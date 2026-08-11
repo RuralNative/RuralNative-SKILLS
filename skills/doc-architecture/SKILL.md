@@ -75,9 +75,8 @@ seams) is code-architecture work, not this skill's job.
    per seam, an ADR directory, a glossary, one conventions policy, a generated
    directory with regeneration scripts where schemas or contracts exist, and a
    work-docs policy whose default is "work docs live in the issue tracker, not
-   the repo." The glossary, the policy set (`testing`, `security`,
-   `migrations`, `reliability`), and the vendor-facts entry are created per
-   the templates in `reference/templates.md`.
+   the repo." The glossary, the policy set, and the vendor-facts entry are
+   created per the templates in `reference/templates.md`.
    *Done when: the index's coverage table matches the docs on disk.*
 5. **Wire the harness.** Install the change-aware gate from
    `reference/harness.md` — eight checks: coverage ↔ disk, same-diff

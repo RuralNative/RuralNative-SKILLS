@@ -1,0 +1,4 @@
+# The repo is the distribution source, never its own consumer.
+# Local `npx skills add` artifacts would duplicate skills/ and drift.
+.agents/
+skills-lock.json

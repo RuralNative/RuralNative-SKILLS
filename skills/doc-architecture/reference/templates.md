@@ -83,7 +83,8 @@ entry when a new dependency is introduced.
 _Avoid_: <forbidden synonyms>
 ```
 
-The glossary is frozen; changes require a decision.
+The glossary is frozen; changes require a decision — the rule lives in the
+routing table in `reference/classify.md`.
 
 ## Loading protocol
 

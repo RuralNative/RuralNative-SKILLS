@@ -30,3 +30,25 @@ _Avoid_: npx install, package install
 The shelf shape of `skills/<skill-identity>/`, as opposed to a single skill
 folder at the repository root.
 _Avoid_: Monorepo, folder structure
+
+**Harness**:
+The change-aware docs gate (`scripts/docs-check.sh`) that keeps the doc tree
+coherent. The check set it enforces is defined in
+`skills/doc-architecture/reference/harness.md`.
+_Avoid_: CI job, docs:check
+
+**Leaf doc**:
+The doc-cache entry for one seam — purpose, scope, key files, data flow,
+non-negotiables, links — kept to a 1–2 minute read. Lives in `docs/leaves/`.
+_Avoid_: Seam doc, readme
+
+**Seam**:
+A module an agent edits as a unit: its own directory, entry files, tests, and
+its own leaf doc once the tree is established. In this repo, each skill under
+`skills/` is a seam.
+_Avoid_: Folder, module
+
+**Work doc**:
+A record of in-flight work (plans, audits, notes). Default policy: work docs
+live in the issue tracker, not the repo, and die with the work.
+_Avoid_: Notes, scratch

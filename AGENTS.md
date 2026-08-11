@@ -1,3 +1,16 @@
+## Documentation (doc-cache)
+
+This repo runs the doc-architecture lifecycle on its own docs.
+
+- Orientation: `AGENTS.md` → `ARCHITECTURE.md` → the seam's leaf doc →
+  `CONTEXT.md`.
+- The docs tree is a cache: when code changes, update its doc in the same
+  change. On a doc/code conflict the code wins — fix the doc and flag the
+  discrepancy.
+- Work docs (plans, audits) live in the issue tracker, never the repo.
+- Run `./scripts/docs-check.sh` before finishing; a red harness is a work
+  item, not a warning.
+
 ## Agent skills
 
 ### Issue tracker
