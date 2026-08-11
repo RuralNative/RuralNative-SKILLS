@@ -86,6 +86,24 @@ _Avoid_: <forbidden synonyms>
 The glossary is frozen; changes require a decision — the rule lives in the
 routing table in `reference/classify.md`.
 
+## Debt registry
+
+Known shortcuts and unfinished pieces get an official home: one register
+(`docs/debt.md`) for small projects, or a debt section in each leaf doc where
+debt is dense. The register is linked from the index and never restated.
+
+```
+### DEBT-N — <short title>
+
+Status: open | resolved
+Revisit-when: <condition that makes it due>
+What: <the shortcut or unfinished piece, and why it is acceptable now>
+```
+
+Resolved entries are kept, with a pointer to the change that paid them off —
+debt history survives like ADR supersession. Trigger maturity is a review act,
+not a parse; the harness checks form and completeness, not conditions.
+
 ## Loading protocol
 
 | Task | Read set | Budget |

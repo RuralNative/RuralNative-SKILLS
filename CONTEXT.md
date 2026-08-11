@@ -52,3 +52,13 @@ _Avoid_: Folder, module
 A record of in-flight work (plans, audits, notes). Default policy: work docs
 live in the issue tracker, not the repo, and die with the work.
 _Avoid_: Notes, scratch
+
+**Debt item**:
+A numbered `DEBT-N` record of a known shortcut or unfinished piece, carrying
+a `Status:` and a `Revisit-when:` trigger.
+_Avoid_: TODO, known issue
+
+**Debt registry**:
+The official home of debt items — `docs/debt.md`, or per-seam debt sections
+in leaf docs — linked from the index, reviewed in every diff.
+_Avoid_: Backlog, issue list

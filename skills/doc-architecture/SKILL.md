@@ -75,15 +75,15 @@ seams) is code-architecture work, not this skill's job.
    per seam, an ADR directory, a glossary, one conventions policy, a generated
    directory with regeneration scripts where schemas or contracts exist, and a
    work-docs policy whose default is "work docs live in the issue tracker, not
-   the repo." The glossary, the policy set, and the vendor-facts entry are
-   created per the templates in `reference/templates.md`.
+   the repo." The glossary, the policy set, the debt registry, and the
+   vendor-facts entry are created per the templates in `reference/templates.md`.
    *Done when: the index's coverage table matches the docs on disk.*
 5. **Wire the harness.** Install the change-aware gate from
-   `reference/harness.md` — eight checks: coverage ↔ disk, same-diff
+   `reference/harness.md` — nine checks: coverage ↔ disk, same-diff
    freshness, new-seam-requires-doc, decision status parse, work-doc expiry,
-   seam-table completeness, generated freshness, policy coverage. Hook it into
-   the project's standard check path — a script entry, pre-commit hook, or CI
-   job — so it runs without being remembered.
+   seam-table completeness, generated freshness, policy coverage, debt
+   register. Hook it into the project's standard check path — a script entry,
+   pre-commit hook, or CI job — so it runs without being remembered.
    *Done when: the harness fails on a deliberate violation and passes after
    the fix — proven by running both.*
 
@@ -119,7 +119,8 @@ seams) is code-architecture work, not this skill's job.
 2. **Same diff.** A change touching a seam updates its doc in the same commit;
    a fact discovered mid-work lands on its tier in the same change — new term
    (with its `_Avoid:` list) in the glossary, new decision in an ADR, new
-   limit in the seam's invariants.
+   limit in the seam's invariants, new debt item (`DEBT-N`) in the debt
+   registry.
 3. **Code wins.** On a doc/code conflict: trust the code, fix the doc, flag
    the discrepancy in the change description.
 4. **Supersede, don't rewrite.** A changed decision gets a new ADR; the
@@ -137,4 +138,4 @@ seams) is code-architecture work, not this skill's job.
 - `reference/harness.md` — the portable gate: checks, adaptation rules,
   scorecard.
 - `reference/templates.md` — mini-ADR, leaf doc, index, policy set,
-  vendor-facts, glossary, loading protocol.
+  vendor-facts, glossary, debt registry, loading protocol.

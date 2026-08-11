@@ -14,6 +14,7 @@ code?"**
 | Where does X live? | pointer | index table / conventions | harness: table ↔ disk ↔ directories |
 | What does the code say? (schema, endpoints, structure) | restatement | generated artifact, or absent | regeneration + timestamp gate |
 | What are the cross-cutting rules? | policy | policy doc ≤ 1 page | linked from index; never restated in leaves |
+| What is knowingly unfinished or a shortcut? | debt | debt registry | `DEBT-N` ids, `Status:`, `Revisit-when:` triggers, reviewable in diffs |
 | What are we doing right now? | work | issue tracker | deleted on completion; never cited |
 
 ## Notes
@@ -37,3 +38,7 @@ code?"**
 - **New terms land with their avoid-list.** A new term (with its `_Avoid:`
   list) enters the glossary in the same change that introduces it.
 - **Vocabulary is frozen.** Glossary changes require a decision.
+- **Debt is a claim about the present.** A debt entry says "this shortcut is
+  acceptable now"; its `Revisit-when:` trigger is the stay-true mechanism.
+  Maturity is a review act, not a parse. Resolved entries keep history,
+  pointing at the paying change — like ADR supersession.

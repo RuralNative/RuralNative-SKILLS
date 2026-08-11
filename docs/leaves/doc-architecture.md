@@ -23,16 +23,19 @@ carries its own install — `.agents/` and `skills-lock.json` are ignored.
 
 ## Non-negotiables
 
-1. `SKILL.md` frontmatter `name` equals the folder name `doc-architecture`.
-2. The registry-lane command in `INSTALL.md` installs this seam.
-3. Reference files resolve relative to `SKILL.md`; no absolute paths.
-4. Distribution stays on the registry lane; the copy-based install is a
-   convenience, not a channel (ADR-0001).
-5. This repo's own install artifacts (`.agents/`, `skills-lock.json`) are
-   never committed.
+1. **INV-1** — `SKILL.md` frontmatter `name` equals the folder name
+   `doc-architecture`.
+2. **INV-2** — The registry-lane command in `INSTALL.md` installs this seam.
+3. **INV-3** — Reference files resolve relative to `SKILL.md`; no absolute
+   paths.
+4. **INV-4** — Distribution stays on the registry lane; the copy-based
+   install is a convenience, not a channel (ADR-0001).
+5. **INV-5** — This repo's own install artifacts (`.agents/`,
+   `skills-lock.json`) are never committed.
 
 ## Links
 
 - Glossary: `CONTEXT.md` — Skill, skill identity, registry lane.
 - Decision: `docs/adr/0001-distribute-as-public-catalog-shelf.md`.
+- Debt registry: `docs/debt.md`.
 - Harness: `scripts/docs-check.sh`.

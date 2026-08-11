@@ -70,6 +70,87 @@ if grep -rEq '^Expires:' "${COVERED[@]}" 2>/dev/null; then
 fi
 note "work docs: none in the repo"
 
+# Seam-table completeness (check 6): every coverage doc is a seam doc or in the
+# labeled non-seam section; every seam code root exists on disk.
+mapfile -t NONSEAM < <(awk '/^## Non-seam docs/{f=1; next} /^## /{f=0} f && /^- / {sub(/^- /,""); gsub(/[[:space:]]/,""); print}' "$ARCH")
+seam_docs=()
+for s in "${SEAMS[@]}"; do rest="${s#*|}"; seam_docs+=("${rest#*|}"); done
+table_fail=0
+for f in "${COVERED[@]}"; do
+  if ! grep -qxF "$f" <(printf '%s\n' "${seam_docs[@]}") && ! grep -qxF "$f" <(printf '%s\n' "${NONSEAM[@]}"); then
+    bad "seam-table: coverage doc '$f' is in neither the seam table nor the non-seam list"; table_fail=1
+  fi
+done
+for s in "${SEAMS[@]}"; do
+  name="${s%%|*}"; rest="${s#*|}"; root="${rest%%|*}"
+  [[ -d "$root" ]] || { bad "seam-table: code root '$root' does not exist on disk"; table_fail=1; }
+done
+[[ $table_fail -eq 0 ]] && note "seam-table: coverage <-> seam/non-seam tables match"
+
+# Generated freshness (check 7): generated docs embed Generated: YYYY-MM-DD.
+mapfile -t GEN < <(grep -lE '^Generated: [0-9]{4}-[0-9]{2}-[0-9]{2}$' "${COVERED[@]}" 2>/dev/null | sort -u)
+gen_fail=0
+if [[ ${#GEN[@]} -eq 0 ]]; then
+  note "generated freshness: dormant (no generated docs)"
+else
+  threshold=30
+  tline=$(grep -E '^Freshness threshold: [0-9]+ days' "$ARCH" | head -1)
+  [[ -n "$tline" ]] && threshold=$(grep -oE '[0-9]+' <<<"$tline" | head -1)
+  today=$(date +%s)
+  for g in "${GEN[@]}"; do
+    d=$(grep -m1 -oE '^Generated: [0-9]{4}-[0-9]{2}-[0-9]{2}' "$g" | awk '{print $2}')
+    age=$(( (today - $(date -d "$d" +%s)) / 86400 ))
+    if (( age > threshold )); then
+      bad "generated: '$g' is $age days old (threshold $threshold)"; gen_fail=1
+    fi
+  done
+  if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    for g in "${GEN[@]}"; do
+      if [[ -n "$(git status --porcelain -- scripts/)" ]] && [[ -z "$(git status --porcelain -- "$g")" ]]; then
+        bad "generated: '$g' not regenerated although scripts/ changed"; gen_fail=1
+      fi
+    done
+  fi
+  [[ $gen_fail -eq 0 ]] && note "generated freshness: all generated docs within threshold"
+fi
+
+# Policy coverage (check 8): policy docs linked from the index, both ways.
+mapfile -t POLICIES < <(find docs/policies -name '*.md' -type f 2>/dev/null | sort)
+mapfile -t POLICYROWS < <(awk -F'|' '/^\| [^|]+\.md \| policy \|/ {gsub(/ /,"",$2); print $2}' "$ARCH")
+pol_fail=0
+if [[ ${#POLICIES[@]} -eq 0 && ${#POLICYROWS[@]} -eq 0 ]]; then
+  note "policy coverage: dormant (no policy docs)"
+else
+  for f in "${POLICIES[@]}"; do
+    grep -qxF "$f" <(printf '%s\n' "${COVERED[@]}") || { bad "policy: '$f' on disk but not linked from the index"; pol_fail=1; }
+  done
+  for f in "${POLICYROWS[@]}"; do
+    [[ -f "$f" ]] || { bad "policy: '$f' linked from the index but missing on disk"; pol_fail=1; }
+  done
+  [[ $pol_fail -eq 0 ]] && note "policy coverage: policies linked from the index"
+fi
+
+# Debt register (check 9): entries well-formed; referenced DEBT-N ids declared.
+DEBT_REG="docs/debt.md"
+if [[ -f "$DEBT_REG" ]]; then
+  debt_fail=0
+  mapfile -t DEBTIDS < <(grep -oE '^### DEBT-[0-9]+' "$DEBT_REG" | awk '{print $2}')
+  if [[ ${#DEBTIDS[@]} -eq 0 ]]; then
+    bad "debt: register exists but has no DEBT-N entries"; debt_fail=1
+  else
+    st=$(grep -cE '^Status: (open|resolved)$' "$DEBT_REG")
+    rw=$(grep -cE '^Revisit-when:' "$DEBT_REG")
+    (( st == ${#DEBTIDS[@]} )) || { bad "debt: $(( ${#DEBTIDS[@]} - st )) entries missing a Status line"; debt_fail=1; }
+    (( rw == ${#DEBTIDS[@]} )) || { bad "debt: $(( ${#DEBTIDS[@]} - rw )) entries missing a Revisit-when line"; debt_fail=1; }
+  fi
+  for ref in $(grep -rhoE 'DEBT-[0-9]+' skills docs CONTEXT.md README.md 2>/dev/null | sort -u); do
+    grep -qxF "$ref" <(printf '%s\n' "${DEBTIDS[@]}") || { bad "debt: '$ref' referenced but not declared in the register"; debt_fail=1; }
+  done
+  [[ $debt_fail -eq 0 ]] && note "debt: register complete (${#DEBTIDS[@]} entries)"
+else
+  note "debt register: dormant (no register yet)"
+fi
+
 # Scorecard.
 adr_accepted=0; adr_superseded=0; adr_rejected=0
 for f in docs/adr/*.md; do
@@ -82,7 +163,21 @@ for f in docs/adr/*.md; do
 done
 ondisk=${#ONDISK[@]}; covered=${#COVERED[@]}
 [[ $ondisk -gt 0 ]] && pct=$((covered*100/ondisk)) || pct=100
-printf 'scorecard: docs %d/%d (%d%%), seams %d, ADRs accepted %d / superseded %d / rejected %d\n' \
-  "$covered" "$ondisk" "$pct" "${#SEAMS[@]}" "$adr_accepted" "$adr_superseded" "$adr_rejected"
+inv_list=""
+for s in "${SEAMS[@]}"; do
+  name="${s%%|*}"; doc="${s##*|}"
+  [[ -f "$doc" ]] || continue
+  invs=$(grep -oE 'INV-[0-9]+' "$doc" | sort -u | tr '\n' ' ')
+  enc="prose"
+  for i in $invs; do grep -rqF "$i" scripts 2>/dev/null && enc="test-encoded"; done
+  inv_list="$inv_list $name:$invs($enc)"
+done
+debt_open=0; debt_resolved=0
+if [[ -f "$DEBT_REG" ]]; then
+  debt_open=$(grep -cE '^Status: open$' "$DEBT_REG")
+  debt_resolved=$(grep -cE '^Status: resolved$' "$DEBT_REG")
+fi
+printf 'scorecard: docs %d/%d (%d%%), seams %d, invariants:%s, ADRs accepted %d / superseded %d / rejected %d, debt open %d / resolved %d\n' \
+  "$covered" "$ondisk" "$pct" "${#SEAMS[@]}" "$inv_list" "$adr_accepted" "$adr_superseded" "$adr_rejected" "$debt_open" "$debt_resolved"
 
 exit "$fail"

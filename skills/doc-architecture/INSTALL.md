@@ -83,4 +83,4 @@ diff-able plan. If the repo has no docs yet, run Branch A instead:
 - `reference/classify.md` — routes every fact to its doc tier.
 - `reference/harness.md` — the portable change-aware gate.
 - `reference/templates.md` — mini-ADR, leaf doc, index, policy set,
-  vendor-facts, glossary, loading protocol.
+  vendor-facts, glossary, debt registry, loading protocol.

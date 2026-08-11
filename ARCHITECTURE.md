@@ -16,6 +16,19 @@ A new directory under `skills/` is a new seam: it needs a row here, a leaf
 doc, and a `SKILL.md` whose frontmatter `name` matches its folder (harness
 check 3).
 
+## Non-seam docs
+
+Covered docs that are not seams — the seam table's counterpart, parsed by
+harness check 6. A covered doc must be in the seam table or listed here:
+
+- CONTEXT.md
+- docs/debt.md
+- README.md
+- docs/agents/domain.md
+- docs/agents/issue-tracker.md
+- docs/agents/triage-labels.md
+- docs/adr/0001-distribute-as-public-catalog-shelf.md
+
 ## Cross-cutting boundaries
 
 - Distribution is the registry lane only — no npm packaging. See ADR-0001.
@@ -23,6 +36,8 @@ check 3).
   `docs/agents/issue-tracker.md`.
 - Glossary vocabulary is binding; forbidden synonyms are listed. See
   `CONTEXT.md`.
+- Known shortcuts and unfinished pieces are tracked in the debt registry. See
+  `docs/debt.md`.
 
 ## Coverage
 
@@ -39,6 +54,7 @@ parsed from, so they are not listed here.
 | docs/agents/triage-labels.md | pointer |
 | docs/adr/0001-distribute-as-public-catalog-shelf.md | decision |
 | docs/leaves/doc-architecture.md | leaf |
+| docs/debt.md | debt |
 
 ## Loading protocol
 
@@ -49,9 +65,12 @@ parsed from, so they are not listed here.
 
 ## Checks
 
-- `./scripts/docs-check.sh` — the coherence gate: checks 1–5 of the
-  eight-check gate in `skills/doc-architecture/reference/harness.md`
-  (coverage ↔ disk, same-diff freshness, new-seam-requires-doc, ADR status
-  parse, no work docs), plus a scorecard. Run it before finishing; a red
-  harness is a work item, not a warning.
+- `./scripts/docs-check.sh` — the coherence gate: the nine checks of
+  `skills/doc-architecture/reference/harness.md` (coverage ↔ disk, same-diff
+  freshness, new-seam-requires-doc, ADR status parse, work-doc expiry,
+  seam-table completeness, generated freshness, policy coverage, debt
+  register), plus a scorecard reporting per-seam invariants and debt counts.
+  Checks 7 and 8 are dormant until generated docs and policy docs exist.
+  Run it before finishing; a red harness is a work item, not a warning.
+- Freshness threshold: 30 days — generated docs older than this fail check 7.
 - The harness is tooling and is exempt from demanding its own doc.

@@ -5,7 +5,7 @@ cheapest script in the repo; if it isn't tiny, it will be skipped. It is
 tooling, so it is exempt from demanding its own doc — record that exemption in
 the conventions policy to avoid infinite regress.
 
-## The eight checks
+## The nine checks
 
 1. **Coverage ↔ disk.** The index lists every doc in the docs tree; every
    listed doc exists; every doc on disk is listed. Parse the index's coverage
@@ -33,7 +33,13 @@ the conventions policy to avoid infinite regress.
    script changed without the doc being regenerated.
 8. **Policy coverage.** Every policy doc on disk is linked from the index;
    every policy doc linked from the index exists; leaf docs link policy docs
-   instead of restating them.
+   instead of restating them. The linkage half is mechanical; the restatement
+   half is a review convention — a script cannot judge duplication.
+9. **Debt register.** Every debt item is a numbered `DEBT-N` entry with a
+   `Status:` line and a `Revisit-when:` trigger; every `DEBT-N` referenced in
+   code or docs exists in the register; the scorecard reports open and
+   resolved debt. Trigger maturity is a review act, not a parse — the
+   register turns "what is owed?" into a query with an answer.
 
 ## Scorecard
 
@@ -41,22 +47,24 @@ A re-runnable health statement produced by the harness: docs count, coverage
 %, stale/overdue count, ADR status counts, last-generation timestamps for
 generated docs. Per seam it also lists the seam's invariants (`INV-1..INV-N`)
 and marks each as test-encoded or prose, flagging prose invariants whose claim
-does not match a code marker. It exists to turn "is our documentation lying?"
-into a query with an answer.
+does not match a code marker. It also reports open and resolved debt from the
+register. It exists to turn "is our documentation lying?" into a query with an
+answer.
 
 ## Adaptation rules
 
 - Directory names are conventional, not sacred: whatever the project calls its
   docs tree, the harness points at it. What must not change are the *checks*:
-  coverage, same-diff, new-seam, seam-table, generated, policy, status,
+  coverage, same-diff, new-seam, seam-table, generated, policy, debt, status,
   expiry.
 - If the project has no ADRs yet, check 4 is dormant until the first decision
   is recorded — do not pre-create rules for empty categories. The same
   dormancy applies to check 7 (generated freshness) until a generated doc
-  exists and to check 8 (policy coverage) until the first policy doc lands.
+  exists, to check 8 (policy coverage) until the first policy doc lands, and
+  to check 9 (debt register) until the first debt entry is recorded.
 - Generated docs exist only where generation is possible and cheap (schemas,
   contracts, structure trees). A project with no generation pipeline gets
-  checks 1–6 and 8, with check 7 dormant, and a scorecard.
+  checks 1–6 and 8–9, with check 7 dormant, and a scorecard.
 - In a monorepo, give each independently navigable package its own index and
   leaf docs, sharing one conventions policy and one harness run across all
   packages.
