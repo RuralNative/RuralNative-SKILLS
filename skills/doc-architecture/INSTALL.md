@@ -13,19 +13,30 @@ You can also invoke it by name at any time.
 
 ## Install
 
+### Via the skills registry (recommended)
+
+```bash
+npx skills add RuralNative/RuralNative-SKILLS --skill doc-architecture
+```
+
+The registry CLI clones the repository, resolves the skill by name, and
+installs it into your agent's standard skills directory.
+
+### Manual install (copy-based fallback)
+
 Copy this folder into your skill directory. The destination folder must be
 named `doc-architecture` and contain `SKILL.md` at its root, alongside the
-`reference/` directory.
+`reference/` directory. Run the following from the repository root:
 
 ```
 # Anthropic Claude Code (user-wide)
-cp -r docs-architecture ~/.claude/skills/doc-architecture
+cp -r skills/doc-architecture ~/.claude/skills/doc-architecture
 
 # Kilo (project scope)
-cp -r docs-architecture .kilo/skills/doc-architecture
+cp -r skills/doc-architecture .kilo/skills/doc-architecture
 
 # Kilo (user-wide)
-cp -r docs-architecture ~/.agents/skills/doc-architecture
+cp -r skills/doc-architecture ~/.agents/skills/doc-architecture
 ```
 
 For other platforms, place `SKILL.md` and `reference/` in whatever location
