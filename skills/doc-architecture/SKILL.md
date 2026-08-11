@@ -75,13 +75,16 @@ seams) is code-architecture work, not this skill's job.
    per seam, an ADR directory, a glossary, one conventions policy, a generated
    directory with regeneration scripts where schemas or contracts exist, and a
    work-docs policy whose default is "work docs live in the issue tracker, not
-   the repo." Follow the templates in `reference/templates.md`.
+   the repo." The glossary, the policy set (`testing`, `security`,
+   `migrations`, `reliability`), and the vendor-facts entry are created per
+   the templates in `reference/templates.md`.
    *Done when: the index's coverage table matches the docs on disk.*
 5. **Wire the harness.** Install the change-aware gate from
-   `reference/harness.md`: coverage ↔ disk, seam-code ↔ doc in the same diff,
-   new-seam-requires-doc, ADR status parse, work-doc expiry. Hook it into the
-   project's standard check path — a script entry, pre-commit hook, or CI job
-   — so it runs without being remembered.
+   `reference/harness.md` — eight checks: coverage ↔ disk, same-diff
+   freshness, new-seam-requires-doc, decision status parse, work-doc expiry,
+   seam-table completeness, generated freshness, policy coverage. Hook it into
+   the project's standard check path — a script entry, pre-commit hook, or CI
+   job — so it runs without being remembered.
    *Done when: the harness fails on a deliberate violation and passes after
    the fix — proven by running both.*
 
@@ -110,17 +113,23 @@ seams) is code-architecture work, not this skill's job.
 
 ## Branch C — Maintain: keep the cache coherent during normal work
 
-1. **Same diff.** A change touching a seam updates its doc in the same commit;
+1. **Re-verify invariants.** Before a seam change or after re-orientation,
+   read that seam's Non-negotiables and confirm each still holds; on a
+   violation, code wins — fix the code or supersede the invariant via a
+   decision.
+2. **Same diff.** A change touching a seam updates its doc in the same commit;
    a fact discovered mid-work lands on its tier in the same change — new term
-   in the glossary, new decision in an ADR, new limit in the seam's invariants.
-2. **Code wins.** On a doc/code conflict: trust the code, fix the doc, flag
+   (with its `_Avoid:` list) in the glossary, new decision in an ADR, new
+   limit in the seam's invariants.
+3. **Code wins.** On a doc/code conflict: trust the code, fix the doc, flag
    the discrepancy in the change description.
-3. **Supersede, don't rewrite.** A changed decision gets a new ADR; the
+4. **Supersede, don't rewrite.** A changed decision gets a new ADR; the
    original record is left verbatim.
-4. **Work docs die with the work.** Plans and audits are mined for durable
+5. **Work docs die with the work.** Plans and audits are mined for durable
    facts and deleted; nothing durable cites them.
-5. **Run the harness.** Keep the scorecard current: coverage, stale counts,
-   ADR statuses. A red harness is a work item, not a warning.
+6. **Run the harness.** Keep the scorecard current: coverage, stale counts,
+   ADR statuses, invariant re-verification. A red harness is a work item, not
+   a warning.
 
 ## Reference
 
@@ -128,4 +137,5 @@ seams) is code-architecture work, not this skill's job.
   stay-true mechanism.
 - `reference/harness.md` — the portable gate: checks, adaptation rules,
   scorecard.
-- `reference/templates.md` — mini-ADR, leaf doc, index, loading protocol.
+- `reference/templates.md` — mini-ADR, leaf doc, index, policy set,
+  vendor-facts, glossary, loading protocol.

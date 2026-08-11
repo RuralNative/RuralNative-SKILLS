@@ -33,8 +33,10 @@ Six sections, 1–2 minute read; longer content moves to a referenced file:
 3. **Key types & files** — by role, not by path; paths go stale.
 4. **Data flow** — one directed walk-through from entry point to resting
    place.
-5. **Non-negotiables** — 3–5 numbered invariants: limits, exclusions,
-   contracts. Specific, single-claim bullets. Tests where encodable.
+5. **Non-negotiables** — 3–5 invariants: limits, exclusions, contracts.
+   Specific, single-claim bullets. Tests where encodable. Invariants carry
+   stable identifiers `INV-1..INV-N`; together they form the seam's
+   re-orientation checklist.
 6. **Links** — glossary terms, ADRs, sibling docs, test location.
 
 ## Index (AGENTS.md or ARCHITECTURE.md)
@@ -45,6 +47,44 @@ Six sections, 1–2 minute read; longer content moves to a referenced file:
 - Coverage table: every doc, machine-checked against disk.
 - Pointers to glossary, ADRs, policy, README. Link, never restate.
 
+## Policy set
+
+The canonical policy docs are `testing`, `security`, `migrations`,
+`reliability`. Each is ≤ 1 page, each is linked from the index, each is
+created when the project reaches the standard size class (Principle 6 in
+SKILL.md), and leaf docs link policy docs instead of restating them.
+
+```
+# <area> policy
+
+<the cross-cutting rules for one area, ≤ 1 page; linked from the index;
+never restated in leaf docs>
+```
+
+## Vendor-facts
+
+`references/vendor-facts.md` holds one ~10-line entry per dependency: pinned
+version, known gotchas, and a note to fetch the full docs on demand. Create an
+entry when a new dependency is introduced.
+
+```
+### <dependency>
+
+- Pinned: <version>
+- Gotchas: <the ones that cost a session to rediscover>
+- Full docs: fetch on demand — this entry is a pointer, not a restatement.
+```
+
+## Glossary template
+
+```
+**<Term>**:
+<definition in the domain vocabulary, 1–2 sentences>
+_Avoid_: <forbidden synonyms>
+```
+
+The glossary is frozen; changes require a decision.
+
 ## Loading protocol
 
 | Task | Read set | Budget |
@@ -53,7 +93,7 @@ Six sections, 1–2 minute read; longer content moves to a referenced file:
 | API/route change | + route map, security + testing policy | ~6–9k |
 | Schema/data change | + data doc, migrations policy, generated schema slice | ~8–12k |
 | New dependency | + one vendor-facts entry | ~0.3k |
-| Re-orient after compaction | index → task leaf doc → glossary | ~4–7k |
+| Re-orient after compaction | index → task leaf doc (including its Non-negotiables) → glossary | ~4–7k |
 
 Rule: an agent's re-orientation is the same small read every time — that
 fixed cost is what makes compaction survivable.

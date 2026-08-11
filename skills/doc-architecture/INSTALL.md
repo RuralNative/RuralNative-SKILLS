@@ -24,9 +24,20 @@ installs it into your agent's standard skills directory.
 
 ### Manual install (copy-based fallback)
 
-Copy this folder into your skill directory. The destination folder must be
-named `doc-architecture` and contain `SKILL.md` at its root, alongside the
-`reference/` directory. Run the following from the repository root:
+The copy commands below must run from the root of a clone of
+`RuralNative/RuralNative-SKILLS` — the relative path `skills/doc-architecture`
+only resolves there. Inside an installed skill directory that path does not
+exist, so `cp` fails with `cp: cannot stat ... No such file or directory`.
+Clone first if you have not:
+
+```
+git clone https://github.com/RuralNative/RuralNative-SKILLS.git
+cd RuralNative-SKILLS
+```
+
+From that clone's root, copy the folder into your skill directory. The
+destination folder must be named `doc-architecture` and contain `SKILL.md` at
+its root, alongside the `reference/` directory:
 
 ```
 # Anthropic Claude Code (user-wide)
@@ -71,4 +82,5 @@ diff-able plan. If the repo has no docs yet, run Branch A instead:
   criteria.
 - `reference/classify.md` — routes every fact to its doc tier.
 - `reference/harness.md` — the portable change-aware gate.
-- `reference/templates.md` — mini-ADR, leaf doc, index, loading protocol.
+- `reference/templates.md` — mini-ADR, leaf doc, index, policy set,
+  vendor-facts, glossary, loading protocol.

@@ -30,3 +30,10 @@ code?"**
 - **Exceptions are the only navigational prose worth writing.** Convention
   covers the rule; prose covers the one place the convention breaks, with the
   reason.
+- **The avoid-list is a negative specification.** The glossary carries a
+  per-term `_Avoid:` list of forbidden synonyms, stating what the term is not.
+- **Naming violations are reviewable in every diff.** The avoid-list turns
+  vocabulary drift into a review finding.
+- **New terms land with their avoid-list.** A new term (with its `_Avoid:`
+  list) enters the glossary in the same change that introduces it.
+- **Vocabulary is frozen.** Glossary changes require a decision.
