@@ -94,7 +94,7 @@ if [[ ${#GEN[@]} -eq 0 ]]; then
   note "generated freshness: dormant (no generated docs)"
 else
   threshold=30
-  tline=$(grep -E '^Freshness threshold: [0-9]+ days' "$ARCH" | head -1)
+  tline=$(grep -oE 'Freshness threshold: [0-9]+ days' "$ARCH" | head -1)
   [[ -n "$tline" ]] && threshold=$(grep -oE '[0-9]+' <<<"$tline" | head -1)
   today=$(date +%s)
   for g in "${GEN[@]}"; do
@@ -105,7 +105,12 @@ else
     fi
   done
   if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    last_script_change=$(git log -1 --format=%cd --date=short -- scripts/ 2>/dev/null)
     for g in "${GEN[@]}"; do
+      d=$(grep -m1 -oE '^Generated: [0-9]{4}-[0-9]{2}-[0-9]{2}' "$g" | awk '{print $2}')
+      if [[ -n "$last_script_change" && "$last_script_change" > "$d" ]]; then
+        bad "generated: '$g' not regenerated although scripts/ changed after it was generated"; gen_fail=1
+      fi
       if [[ -n "$(git status --porcelain -- scripts/)" ]] && [[ -z "$(git status --porcelain -- "$g")" ]]; then
         bad "generated: '$g' not regenerated although scripts/ changed"; gen_fail=1
       fi
@@ -130,20 +135,29 @@ else
   [[ $pol_fail -eq 0 ]] && note "policy coverage: policies linked from the index"
 fi
 
-# Debt register (check 9): entries well-formed; referenced DEBT-N ids declared.
+# Debt register (check 9): entries well-formed per entry; referenced DEBT-N ids
+# declared.
 DEBT_REG="docs/debt.md"
 if [[ -f "$DEBT_REG" ]]; then
   debt_fail=0
   mapfile -t DEBTIDS < <(grep -oE '^### DEBT-[0-9]+' "$DEBT_REG" | awk '{print $2}')
+  entries=$(grep -cE '^### DEBT-[0-9]+ — ' "$DEBT_REG")
   if [[ ${#DEBTIDS[@]} -eq 0 ]]; then
     bad "debt: register exists but has no DEBT-N entries"; debt_fail=1
   else
-    st=$(grep -cE '^Status: (open|resolved)$' "$DEBT_REG")
-    rw=$(grep -cE '^Revisit-when:' "$DEBT_REG")
-    (( st == ${#DEBTIDS[@]} )) || { bad "debt: $(( ${#DEBTIDS[@]} - st )) entries missing a Status line"; debt_fail=1; }
-    (( rw == ${#DEBTIDS[@]} )) || { bad "debt: $(( ${#DEBTIDS[@]} - rw )) entries missing a Revisit-when line"; debt_fail=1; }
+    if (( entries != ${#DEBTIDS[@]} )); then
+      bad "debt: $(( ${#DEBTIDS[@]} - entries )) entries missing a title ('### DEBT-N — <title>')"; debt_fail=1
+    fi
+    while IFS= read -r bad_entry; do
+      bad "debt: entry $bad_entry missing a Status or Revisit-when line"; debt_fail=1
+    done < <(awk '
+      /^### DEBT-[0-9]+/ { if (id != "" && (st != 1 || rw != 1)) print id; id=$2; st=0; rw=0; next }
+      /^Status: (open|resolved)$/ { st=1 }
+      /^Revisit-when:/ { rw=1 }
+      END { if (id != "" && (st != 1 || rw != 1)) print id }
+    ' "$DEBT_REG")
   fi
-  for ref in $(grep -rhoE 'DEBT-[0-9]+' skills docs CONTEXT.md README.md 2>/dev/null | sort -u); do
+  for ref in $(grep -rhoE 'DEBT-[0-9]+' skills docs AGENTS.md ARCHITECTURE.md CONTEXT.md README.md 2>/dev/null | sort -u); do
     grep -qxF "$ref" <(printf '%s\n' "${DEBTIDS[@]}") || { bad "debt: '$ref' referenced but not declared in the register"; debt_fail=1; }
   done
   [[ $debt_fail -eq 0 ]] && note "debt: register complete (${#DEBTIDS[@]} entries)"
@@ -167,10 +181,13 @@ inv_list=""
 for s in "${SEAMS[@]}"; do
   name="${s%%|*}"; doc="${s##*|}"
   [[ -f "$doc" ]] || continue
-  invs=$(grep -oE 'INV-[0-9]+' "$doc" | sort -u | tr '\n' ' ')
-  enc="prose"
-  for i in $invs; do grep -rqF "$i" scripts 2>/dev/null && enc="test-encoded"; done
-  inv_list="$inv_list $name:$invs($enc)"
+  for i in $(grep -oE 'INV-[0-9]+' "$doc" | sort -u); do
+    if grep -rqF "$i" scripts 2>/dev/null; then
+      inv_list="$inv_list $name:$i(enc)"
+    else
+      inv_list="$inv_list $name:$i(prose)"
+    fi
+  done
 done
 debt_open=0; debt_resolved=0
 if [[ -f "$DEBT_REG" ]]; then

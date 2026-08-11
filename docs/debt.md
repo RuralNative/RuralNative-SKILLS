@@ -32,3 +32,4 @@ Status: open
 Revisit-when: a second agent works in this repo
 What: the two-hop re-orientation read is asserted by construction; no drill
 proves a fresh agent can re-orient from the index alone.
+
