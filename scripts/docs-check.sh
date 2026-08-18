@@ -168,25 +168,23 @@ fi
 
 # Invariant identifier integrity (check 10): per leaf doc, INV-N ids are
 # unique; every INV-N referenced elsewhere in repo docs resolves to a
-# declared id. Numbering gaps are not checked (gap-lenience).
+# declared id; tombstoned (Retired) ids satisfy no reference. Numbering gaps
+# are not checked (gap-lenience).
 inv_ids=(); inv_docs=(); inv_fail=0
 for s in "${SEAMS[@]}"; do
   doc="${s##*|}"
   [[ -f "$doc" ]] || continue
+  doc_ids=()
   while IFS= read -r line; do
-    [[ "$line" == *".."* ]] && continue
-    for id in $(grep -oE 'INV-[0-9]+' <<<"$line" | sort -u); do
-      owner=""
-      for j in "${!inv_ids[@]}"; do
-        if [[ "${inv_ids[$j]}" == "$id" ]]; then owner="${inv_docs[$j]}"; break; fi
-      done
-      if [[ -n "$owner" ]]; then
-        bad "invariant: duplicate $id in $doc"; inv_fail=1
-      else
-        inv_ids+=("$id"); inv_docs+=("$doc")
-      fi
-    done
+    [[ "$line" == *".."* || "$line" == *"(Retired"* ]] && continue
+    doc_ids+=($(grep -oE 'INV-[0-9]+' <<<"$line"))
   done < "$doc"
+  for id in $(printf '%s\n' "${doc_ids[@]}" | sort | uniq -d); do
+    bad "invariant: duplicate $id in $doc"; inv_fail=1
+  done
+  for id in $(printf '%s\n' "${doc_ids[@]}" | sort -u); do
+    inv_ids+=("$id"); inv_docs+=("$doc")
+  done
 done
 if [[ ${#inv_ids[@]} -eq 0 ]]; then
   note "invariant integrity: dormant (no invariants yet)"
@@ -195,17 +193,22 @@ else
   for f in "${INVSCAN[@]}"; do
     [[ -f "$f" ]] || continue
     while IFS= read -r line; do
-      [[ "$line" == *".."* ]] && continue
+      [[ "$line" == *".."* || "$line" == *"(Retired"* ]] && continue
       for id in $(grep -oE 'INV-[0-9]+' <<<"$line" | sort -u); do
-        declared=""
+        declared=0; owns=0
         for k in "${!inv_ids[@]}"; do
-          if [[ "${inv_ids[$k]}" == "$id" ]]; then declared=1; break; fi
+          if [[ "${inv_ids[$k]}" == "$id" ]]; then
+            declared=1
+            [[ "${inv_docs[$k]}" == "$f" ]] && owns=1
+          fi
         done
-        [[ -n "$declared" ]] || { bad "invariant: '$id' referenced in $f but not declared"; inv_fail=1; }
+        [[ $owns -eq 1 ]] && continue
+        [[ $declared -eq 1 ]] || { bad "invariant: '$id' referenced in $f but not declared"; inv_fail=1; }
       done
     done < "$f"
   done
-  [[ $inv_fail -eq 0 ]] && note "invariant: ids unique and references resolve (${#inv_ids[@]} invariants)"
+  inv_count=$(printf '%s\n' "${inv_ids[@]}" | sort -u | wc -l | tr -d ' ')
+  [[ $inv_fail -eq 0 ]] && note "invariant: ids unique and references resolve ($inv_count invariants)"
 fi
 
 # Scorecard.
@@ -230,7 +233,7 @@ for s in "${SEAMS[@]}"; do
       */*) [[ -e "$t" ]] && tests_loc+=("$t") ;;
     esac
   done
-  for i in $(grep -v '\.\.' "$doc" | grep -oE 'INV-[0-9]+' | sort -u); do
+  for i in $(grep -vE '\.\.|\(Retired' "$doc" | grep -oE 'INV-[0-9]+' | sort -u); do
     enc=0
     for t in "${tests_loc[@]}"; do
       grep -rqF "$i" "$t" 2>/dev/null && { enc=1; break; }
