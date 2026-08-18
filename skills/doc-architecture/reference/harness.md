@@ -5,7 +5,7 @@ cheapest script in the repo; if it isn't tiny, it will be skipped. It is
 tooling, so it is exempt from demanding its own doc — record that exemption in
 the conventions policy to avoid infinite regress.
 
-## The nine checks
+## The ten checks
 
 1. **Coverage ↔ disk.** The index lists every doc in the docs tree; every
    listed doc exists; every doc on disk is listed. Parse the index's coverage
@@ -40,16 +40,28 @@ the conventions policy to avoid infinite regress.
    code or docs exists in the register; the scorecard reports open and
    resolved debt. Trigger maturity is a review act, not a parse — the
    register turns "what is owed?" into a query with an answer.
+10. **Invariant identifier integrity.** Per leaf doc, every `INV-N` number is
+    unique within the seam — duplicates are fatal. Every `INV-N` referenced
+    from another doc resolves to a live entry in its seam's leaf doc —
+    unresolved references are fatal; a tombstoned entry does not satisfy a
+    reference. Numbering gaps are not checked: a gate that fails an adopter's
+    pre-existing numbering on day one gets deleted. Retired entries are
+    tombstoned (`(Retired — <decision id>)`), never deleted; renumbering is
+    forbidden except recorded duplicate repair.
 
 ## Scorecard
 
 A re-runnable health statement produced by the harness: docs count, coverage
 %, stale/overdue count, ADR status counts, last-generation timestamps for
 generated docs. Per seam it also lists the seam's invariants (`INV-1..INV-N`)
-and marks each as test-encoded or prose, flagging prose invariants whose claim
-does not match a code marker. It also reports open and resolved debt from the
-register. It exists to turn "is our documentation lying?" into a query with an
-answer.
+and marks each: **test-encoded** when the identifier appears literally in a
+file under the test location the seam table declares; otherwise **prose**, and
+a prose invariant must carry a justification naming the mechanism that keeps
+it true. The mark is a claim audit — a leaf doc asserting test enforcement
+without the marker is silent drift made visible. A seam whose Tests column
+names no scannable location has no test location; all its invariants are
+prose. It also reports open and resolved debt from the register. It exists to
+turn "is our documentation lying?" into a query with an answer.
 
 ## Adaptation rules
 
@@ -60,11 +72,13 @@ answer.
 - If the project has no ADRs yet, check 4 is dormant until the first decision
   is recorded — do not pre-create rules for empty categories. The same
   dormancy applies to check 7 (generated freshness) until a generated doc
-  exists, to check 8 (policy coverage) until the first policy doc lands, and
-  to check 9 (debt register) until the first debt entry is recorded.
+  exists, to check 8 (policy coverage) until the first policy doc lands, to
+  check 9 (debt register) until the first debt entry is recorded, and to
+  check 10 (invariant integrity) until the first leaf doc with invariants
+  exists.
 - Generated docs exist only where generation is possible and cheap (schemas,
   contracts, structure trees). A project with no generation pipeline gets
-  checks 1–6 and 8–9, with check 7 dormant, and a scorecard.
+  checks 1–6 and 8–10, with check 7 dormant, and a scorecard.
 - In a monorepo, give each independently navigable package its own index and
   leaf docs, sharing one conventions policy and one harness run across all
   packages.
