@@ -61,8 +61,8 @@ Ask the agent:
 > Establish human-first docs for this repo.
 
 A healthy run creates the `docs/human/` tree with the overview artifact, wires
-the prevention stack and freshness rule, and leaves the gate extension
-installed and green.
+the prevention stack and freshness rule into the repo's gate script, and leaves
+the human-docs extension installed with a green gate.
 
 For a repo that already has human docs, ask instead:
 
@@ -73,11 +73,12 @@ honest, tone within budget — with a fix for each finding, or a clean pass.
 
 ## Integrate
 
-1. **Establish** (Branch A) builds the tree and derives the first artifacts.
-   On a small repo, the size step keeps the artifact set minimal.
-2. Wire the gate extension into the repo's check path — a script entry,
-   pre-commit hook, or CI job — so read-set absence, link direction, and
-   derived freshness are enforced mechanically.
+1. **Establish** (Branch A) builds the tree, derives the first artifacts, and
+   installs the gate extension. On a small repo, the size step keeps the
+   artifact set minimal.
+2. Make the gate actually run in your change path — a script entry, pre-commit
+   hook, or CI job — so read-set absence, link direction, and derived
+   freshness are enforced mechanically rather than by memory.
 3. **Maintain** (Branch C) is the steady state: same-diff regeneration on
    source change, one new journal entry per accepted decision, and a green
    gate.

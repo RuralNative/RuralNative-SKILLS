@@ -1,6 +1,4 @@
-<!-- human-first: derived artifact — agents regenerate, never cite as ground truth
-     Derived: 2026-08-18
-     Sources: ARCHITECTURE.md, CONTEXT.md -->
+<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-18 · Sources: ARCHITECTURE.md, CONTEXT.md -->
 
 # RuralNative-SKILLS — in plain words
 

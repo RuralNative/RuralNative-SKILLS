@@ -5,9 +5,7 @@
 Every human-first doc opens with this block; the gate reads it for freshness, agents read it for regeneration, humans never need to see it rendered:
 
 ```
-<!-- human-first: derived artifact — agents regenerate, never cite as ground truth
-     Derived: YYYY-MM-DD
-     Sources: <path>, <path> -->
+<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: YYYY-MM-DD · Sources: <path>, <path> -->
 ```
 
 ## Overview

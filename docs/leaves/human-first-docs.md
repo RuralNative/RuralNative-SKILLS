@@ -21,7 +21,9 @@ artifacts, `templates.md` holds the four artifact templates and the derived
 header block, `coherence.md` the prevention stack and the freshness rule.
 `INSTALL.md` covers the install path. The consumption path: sources → derived
 docs → human readers; agents regenerate on source change, humans get plain
-language with one-way bridges into depth.
+language with one-way bridges into depth. The gate extension in
+`scripts/docs-check.sh` enforces read-set absence, one-way links, and derived
+freshness for `docs/human/`, dormant until the tree exists.
 
 ## Non-negotiables
 

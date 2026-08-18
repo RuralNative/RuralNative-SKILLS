@@ -207,7 +207,7 @@ else
       done
     done < "$f"
   done
-  inv_count=$(printf '%s\n' "${inv_ids[@]}" | sort -u | wc -l | tr -d ' ')
+  inv_count=$(printf '%s\n' "${inv_ids[@]}" | wc -l | tr -d ' ')
   [[ $inv_fail -eq 0 ]] && note "invariant: ids unique and references resolve ($inv_count invariants)"
 fi
 
@@ -228,10 +228,12 @@ else
     bad "human docs: a loading-protocol/read-set row names docs/human/"; human_fail=1
   fi
   # Link direction: no markdown link into docs/human/ from outside the tree.
+  # Matches inline links, angle-bracket targets, ../ or ./ or absolute-relative
+  # paths, and reference-style definitions; prose mentions without a link pass.
   mapfile -t OUTSIDE < <({ find docs -path 'docs/human' -prune -o -name '*.md' -type f -print; printf '%s\n' AGENTS.md "$ARCH" CONTEXT.md README.md; find skills -name '*.md' -type f; } | sort)
   for f in "${OUTSIDE[@]}"; do
     [[ -f "$f" ]] || continue
-    if grep -qE '\]\(docs/human/' "$f"; then
+    if grep -qE '\]\(<?((\.\./|\./|/)*docs/human/|(\.\./|\./)+human/)|^\[[^]]+\]:[[:space:]]*<?((\.\./|\./|/)*docs/human/|(\.\./|\./)+human/)' "$f"; then
       bad "human docs: link into docs/human/ from '$f'"; human_fail=1
     fi
   done
@@ -239,12 +241,13 @@ else
   # working tree while its derived doc is untouched, fails.
   if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     for f in "${HUMAN[@]}"; do
-      stamp=$(grep -m1 -oE 'Derived: [0-9]{4}-[0-9]{2}-[0-9]{2}' "$f" | awk '{print $2}')
+      header=$(head -10 "$f")
+      stamp=$(grep -m1 -oE 'Derived: [0-9]{4}-[0-9]{2}-[0-9]{2}' <<<"$header" | awk '{print $2}')
       if [[ -z "$stamp" ]]; then
         bad "human docs: '$f' missing a Derived: YYYY-MM-DD stamp"; human_fail=1
         continue
       fi
-      sources=$(grep -m1 'Sources:' "$f" | sed -E 's/^[[:space:]]*Sources:[[:space:]]*//; s/[[:space:]]*-->[[:space:]]*$//')
+      sources=$(grep 'Sources:' <<<"$header" | sed -E 's/^.*Sources:[[:space:]]*//; s/[[:space:]]*-->[[:space:]]*$//')
       IFS=',' read -ra srcs <<< "$sources"
       for src in "${srcs[@]}"; do
         src="$(sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' <<<"$src")"
@@ -258,6 +261,8 @@ else
         fi
       done
     done
+  else
+    note "human docs: derived freshness skipped (not a git work tree)"
   fi
   [[ $human_fail -eq 0 ]] && note "human docs: ${#HUMAN[@]} docs fresh"
 fi
