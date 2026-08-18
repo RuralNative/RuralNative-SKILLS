@@ -20,4 +20,3 @@ Where to object: the decision journal — big changes land there first.
 Go deeper:
 
 - depth: ARCHITECTURE.md — how the shelf is organised and what lives where
-- depth: CONTEXT.md — the words the project uses and what they mean
