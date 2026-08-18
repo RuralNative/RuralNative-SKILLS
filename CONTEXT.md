@@ -62,3 +62,18 @@ _Avoid_: TODO, known issue
 The official home of debt items — `docs/debt.md`, or per-seam debt sections
 in leaf docs — linked from the index, reviewed in every diff.
 _Avoid_: Backlog, issue list
+
+**Tombstone**:
+A retired invariant kept verbatim in the leaf doc with a pointer to the
+decision that retired it. History survives; the number is never reused.
+_Avoid_: deletion, removal
+
+**Test-encoded invariant**:
+An invariant whose identifier appears literally in a file under the test
+location the seam table declares; the drift test becomes a deletion.
+_Avoid_: covered by tests (a coverage claim, not a marker)
+
+**Prose invariant**:
+An invariant that is not test-encoded; it must carry a justification naming
+the mechanism that keeps it true.
+_Avoid_: unverified invariant

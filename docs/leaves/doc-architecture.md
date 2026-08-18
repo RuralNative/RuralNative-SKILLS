@@ -45,6 +45,8 @@ names, else prose.
 
 - Glossary: `CONTEXT.md` — Skill, skill identity, registry lane.
 - Decision: `docs/adr/0001-distribute-as-public-catalog-shelf.md`.
+- Decision: `docs/adr/0002-adopt-ten-check-gate.md` — the ten-check gate and
+  the invariant lifecycle.
 - Debt registry: `docs/debt.md`.
 - Harness: `scripts/docs-check.sh`.
 - Template: `skills/doc-architecture/reference/templates.md` — the shape this

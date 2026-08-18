@@ -13,3 +13,11 @@ The skills speak in terms of five canonical triage roles. This file maps those r
 When a skill mentions a role (e.g. "apply the AFK-ready triage label"), use the corresponding label string from this table.
 
 Edit the right-hand column to match whatever vocabulary you actually use.
+
+## Workflow-state labels
+
+| Label | Meaning | Transition |
+| --- | --- | --- |
+| `ready-for-dev` | Fully specified, no open blockers, claimable now | Applied at creation |
+| `blocked` | Has at least one open blocker; do not claim | Applied at creation |
+| `unblocked` | Was blocked; last blocker closed; claimable now | Applied by the closer of the final blocker, who also removes `blocked` |

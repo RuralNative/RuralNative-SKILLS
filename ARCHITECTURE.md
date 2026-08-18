@@ -28,6 +28,7 @@ harness check 6. A covered doc must be in the seam table or listed here:
 - docs/agents/issue-tracker.md
 - docs/agents/triage-labels.md
 - docs/adr/0001-distribute-as-public-catalog-shelf.md
+- docs/adr/0002-adopt-ten-check-gate.md
 
 ## Cross-cutting boundaries
 
@@ -53,6 +54,7 @@ parsed from, so they are not listed here.
 | docs/agents/issue-tracker.md | pointer |
 | docs/agents/triage-labels.md | pointer |
 | docs/adr/0001-distribute-as-public-catalog-shelf.md | decision |
+| docs/adr/0002-adopt-ten-check-gate.md | decision |
 | docs/leaves/doc-architecture.md | leaf |
 | docs/debt.md | debt |
 
@@ -65,12 +67,14 @@ parsed from, so they are not listed here.
 
 ## Checks
 
-- `./scripts/docs-check.sh` — the coherence gate: the nine checks of
+- `./scripts/docs-check.sh` — the coherence gate: the ten checks of
   `skills/doc-architecture/reference/harness.md` (coverage ↔ disk, same-diff
   freshness, new-seam-requires-doc, ADR status parse, work-doc expiry,
   seam-table completeness, generated freshness, policy coverage, debt
-  register), plus a scorecard reporting per-seam invariants and debt counts.
-  Checks 7 and 8 are dormant until generated docs and policy docs exist.
-  Run it before finishing; a red harness is a work item, not a warning.
+  register, invariant identifier integrity), plus a scorecard reporting
+  per-seam invariants and debt counts. Checks 7 and 8 are dormant until
+  generated docs and policy docs exist; check 10 is live because the seam
+  leaves declare invariants. Run it before finishing; a red harness is a work
+  item, not a warning.
 - Freshness threshold: 30 days — generated docs older than this fail check 7.
 - The harness is tooling and is exempt from demanding its own doc.

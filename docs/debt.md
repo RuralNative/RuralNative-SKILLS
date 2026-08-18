@@ -33,3 +33,11 @@ Revisit-when: a second agent works in this repo
 What: the two-hop re-orientation read is asserted by construction; no drill
 proves a fresh agent can re-orient from the index alone.
 
+### DEBT-5 — Layout-agnostic gaps in seam discovery
+
+Status: open
+Revisit-when: a seam spans multiple roots or a stray root-level code file
+appears
+What: checks 3 and 6 reason about single directories; seams spanning multiple
+roots and stray root-level code files are not covered by the gate.
+
