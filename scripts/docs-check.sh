@@ -211,6 +211,57 @@ else
   [[ $inv_fail -eq 0 ]] && note "invariant: ids unique and references resolve ($inv_count invariants)"
 fi
 
+# Human-docs extension (spec #28): read-set absence, link direction, and
+# derived freshness for docs/human/. Dormant until the human tree has docs.
+mapfile -t HUMAN < <(find docs/human -name '*.md' -type f 2>/dev/null | sort)
+human_fail=0
+if [[ ${#HUMAN[@]} -eq 0 ]]; then
+  note "human docs: dormant (none yet)"
+else
+  # Read-set absence: no loading-protocol/read-set row names docs/human/.
+  readset_hit=0
+  loading=$(awk '/^## Loading protocol/{f=1; next} /^## /{f=0} f' "$ARCH")
+  [[ -n "$(grep -F 'docs/human/' <<<"$loading")" ]] && readset_hit=1
+  orientation=$(awk '/^## Documentation \(doc-cache\)/{f=1; next} /^## /{f=0} f' AGENTS.md)
+  [[ -n "$(grep -F 'docs/human/' <<<"$orientation")" ]] && readset_hit=1
+  if [[ $readset_hit -eq 1 ]]; then
+    bad "human docs: a loading-protocol/read-set row names docs/human/"; human_fail=1
+  fi
+  # Link direction: no markdown link into docs/human/ from outside the tree.
+  mapfile -t OUTSIDE < <({ find docs -path 'docs/human' -prune -o -name '*.md' -type f -print; printf '%s\n' AGENTS.md "$ARCH" CONTEXT.md README.md; find skills -name '*.md' -type f; } | sort)
+  for f in "${OUTSIDE[@]}"; do
+    [[ -f "$f" ]] || continue
+    if grep -qE '\]\(docs/human/' "$f"; then
+      bad "human docs: link into docs/human/ from '$f'"; human_fail=1
+    fi
+  done
+  # Derived freshness: a source committed after the stamp, or dirty in the
+  # working tree while its derived doc is untouched, fails.
+  if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    for f in "${HUMAN[@]}"; do
+      stamp=$(grep -m1 -oE 'Derived: [0-9]{4}-[0-9]{2}-[0-9]{2}' "$f" | awk '{print $2}')
+      if [[ -z "$stamp" ]]; then
+        bad "human docs: '$f' missing a Derived: YYYY-MM-DD stamp"; human_fail=1
+        continue
+      fi
+      sources=$(grep -m1 'Sources:' "$f" | sed -E 's/^[[:space:]]*Sources:[[:space:]]*//; s/[[:space:]]*-->[[:space:]]*$//')
+      IFS=',' read -ra srcs <<< "$sources"
+      for src in "${srcs[@]}"; do
+        src="$(sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' <<<"$src")"
+        [[ -n "$src" ]] || continue
+        last=$(git log -1 --format=%cd --date=short -- "$src" 2>/dev/null)
+        if [[ -n "$last" && "$last" > "$stamp" ]]; then
+          bad "human docs: '$f' stale — source '$src' committed $last after its Derived stamp $stamp"; human_fail=1
+        fi
+        if [[ -n "$(git status --porcelain -- "$src")" ]] && [[ -z "$(git status --porcelain -- "$f")" ]]; then
+          bad "human docs: '$f' not regenerated although source '$src' is modified"; human_fail=1
+        fi
+      done
+    done
+  fi
+  [[ $human_fail -eq 0 ]] && note "human docs: ${#HUMAN[@]} docs fresh"
+fi
+
 # Scorecard.
 adr_accepted=0; adr_superseded=0; adr_rejected=0
 for f in docs/adr/*.md; do
@@ -250,7 +301,7 @@ if [[ -f "$DEBT_REG" ]]; then
   debt_open=$(grep -cE '^Status: open$' "$DEBT_REG")
   debt_resolved=$(grep -cE '^Status: resolved$' "$DEBT_REG")
 fi
-printf 'scorecard: docs %d/%d (%d%%), seams %d, invariants:%s, ADRs accepted %d / superseded %d / rejected %d, debt open %d / resolved %d\n' \
-  "$covered" "$ondisk" "$pct" "${#SEAMS[@]}" "$inv_list" "$adr_accepted" "$adr_superseded" "$adr_rejected" "$debt_open" "$debt_resolved"
+printf 'scorecard: docs %d/%d (%d%%), seams %d, invariants:%s, ADRs accepted %d / superseded %d / rejected %d, debt open %d / resolved %d, human docs %d\n' \
+  "$covered" "$ondisk" "$pct" "${#SEAMS[@]}" "$inv_list" "$adr_accepted" "$adr_superseded" "$adr_rejected" "$debt_open" "$debt_resolved" "${#HUMAN[@]}"
 
 exit "$fail"

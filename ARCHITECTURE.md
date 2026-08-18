@@ -30,7 +30,10 @@ harness check 6. A covered doc must be in the seam table or listed here:
 - docs/agents/triage-labels.md
 - docs/adr/0001-distribute-as-public-catalog-shelf.md
 - docs/adr/0002-adopt-ten-check-gate.md
+- docs/adr/0003-human-first-derived-artifacts.md
 - docs/leaves/human-first-docs.md
+- docs/human/overview.md
+- docs/human/decision-journal.md
 
 ## Cross-cutting boundaries
 
@@ -57,9 +60,12 @@ parsed from, so they are not listed here.
 | docs/agents/triage-labels.md | pointer |
 | docs/adr/0001-distribute-as-public-catalog-shelf.md | decision |
 | docs/adr/0002-adopt-ten-check-gate.md | decision |
+| docs/adr/0003-human-first-derived-artifacts.md | decision |
 | docs/leaves/doc-architecture.md | leaf |
 | docs/leaves/human-first-docs.md | leaf |
 | docs/debt.md | debt |
+| docs/human/overview.md | human |
+| docs/human/decision-journal.md | human |
 
 ## Loading protocol
 
@@ -80,4 +86,5 @@ parsed from, so they are not listed here.
   leaves declare invariants. Run it before finishing; a red harness is a work
   item, not a warning.
 - Freshness threshold: 30 days — generated docs older than this fail check 7.
+- Human-docs extension: read-set absence, link direction, derived freshness for docs/human/ (spec #28; dormant until the tree exists).
 - The harness is tooling and is exempt from demanding its own doc.

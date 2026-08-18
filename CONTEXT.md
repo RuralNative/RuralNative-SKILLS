@@ -77,3 +77,22 @@ _Avoid_: covered by tests (a coverage claim, not a marker)
 An invariant that is not test-encoded; it must carry a justification naming
 the mechanism that keeps it true.
 _Avoid_: unverified invariant
+
+**Human-first doc**:
+Plain-language documentation for non-technical readers, derived from authored
+docs and excluded from agent read sets.
+_Avoid_: README (when the human tree is meant)
+
+**Derived doc**:
+A doc whose only input is other authored docs, carrying Derived/Sources
+headers; regenerated on source change, never hand-edited against code.
+_Avoid_: generated doc (reserved for code-derived artifacts)
+
+**Decision journal**:
+The append-only plain-language digest of ADRs — the stakeholder intervention
+surface.
+_Avoid_: changelog
+
+**Bridge link**:
+A one-way pointer from a human doc to an AI-first doc for depth.
+_Avoid_: cross-reference (when one-way is meant)
