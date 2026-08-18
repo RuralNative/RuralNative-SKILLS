@@ -22,6 +22,8 @@ consumption path: edit
 the repo → a consumer runs `npx skills add
 RuralNative/RuralNative-SKILLS --skill doc-architecture`. The repo never
 carries its own install — `.agents/` and `skills-lock.json` are ignored.
+The harness in `scripts/docs-check.sh` enforces the ten-check gate defined
+in `reference/harness.md`.
 
 ## Non-negotiables
 

@@ -79,11 +79,12 @@ seams) is code-architecture work, not this skill's job.
    vendor-facts entry are created per the templates in `reference/templates.md`.
    *Done when: the index's coverage table matches the docs on disk.*
 5. **Wire the harness.** Install the change-aware gate from
-   `reference/harness.md` — nine checks: coverage ↔ disk, same-diff
-   freshness, new-seam-requires-doc, decision status parse, work-doc expiry,
-   seam-table completeness, generated freshness, policy coverage, debt
-   register. Hook it into the project's standard check path — a script entry,
-   pre-commit hook, or CI job — so it runs without being remembered.
+   `reference/harness.md` — ten checks: coverage ↔ disk, same-diff freshness,
+   new-seam-requires-doc, decision status parse, work-doc expiry, seam-table
+   completeness, generated freshness, policy coverage, debt register,
+   invariant identifier integrity. Hook it into the project's standard check
+   path — a script entry, pre-commit hook, or CI job — so it runs without
+   being remembered.
    *Done when: the harness fails on a deliberate violation and passes after
    the fix — proven by running both.*
 
@@ -95,7 +96,12 @@ seams) is code-architecture work, not this skill's job.
    *Done when: every documentation file in the repo has a tier.*
 2. **Measure drift.** For authored docs, check claims against code; for
    generated docs, check regeneration timestamps; for work docs, check age
-   against expiry. Name the tier each violation belongs to.
+   against expiry.
+    Measure tier-first: the harness owns the mechanical tiers (pointers,
+    statuses, timestamps, expiry, debt form); spend manual budget on the
+    highest-decay claims — navigational prose and restatements — before slow
+    tiers.
+   Name the tier each violation belongs to.
    *Done when: a numbered findings list exists, each finding with its tier
    and its fix.*
 3. **Route the findings.** Durable facts → their tier (decision → ADR, term →
@@ -121,6 +127,8 @@ seams) is code-architecture work, not this skill's job.
    (with its `_Avoid:` list) in the glossary, new decision in an ADR, new
    limit in the seam's invariants, new debt item (`DEBT-N`) in the debt
    registry.
+    A rule the skill is silent on is born in the repo's official structures —
+    policy, decision record, or glossary — never a side channel.
 3. **Code wins.** On a doc/code conflict: trust the code, fix the doc, flag
    the discrepancy in the change description.
 4. **Supersede, don't rewrite.** A changed decision gets a new ADR; the
