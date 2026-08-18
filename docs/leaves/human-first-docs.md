@@ -16,9 +16,11 @@ enforcement to the adopting repo's gate.
 ## Key files & data flow
 
 `SKILL.md` is the entry point; its frontmatter `name` is the skill identity.
-`reference/` files resolve relative to it. The consumption path: sources →
-derived docs → human readers; agents regenerate on source change, humans get
-plain language with one-way bridges into depth.
+`reference/` files resolve relative to it: `routing.md` maps audiences to
+artifacts, `templates.md` holds the four artifact templates and the derived
+header block. The consumption path: sources → derived docs → human readers;
+agents regenerate on source change, humans get plain language with one-way
+bridges into depth.
 
 ## Non-negotiables
 
