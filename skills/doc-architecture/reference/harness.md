@@ -41,7 +41,7 @@ the conventions policy to avoid infinite regress.
    resolved debt. Trigger maturity is a review act, not a parse — the
    register turns "what is owed?" into a query with an answer.
 10. **Invariant identifier integrity.** Per leaf doc, every `INV-N` number is
-    unique within the seam — duplicates are fatal. Every `INV-N` referenced
+    unique — duplicates are fatal. Every `INV-N` referenced
     from another doc resolves to a live entry in its seam's leaf doc —
     unresolved references are fatal; a tombstoned entry does not satisfy a
     reference. Numbering gaps are not checked: a gate that fails an adopter's

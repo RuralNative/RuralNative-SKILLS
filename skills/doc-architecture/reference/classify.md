@@ -10,7 +10,7 @@ code?"**
 |---|---|---|---|
 | Why is the system shaped this way? | decision | ADR | append-only; supersession; parseable `Status:` |
 | What does this term mean; what's forbidden? | vocabulary | glossary | frozen; changes require a decision |
-| What must not change? (limits, exclusions, contracts) | invariant | seam leaf doc, numbered, 3–5 per seam | test where encodable — the identifier appears literally under the seam's declared test location, so the drift test becomes a deletion; otherwise prose, with a justification naming its mechanism |
+| What must not change? (limits, exclusions, contracts) | invariant | seam leaf doc, numbered, 3–5 at establishment, grows with decisions; audit past ~15 | test where encodable — the identifier appears literally under the seam's declared test location, so the drift test becomes a deletion; otherwise prose, with a justification naming its mechanism |
 | Where does X live? | pointer | index table / conventions | harness: table ↔ disk ↔ directories |
 | What does the code say? (schema, endpoints, structure) | restatement | generated artifact, or absent | regeneration + timestamp gate |
 | What are the cross-cutting rules? | policy | policy doc ≤ 1 page | linked from index; never restated in leaves |

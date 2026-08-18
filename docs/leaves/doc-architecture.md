@@ -23,11 +23,7 @@ the repo → a consumer runs `npx skills add
 RuralNative/RuralNative-SKILLS --skill doc-architecture`. The repo never
 carries its own install — `.agents/` and `skills-lock.json` are ignored.
 The gate's check set is defined in `reference/harness.md`; this repo's
-`scripts/docs-check.sh` enforces it, and its ten checks are immutable. Check 10
-guarantees invariant integrity: ids are unique per leaf doc and every
-reference resolves. The scorecard marks each invariant test-encoded (`enc`)
-when its id appears literally under a path the seam table's Tests column
-names, else prose.
+`scripts/docs-check.sh` enforces it, and its ten checks are immutable.
 
 ## Non-negotiables
 

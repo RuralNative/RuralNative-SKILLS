@@ -97,10 +97,10 @@ seams) is code-architecture work, not this skill's job.
 2. **Measure drift.** For authored docs, check claims against code; for
    generated docs, check regeneration timestamps; for work docs, check age
    against expiry.
-    Measure tier-first: the harness owns the mechanical tiers (pointers,
-    statuses, timestamps, expiry, debt form); spend manual budget on the
-    highest-decay claims — navigational prose and restatements — before slow
-    tiers.
+   Measure tier-first: the harness owns the mechanical tiers (pointers,
+   statuses, timestamps, expiry, debt form); spend manual budget on the
+   highest-decay claims — navigational prose and restatements — before slow
+   tiers.
    Name the tier each violation belongs to.
    *Done when: a numbered findings list exists, each finding with its tier
    and its fix.*
