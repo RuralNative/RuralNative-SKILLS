@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # docs-check.sh — the doc-cache coherence gate for RuralNative-SKILLS.
+# Implements the ten checks of skills/doc-architecture/reference/harness.md.
 # Tooling: exempt from demanding its own doc (see ARCHITECTURE.md, Checks).
 set -u
 
@@ -21,14 +22,14 @@ for f in "${ONDISK[@]}"; do
 done
 [[ $missing -eq 0 && $unlisted -eq 0 ]] && note "coverage: table <-> disk match"
 
-# Seam table (name | root | doc).
-mapfile -t SEAMS < <(awk -F'|' '/^\| / && $4 ~ /skills\// {gsub(/ /,"",$2); gsub(/ /,"",$4); gsub(/ /,"",$6); print $2 "|" $4 "|" $6}' "$ARCH")
+# Seam table (name | root | tests | doc).
+mapfile -t SEAMS < <(awk -F'|' '/^\| / && $4 ~ /skills\// {gsub(/ /,"",$2); gsub(/ /,"",$4); gsub(/ +/," ",$5); gsub(/^ | $/,"",$5); gsub(/ /,"",$6); print $2 "|" $4 "|" $5 "|" $6}' "$ARCH")
 
 # Same-diff freshness (check 2).
 if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   samdiff_fail=0
   for s in "${SEAMS[@]}"; do
-    name="${s%%|*}"; rest="${s#*|}"; root="${rest%%|*}"; doc="${rest#*|}"
+    name="${s%%|*}"; rest="${s#*|}"; root="${rest%%|*}"; rest="${rest#*|}"; doc="${rest#*|}"
     if [[ -n "$(git status --porcelain -- "$root")" ]] && [[ -z "$(git status --porcelain -- "$doc")" ]]; then
       bad "same-diff: '$root' changed but '$doc' did not"; samdiff_fail=1
     fi
@@ -49,7 +50,7 @@ for d in skills/*/; do
   [[ -f "$d/SKILL.md" ]] && grep -qx "name: $name" "$d/SKILL.md" || bad "identity: '$d/SKILL.md' name must equal folder '$name'"
 done
 for s in "${SEAMS[@]}"; do
-  name="${s%%|*}"; rest="${s#*|}"; doc="${rest#*|}"
+  name="${s%%|*}"; doc="${s##*|}"
   [[ -f "$doc" ]] || bad "seam '$name': leaf doc missing — $doc"
 done
 [[ $fail -eq 0 ]] && note "seams: every skills/ dir has a row and a leaf doc"
@@ -74,7 +75,7 @@ note "work docs: none in the repo"
 # labeled non-seam section; every seam code root exists on disk.
 mapfile -t NONSEAM < <(awk '/^## Non-seam docs/{f=1; next} /^## /{f=0} f && /^- / {sub(/^- /,""); gsub(/[[:space:]]/,""); print}' "$ARCH")
 seam_docs=()
-for s in "${SEAMS[@]}"; do rest="${s#*|}"; seam_docs+=("${rest#*|}"); done
+for s in "${SEAMS[@]}"; do seam_docs+=("${s##*|}"); done
 table_fail=0
 for f in "${COVERED[@]}"; do
   if ! grep -qxF "$f" <(printf '%s\n' "${seam_docs[@]}") && ! grep -qxF "$f" <(printf '%s\n' "${NONSEAM[@]}"); then
@@ -165,6 +166,48 @@ else
   note "debt register: dormant (no register yet)"
 fi
 
+# Invariant identifier integrity (check 10): per leaf doc, INV-N ids are
+# unique; every INV-N referenced elsewhere in repo docs resolves to a
+# declared id. Numbering gaps are not checked (gap-lenience).
+inv_ids=(); inv_docs=(); inv_fail=0
+for s in "${SEAMS[@]}"; do
+  doc="${s##*|}"
+  [[ -f "$doc" ]] || continue
+  while IFS= read -r line; do
+    [[ "$line" == *".."* ]] && continue
+    for id in $(grep -oE 'INV-[0-9]+' <<<"$line" | sort -u); do
+      owner=""
+      for j in "${!inv_ids[@]}"; do
+        if [[ "${inv_ids[$j]}" == "$id" ]]; then owner="${inv_docs[$j]}"; break; fi
+      done
+      if [[ -n "$owner" ]]; then
+        bad "invariant: duplicate $id in $doc"; inv_fail=1
+      else
+        inv_ids+=("$id"); inv_docs+=("$doc")
+      fi
+    done
+  done < "$doc"
+done
+if [[ ${#inv_ids[@]} -eq 0 ]]; then
+  note "invariant integrity: dormant (no invariants yet)"
+else
+  mapfile -t INVSCAN < <({ find docs -name '*.md' -type f; printf '%s\n' AGENTS.md ARCHITECTURE.md CONTEXT.md README.md; } | sort)
+  for f in "${INVSCAN[@]}"; do
+    [[ -f "$f" ]] || continue
+    while IFS= read -r line; do
+      [[ "$line" == *".."* ]] && continue
+      for id in $(grep -oE 'INV-[0-9]+' <<<"$line" | sort -u); do
+        declared=""
+        for k in "${!inv_ids[@]}"; do
+          if [[ "${inv_ids[$k]}" == "$id" ]]; then declared=1; break; fi
+        done
+        [[ -n "$declared" ]] || { bad "invariant: '$id' referenced in $f but not declared"; inv_fail=1; }
+      done
+    done < "$f"
+  done
+  [[ $inv_fail -eq 0 ]] && note "invariant: ids unique and references resolve (${#inv_ids[@]} invariants)"
+fi
+
 # Scorecard.
 adr_accepted=0; adr_superseded=0; adr_rejected=0
 for f in docs/adr/*.md; do
@@ -179,10 +222,20 @@ ondisk=${#ONDISK[@]}; covered=${#COVERED[@]}
 [[ $ondisk -gt 0 ]] && pct=$((covered*100/ondisk)) || pct=100
 inv_list=""
 for s in "${SEAMS[@]}"; do
-  name="${s%%|*}"; doc="${s##*|}"
+  name="${s%%|*}"; rest="${s#*|}"; rest="${rest#*|}"; tests="${rest%%|*}"; doc="${s##*|}"
   [[ -f "$doc" ]] || continue
-  for i in $(grep -oE 'INV-[0-9]+' "$doc" | sort -u); do
-    if grep -rqF "$i" scripts 2>/dev/null; then
+  tests_loc=()
+  for t in $(printf '%s' "$tests" | grep -oE '[^[:space:];,]+' | tr -d '`*'); do
+    case "$t" in
+      */*) [[ -e "$t" ]] && tests_loc+=("$t") ;;
+    esac
+  done
+  for i in $(grep -v '\.\.' "$doc" | grep -oE 'INV-[0-9]+' | sort -u); do
+    enc=0
+    for t in "${tests_loc[@]}"; do
+      grep -rqF "$i" "$t" 2>/dev/null && { enc=1; break; }
+    done
+    if (( enc )); then
       inv_list="$inv_list $name:$i(enc)"
     else
       inv_list="$inv_list $name:$i(prose)"
