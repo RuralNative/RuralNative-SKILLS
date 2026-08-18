@@ -68,7 +68,7 @@ turn "is our documentation lying?" into a query with an answer.
 - Directory names are conventional, not sacred: whatever the project calls its
   docs tree, the harness points at it. What must not change are the *checks*:
   coverage, same-diff, new-seam, seam-table, generated, policy, debt, status,
-  expiry.
+  expiry, invariant.
 - If the project has no ADRs yet, check 4 is dormant until the first decision
   is recorded — do not pre-create rules for empty categories. The same
   dormancy applies to check 7 (generated freshness) until a generated doc
