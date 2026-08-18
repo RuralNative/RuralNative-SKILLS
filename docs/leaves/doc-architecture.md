@@ -15,7 +15,9 @@ registry; the repo's own docs coherence to this repo's harness.
 ## Key files & data flow
 
 `SKILL.md` is the entry point; its frontmatter `name` is the skill identity.
-`reference/` files resolve relative to it. The consumption path: edit
+`reference/` files resolve relative to it. `reference/classify.md` is the
+routing table for claims; its Notes govern the invariant lifecycle and the
+birth of missing rules. The consumption path: edit
 `skills/doc-architecture/SKILL.md` → push to main → registry discovery lists
 the repo → a consumer runs `npx skills add
 RuralNative/RuralNative-SKILLS --skill doc-architecture`. The repo never

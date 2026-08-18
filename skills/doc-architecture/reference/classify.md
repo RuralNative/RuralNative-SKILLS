@@ -10,7 +10,7 @@ code?"**
 |---|---|---|---|
 | Why is the system shaped this way? | decision | ADR | append-only; supersession; parseable `Status:` |
 | What does this term mean; what's forbidden? | vocabulary | glossary | frozen; changes require a decision |
-| What must not change? (limits, exclusions, contracts) | invariant | seam leaf doc, numbered, 3–5 per seam | test where encodable — the drift test becomes a deletion |
+| What must not change? (limits, exclusions, contracts) | invariant | seam leaf doc, numbered, 3–5 per seam | test where encodable — the identifier appears literally under the seam's declared test location, so the drift test becomes a deletion; otherwise prose, with a justification naming its mechanism |
 | Where does X live? | pointer | index table / conventions | harness: table ↔ disk ↔ directories |
 | What does the code say? (schema, endpoints, structure) | restatement | generated artifact, or absent | regeneration + timestamp gate |
 | What are the cross-cutting rules? | policy | policy doc ≤ 1 page | linked from index; never restated in leaves |
@@ -42,3 +42,10 @@ code?"**
   acceptable now"; its `Revisit-when:` trigger is the stay-true mechanism.
   Maturity is a review act, not a parse. Resolved entries keep history,
   pointing at the paying change — like ADR supersession.
+- **Invariants have a lifecycle.** Tier declared at birth; retirement is a
+  tombstone (`(Retired — <decision id>)`) tied to a decision — never deleted,
+  never renumbered except recorded duplicate repair.
+- **Missing rules are born in official structures.** When the skill is silent,
+  a new rule lands in the adopting repo's policy, decision record, or glossary
+  — never a side channel; gaps generic enough to recur feed back into this
+  skill.
