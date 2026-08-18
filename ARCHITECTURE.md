@@ -35,6 +35,8 @@ harness check 6. A covered doc must be in the seam table or listed here:
 - docs/leaves/document-for-humans.md
 - docs/human/overview.md
 - docs/human/decision-journal.md
+- docs/human/guardrails.md
+- docs/human/data-flow.md
 
 ## Cross-cutting boundaries
 
@@ -68,6 +70,8 @@ parsed from, so they are not listed here.
 | docs/debt.md | debt |
 | docs/human/overview.md | human |
 | docs/human/decision-journal.md | human |
+| docs/human/guardrails.md | human |
+| docs/human/data-flow.md | human |
 
 ## Loading protocol
 

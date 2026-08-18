@@ -1,0 +1,35 @@
+<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-18 · Sources: docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md -->
+
+# Guardrails — in plain words
+
+The numbered promises each skill makes, said plainly. If your change breaks
+one, the checker goes red. One line per promise.
+
+- The name inside each skill must match its folder name — because the
+  installer keys on that name. (depth: docs/leaves/document-for-agents.md)
+- The one-line install command must keep installing that exact skill —
+  because that command is the front door for every consumer. (depth:
+  docs/leaves/document-for-agents.md)
+- Files inside a skill are referenced by relative path only — because the
+  folder must work wherever it is copied. (depth:
+  docs/leaves/document-for-agents.md)
+- The skill ships through the public registry only — because that is the one
+  official channel. (depth: docs/leaves/document-for-agents.md)
+- Leftovers from a local install are never committed — because they would
+  fake a second distribution channel. (depth:
+  docs/leaves/document-for-agents.md)
+- The name inside the skill must match its folder name — the same front-door
+  rule, kept separately for this skill. (depth:
+  docs/leaves/document-for-humans.md)
+- Plain-language pages are built from written docs only, never by reading
+  code — because summaries made from code rot fastest. (depth:
+  docs/leaves/document-for-humans.md)
+- Every plain-language page says where it came from and when it was made —
+  because an honest age stamp beats a confident guess. (depth:
+  docs/leaves/document-for-humans.md)
+- Depth links point one way, from plain pages into technical pages — because
+  back-links would invite agents to trust summaries. (depth:
+  docs/leaves/document-for-humans.md)
+- Agents rewrite these pages but never treat them as the truth — because
+  writing and trusting are different permissions. (depth:
+  docs/leaves/document-for-humans.md)
