@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # docs-check.sh — the doc-cache coherence gate for RuralNative-SKILLS.
-# Implements the ten checks of skills/doc-architecture/reference/harness.md.
+# Implements the ten checks of skills/document-for-agents/reference/harness.md.
 # Tooling: exempt from demanding its own doc (see ARCHITECTURE.md, Checks).
 set -u
 

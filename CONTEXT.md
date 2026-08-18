@@ -34,7 +34,7 @@ _Avoid_: Monorepo, folder structure
 **Harness**:
 The change-aware docs gate (`scripts/docs-check.sh`) that keeps the doc tree
 coherent. The check set it enforces is defined in
-`skills/doc-architecture/reference/harness.md`.
+`skills/document-for-agents/reference/harness.md`.
 _Avoid_: CI job, docs:check
 
 **Leaf doc**:

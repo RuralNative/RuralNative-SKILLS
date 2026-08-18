@@ -1,6 +1,6 @@
 ## Documentation (doc-cache)
 
-This repo runs the doc-architecture lifecycle on its own docs.
+This repo runs the document-for-agents lifecycle on its own docs.
 
 - Orientation: `AGENTS.md` → `ARCHITECTURE.md` → the seam's leaf doc →
   `CONTEXT.md`.

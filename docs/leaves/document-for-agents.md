@@ -1,4 +1,4 @@
-# Seam: doc-architecture
+# Seam: document-for-agents
 
 ## Purpose
 
@@ -8,7 +8,7 @@ It is published for consumers, not merely hosted here.
 
 ## Scope & boundaries
 
-Owns: the content under `skills/doc-architecture/` — `SKILL.md`, `INSTALL.md`,
+Owns: the content under `skills/document-for-agents/` — `SKILL.md`, `INSTALL.md`,
 `reference/`. Delegates: the shelf layout and registry behavior to the skills
 registry; the repo's own docs coherence to this repo's harness.
 
@@ -18,9 +18,9 @@ registry; the repo's own docs coherence to this repo's harness.
 `reference/` files resolve relative to it; `reference/classify.md`'s Notes
 govern the invariant lifecycle and the birth of missing rules. The
 consumption path: edit
-`skills/doc-architecture/SKILL.md` → push to main → registry discovery lists
+`skills/document-for-agents/SKILL.md` → push to main → registry discovery lists
 the repo → a consumer runs `npx skills add
-RuralNative/RuralNative-SKILLS --skill doc-architecture`. The repo never
+RuralNative/RuralNative-SKILLS --skill document-for-agents`. The repo never
 carries its own install — `.agents/` and `skills-lock.json` are ignored.
 The gate's check set is defined in `reference/harness.md`; this repo's
 `scripts/docs-check.sh` enforces it, and its ten checks are immutable.
@@ -28,7 +28,7 @@ The gate's check set is defined in `reference/harness.md`; this repo's
 ## Non-negotiables
 
 1. **INV-1** — `SKILL.md` frontmatter `name` equals the folder name
-   `doc-architecture`.
+   `document-for-agents`.
 2. **INV-2** — The registry-lane command in `INSTALL.md` installs this seam.
 3. **INV-3** — Reference files resolve relative to `SKILL.md`; no absolute
    paths.
@@ -45,5 +45,5 @@ The gate's check set is defined in `reference/harness.md`; this repo's
   the invariant lifecycle.
 - Debt registry: `docs/debt.md`.
 - Harness: `scripts/docs-check.sh`.
-- Template: `skills/doc-architecture/reference/templates.md` — the shape this
+- Template: `skills/document-for-agents/reference/templates.md` — the shape this
   leaf doc follows (six sections, honest invariant budget, links rule).

@@ -1,5 +1,5 @@
 ---
-name: doc-architecture
+name: document-for-agents
 description: >-
   Run the doc-cache lifecycle for a codebase: establish, audit, or maintain
   architecture documentation so AI agents navigate and modify code accurately.
@@ -11,7 +11,7 @@ description: >-
   documentation system is needed for their workflow.
 ---
 
-# doc-architecture — the doc-cache lifecycle
+# document-for-agents — the doc-cache lifecycle
 
 Documentation is a **cache** of the codebase: it stores what re-deriving from
 code would cost. Caches have a coherence problem — entries go **stale**, and a

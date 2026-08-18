@@ -1,4 +1,4 @@
-<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-18 · Sources: docs/adr/0001-distribute-as-public-catalog-shelf.md, docs/adr/0002-adopt-ten-check-gate.md, docs/adr/0003-human-first-derived-artifacts.md -->
+<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-18 · Sources: docs/adr/0001-distribute-as-public-catalog-shelf.md, docs/adr/0002-adopt-ten-check-gate.md, docs/adr/0003-human-first-derived-artifacts.md, docs/adr/0004-verb-named-skills-flat-shelf.md -->
 
 # Decision journal — in plain words
 
@@ -48,3 +48,18 @@ What it costs you: when a big change lands, this journal is where it shows up
 first, and it is the place to object before the change is final.
 
 Object or discuss: ADR 0003 — the [decision record](https://github.com/RuralNative/RuralNative-SKILLS/blob/main/docs/adr/0003-human-first-derived-artifacts.md) and its [issue](https://github.com/RuralNative/RuralNative-SKILLS/issues/28).
+
+### 2026-08-18 — The skills get verb names, and there is no router
+
+What changed: the two skills were renamed to start with a doing-word and say
+who they serve — document-for-agents and document-for-humans — and the shelf
+stays flat: no parent skill that picks between them.
+
+Why: names that lead with the action are easier to choose correctly, and a
+router skill would cost every session a detour to re-learn what the skill
+descriptions already say for free.
+
+What it costs you: if you installed a skill under its old name, the install
+command changes — reinstall with the new name.
+
+Object or discuss: ADR 0004 — the [decision record](https://github.com/RuralNative/RuralNative-SKILLS/blob/main/docs/adr/0004-verb-named-skills-flat-shelf.md) and its [issue](https://github.com/RuralNative/RuralNative-SKILLS/issues/35).

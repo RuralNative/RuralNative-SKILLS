@@ -1,6 +1,6 @@
 # Debt Registry
 
-Known shortcuts and unfinished pieces, tracked per the doc-architecture debt
+Known shortcuts and unfinished pieces, tracked per the document-for-agents debt
 tier: `DEBT-N` entries with a `Status:` and a `Revisit-when:` trigger. Trigger
 maturity is a review act, not a parse. Linked from `ARCHITECTURE.md`.
 

@@ -4,7 +4,9 @@
 
 What this is: a public shelf of skills for AI coding agents. A skill is a
 ready-made pack of instructions that teaches an agent how to do a job the
-proven way, and anyone can install one and load it into their agent.
+proven way, and anyone can install one and load it into their agent. Every
+skill name starts with the doing-word and says who it serves; the shelf
+currently holds two: document-for-agents and document-for-humans.
 
 Why it exists: an agent starts every session from scratch. Loading a skill
 hands it instructions that already work, so the agent spends its effort on

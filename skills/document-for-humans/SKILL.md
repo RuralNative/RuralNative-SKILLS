@@ -1,5 +1,5 @@
 ---
-name: human-first-docs
+name: document-for-humans
 description: >-
   Create and maintain plain-language, human-facing documentation derived from
   an AI-first doc tree. Use when the user asks for human-readable docs, a
@@ -8,7 +8,7 @@ description: >-
   without ever becoming an agent's source of truth.
 ---
 
-# human-first-docs — plain-language documentation, derived not authored
+# document-for-humans — plain-language documentation, derived not authored
 
 Human-first docs are **derived artifacts**: their only input is the project's
 authored docs — decisions, glossary, seam table, leaf docs, debt registry —

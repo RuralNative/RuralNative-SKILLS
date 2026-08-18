@@ -1,4 +1,4 @@
-# Seam: human-first-docs
+# Seam: document-for-humans
 
 ## Purpose
 
@@ -8,7 +8,7 @@ stories that agents regenerate but never cite as truth.
 
 ## Scope & boundaries
 
-Owns: the content under `skills/human-first-docs/` — `SKILL.md`,
+Owns: the content under `skills/document-for-humans/` — `SKILL.md`,
 `reference/`. Derives from authored docs only — decisions, glossary, seam
 table, leaf docs, debt registry; never parses code. Delegates freshness
 enforcement to the adopting repo's gate.
@@ -28,7 +28,7 @@ freshness for `docs/human/`, dormant until the tree exists.
 ## Non-negotiables
 
 1. **INV-1** — `SKILL.md` frontmatter `name` equals the folder name
-   `human-first-docs`.
+   `document-for-humans`.
 2. **INV-2** — Sources are authored docs only, never code.
 3. **INV-3** — Every human doc carries `Derived:`/`Sources:` headers.
 4. **INV-4** — One-way bridges only: no AI doc links into `docs/human/`.
@@ -41,5 +41,5 @@ freshness for `docs/human/`, dormant until the tree exists.
   journal, bridge link.
 - Decision: `docs/adr/0003-human-first-derived-artifacts.md`.
 - Harness: `scripts/docs-check.sh`.
-- Template: `skills/doc-architecture/reference/templates.md` — the shape this
+- Template: `skills/document-for-agents/reference/templates.md` — the shape this
   leaf doc follows.

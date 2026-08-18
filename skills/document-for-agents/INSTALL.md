@@ -1,6 +1,6 @@
-# Installing doc-architecture
+# Installing document-for-agents
 
-`doc-architecture` is a model-invoked skill: once installed, the agent loads
+`document-for-agents` is a model-invoked skill: once installed, the agent loads
 it automatically when documentation architecture work appears — setting up
 agent-facing docs, diagnosing stale docs, or adding a lightweight ADR process.
 You can also invoke it by name at any time.
@@ -16,7 +16,7 @@ You can also invoke it by name at any time.
 ### Via the skills registry (recommended)
 
 ```bash
-npx skills add RuralNative/RuralNative-SKILLS --skill doc-architecture
+npx skills add RuralNative/RuralNative-SKILLS --skill document-for-agents
 ```
 
 The registry CLI clones the repository, resolves the skill by name, and
@@ -25,7 +25,7 @@ installs it into your agent's standard skills directory.
 ### Manual install (copy-based fallback)
 
 The copy commands below must run from the root of a clone of
-`RuralNative/RuralNative-SKILLS` — the relative path `skills/doc-architecture`
+`RuralNative/RuralNative-SKILLS` — the relative path `skills/document-for-agents`
 only resolves there. Inside an installed skill directory that path does not
 exist, so `cp` fails with `cp: cannot stat ... No such file or directory`.
 Clone first if you have not:
@@ -36,22 +36,22 @@ cd RuralNative-SKILLS
 ```
 
 From that clone's root, copy the folder into your skill directory. The
-destination folder must be named `doc-architecture` and contain `SKILL.md` at
+destination folder must be named `document-for-agents` and contain `SKILL.md` at
 its root, alongside the `reference/` directory:
 
 ```
 # Anthropic Claude Code (user-wide)
-cp -r skills/doc-architecture ~/.claude/skills/doc-architecture
+cp -r skills/document-for-agents ~/.claude/skills/document-for-agents
 
 # Kilo (project scope)
-cp -r skills/doc-architecture .kilo/skills/doc-architecture
+cp -r skills/document-for-agents .kilo/skills/document-for-agents
 
 # Kilo (user-wide)
-cp -r skills/doc-architecture ~/.agents/skills/doc-architecture
+cp -r skills/document-for-agents ~/.agents/skills/document-for-agents
 ```
 
 For other platforms, place `SKILL.md` and `reference/` in whatever location
-your agent loads skills from, keeping the folder name `doc-architecture`.
+your agent loads skills from, keeping the folder name `document-for-agents`.
 
 ## Verify
 

@@ -3,15 +3,15 @@
 A public distribution shelf: a repository that publishes installable agent
 skills. Each skill is a seam under `skills/<skill-identity>/`; the docs tree
 under `docs/` caches what the code cannot express — decisions, vocabulary,
-invariants, conventions. The repo runs the doc-architecture lifecycle on its
+invariants, conventions. The repo runs the document-for-agents lifecycle on its
 own docs.
 
 ## Seams
 
 | Seam | Responsibility | Code root | Tests | Doc |
 |---|---|---|---|---|
-| doc-architecture | publishable agent instructions for the doc-cache lifecycle | skills/doc-architecture/ | install smoke via `npx skills add`; identity == folder check | docs/leaves/doc-architecture.md |
-| human-first-docs | plain-language derived documentation for human stakeholders | skills/human-first-docs/ | gate extension via scripts/docs-check.sh | docs/leaves/human-first-docs.md |
+| document-for-agents | publishable agent instructions for the doc-cache lifecycle | skills/document-for-agents/ | install smoke via `npx skills add`; identity == folder check | docs/leaves/document-for-agents.md |
+| document-for-humans | plain-language derived documentation for human stakeholders | skills/document-for-humans/ | gate extension via scripts/docs-check.sh | docs/leaves/document-for-humans.md |
 
 A new directory under `skills/` is a new seam: it needs a row here, a leaf
 doc, and a `SKILL.md` whose frontmatter `name` matches its folder (harness
@@ -31,7 +31,8 @@ harness check 6. A covered doc must be in the seam table or listed here:
 - docs/adr/0001-distribute-as-public-catalog-shelf.md
 - docs/adr/0002-adopt-ten-check-gate.md
 - docs/adr/0003-human-first-derived-artifacts.md
-- docs/leaves/human-first-docs.md
+- docs/adr/0004-verb-named-skills-flat-shelf.md
+- docs/leaves/document-for-humans.md
 - docs/human/overview.md
 - docs/human/decision-journal.md
 
@@ -61,8 +62,9 @@ parsed from, so they are not listed here.
 | docs/adr/0001-distribute-as-public-catalog-shelf.md | decision |
 | docs/adr/0002-adopt-ten-check-gate.md | decision |
 | docs/adr/0003-human-first-derived-artifacts.md | decision |
-| docs/leaves/doc-architecture.md | leaf |
-| docs/leaves/human-first-docs.md | leaf |
+| docs/adr/0004-verb-named-skills-flat-shelf.md | decision |
+| docs/leaves/document-for-agents.md | leaf |
+| docs/leaves/document-for-humans.md | leaf |
 | docs/debt.md | debt |
 | docs/human/overview.md | human |
 | docs/human/decision-journal.md | human |
@@ -77,7 +79,7 @@ parsed from, so they are not listed here.
 ## Checks
 
 - `./scripts/docs-check.sh` — the coherence gate: the ten checks of
-  `skills/doc-architecture/reference/harness.md` (coverage ↔ disk, same-diff
+  `skills/document-for-agents/reference/harness.md` (coverage ↔ disk, same-diff
   freshness, new-seam-requires-doc, ADR status parse, work-doc expiry,
   seam-table completeness, generated freshness, policy coverage, debt
   register, invariant identifier integrity), plus a scorecard reporting
