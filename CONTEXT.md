@@ -15,6 +15,12 @@ The `name` declared in a skill's `SKILL.md` frontmatter. The registry keys on
 it, and it must equal the folder name the skill lives in.
 _Avoid_: Slug, skill name (when the folder name is meant)
 
+**Skill naming convention**:
+Verb-first, audience-suffixed skill identities — the verb names the job,
+the suffix names who serves or reads (document-for-agents,
+document-for-humans). Per ADR-0004.
+_Avoid_: noun-phrase names (documentation-for-ai), router prefixes (docs/)
+
 **Distribution shelf**:
 The `skills/` directory at the repository root. The registry's discovery
 engine walks this directory to find installable skills.

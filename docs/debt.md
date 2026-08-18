@@ -7,7 +7,7 @@ maturity is a review act, not a parse. Linked from `ARCHITECTURE.md`.
 ### DEBT-1 — Checker under-implemented (5 of 8 checks)
 
 Status: resolved
-Revisit-when: none — paid off by the nine-check gate
+Revisit-when: none — paid off by the ten-check gate (ADR-0002)
 What: the repo's checker enforced five of the rulebook's eight checks, so the
 repo under-practiced its own doctrine. Resolved by implementing checks 6–9 in
 `scripts/docs-check.sh`.
