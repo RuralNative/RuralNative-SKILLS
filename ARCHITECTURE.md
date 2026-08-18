@@ -11,6 +11,7 @@ own docs.
 | Seam | Responsibility | Code root | Tests | Doc |
 |---|---|---|---|---|
 | doc-architecture | publishable agent instructions for the doc-cache lifecycle | skills/doc-architecture/ | install smoke via `npx skills add`; identity == folder check | docs/leaves/doc-architecture.md |
+| human-first-docs | plain-language derived documentation for human stakeholders | skills/human-first-docs/ | gate extension via scripts/docs-check.sh | docs/leaves/human-first-docs.md |
 
 A new directory under `skills/` is a new seam: it needs a row here, a leaf
 doc, and a `SKILL.md` whose frontmatter `name` matches its folder (harness
@@ -29,6 +30,7 @@ harness check 6. A covered doc must be in the seam table or listed here:
 - docs/agents/triage-labels.md
 - docs/adr/0001-distribute-as-public-catalog-shelf.md
 - docs/adr/0002-adopt-ten-check-gate.md
+- docs/leaves/human-first-docs.md
 
 ## Cross-cutting boundaries
 
@@ -56,6 +58,7 @@ parsed from, so they are not listed here.
 | docs/adr/0001-distribute-as-public-catalog-shelf.md | decision |
 | docs/adr/0002-adopt-ten-check-gate.md | decision |
 | docs/leaves/doc-architecture.md | leaf |
+| docs/leaves/human-first-docs.md | leaf |
 | docs/debt.md | debt |
 
 ## Loading protocol
