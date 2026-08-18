@@ -43,3 +43,5 @@ The gate's check set is defined in `reference/harness.md`; this repo's
 - Decision: `docs/adr/0001-distribute-as-public-catalog-shelf.md`.
 - Debt registry: `docs/debt.md`.
 - Harness: `scripts/docs-check.sh`.
+- Template: `skills/doc-architecture/reference/templates.md` — the shape this
+  leaf doc follows (six sections, honest invariant budget, links rule).

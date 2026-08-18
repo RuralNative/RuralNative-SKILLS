@@ -33,11 +33,15 @@ Six sections, 1–2 minute read; longer content moves to a referenced file:
 3. **Key types & files** — by role, not by path; paths go stale.
 4. **Data flow** — one directed walk-through from entry point to resting
    place.
-5. **Non-negotiables** — 3–5 invariants: limits, exclusions, contracts.
-   Specific, single-claim bullets. Tests where encodable. Invariants carry
-   stable identifiers `INV-1..INV-N`; together they form the seam's
-   re-orientation checklist.
-6. **Links** — glossary terms, ADRs, sibling docs, test location.
+5. **Non-negotiables** — 3–5 invariants at establishment; the set grows with
+   decisions. Limits, exclusions, contracts: specific, single-claim bullets.
+   Tests where encodable. Invariants carry stable identifiers `INV-1..INV-N`;
+   retire via tombstone tied to a decision — never delete, never renumber.
+   Audit the read budget: past ~15 invariants, split the seam or fold settled
+   ones into a decision record.
+6. **Links** — glossary terms, ADRs, sibling docs, test location — link where
+   tests live, never what they cover (coverage claims are fast-decay
+   restatements).
 
 ## Index (AGENTS.md or ARCHITECTURE.md)
 
