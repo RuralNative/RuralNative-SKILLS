@@ -57,3 +57,9 @@ separate permissions.
    *Done when: the gate stays green in the diff.*
 2. **New decision ⇒ new journal entry** in the same diff.
    *Done when: the journal links every accepted ADR.*
+
+## Reference
+
+- `reference/routing.md` — audience routing, the derivation contract, tone.
+- `reference/templates.md` — the four artifacts and the derived header.
+- `reference/coherence.md` — the prevention stack and the freshness rule.
