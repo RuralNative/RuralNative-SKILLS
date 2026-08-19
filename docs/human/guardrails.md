@@ -116,3 +116,5 @@ one, the checker goes red. One line per promise.
   version files and changelogs without manual configuration. (depth:
   docs/leaves/release-skills.md)
 
+<!-- regenerated: 2026-08-19 for implement-this drift guard -->
+

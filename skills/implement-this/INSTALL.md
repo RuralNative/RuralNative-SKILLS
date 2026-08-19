@@ -57,8 +57,16 @@ Invoke explicitly:
 
 > /implement-this #100
 
-A healthy run loads `/unslop` before the first progress update, runs `/implement` followed by `/code-review` in order, and places `Issue #100` verbatim in place of `Issue #0` without other substitution. The exact Git commands `git branch --show-current`, `git status --short`, `git fetch origin`, `gh issue edit <n> --add-assignee @me`, `npm ci`, `npm run format && npm test && npm run lint && npx tsc --noEmit && npm run docs:check && npm run build`, `BASE=$(git merge-base origin/main HEAD)`, `git rebase origin/main`, and `git push origin HEAD:main` remain unchanged.
+A healthy run loads `/unslop` before the first progress update, runs `/implement` followed by `/code-review` in order, and places the requested reference in place of `Issue #0` — for example `Issue #100` for `/implement-this #100` — without other substitution, matching the trimmed `SKILL.md`. The exact Git commands `git branch --show-current`, `git status --short`, `git fetch origin`, `gh issue edit <n> --add-assignee @me`, `npm ci`, `npm run format && npm test && npm run lint && npx tsc --noEmit && npm run docs:check && npm run build`, `BASE=$(git merge-base origin/main HEAD)`, `git rebase origin/main`, and `git push origin HEAD:main` remain unchanged.
 
 ## Files
 
 - `SKILL.md` — the fixed implementation prefix, hard-dependency order, issue substitution slot, and boundary.
+
+## Notes
+
+Former wrapper sections — Invocation details, Hard dependencies exposition, Rules preserved summary, Installation, and Boundary — now live only in the leaf doc, this INSTALL guide, and the ADR, not in `SKILL.md`. The trimmed `SKILL.md` contains only frontmatter plus the fixed prefix with the single `Issue #0` substitution point.
+
+### Drift guard
+
+`SKILL.md` must not contain wrapper phrases such as `Rules preserved`, `## Installation`, `## Boundary`, `--- start of supplied`, `This skill is a thin fixed-template adapter`, `## Invocation`, or `## Hard dependencies`. The composition test `skills/implement-this/tests/composition.test.ts` enforces the trimmed shape and fails if any wrapper phrase leaks back. Keep this file and the leaf doc as the single home for wrapper reference material.

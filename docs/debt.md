@@ -41,3 +41,9 @@ appears
 What: checks 3 and 6 reason about single directories; seams spanning multiple
 roots and stray root-level code files are not covered by the gate.
 
+### DEBT-6 — Wrapper parity for review-this-spec
+
+Status: open
+Revisit-when: next adapter trim slice after implement-this and plan-this
+What: `review-this-spec` shares a similar wrapper pattern to the pre-trim `implement-this` and `plan-this` adapters and could be pruned for parity to keep a single home for wrapper material outside `SKILL.md`. No code change in this slice; tracked here and in `docs/leaves/implement-this.md` Further Notes for follow-up.
+

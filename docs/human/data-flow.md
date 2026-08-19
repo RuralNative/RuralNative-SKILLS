@@ -78,3 +78,5 @@ regeneration behind its sources, never ahead of them.
 
 depth: docs/leaves/document-for-agents.md · docs/leaves/document-for-humans.md · docs/leaves/unslopify.md · docs/leaves/plan-this.md · docs/leaves/implement-this.md · docs/leaves/release-skills.md
 
+<!-- regenerated: 2026-08-19 for implement-this drift guard -->
+
