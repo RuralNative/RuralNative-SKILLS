@@ -13,6 +13,7 @@ own docs.
 | document-for-agents | publishable agent instructions for the doc-cache lifecycle | skills/document-for-agents/ | install smoke via `npx skills add`; identity == folder check; composition via `skills/document-for-agents/tests/` | docs/leaves/document-for-agents.md |
 | document-for-humans | plain-language derived documentation for human stakeholders | skills/document-for-humans/ | gate extension via scripts/docs-check.sh; composition via `skills/document-for-humans/tests/` | docs/leaves/document-for-humans.md |
 | unslopify | AI-tell detection and meaning-safe prose revision | skills/unslopify/ | scanner contract via `skills/unslopify/scanner.py` and parity catalog via `skills/unslopify/reference/parity.md`; identity == folder check | docs/leaves/unslopify.md |
+| plan-this | fixed-template planning adapter that applies the planning prefix and delegates to `/grill-with-docs`, `/to-spec`, `/to-tickets`, and `/unslop` | skills/plan-this/ | composition via `skills/plan-this/tests/`; identity == folder check | docs/leaves/plan-this.md |
 
 A new directory under `skills/` is a new seam: it needs a row here, a leaf
 doc, and a `SKILL.md` whose frontmatter `name` matches its folder (harness
@@ -34,6 +35,7 @@ harness check 6. A covered doc must be in the seam table or listed here:
 - docs/adr/0003-human-first-derived-artifacts.md
 - docs/adr/0004-verb-named-skills-flat-shelf.md
 - docs/adr/0005-unslopify-utility-identity-and-hard-dependency.md
+- docs/adr/0006-plan-this-fixed-template-adapter.md
 - docs/leaves/document-for-humans.md
 - docs/human/overview.md
 - docs/human/decision-journal.md
@@ -68,9 +70,11 @@ parsed from, so they are not listed here.
 | docs/adr/0003-human-first-derived-artifacts.md | decision |
 | docs/adr/0004-verb-named-skills-flat-shelf.md | decision |
 | docs/adr/0005-unslopify-utility-identity-and-hard-dependency.md | decision |
+| docs/adr/0006-plan-this-fixed-template-adapter.md | decision |
 | docs/leaves/document-for-agents.md | leaf |
 | docs/leaves/document-for-humans.md | leaf |
 | docs/leaves/unslopify.md | leaf |
+| docs/leaves/plan-this.md | leaf |
 | docs/debt.md | debt |
 | docs/human/overview.md | human |
 | docs/human/decision-journal.md | human |

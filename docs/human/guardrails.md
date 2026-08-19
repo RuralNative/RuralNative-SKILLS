@@ -1,4 +1,4 @@
-<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-19 · Sources: docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md, docs/leaves/unslopify.md -->
+<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-19 · Sources: docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md, docs/leaves/unslopify.md, docs/leaves/plan-this.md -->
 
 # Guardrails — in plain words
 
@@ -80,3 +80,20 @@ one, the checker goes red. One line per promise.
   repository-relative path, and behavior-based composition checks assert README
   routing and install order without locking whole prose passages. (depth:
   docs/leaves/document-for-humans.md)
+- The name inside plan-this must match its folder — the same front-door rule
+  for the workflow adapter. (depth: docs/leaves/plan-this.md)
+- The one-line install for plan-this must keep installing that exact skill
+  with the explicit invocation `/plan-this <task>` preserved as example
+  `/plan-this Create a Next.js App`. (depth: docs/leaves/plan-this.md)
+- The planning template keeps the exact supplied prefix and substitutes only
+  the task under `## Task:`, preserving `ready-for-agent`, dependency names,
+  quotations, and technical meaning, with no router, command files, runtime
+  scripts, or model evals. (depth: docs/leaves/plan-this.md)
+- Hard dependencies are `/unslop`, `/grill-with-docs`, `/to-spec`,
+  `/to-tickets` with workflow order `/grill-with-docs` → `/to-spec` →
+  `/to-tickets` and `/unslop` active before the first progress update; the
+  local `unslopify` stays unchanged. (depth: docs/leaves/plan-this.md)
+- The skill is user-invoked only via `/plan-this <task>` and preserves the
+  concise to-do list, approval gates, vertical-slice ticket design, labels,
+  native dependency edges, and the final ELI18 Why / What / Where / How
+  summary. (depth: docs/leaves/plan-this.md)

@@ -1,4 +1,4 @@
-<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-19 · Sources: docs/adr/0001-distribute-as-public-catalog-shelf.md, docs/adr/0002-adopt-ten-check-gate.md, docs/adr/0003-human-first-derived-artifacts.md, docs/adr/0004-verb-named-skills-flat-shelf.md, docs/adr/0005-unslopify-utility-identity-and-hard-dependency.md -->
+<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-19 · Sources: docs/adr/0001-distribute-as-public-catalog-shelf.md, docs/adr/0002-adopt-ten-check-gate.md, docs/adr/0003-human-first-derived-artifacts.md, docs/adr/0004-verb-named-skills-flat-shelf.md, docs/adr/0005-unslopify-utility-identity-and-hard-dependency.md, docs/adr/0006-plan-this-fixed-template-adapter.md -->
 
 # Decision journal — in plain words
 
@@ -82,3 +82,13 @@ workflow stops with `npx skills add RuralNative/RuralNative-SKILLS --skill
 unslopify`; missing Python does not block because scanning stays advisory.
 
 Object or discuss: ADR 0005 — the [decision record](https://github.com/RuralNative/RuralNative-SKILLS/blob/main/docs/adr/0005-unslopify-utility-identity-and-hard-dependency.md) and its [issue](https://github.com/RuralNative/RuralNative-SKILLS/issues/40).
+
+### 2026-08-19 — Fixed-template workflow adapters for planning and implementation
+
+What changed: two workflow skills, `plan-this` and `implement-this`, joined the shelf as fixed-template adapters. Each preserves its supplied prefix verbatim and substitutes only the task under `## Task:` or the issue reference for `Issue #0`, delegates to its hard dependencies, and stays user-invoked via `/plan-this <task>` and `/implement-this #<n>` with no router or runtime scripts.
+
+Why: pasting long prefixes wastes tokens, weakens prompt caching, and lets workflow rules drift. A thin adapter keeps the process fixed while accepting only the varying input.
+
+What it costs you: the shelf now lists four skills; the naming convention carries a narrow task-scoped exception for these adapters, and `/unslop` stays the external prose dependency.
+
+Object or discuss: ADR 0006 — the [decision record](https://github.com/RuralNative/RuralNative-SKILLS/blob/main/docs/adr/0006-plan-this-fixed-template-adapter.md) and its [issue](https://github.com/RuralNative/RuralNative-SKILLS/issues/51).

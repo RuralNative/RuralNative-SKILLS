@@ -20,8 +20,11 @@ Verb-first, audience-suffixed skill identities — the verb names the job,
 the suffix names who serves or reads (document-for-agents,
 document-for-humans). Per ADR-0004, with a narrow exception for
 audience-neutral utilities such as `unslopify` where one behavior applies
-unchanged across audiences and a suffix would invent a false distinction.
-See ADR-0005.
+unchanged across audiences and a suffix would invent a false distinction
+(ADR-0005), and for task-scoped fixed-template workflow adapters such as
+`plan-this` and `implement-this` where the identity is the user-facing
+slash command and a suffix would obscure the explicit invocation contract.
+See ADR-0006.
 _Avoid_: noun-phrase names (documentation-for-ai), router prefixes (docs/)
 
 **AI tell**:

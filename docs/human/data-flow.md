@@ -1,4 +1,4 @@
-<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-19 · Sources: docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md, docs/leaves/unslopify.md -->
+<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-19 · Sources: docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md, docs/leaves/unslopify.md, docs/leaves/plan-this.md -->
 
 # How information moves — in plain words
 
@@ -63,8 +63,13 @@ one-way Bridge links for depth, and explains or links glossary terms on first
 use. People read those pages, and when they want more, the one-way depth
 links carry them into the technical pages, never the reverse.
 
+The planning adapter flow rides alongside: a user invokes `/plan-this <task>`,
+the skill places the task verbatim under `## Task:` and delegates to
+`/grill-with-docs` → `/to-spec` → `/to-tickets` with `/unslop` active before the
+first progress update, preserving the fixed prefix without extra runtime.
+
 Where information rests: authored knowledge rests in the technical tree;
 plain-language knowledge rests in the human pages, always one honest
 regeneration behind its sources, never ahead of them.
 
-depth: docs/leaves/document-for-agents.md · docs/leaves/document-for-humans.md · docs/leaves/unslopify.md
+depth: docs/leaves/document-for-agents.md · docs/leaves/document-for-humans.md · docs/leaves/unslopify.md · docs/leaves/plan-this.md
