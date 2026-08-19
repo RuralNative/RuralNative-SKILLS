@@ -7,11 +7,14 @@ ready-made pack of instructions that teaches an agent how to do a job the
 proven way, and anyone can install one and load it into their agent. Most
 skill names start with the doing-word and say who they serve; the shelf
 currently holds three: document-for-agents, document-for-humans, and
-unslopify, the audience-neutral utility for cleaning AI tells from prose.
+unslopify, the audience-neutral utility that cleans AI tells from explicit prose
+while keeping meaning, evidence, and tone.
 
 Why it exists: an agent starts every session from scratch. Loading a skill
 hands it instructions that already work, so the agent spends its effort on
-the task instead of rediscovering how the task should be done.
+the task instead of rediscovering how the task should be done. For prose
+cleanup, the caller names the scope, the skill checks only that scope, and
+protected content such as code, links, and verbatim ranges stays untouched.
 
 Who it serves: agent users who install skills from the public registry to get
 reliable, pre-built workflows without building them from scratch each time.

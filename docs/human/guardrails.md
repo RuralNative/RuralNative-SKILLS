@@ -35,14 +35,19 @@ one, the checker goes red. One line per promise.
   docs/leaves/document-for-humans.md)
 - The name inside unslopify must match its folder — the same front-door rule
   for the utility. (depth: docs/leaves/unslopify.md)
-- The 31 upstream patterns map one-to-one to stable `AIT-*` identifiers and the
-  MIT notice ships — because parity must be traceable and legal. (depth:
+- The 31 upstream patterns map to stable `AIT-*` identifiers in six families
+  and the MIT notice ships — because parity must be traceable and legal.
+  (depth: docs/leaves/unslopify.md)
+- Scope stays with the caller and protected content stays byte for byte,
+  verbatim ranges use `<!-- unslopify:off -->`/`<!-- unslopify:on -->` with no
+  nesting, and an unmatched marker stops the pass — because a prose pass must
+  not break code, links, or facts or expand scope on its own. (depth:
   docs/leaves/unslopify.md)
-- Scope stays with the caller and protected content stays byte for byte —
-  because a prose pass must not break code, links, or facts. (depth:
-  docs/leaves/unslopify.md)
-- Only English prose is revised, other languages stay unchanged — because
-  English heuristics would damage them. (depth: docs/leaves/unslopify.md)
-- Scanning is advisory and never blocks the gate — because style signals are
-  clues, not proof. (depth: docs/leaves/unslopify.md)
-
+- Only English prose is revised, other languages stay unchanged, edits are
+  minimal and gated, and every finding reports its identifier, family, span,
+  evidence, confidence, and action — because heuristics must not damage other
+  languages or invent voice. (depth: docs/leaves/unslopify.md)
+- Scanning is advisory and never blocks the gate, the model-only path holds the
+  full contract, and a final preservation audit checks protected content and
+  factual equality — because style signals are clues, not proof, and meaning
+  must survive cleanup. (depth: docs/leaves/unslopify.md)

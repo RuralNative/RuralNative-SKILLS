@@ -4,7 +4,12 @@ Source: https://github.com/cursor/plugins/tree/main/pstack/skills/unslop
 Pinned commit: 99559f2f52047978602ef365589275831e76af07
 
 Each upstream rule maps to one stable local identifier. No upstream number is
-missing or duplicated. Local identifiers are stable and versioned.
+missing or duplicated. Local identifiers are stable and versioned. Extended
+subtle tells add new identifiers in the same six families without reusing
+upstream numbers.
+
+Six families: LEX lexical choice, STR structure and cadence, FMT formatting,
+CONV conversational residue, EVD evidence and claims, VOICE voice or tone.
 
 | Upstream | Pattern | Local identifier | Family | Notes |
 |---|---|---|---|---|
@@ -40,13 +45,40 @@ missing or duplicated. Local identifiers are stable and versioned.
 | 30 | Cut adverbs, or use a stronger verb | AIT-LEX-006 | LEX | Weak verb with adverb |
 | 31 | Prefer the plain word | AIT-LEX-007 | LEX | Formal synonyms |
 
+## Extended subtle tells — same six families, beyond upstream 1..31
+
+These identifiers are stable and add the subtle patterns required for ticket 42.
+They do not reuse upstream numbers.
+
+| Local identifier | Family | Pattern | Notes |
+|---|---|---|---|
+| AIT-STR-009 | STR | Repeated sentence openers | Three or more same openers in a row |
+| AIT-STR-010 | STR | Repeated transition shape | Same transition pattern every paragraph |
+| AIT-STR-011 | STR | Uniform rhythm | Near-identical sentence or paragraph length |
+| AIT-STR-012 | STR | Perfect bullet symmetry | Every bullet same shape and word count |
+| AIT-STR-013 | STR | Heading restatement | First sentence repeats the heading |
+| AIT-STR-014 | STR | Staged introductions | Generic stage-setting opening |
+| AIT-STR-015 | STR | Mechanical section symmetry | Same heading-predicate-example-wrap per section |
+| AIT-EVD-006 | EVD | Empty recaps | Closing that restates intro without new info |
+| AIT-EVD-007 | EVD | Unsupported confidence | Strong claim without evidence |
+| AIT-EVD-008 | EVD | Claim laundering | Model summary presented as fact |
+| AIT-EVD-009 | EVD | Generic benefits | Vague value without mechanism or number |
+| AIT-VOICE-002 | VOICE | False neutrality | Balanced framing when facts support one side |
+| AIT-VOICE-003 | VOICE | Cross-project swap test | Sentence works unchanged in another project |
+
+All extended identifiers match `^AIT-(LEX|STR|FMT|CONV|EVD|VOICE)-[0-9]{3}$`
+and are unique across the combined set.
+
 ## Validation
 
 - Upstream numbers present: 1 through 31 once each, no gaps, no duplicates.
-- Local identifiers: all `AIT-*` identifiers above are stable and unique.
+- Local identifiers: all `AIT-*` identifiers above and in the extended table are stable and unique, matching `^AIT-(LEX|STR|FMT|CONV|EVD|VOICE)-[0-9]{3}$`.
+- Six families cover every upstream rule and every extended subtle tell.
 - Provenance: see `../NOTICE.md` for upstream copyright and MIT permission.
 
 ## Usage
 
 A finding cites its upstream number and local identifier, for example:
 "Upstream 7 (AIT-LEX-002) — AI vocabulary: 'delve' in 'delve into the details'".
+A subtle finding cites its local identifier, for example:
+"AIT-STR-009 — repeated openers: three sentences starting with 'Additionally,'".
