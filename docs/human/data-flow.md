@@ -32,8 +32,9 @@ invariants, derivation rules, and approval gates outrank any style finding. If
 `npx skills add RuralNative/RuralNative-SKILLS --skill unslopify`; missing
 Python does not stop it and the model-only path continues without weakening
 scope or preservation, and installed runtime resolves by skill identity, not by
-a repository-relative path, and composition checks assert README routing and
-install order without locking whole prose passages. The change is pushed to the
+a repository-relative path, and behavior-based composition checks assert README
+routing and install order without locking whole prose passages. The change is
+pushed to the
 shared trunk, where the
 checker runs: it confirms every listed document exists, that changed code
 arrived with its changed summary, and that every plain-language page is at

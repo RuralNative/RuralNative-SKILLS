@@ -53,8 +53,8 @@ repository-relative path.
    catalog-ownership note); dependency visible in `INSTALL.md`; composition
    tests in `skills/document-for-humans/tests/` encode the invariant
    including fixtures that reject code, issues, commits, and human-first docs as
-   sources and checks that README routing and install order hold without locking
-   whole prose passages.
+   sources and behavior-based checks that README routing and install order hold
+   without locking whole prose passages.
 
 ## Links
 

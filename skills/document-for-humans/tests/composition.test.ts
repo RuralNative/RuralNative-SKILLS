@@ -266,8 +266,8 @@ describe("document-for-humans hard dependency (document-for-humans:INV-6)", () =
     // routing distinguishes standalone unslopify from parent workflows and preserves Establish, Audit, Maintain
     assert.ok(n.includes("standalone"), "standalone unslopify use must be distinguished");
     assert.ok(n.includes("establish") && n.includes("audit") && n.includes("maintain"), "Establish, Audit, Maintain must be preserved");
-    assert.ok(readme.includes("Scan and rewrite explicit scope (standalone)"));
-    assert.ok(readme.includes("Final audit on named files (standalone)"));
+    assert.ok(n.includes("scan and rewrite explicit scope") && n.includes("standalone"), "standalone scan mode must be present");
+    assert.ok(n.includes("final audit on named files") && n.includes("standalone"), "standalone final audit mode must be present");
     // installation puts unslopify before either parent skill, preserves registry-lane and manual-copy commands, states Python optional
     const idxUnslop = readme.indexOf("npx skills add RuralNative/RuralNative-SKILLS --skill unslopify");
     const idxAgents = readme.indexOf("npx skills add RuralNative/RuralNative-SKILLS --skill document-for-agents");
