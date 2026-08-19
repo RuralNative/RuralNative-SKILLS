@@ -9,33 +9,41 @@ with a meaning-safe rewrite contract.
 
 ## Scope & boundaries
 
-Owns: the content under `skills/unslopify/` — `SKILL.md`, `NOTICE.md`,
-`INSTALL.md`, `reference/parity.md`. Delegates: documentation lifecycle
-decisions to `document-for-agents`; human-voice derivation to
-`document-for-humans`; scope selection to the caller. The seam does not own
-scanner implementation, language detection beyond English scope, or authorship
+Owns: the content under `skills/unslopify/` — `SKILL.md`, `scanner.py`,
+`NOTICE.md`, `INSTALL.md`, `reference/parity.md`. Delegates: documentation
+lifecycle decisions to `document-for-agents`; human-voice derivation to
+`document-for-humans`; scope selection to the caller. The seam owns the
+optional advisory scanner as repeatable evidence but does not own authorship
 classification. It never expands scope on its own.
 
 ## Key files & data flow
 
 `SKILL.md` is the entry point; its frontmatter `name` is the skill identity.
-`reference/parity.md` maps upstream rules 1..31 to stable local `AIT-*`
-identifiers and defines extended subtle tells in the same six families
-(LEX, STR, FMT, CONV, EVD, VOICE). `NOTICE.md` ships the pinned source commit,
-URL, copyright, and MIT permission. The consumption path: caller provides
-explicit scope or parent-supplied scope including a repository sweep → validate
-`<!-- unslopify:off -->` / `<!-- unslopify:on -->` markers (unmatched stops
-the pass with no partial output) → inventory protected content → scan
+`scanner.py` is the optional advisory scanner that reads explicit text or
+Markdown, masks frontmatter, code, comments, links, valid off ranges, and
+non-English paragraphs before measuring eight signals with stable `AIT-*`
+identifiers and advisory thresholds. `reference/parity.md` maps upstream rules
+1..31 to stable local `AIT-*` identifiers and defines extended subtle tells in
+the same six families (LEX, STR, FMT, CONV, EVD, VOICE). `NOTICE.md` ships the
+pinned source commit, URL, copyright, and MIT permission. The consumption path:
+caller provides explicit scope or parent-supplied scope including a repository
+sweep → validate `<!-- unslopify:off -->` / `<!-- unslopify:on -->` markers
+(unmatched stops the pass with no partial output) → inventory protected content
+and mask it plus non-English for scanning → if Python is present run the
+advisory scanner for repeatable evidence, otherwise continue model-only → scan
 candidates across six families → judge each candidate in context, rejecting
 exact technical terms, quotations, and domain vocabulary → rewrite only
 supported spans with minimal edits, preserving English-only passages → self-audit
-and preservation audit → publish completion report with accepted findings,
-rejected candidates, scanner availability, protected-content status, and
-needs-info items. The registry discovery walks `skills/unslopify/` and a
-consumer runs `npx skills add RuralNative/RuralNative-SKILLS --skill
+and preservation audit that confirms protected-content byte equality and factual
+equality → publish completion report with accepted findings, rejected
+candidates, scanner availability, protected-content status, and needs-info
+items. Findings carry path, line span, excerpt, evidence, measured value,
+threshold, and confidence; the scanner emits human text by default and stable
+versioned JSON at `1.0`. The registry discovery walks `skills/unslopify/` and
+a consumer runs `npx skills add RuralNative/RuralNative-SKILLS --skill
 unslopify`. The repo never carries its own install — `.agents/` and
 `skills-lock.json` are ignored. Model-only path holds the full contract when
-Python is absent.
+Python is absent, and scanner thresholds never fail the gate.
 
 ## Non-negotiables
 
@@ -71,15 +79,24 @@ Python is absent.
    prose invariant — SKILL scope states non-English remains unchanged and no
    translation occurs, rewrite contract and candidate section enforce minimal
    context-aware edits and finding format.
-5. **INV-5** — Optional advisory scanning remains advisory: a measurable
-   scanner may report findings with evidence but never rewrites files or fails
-   the gate because a style signal was found; the model-only path completes the
-   full contract when Python is absent. The completion report also names
-   rejected findings, scanner availability, protected-content status, and
+5. **INV-5** — Optional advisory scanning remains advisory and hash-stable: the
+   Python 3 scanner at `skills/unslopify/scanner.py` uses only the standard
+   library, performs no network access, masks protected Markdown, non-English,
+   and valid off ranges, emits text or stable versioned JSON `1.0` with
+   `AIT-*` identifiers, path, line span, excerpt, evidence, measured value,
+   threshold, and confidence for stock phrases, repeated openers, repeated
+   transitions, punctuation and bold density, sentence and paragraph uniformity,
+   and canned openings or endings, returns `0` for findings and `1`–`4` for
+   invalid input, unmatched markers, parse failure, or internal failure with no
+   partial JSON, never writes source so before-and-after hashes match, and
+   thresholds never fail the gate. Scanner absence falls back to the model-only
+   workflow without weakening scope or preservation. The completion report also
+   names rejected findings, scanner availability, protected-content status, and
    unresolved `needs-info` items, and a final preservation audit checks
-   protected-content equality and factual equality. Mechanism: prose invariant
-   — SKILL preserves model-only path and NOTICE declares no network or CI
-   blocking, plus preservation audit section.
+   protected-content equality and factual equality. Mechanism: scanner present
+   in `skills/unslopify/scanner.py` and parsed by contract tests; SKILL
+   advisory section and prose invariant preserve model-only path and advisory
+   thresholds.
 
 ## Links
 

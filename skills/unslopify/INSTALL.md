@@ -8,8 +8,10 @@ also invoke it by name at any time.
 ## Requirements
 
 - A codebase or document set with prose you want to clean.
-- Nothing else. The skill has no dependencies, no runtime, no language or
-  framework requirements. It works on any prose you name.
+- Optional: Python 3 for the advisory scanner at `skills/unslopify/scanner.py`
+  (standard library only, no network, no install). When Python is absent the
+  skill runs the same meaning-safe workflow model-only without weakening scope
+  or preservation rules.
 
 ## Install
 
@@ -65,8 +67,25 @@ A healthy run scans the explicit scope, reports findings with upstream and
 It does not claim authorship detection and it leaves non-English passages and
 protected content unchanged.
 
+## Optional scanner
+
+When Python 3 is available, run the repeatable advisory scan before rewriting:
+
+```bash
+python3 skills/unslopify/scanner.py docs/example.md
+python3 skills/unslopify/scanner.py --json docs/example.md | python3 -m json.tool
+```
+
+The scanner emits human text by default and stable versioned JSON with
+`--json`. Every finding carries its `AIT-*` identifier, family, line span,
+excerpt, evidence, measured value, threshold, and confidence. Thresholds are
+advisory and never fail the repository gate. A valid scan exits `0` even with
+findings; invalid input, unmatched `unslopify:off` ranges, parse failure, and
+internal failures exit `1`–`4` with no partial JSON.
+
 ## Files
 
-- `SKILL.md` — the four-step workflow and 31 pattern families.
+- `SKILL.md` — the workflow, pattern catalog, and advisory scanner contract.
+- `scanner.py` — optional Python 3 scanner (stdlib only, no network, never writes source).
 - `reference/parity.md` — parity catalog mapping upstream 1..31 to `AIT-*`.
 - `NOTICE.md` — upstream source, pinned commit, copyright, and MIT permission.

@@ -48,8 +48,12 @@ completion report instead of continuing.
 
 ## Process
 
-1. Resolve scope and inventory protected content. Validate verbatim markers.
-2. Scan candidates. Judge each candidate in context for the patterns below.
+1. Resolve scope and inventory protected content. Validate verbatim markers. If
+   `python3` and `skills/unslopify/scanner.py` are available, run the advisory
+   scan for repeatable evidence; if Python is absent, continue model-only.
+2. Scan candidates. Judge each candidate in context for the patterns below,
+   using scanner evidence as advisory input when present and rejecting it where
+   context demands.
 3. Rewrite only spans supported by an accepted finding. Keep edits minimal.
 4. Add soul only when requested or already present in the source voice (see below).
 5. Self-audit and preservation audit. Publish the completion report.
@@ -195,16 +199,68 @@ The completion report states:
 - preservation audit result
 - changed spans and changed-line ratio
 
+## Optional advisory scanner
+
+A Python 3 scanner at `skills/unslopify/scanner.py` provides repeatable
+evidence for measurable signals. It uses only the standard library, performs
+no network access, and never writes source files. A before-and-after content
+hash stays identical for every scan.
+
+Usage:
+
+- Explicit inputs: `python3 skills/unslopify/scanner.py file.md` or
+  `cat file.md | python3 skills/unslopify/scanner.py --stdin-path file.md`
+- Human text: default (no flag) prints `path:line — [AIT-*] family — evidence — excerpt (measured, threshold, confidence)`
+- Stable JSON: `--json` or `--format json` emits `{ version, schema_version, findings[], summary }` where each finding carries `id, family, path, line_start, line_end, excerpt, evidence, measured_value, threshold, confidence` and `summary` marks `advisory: true`
+- Version: `--version` prints `unslopify scanner 1.0 (schema 1.0)`
+
+Signals covered with advisory thresholds:
+
+- Stock phrases `AIT-LEX-002` when weighted phrase count crosses 2
+- Repeated sentence openers `AIT-STR-009` when three consecutive sentences share the same opener
+- Repeated transition shape `AIT-STR-010` when three consecutive paragraphs share the same starter
+- Punctuation density `AIT-FMT-001` for em dash count at 3 and `AIT-FMT-002` for colon count at 8
+- Bold-label density `AIT-FMT-003` for bold span count at 5 and `AIT-FMT-004` for inline-header labels at 2
+- Sentence-length uniformity `AIT-STR-011` when coefficient of variation drops below 0.25
+- Paragraph-length uniformity `AIT-STR-011` when paragraph CV drops below 0.30
+- Canned openings `AIT-STR-014` and endings `AIT-EVD-005` for known stage-setting phrases
+
+Masking before measurement: frontmatter, fenced code, inline code, HTML
+comments, link destinations, and every `<!-- unslopify:off -->` to
+`<!-- unslopify:on -->` range are replaced with spaces to preserve line
+spans, and non-English paragraphs are skipped entirely. An unmatched or nested
+marker stops the scan with a distinct nonzero exit and no partial JSON.
+
+When to use scanner evidence: treat countable findings as a starting point.
+Confirm the excerpt is visible prose, check the line span, and verify the
+measured value against the threshold.
+
+When to reject it: a technical term that is exact in context, prose inside a
+quotation or verbatim range, non-English text, or a style the project
+explicitly permits outranks a threshold. Thresholds are advisory in v1 and
+never fail the gate. Record the rejection reason in the completion report.
+
+Exit contract:
+
+- `0` findings exist or not. Valid prose always succeeds.
+- `1` invalid input such as a missing file or empty stdin.
+- `2` unmatched or nested verbatim markers.
+- `3` parse failure reading a file.
+- `4` internal failure.
+- Valid scans never emit partial JSON on failure. Errors go to stderr.
+
 ## Model-only path
 
 The model-only path completes the full contract when Python is absent. No scanner
 is required. Context review, protected-content checks, English-only handling,
 minimal edits, and the preservation audit still hold. Scanner presence may improve
-evidence consistency but never changes protection guarantees.
+evidence consistency but never changes protection guarantees, scope, or
+preservation rules.
 
 When a Python scanner is present, it is advisory only. It reports measurable
 signals with evidence and never rewrites files or fails the gate because a style
-signal was found.
+signal was found. Do not weaken scope or skip preservation checks when the
+scanner is absent.
 
 ## Preservation audit
 

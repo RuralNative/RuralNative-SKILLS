@@ -13,8 +13,10 @@ while keeping meaning, evidence, and tone.
 Why it exists: an agent starts every session from scratch. Loading a skill
 hands it instructions that already work, so the agent spends its effort on
 the task instead of rediscovering how the task should be done. For prose
-cleanup, the caller names the scope, the skill checks only that scope, and
-protected content such as code, links, and verbatim ranges stays untouched.
+cleanup, the caller names the scope, the skill checks only that scope,
+protected content such as code, links, and verbatim ranges stays untouched,
+and an optional Python scanner can add repeatable evidence without writing
+source or blocking the gate.
 
 Who it serves: agent users who install skills from the public registry to get
 reliable, pre-built workflows without building them from scratch each time.

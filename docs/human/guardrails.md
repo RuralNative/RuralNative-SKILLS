@@ -47,7 +47,9 @@ one, the checker goes red. One line per promise.
   minimal and gated, and every finding reports its identifier, family, span,
   evidence, confidence, and action — because heuristics must not damage other
   languages or invent voice. (depth: docs/leaves/unslopify.md)
-- Scanning is advisory and never blocks the gate, the model-only path holds the
-  full contract, and a final preservation audit checks protected content and
-  factual equality — because style signals are clues, not proof, and meaning
-  must survive cleanup. (depth: docs/leaves/unslopify.md)
+- Scanning is advisory, hash-stable, and never blocks the gate, the scanner
+  masks protected regions and non-English before measuring eight repeatable
+  signals with versioned JSON and advisory thresholds, absent Python falls back
+  model-only without weakening scope, and a final preservation audit checks
+  protected content and factual equality — because style signals are clues, not
+  proof, and meaning must survive cleanup. (depth: docs/leaves/unslopify.md)
