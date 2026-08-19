@@ -58,7 +58,11 @@ Invoke explicitly:
 
 > /plan-this Create a Next.js App
 
-A healthy run loads `/unslop` before the first progress update, runs `/grill-with-docs` → `/to-spec` → `/to-tickets` in order, and places the task `Create a Next.js App` verbatim under `## Task:` without other substitution.
+A healthy run loads `/unslop` before the first progress update and keeps it active throughout `/grill-with-docs` → `/to-spec` → `/to-tickets`, runs those three delegated skills in order, and places the full task `Create a Next.js App` verbatim under `## Task:` without truncation or other substitution — matching the trimmed `SKILL.md` body exactly (workflow line, `## Rules:` with eight bullets, final `**Why / What / Where / How**` line, and single `## Task:` slot).
+
+## Drift guard
+
+Former wrapper sections — Invocation details, Hard dependencies exposition, Rules preserved summary, Installation and discovery, and Boundary — now live only in `docs/leaves/plan-this.md`, this `INSTALL.md`, and `docs/adr/0006-plan-this-fixed-template-adapter.md`, not in `SKILL.md`. `SKILL.md` must stay within 18–35 lines including frontmatter (~21, target ~25-35) and must not contain wrapper phrases `Rules preserved`, `## Installation`, `## Boundary`, `--- start of supplied`, or `This skill is a thin fixed-template adapter`. The composition test in `skills/plan-this/tests/composition.test.ts` enforces this bound and the negative checks.
 
 ## Files
 

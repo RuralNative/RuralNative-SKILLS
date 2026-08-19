@@ -47,3 +47,18 @@ Status: open
 Revisit-when: next adapter trim slice after implement-this and plan-this
 What: `review-this-spec` shares a similar wrapper pattern to the pre-trim `implement-this` and `plan-this` adapters and could be pruned for parity to keep a single home for wrapper material outside `SKILL.md`. No code change in this slice; tracked here and in `docs/leaves/implement-this.md` Further Notes for follow-up.
 
+### DEBT-7 — implement-this wrapper parity with plan-this trim
+
+Status: open
+Revisit-when: next fixed-template adapter grooming slice
+What: `implement-this` at 83 lines still carries the pre-trim wrapper pattern
+that `plan-this` had before #55 — title intro, Invocation, Hard dependencies,
+Rules preserved summary, Installation and discovery, and Boundary — duplicated
+from reference material already in its leaf, INSTALL, and ADR. It should be
+pruned to the same trimmed shape (~25-35 lines including frontmatter, workflow
+line plus Rules plus `## Ticket Issue #0` slot) with leaf/INSTALL/ADR as the
+single home for wrapper reference and with negative composition guards for
+`Rules preserved`, `## Installation`, `## Boundary`, and marker phrases. An
+optional `review-this-spec` slice would share the same pattern if introduced.
+This slice (#57) tracks the debt without editing `implement-this`.
+
