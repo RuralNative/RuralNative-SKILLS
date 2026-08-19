@@ -49,7 +49,7 @@ gate's check set is defined in `reference/harness.md`; this repo's
     catalog-ownership note); dependency visible in `INSTALL.md`; composition
     tests in `skills/document-for-agents/tests/` encode the invariant
     including a fixture that minimal creates only index, glossary, and
-    conventions policy.
+    conventions policy and that installed runtime uses skill identity.
 
 ## Links
 

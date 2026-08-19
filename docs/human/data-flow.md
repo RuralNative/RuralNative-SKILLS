@@ -31,7 +31,8 @@ invariants, derivation rules, and approval gates outrank any style finding. If
 `unslopify` is absent the parent workflow stops before user-visible prose with
 `npx skills add RuralNative/RuralNative-SKILLS --skill unslopify`; missing
 Python does not stop it and the model-only path continues without weakening
-scope or preservation. The change is pushed to the shared trunk, where the
+scope or preservation, and installed runtime resolves by skill identity, not by
+a repository-relative path. The change is pushed to the shared trunk, where the
 checker runs: it confirms every listed document exists, that changed code
 arrived with its changed summary, and that every plain-language page is at
 least as new as the documents it was made from. If any of that is false, the

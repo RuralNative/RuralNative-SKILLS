@@ -1,0 +1,24 @@
+{
+  "minimal": [
+    "AGENTS.md",
+    "ARCHITECTURE.md",
+    "CONTEXT.md",
+    "conventions.md"
+  ],
+  "notInMinimal": [
+    "docs/leaves/",
+    "docs/adr/",
+    "generated/",
+    "scripts/docs-check.sh",
+    "scorecard"
+  ],
+  "standard_adds": [
+    "docs/leaves/",
+    "docs/adr/"
+  ],
+  "full_adds": [
+    "scripts/docs-check.sh",
+    "generated/",
+    "scorecard"
+  ]
+}

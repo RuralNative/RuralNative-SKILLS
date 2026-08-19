@@ -40,7 +40,7 @@ model-only without weakening scope or preservation. Before publishing or
 marking complete, run the final `unslopify` audit on the exact prose the
 reader will see and record scope, accepted and rejected findings, scanner
 availability, protected-content status, and preservation result. The `AIT-*`
-catalog lives in `unslopify`, see its parity reference, it is not copied here.
+catalog lives in `unslopify`, see its parity reference, it is not copied here. Installed runtime resolves `unslopify` by skill identity, not by a repository-relative path.
 
 ## Principles: every branch obeys these
 

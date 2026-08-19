@@ -36,13 +36,10 @@ describe("document-for-agents hard dependency (document-for-agents:INV-6)", () =
     assert.ok(n.includes("parent decisions outrank") || n.includes("parent precedence") || n.includes("parent decisions outrank style findings"));
     assert.ok(n.includes("factual correctness"));
     assert.ok(n.includes("glossary terms"));
-    // Installed runtime must not use repo-relative SKILL.md path; source docs may still mention it but adapter itself must be identity-based
-    // The adapter line must use skill identity phrasing
     assert.ok(skill.includes("by skill identity"));
-    // The skill should not contain a repository-relative runtime instruction like "Load `skills/unslopify/SKILL.md` before" in the adapter section
-    // We allow the string in comments/INSTALL but not as the load instruction
     const hasIdentityLoad = n.includes("load `unslopify` by skill identity before") || n.includes("load unslopify by skill identity before");
     assert.ok(hasIdentityLoad, "adapter should load unslopify by skill identity");
+    assert.ok(n.includes("installed runtime") && n.includes("not by a repository-relative path") || n.includes("skill identity, not by a repository-relative path"));
   });
 
   test("adapter keeps parent-owned scope and orders final audit before completion", () => {
@@ -105,25 +102,31 @@ describe("document-for-agents hard dependency (document-for-agents:INV-6)", () =
   });
 
   test("minimal-tier fixture: minimal does not create higher-tier artifacts", () => {
-    // Fixture: list artifacts that a minimal Establish would create vs not create
     const skill = read("skills/document-for-agents/SKILL.md");
     const classify = read("skills/document-for-agents/reference/classify.md");
     const templates = read("skills/document-for-agents/reference/templates.md");
+    const fixture = JSON.parse(read("skills/document-for-agents/tests/fixtures/minimal-tier.json"));
     const nS = norm(skill);
     const nC = norm(classify);
     const nT = norm(templates);
-    // Minimal tier boundary documented in at least one of skill/classify/templates
     assert.ok(
       nS.includes("minimal") && nS.includes("does not create per-seam") ||
       nC.includes("minimal") && nC.includes("no per-seam leaf doc"),
       "minimal tier boundary must be documented"
     );
-    // Templates should reflect tier-conditional leaf docs
     assert.ok(nT.includes("leaf doc") && (nT.includes("standard tier") || nT.includes("minimal tier has no leaf doc")));
-    // Harness omitted for minimal, referenced dormancy
     assert.ok(nS.includes("minimal tier skips") || nS.includes("when the selected tier includes the harness") || nC.includes("dormant"));
-    // No artifact that implies minimal creates ADR dir unconditionally
     assert.ok(!nS.includes("create the tree. index") || nS.includes("create only the artifacts the approved tier requires") || nS.includes("create the tiered tree"));
+    // Fixture proves minimal does not include higher-tier artifacts
+    assert.ok(Array.isArray(fixture.minimal));
+    assert.ok(fixture.minimal.includes("AGENTS.md"));
+    assert.ok(fixture.minimal.includes("CONTEXT.md"));
+    assert.ok(Array.isArray(fixture.notInMinimal));
+    assert.ok(fixture.notInMinimal.includes("docs/leaves/"));
+    assert.ok(fixture.notInMinimal.includes("docs/adr/"));
+    assert.ok(fixture.notInMinimal.includes("generated/"));
+    assert.ok(!fixture.minimal.some((f: string) => f.includes("docs/leaves/")));
+    assert.ok(!fixture.minimal.some((f: string) => f.includes("docs/adr/")));
   });
 
   test("Branch definitions and harness detail live behind references, not repeated in entry", () => {

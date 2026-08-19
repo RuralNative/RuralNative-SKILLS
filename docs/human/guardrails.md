@@ -60,7 +60,8 @@ one, the checker goes red. One line per promise.
   with `npx skills add RuralNative/RuralNative-SKILLS --skill unslopify`
   while missing Python does not and the workflow continues model-only without
   weakening scope or preservation, and the skill does not copy the `AIT-*`
-  catalog and installed runtime does not depend on a repository-relative path.
+  catalog and installed runtime resolves by skill identity, not by a
+  repository-relative path.
   (depth: docs/leaves/document-for-agents.md)
 - The human-docs skill loads `unslopify` before interview questions, progress
   prose, derived drafts, comments, issues, and summaries and audits again
