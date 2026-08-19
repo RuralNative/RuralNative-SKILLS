@@ -103,21 +103,9 @@ one, the checker goes red. One line per promise.
   skill with the explicit invocation `/implement-this #<n>` preserved as
   example `Issue #100` in place of `Issue #0`. (depth:
   docs/leaves/implement-this.md)
-- The implementation template keeps the exact supplied prefix and substitutes
-  only the issue reference in place of `Issue #0`, preserving exact Git
-  commands, `ready-for-agent`, `AGENTS.md`, `docs/agents/issue-tracker.md`,
-  dependency names, quotations, and technical meaning, with no router, command
-  files, runtime scripts, or model evals. (depth:
-  docs/leaves/implement-this.md)
-- Hard dependencies are `/unslop`, `/implement`, and `/code-review` with
-  workflow order `/implement` → `/code-review` and `/unslop` active before the
-  first progress update; the local `unslopify` stays unchanged. (depth:
-  docs/leaves/implement-this.md)
-- The skill is user-invoked only via `/implement-this #<n>` and preserves
-  worktree checks, ticket authority, claiming, verification, documentation,
-  review, rebase, push, issue comment, label removal, and closure with the
-  final ELI18 Why / What / Where / How summary. (depth:
-  docs/leaves/implement-this.md)
+- The implementation template keeps the exact supplied prefix verbatim after frontmatter and substitutes only the issue reference in place of `Issue #0`, preserving exact Git commands, `ready-for-agent`, `AGENTS.md`, `docs/agents/issue-tracker.md`, `Issue #0`, `/tmp/kilo`, dependency names, quotations, and technical meaning, with no wrapper phrases `Rules preserved`, `## Installation`, `## Boundary`, `--- start of supplied`, and no router, command files, runtime scripts, or model evals. (depth: docs/leaves/implement-this.md)
+- Hard dependencies are `/unslop`, `/implement`, and `/code-review` with workflow order `/implement` → `/code-review` and `/unslop` active before the first progress update, declared via the prefix plus frontmatter description, not a separate Hard dependencies section; the local `unslopify` stays unchanged. (depth: docs/leaves/implement-this.md)
+- The skill is user-invoked only via `/implement-this #<n>` and preserves worktree checks, ticket authority, claiming, verification, documentation, review, rebase, push, issue comment, label removal, and closure with the final ELI18 Why / What / Where / How summary, without requiring a separate `## Rules preserved` section. (depth: docs/leaves/implement-this.md)
 - The name inside release-skills must match its folder — the same front-door
   rule for the release workflow. (depth: docs/leaves/release-skills.md)
 - The release workflow is invoked via release trigger phrases and auto-detects
