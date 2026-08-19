@@ -49,3 +49,12 @@ code?"**
   a new rule lands in the adopting repo's policy, decision record, or glossary
   — never a side channel; gaps generic enough to recur feed back into this
   skill.
+
+- **Sizing controls artifact set.** Minimal fits a repo one session can hold:
+  index, glossary, one conventions policy. No per-seam leaf doc, ADR directory,
+  generated-doc directory, or harness yet. Standard adds a leaf doc per seam and
+  ADRs as decisions land. Full adds the harness, generated artifacts, and
+  scorecard. A dormant category creates no file and its harness checks stay
+  dormant. Cross the threshold only on verified need: more seams, durable
+  decisions, or a coordination cost that the check would have caught.
+

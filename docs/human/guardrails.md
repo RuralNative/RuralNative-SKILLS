@@ -54,12 +54,14 @@ one, the checker goes red. One line per promise.
   weakening scope, and a final preservation audit checks protected content and
   factual equality — because style signals are clues, not proof, and meaning
   must survive cleanup. (depth: docs/leaves/unslopify.md)
-- The documentation skill loads `unslopify` before interview questions, drafts,
-  comments, issues, and summaries and audits again before publishing — parent
-  scope and parent decisions outrank style fixes, missing `unslopify` stops the
-  workflow with `npx skills add RuralNative/RuralNative-SKILLS --skill
-  unslopify` while missing Python does not, and the skill does not copy the
-  `AIT-*` catalog. (depth: docs/leaves/document-for-agents.md)
+- The documentation skill loads `unslopify` by skill identity before any
+  user-visible prose and audits again before publication, parent scope and
+  parent decisions outrank style fixes, missing `unslopify` stops the workflow
+  with `npx skills add RuralNative/RuralNative-SKILLS --skill unslopify`
+  while missing Python does not and the workflow continues model-only without
+  weakening scope or preservation, and the skill does not copy the `AIT-*`
+  catalog and installed runtime does not depend on a repository-relative path.
+  (depth: docs/leaves/document-for-agents.md)
 - The human-docs skill loads `unslopify` before interview questions, progress
   prose, derived drafts, comments, issues, and summaries and audits again
   before publishing — parent scope (routine passes changed sources, an audit may

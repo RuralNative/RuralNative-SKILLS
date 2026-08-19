@@ -15,14 +15,14 @@ registry; the repo's own docs coherence to this repo's harness.
 ## Key files & data flow
 
 `SKILL.md` is the entry point; its frontmatter `name` is the skill identity.
-`reference/` files resolve relative to it; `reference/classify.md`'s Notes
-govern the invariant lifecycle and the birth of missing rules. The
-consumption path: edit
-`skills/document-for-agents/SKILL.md` → push to main → registry discovery lists
-the repo → a consumer runs `npx skills add
+`reference/` files resolve relative to it; `reference/classify.md` governs
+sizing, tier routing, and the invariant lifecycle, `reference/harness.md`
+defines the gate, `reference/templates.md` holds the artifact shapes. The
+consumption path: edit `skills/document-for-agents/SKILL.md` then push to
+main, registry discovery lists the repo, a consumer runs `npx skills add
 RuralNative/RuralNative-SKILLS --skill document-for-agents`. The repo never
-carries its own install — `.agents/` and `skills-lock.json` are ignored.
-The gate's check set is defined in `reference/harness.md`; this repo's
+carries its own install, `.agents/` and `skills-lock.json` are ignored. The
+gate's check set is defined in `reference/harness.md`; this repo's
 `scripts/docs-check.sh` enforces it, and its ten checks are immutable.
 
 ## Non-negotiables
@@ -36,19 +36,20 @@ The gate's check set is defined in `reference/harness.md`; this repo's
     install is a convenience, not a channel (ADR-0001).
 5. **INV-5** — This repo's own install artifacts (`.agents/`,
     `skills-lock.json`) are never committed.
-6. **INV-6** — `unslopify` loads before any user-visible prose and audits it
-    again before publication; parent scope and parent decisions outrank prose
-    rewrites; missing `unslopify` stops the workflow with the exact
-    registry-lane install instruction `npx skills add
+6. **INV-6** — `unslopify` loads by skill identity before any user-visible
+    prose and audits again before publication; parent scope and parent
+    decisions outrank prose rewrites; missing `unslopify` stops the workflow
+    with the exact registry-lane install instruction `npx skills add
     RuralNative/RuralNative-SKILLS --skill unslopify`, missing Python does not
-    stop it; the skill does not copy the `AIT-*` catalog. Mechanism:
-    hard dependency declared in `SKILL.md` load order (interview questions,
-    progress prose, drafts, comments, issues, final summaries), final-audit
-    order, parent-owned scope (routine passes changed prose, an audit may sweep),
-    precedence rule (factual correctness, tier routing, glossary, invariants,
-    derivation rules, approval gates), missing-dependency stop, and
-    catalog-ownership note; dependency visible in `INSTALL.md`; composition
-    tests in `skills/document-for-agents/tests/` encode the invariant.
+    stop it and the workflow continues model-only without weakening scope or
+    preservation; the skill does not copy the `AIT-*` catalog and installed
+    runtime does not depend on a repository-relative path. Mechanism:
+    short adapter in `SKILL.md` (skill-identity load, parent-owned scope,
+    precedence, missing-dependency stop, model-only path, final audit,
+    catalog-ownership note); dependency visible in `INSTALL.md`; composition
+    tests in `skills/document-for-agents/tests/` encode the invariant
+    including a fixture that minimal creates only index, glossary, and
+    conventions policy.
 
 ## Links
 

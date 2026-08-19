@@ -22,9 +22,9 @@ Threshold: a decision earns an ADR when it changes what a future agent is
 allowed to assume — boundaries, contracts, security, data model, conventions.
 Reversible trivia stays in the commit message.
 
-## Leaf doc (one per seam)
+## Leaf doc (one per seam, standard tier and above)
 
-Six sections, 1–2 minute read; longer content moves to a referenced file:
+Six sections, 1–2 minute read; longer content moves to a referenced file. Minimal tier has no leaf doc; the index seam table lists the code root and tests and the leaf doc appears only at standard and above.
 
 1. **Purpose** — why the seam exists, in glossary vocabulary; link the ADR
    if one constrains it.

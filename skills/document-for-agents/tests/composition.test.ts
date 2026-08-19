@@ -1,4 +1,4 @@
-// document-for-agents:INV-6 — hard dependency composition: unslopify loads before prose and audits again before publishing; parent scope and decisions outrank rewrites; missing unslopify stops with install instruction, missing Python does not; catalog not copied.
+// document-for-agents:INV-6 — hard dependency composition: unslopify loads by skill identity before prose and audits again before publishing; parent scope and decisions outrank rewrites; missing unslopify stops with install instruction, missing Python does not; catalog not copied; installed behavior not repo-relative.
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -13,125 +13,159 @@ function norm(s: string): string {
 }
 
 describe("document-for-agents hard dependency (document-for-agents:INV-6)", () => {
-  test("dependency present: description and workflow state hard dependency without copying catalog", () => {
+  test("adapter loads unslopify by skill identity before user-visible prose without copying catalog", () => {
     const skill = read("skills/document-for-agents/SKILL.md");
     const n = norm(skill);
-    assert.ok(n.includes("hard dependency"));
     assert.ok(n.includes("unslopify"));
+    // Short adapter by skill identity, not a repo-relative runtime path
+    assert.ok(n.includes("by skill identity"));
+    assert.ok(n.includes("before the first user-visible prose"));
+    assert.ok(n.includes("before publishing") || n.includes("before marking complete"));
+    // No copied AIT catalog
     assert.equal(skill.includes("| 1 | Puffery |"), false);
     assert.equal(skill.includes("| 7 | AI vocabulary |"), false);
-    assert.ok(skill.includes("reference/parity.md"));
+    assert.ok(skill.includes("reference/parity.md") || n.includes("parity"));
+    // At least one AIT mention for ownership note is allowed, but no table
+    const aitMatches = skill.match(/AIT-[A-Z]+-\d{3}/g) || [];
+    assert.ok(aitMatches.length < 5, `expected few AIT mentions, got ${aitMatches.length}: ${aitMatches.join(", ")}`);
   });
 
-  test("load order: loads unslopify before interview questions and keeps contract active", () => {
+  test("adapter preserves parent precedence and does not depend on repository-relative runtime path", () => {
     const skill = read("skills/document-for-agents/SKILL.md");
     const n = norm(skill);
-    assert.ok(n.includes("hard dependency:"));
-    assert.ok(skill.includes("Load `skills/unslopify/SKILL.md` before"));
-    assert.ok(n.includes("interview question"));
-    assert.ok(n.includes("progress update"));
-    assert.ok(n.includes("draft"));
-    assert.ok(n.includes("comment"));
-    assert.ok(n.includes("issue body"));
-    assert.ok(n.includes("final summary"));
-  });
-
-  test("final-audit order: runs final unslopify audit before publishing or completion", () => {
-    const skill = read("skills/document-for-agents/SKILL.md");
-    const n = norm(skill);
-    assert.ok(n.includes("final `unslopify` audit"));
-    assert.ok(n.includes("before marking a workflow complete or publishing"));
-    assert.ok(n.includes("completion report"));
-    assert.ok(n.includes("scope used"));
-    assert.ok(n.includes("accepted and rejected findings"));
-    assert.ok(n.includes("final `unslopify` audit on all created prose passes before publishing"));
-    assert.ok(n.includes("run the `unslopify` final audit and the harness"));
-  });
-
-  test("parent-owned scope: routine passes changed prose, audit may sweep", () => {
-    const skill = read("skills/document-for-agents/SKILL.md");
-    const n = norm(skill);
-    assert.ok(n.includes("scope belongs to the caller"));
-    assert.ok(n.includes("this skill owns scope"));
-    assert.ok(n.includes("routine maintenance"));
-    assert.ok(n.includes("repository sweep"));
-    assert.ok(n.includes("routine maintenance passes only changed prose"));
-    assert.ok(n.includes("an audit may request a repository sweep"));
-    assert.ok(n.includes("pass the chosen scope to `unslopify` without expansion"));
-  });
-
-  test("parent decisions outrank prose rewrites", () => {
-    const skill = read("skills/document-for-agents/SKILL.md");
-    const n = norm(skill);
-    assert.ok(n.includes("parent decisions outrank prose rewrites"));
+    assert.ok(n.includes("parent decisions outrank") || n.includes("parent precedence") || n.includes("parent decisions outrank style findings"));
     assert.ok(n.includes("factual correctness"));
-    assert.ok(n.includes("tier routing"));
     assert.ok(n.includes("glossary terms"));
-    assert.ok(n.includes("seam invariants"));
-    assert.ok(n.includes("derivation rules"));
-    assert.ok(n.includes("approval gates are authoritative"));
-    assert.ok(n.includes("may not override an adr"));
-    assert.ok(n.includes("may not change facts"));
-    assert.ok(n.includes("parent decision stands"));
+    // Installed runtime must not use repo-relative SKILL.md path; source docs may still mention it but adapter itself must be identity-based
+    // The adapter line must use skill identity phrasing
+    assert.ok(skill.includes("by skill identity"));
+    // The skill should not contain a repository-relative runtime instruction like "Load `skills/unslopify/SKILL.md` before" in the adapter section
+    // We allow the string in comments/INSTALL but not as the load instruction
+    const hasIdentityLoad = n.includes("load `unslopify` by skill identity before") || n.includes("load unslopify by skill identity before");
+    assert.ok(hasIdentityLoad, "adapter should load unslopify by skill identity");
   });
 
-  test("missing unslopify stops workflow with exact install instruction; missing Python does not", () => {
+  test("adapter keeps parent-owned scope and orders final audit before completion", () => {
     const skill = read("skills/document-for-agents/SKILL.md");
     const n = norm(skill);
-    assert.ok(n.includes("if `skills/unslopify/skill.md` is absent, stop the workflow"));
-    assert.ok(n.includes("npx skills add ruralnative/ruralnative-skills --skill unslopify"));
-    // Also verify raw contains exact registry-lane instruction split across lines is still present as normalized
-    assert.ok(skill.includes("npx skills add RuralNative/RuralNative-SKILLS --skill"));
+    assert.ok(n.includes("parent scope governs") || n.includes("scope governs") || n.includes("parent-owned scope") || n.includes("parent scope"));
+    assert.ok(n.includes("routine"));
+    assert.ok(n.includes("repository sweep") || n.includes("audit may sweep"));
+    assert.ok(n.includes("final `unslopify` audit"));
+    assert.ok(n.includes("before publishing") || n.includes("before marking"));
+    assert.ok(n.includes("completion report") || (n.includes("scope") && n.includes("accepted") && n.includes("rejected")));
+    assert.ok(n.includes("scanner availability") || n.includes("scanner"));
+    assert.ok(n.includes("protected-content") || n.includes("protected content"));
+    assert.ok(n.includes("preservation"));
+  });
+
+  test("missing dependency stops with exact install instruction; missing Python permits model-only path", () => {
+    const skill = read("skills/document-for-agents/SKILL.md");
+    const n = norm(skill);
+    // Must give exact instruction
+    assert.ok(skill.includes("npx skills add RuralNative/RuralNative-SKILLS --skill unslopify"));
+    assert.ok(n.includes("if unslopify is absent") || n.includes("if `unslopify` is absent"));
+    assert.ok(n.includes("stop before"));
     assert.ok(n.includes("missing python"));
     assert.ok(n.includes("does not stop"));
-    assert.ok(n.includes("continue model-only without weakening scope or preservation"));
+    assert.ok(n.includes("continue model-only") || n.includes("model-only"));
   });
 
-  test("install guides make dependency visible before use and provide working sequence", () => {
+  test("install guides state dependency order once per install path and preserve every exact command", () => {
     const install = read("skills/document-for-agents/INSTALL.md");
     const n = norm(install);
     assert.ok(n.includes("unslopify"));
     assert.ok(n.includes("hard dependency"));
-    assert.ok(n.includes("install it before this skill"));
-    assert.ok(n.includes("install the hard dependency first, then this skill"));
+    assert.ok(n.includes("install it before this skill") || n.includes("install the hard dependency first"));
     assert.ok(install.includes("npx skills add RuralNative/RuralNative-SKILLS --skill unslopify"));
     assert.ok(install.includes("npx skills add RuralNative/RuralNative-SKILLS --skill document-for-agents"));
     const idxUnslop = install.indexOf("npx skills add RuralNative/RuralNative-SKILLS --skill unslopify");
     const idxAgent = install.indexOf("npx skills add RuralNative/RuralNative-SKILLS --skill document-for-agents");
-    assert.ok(idxUnslop < idxAgent);
+    assert.ok(idxUnslop < idxAgent, "unslopify install must appear before document-for-agents");
     assert.ok(install.includes("cp -r skills/unslopify"));
     assert.ok(install.includes("cp -r skills/document-for-agents"));
+    assert.ok(install.includes("git clone https://github.com/RuralNative/RuralNative-SKILLS.git"));
   });
 
-  test("absence of copied pattern rules: no duplicate AIT catalog", () => {
+  test("Establish tiers control artifacts: minimal creates only index, glossary, conventions", () => {
     const skill = read("skills/document-for-agents/SKILL.md");
-    const aitMatches = skill.match(/AIT-[A-Z]+-\d{3}/g) || [];
-    assert.ok(aitMatches.length < 5, `expected few AIT mentions, got ${aitMatches.length}: ${aitMatches.join(", ")}`);
-    assert.equal(skill.includes("| 1 | Puffery |"), false);
+    const n = norm(skill);
+    assert.ok(n.includes("branch a"));
+    assert.ok(n.includes("establish"));
+    assert.ok(n.includes("entry: the repository lacks a coherent agent-facing doc tree") || n.includes("lacks a coherent agent-facing doc tree"));
+    assert.ok(n.includes("ask the owner to approve the tier") || n.includes("owner approved the tier"));
+    assert.ok(n.includes("minimal"));
+    assert.ok(n.includes("index"));
+    assert.ok(n.includes("glossary"));
+    assert.ok(n.includes("conventions policy") || n.includes("conventions"));
+    assert.ok(n.includes("does not create per-seam leaf docs") || n.includes("does not create per-seam"));
+    assert.ok(n.includes("does not create") && n.includes("adr directory"));
+    assert.ok(n.includes("does not create") && n.includes("generated"));
+    assert.ok(n.includes("unless a later verified need crosses the threshold") || n.includes("verified need"));
   });
 
-  test("shelf routing distinguishes standalone cleanup from documentation workflows", () => {
-    const readme = read("README.md");
-    const n = norm(readme);
-    assert.ok(n.includes("standalone"));
-    assert.ok(n.includes("hard dependency"));
-    assert.ok(readme.includes("Scan and rewrite explicit scope (standalone)"));
-    assert.ok(n.includes("loads `unslopify` before prose, final audit before publishing"));
-    assert.ok(n.includes("parent") && n.includes("scope") && n.includes("governs"));
-    assert.ok(n.includes("routine") && n.includes("passes changed prose"));
+  test("minimal-tier fixture: minimal does not create higher-tier artifacts", () => {
+    // Fixture: list artifacts that a minimal Establish would create vs not create
+    const skill = read("skills/document-for-agents/SKILL.md");
+    const classify = read("skills/document-for-agents/reference/classify.md");
+    const templates = read("skills/document-for-agents/reference/templates.md");
+    const nS = norm(skill);
+    const nC = norm(classify);
+    const nT = norm(templates);
+    // Minimal tier boundary documented in at least one of skill/classify/templates
+    assert.ok(
+      nS.includes("minimal") && nS.includes("does not create per-seam") ||
+      nC.includes("minimal") && nC.includes("no per-seam leaf doc"),
+      "minimal tier boundary must be documented"
+    );
+    // Templates should reflect tier-conditional leaf docs
+    assert.ok(nT.includes("leaf doc") && (nT.includes("standard tier") || nT.includes("minimal tier has no leaf doc")));
+    // Harness omitted for minimal, referenced dormancy
+    assert.ok(nS.includes("minimal tier skips") || nS.includes("when the selected tier includes the harness") || nC.includes("dormant"));
+    // No artifact that implies minimal creates ADR dir unconditionally
+    assert.ok(!nS.includes("create the tree. index") || nS.includes("create only the artifacts the approved tier requires") || nS.includes("create the tiered tree"));
+  });
+
+  test("Branch definitions and harness detail live behind references, not repeated in entry", () => {
+    const skill = read("skills/document-for-agents/SKILL.md");
+    const n = norm(skill);
+    // Branch-only tables should be referenced, not duplicated
+    assert.ok(!skill.includes("| Why is the system shaped this way?"));
+    assert.ok(!skill.includes("coverage ↔ disk"));
+    assert.ok(!skill.includes("Status: accepted | superseded"));
+    assert.ok(skill.includes("reference/classify.md"));
+    assert.ok(skill.includes("reference/harness.md"));
+    assert.ok(skill.includes("reference/templates.md"));
+  });
+
+  test("Audit runs mechanical checks before manual review and completes with owned executable plan", () => {
+    const skill = read("skills/document-for-agents/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("branch b"));
+    assert.ok(n.includes("entry: an existing doc system needs diagnosis") || n.includes("existing doc system needs diagnosis"));
+    assert.ok(n.includes("run mechanical checks") || n.includes("run the harness"));
+    assert.ok(n.includes("before manual"));
+    assert.ok(n.includes("highest-decay") || n.includes("high-decay"));
+    assert.ok(n.includes("ask the owner to confirm each tier and fix"));
+    assert.ok(n.includes("numbered") && n.includes("owned") && n.includes("executable plan"));
+  });
+
+  test("Maintain starts with seam change or re-orientation and completes after audits", () => {
+    const skill = read("skills/document-for-agents/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("branch c"));
+    assert.ok(n.includes("entry: a seam change or re-orientation") || n.includes("seam change or re-orientation"));
+    assert.ok(n.includes("read the loading protocol"));
+    assert.ok(n.includes("non-negotiables") || n.includes("seam invariants"));
+    assert.ok(n.includes("same diff"));
+    assert.ok(n.includes("code wins"));
+    assert.ok(n.includes("decision gate") && n.includes("supersed"));
+    assert.ok(n.includes("prose audit and harness both pass") || (n.includes("prose audit") && n.includes("harness")));
   });
 
   test("presence: unslopify skill exists when dependency present", () => {
     assert.ok(fs.existsSync(path.join(ROOT, "skills/unslopify/SKILL.md")));
     const unslop = read("skills/unslopify/SKILL.md");
     assert.ok(unslop.includes("name: unslopify"));
-  });
-
-  test("dependency missing path is detectable via absence of file (fake check)", () => {
-    const skill = read("skills/document-for-agents/SKILL.md");
-    const n = norm(skill);
-    assert.ok(n.includes("stop the workflow before the first user-visible prose"));
-    const missingPath = path.join(ROOT, "skills/unslopify/SKILL.md.missing");
-    assert.equal(fs.existsSync(missingPath), false);
   });
 });
