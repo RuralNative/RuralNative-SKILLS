@@ -74,4 +74,6 @@ one, the checker goes red. One line per promise.
   while missing Python does not and the workflow continues model-only without
   weakening scope or preservation, and the skill does not copy the `AIT-*`
   catalog and installed runtime resolves by skill identity, not by a
-  repository-relative path. (depth: docs/leaves/document-for-humans.md)
+  repository-relative path, and composition checks assert README routing and
+  install order without locking whole prose passages. (depth:
+  docs/leaves/document-for-humans.md)

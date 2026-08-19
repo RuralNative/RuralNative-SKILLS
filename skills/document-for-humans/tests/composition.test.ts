@@ -254,4 +254,44 @@ describe("document-for-humans hard dependency (document-for-humans:INV-6)", () =
       return norm(routing).includes("english-only") || norm(coherence).includes("english-only");
     }
   });
+
+  test("README routing, workflow, installation and requirements are single-source and behavior-checked", () => {
+    const readme = read("README.md");
+    const n = norm(readme);
+    // one of each section: routing, workflow, installation, requirements
+    assert.ok(readme.includes("## Which skill, when"), "routing section must exist");
+    assert.ok(readme.includes("## AI-First Workflow Integration"), "workflow section must exist");
+    assert.ok(readme.includes("## Getting Started"), "installation section must exist");
+    assert.ok(readme.includes("## Technical Requirements"), "requirements section must exist");
+    // routing distinguishes standalone unslopify from parent workflows and preserves Establish, Audit, Maintain
+    assert.ok(n.includes("standalone"), "standalone unslopify use must be distinguished");
+    assert.ok(n.includes("establish") && n.includes("audit") && n.includes("maintain"), "Establish, Audit, Maintain must be preserved");
+    assert.ok(readme.includes("Scan and rewrite explicit scope (standalone)"));
+    assert.ok(readme.includes("Final audit on named files (standalone)"));
+    // installation puts unslopify before either parent skill, preserves registry-lane and manual-copy commands, states Python optional
+    const idxUnslop = readme.indexOf("npx skills add RuralNative/RuralNative-SKILLS --skill unslopify");
+    const idxAgents = readme.indexOf("npx skills add RuralNative/RuralNative-SKILLS --skill document-for-agents");
+    const idxHumans = readme.indexOf("npx skills add RuralNative/RuralNative-SKILLS --skill document-for-humans");
+    assert.ok(idxUnslop !== -1 && idxAgents !== -1 && idxHumans !== -1, "registry commands must be present");
+    assert.ok(idxUnslop < idxAgents && idxUnslop < idxHumans, "unslopify must appear before either parent skill");
+    assert.ok(readme.includes("cp -r skills/unslopify"), "manual copy must include unslopify");
+    assert.ok(readme.includes("cp -r skills/document-for-agents"));
+    assert.ok(readme.includes("cp -r skills/document-for-humans"));
+    assert.ok(readme.indexOf("cp -r skills/unslopify") < readme.indexOf("cp -r skills/document-for-agents"), "manual copy order must put unslopify first");
+    assert.ok(n.includes("missing python") && n.includes("does not stop"), "Python optional must be stated");
+    // runtime guidance invokes unslopify by skill identity, not repository-relative path
+    assert.ok(n.includes("by skill identity"), "runtime must invoke by skill identity");
+    assert.ok(n.includes("not by a repository-relative path"));
+    assert.ok(!readme.includes("Load `skills/unslopify/SKILL.md` before"), "must not teach repository-relative runtime path");
+    // no repeated long dependency block in shelf or elsewhere
+    const longBlock = (readme.match(/Requires `unslopify` before any user-visible prose/g) || []).length;
+    assert.ok(longBlock <= 0, "repeated long dependency block must not appear");
+    // other sections point instead of repeating: shelf and rule paragraph point to sections
+    assert.ok(n.includes("see getting started") || n.includes("see installation"), "shelf or routing must point to installation");
+    assert.ok(n.includes("see technical requirements") || n.includes("see requirements"), "must point to requirements");
+    assert.ok(n.includes("see ai-first workflow integration") || n.includes("see workflow"), "must point to workflow");
+    // stale checks: no minimal-tier rule that creates everything, no issue/commit as allowed source, no old runtime path
+    assert.ok(!readme.includes("journal decisions from commit"), "stale journal from commits must not appear");
+    assert.ok(!n.includes("requires `unslopify` before any user-visible prose and again before publishing") || longBlock === 0, "long block should be removed");
+  });
 });
