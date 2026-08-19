@@ -49,7 +49,13 @@ The people-side flow rides on top: the technical summaries, the decision
 records, and the shared dictionary are the ingredients; an agent cooks them
 into the plain-language pages — the overview, the decision journal, the
 rules page, this story — and stamps each page with where it came from and
-when. People read those pages, and when they want more, the one-way depth
+when. Those ingredients are authored docs only — decisions, glossary, seam
+table, leaf docs, debt registry — never code, and never issues, commit
+messages, or human-first docs. An issue stays a discussion link and a repo
+without an accepted ADR leaves the journal dormant instead of mining commits.
+Each derived page carries valid `Derived:` and `Sources:` headers, uses
+one-way Bridge links for depth, and explains or links glossary terms on first
+use. People read those pages, and when they want more, the one-way depth
 links carry them into the technical pages, never the reverse.
 
 Where information rests: authored knowledge rests in the technical tree;

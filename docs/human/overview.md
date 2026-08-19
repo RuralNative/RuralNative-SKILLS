@@ -18,15 +18,17 @@ cleanup, the caller names the scope, the skill checks only that scope,
 protected content such as code, links, and verbatim ranges stays untouched,
 and an optional Python scanner can add repeatable evidence without writing
 source or blocking the gate. For documentation work, `document-for-agents` and
-`document-for-humans` load `unslopify` before the first user-visible prose,
-keep its contract active while drafting, and run a final audit before
-publishing; parent scope and parent decisions outrank style fixes, missing
-`unslopify` stops the workflow with `npx skills add
+`document-for-humans` load `unslopify` by skill identity before the first
+user-visible prose, keep its contract active while drafting, and run a final
+audit before publishing; parent scope and parent decisions outrank style fixes,
+missing `unslopify` stops the workflow with `npx skills add
 RuralNative/RuralNative-SKILLS --skill unslopify` and missing Python does not
-stop it, and the catalog is never copied into the parent skills. Standalone
-cleanup uses explicit human-provided scope; under a parent the parent's chosen
-scope governs — routine work passes changed prose, an audit may sweep the
-repository.
+stop it and the workflow continues model-only without weakening scope or
+preservation, the catalog is never copied into the parent skills, and installed
+runtime resolves by skill identity, not by a repository-relative path.
+Standalone cleanup uses explicit human-provided scope; under a parent the
+parent's chosen scope governs — routine work passes changed prose, an audit may
+sweep the repository.
 
 Who it serves: agent users who install skills from the public registry to get
 reliable, pre-built workflows without building them from scratch each time.

@@ -1,0 +1,11 @@
+{
+  "allowedSources": ["ADRs", "glossary", "seam table", "leaf docs", "debt registry"],
+  "forbiddenSources": ["code", "issues", "commit messages", "human-first docs"],
+  "decisionJournal": {
+    "allowedSources": ["the ADR it digests"],
+    "forbiddenEvidence": ["linked issue", "commit message"],
+    "discussionLink": "an issue may appear as a discussion link but it is not evidence and does not appear as a derivation source"
+  },
+  "journalDormancy": "A repository without an accepted ADR does not derive journal claims from commit messages. It records the decision in the authored tree first or leaves the journal category dormant.",
+  "dormantArtifacts": ["capabilities catalog"]
+}

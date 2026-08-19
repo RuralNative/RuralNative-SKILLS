@@ -22,8 +22,10 @@ one, the checker goes red. One line per promise.
   rule, kept separately for this skill. (depth:
   docs/leaves/document-for-humans.md)
 - Plain-language pages are built from written docs only, never by reading
-  code — because summaries made from code rot fastest. (depth:
-  docs/leaves/document-for-humans.md)
+  code, issues, commit messages, or human-first docs — because summaries made
+  from those rot fastest, an issue is only a discussion link and not evidence,
+  and a repo without an accepted ADR leaves the journal dormant instead of
+  mining commits. (depth: docs/leaves/document-for-humans.md)
 - Every plain-language page says where it came from and when it was made —
   because an honest age stamp beats a confident guess. (depth:
   docs/leaves/document-for-humans.md)
@@ -63,12 +65,13 @@ one, the checker goes red. One line per promise.
   catalog and installed runtime resolves by skill identity, not by a
   repository-relative path.
   (depth: docs/leaves/document-for-agents.md)
-- The human-docs skill loads `unslopify` before interview questions, progress
-  prose, derived drafts, comments, issues, and summaries and audits again
-  before publishing — parent scope (routine passes changed sources, an audit may
-  sweep) and parent decisions (factual correctness, tier routing, derivation
-  rules, glossary, invariants, approval gates) outrank style fixes, missing
-  `unslopify` stops the workflow with `npx skills add
-  RuralNative/RuralNative-SKILLS --skill unslopify` while missing Python does
-  not, and the skill does not copy the `AIT-*` catalog. (depth:
-  docs/leaves/document-for-humans.md)
+- The human-docs skill loads `unslopify` by skill identity before any
+  user-visible prose and audits again before publication — parent scope
+  (routine passes changed sources, an audit may sweep) and parent decisions
+  (factual correctness, tier routing, derivation rules, glossary, invariants,
+  approval gates) outrank style fixes, missing `unslopify` stops the workflow
+  with `npx skills add RuralNative/RuralNative-SKILLS --skill unslopify`
+  while missing Python does not and the workflow continues model-only without
+  weakening scope or preservation, and the skill does not copy the `AIT-*`
+  catalog and installed runtime resolves by skill identity, not by a
+  repository-relative path. (depth: docs/leaves/document-for-humans.md)
