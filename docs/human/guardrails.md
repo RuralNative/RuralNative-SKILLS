@@ -97,3 +97,4 @@ one, the checker goes red. One line per promise.
   concise to-do list, approval gates, vertical-slice ticket design, labels,
   native dependency edges, and the final ELI18 Why / What / Where / How
   summary. (depth: docs/leaves/plan-this.md)
+

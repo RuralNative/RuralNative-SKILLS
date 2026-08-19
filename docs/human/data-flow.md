@@ -73,3 +73,4 @@ plain-language knowledge rests in the human pages, always one honest
 regeneration behind its sources, never ahead of them.
 
 depth: docs/leaves/document-for-agents.md · docs/leaves/document-for-humans.md · docs/leaves/unslopify.md · docs/leaves/plan-this.md
+

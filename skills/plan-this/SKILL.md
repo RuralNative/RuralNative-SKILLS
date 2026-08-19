@@ -27,7 +27,7 @@ Delegated workflow order remains:
 2. `/to-spec`
 3. `/to-tickets`
 
-The planning workflow remains `/grill-with-docs` followed by `/to-spec` followed by `/to-tickets`.
+The planning workflow remains `/grill-with-docs` followed by `/to-spec` followed by `/to-tickets`. Hard dependencies, in order, are `/grill-with-docs`, `/to-spec`, `/to-tickets`, and `/unslop`.
 
 ## Fixed template — planning prefix
 
