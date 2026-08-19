@@ -1,4 +1,4 @@
-<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-19 · Sources: docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md, docs/leaves/unslopify.md, docs/leaves/plan-this.md, docs/leaves/implement-this.md -->
+<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-19 · Sources: docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md, docs/leaves/unslopify.md, docs/leaves/plan-this.md, docs/leaves/implement-this.md, docs/leaves/release-skills.md -->
 
 # Guardrails — in plain words
 
@@ -118,4 +118,9 @@ one, the checker goes red. One line per promise.
   review, rebase, push, issue comment, label removal, and closure with the
   final ELI18 Why / What / Where / How summary. (depth:
   docs/leaves/implement-this.md)
+- The name inside release-skills must match its folder — the same front-door
+  rule for the release workflow. (depth: docs/leaves/release-skills.md)
+- The release workflow is invoked via release trigger phrases and auto-detects
+  version files and changelogs without manual configuration. (depth:
+  docs/leaves/release-skills.md)
 

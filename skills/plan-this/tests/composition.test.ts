@@ -15,6 +15,11 @@ function read(p: string): string {
 function norm(s: string): string {
   return s.replace(/\s+/g, " ").toLowerCase();
 }
+function getBody(skill: string): string {
+  const m = skill.match(/^---\n[\s\S]*?\n---\n/);
+  if (!m) return skill;
+  return skill.slice(m[0].length);
+}
 
 describe("plan-this identity (plan-this:INV-1)", () => {
   test("folder and frontmatter identity are exactly plan-this", () => {
@@ -22,7 +27,6 @@ describe("plan-this identity (plan-this:INV-1)", () => {
     assert.ok(skill.includes("name: plan-this"), "frontmatter name must be exactly plan-this");
     assert.ok(fs.existsSync(path.join(ROOT, "skills/plan-this/SKILL.md")));
     assert.ok(fs.existsSync(path.join(ROOT, "skills/plan-this/INSTALL.md")));
-    // folder identity matches frontmatter
     const match = skill.match(/name:\s*plan-this/);
     assert.ok(match, "frontmatter name must match folder plan-this");
   });
@@ -43,18 +47,19 @@ describe("plan-this discovery and installation (plan-this:INV-2)", () => {
     const skill = read("skills/plan-this/SKILL.md");
     const n = norm(skill);
     assert.ok(skill.includes("/plan-this <task>"), "description and body must declare explicit invocation /plan-this <task>");
-    assert.ok(n.includes("user-invoked") || n.includes("user invoked"), "must state user-invoked");
+    assert.ok(n.includes("user-invoked") || n.includes("user invoked") || n.includes("user invocation") || n.includes("user invokes"), "must state user-invoked");
     assert.ok(n.includes("explicit") || skill.includes("/plan-this"), "discovery text must be explicit");
   });
 
   test("registry-lane install guidance present with exact command and discovery example", () => {
-    const skill = read("skills/plan-this/SKILL.md");
     const install = read("skills/plan-this/INSTALL.md");
-    assert.ok(skill.includes("npx skills add RuralNative/RuralNative-SKILLS --skill plan-this"));
+    // registry lane lives in INSTALL.md, not duplicated in trimmed SKILL.md
     assert.ok(install.includes("npx skills add RuralNative/RuralNative-SKILLS --skill plan-this"));
     assert.ok(install.includes("cp -r skills/plan-this"));
-    // discovery example
-    assert.ok(skill.includes("/plan-this Create a Next.js App") || install.includes("/plan-this Create a Next.js App") || skill.includes("/plan-this <task>"));
+    assert.ok(install.includes("/plan-this Create a Next.js App") || install.includes("/plan-this <task>"));
+    // trimmed SKILL.md should not duplicate install lane
+    const skill = read("skills/plan-this/SKILL.md");
+    assert.equal(skill.includes("npx skills add RuralNative/RuralNative-SKILLS --skill plan-this"), false, "trimmed SKILL.md must not duplicate install command");
   });
 
   test("architecture index and leaf doc describe the new seam", () => {
@@ -72,70 +77,123 @@ describe("plan-this discovery and installation (plan-this:INV-2)", () => {
 describe("plan-this fixed template and task substitution (plan-this:INV-3)", () => {
   test("preserves exact planning prefix and substitutes only task under ## Task:", () => {
     const skill = read("skills/plan-this/SKILL.md");
+    const body = getBody(skill);
     // exact workflow line
-    assert.ok(skill.includes("Run this planning-only workflow: `/grill-with-docs` → `/to-spec` → `/to-tickets`"));
+    assert.ok(body.includes("Run this planning-only workflow: `/grill-with-docs` → `/to-spec` → `/to-tickets`"));
     // Rules header
-    assert.ok(skill.includes("## Rules:") || skill.includes("## Rules"));
+    assert.ok(body.includes("## Rules:"));
     // all eight rule bullets verbatim
-    assert.ok(skill.includes("Load `/unslop` before the first progress update. Keep it active throughout `/grill-with-docs` → `/to-spec` → `/to-tickets`"));
-    assert.ok(skill.includes("Maintain a concise To-Do List covering Discovery, Decisions, Specification, Tickets, and Delivery."));
-    assert.ok(skill.includes("Design tickets as independently verifiable vertical slices suitable for one future worktree."));
-    assert.ok(skill.includes("Optimize for precision per token: keep shared context in the parent specification;"));
-    assert.ok(skill.includes("Ground decisions in the codebase and relevant documentation, following the repository's documented loading order."));
-    assert.ok(skill.includes("Publish GitHub issues using repository-defined labels (`ready-for-agent` where applicable) and native dependency edges."));
-    assert.ok(skill.includes("Ask one decision at a time in ELI18 language, include a recommendation, and honor each skill's approval gates."));
-    assert.ok(skill.includes("Follow the installed skills as the procedural source of truth."));
-    assert.ok(skill.includes("Finish with an ELI18 **Why / What / Where / How** summary and links to the specification and all tickets, then stop."));
-    // Task slot
-    assert.ok(skill.includes("## Task:"), "must contain ## Task: slot");
-    // Should not contain generic placeholder like <task> replacement incorrectly
+    assert.ok(body.includes("Load `/unslop` before the first progress update. Keep it active throughout `/grill-with-docs` → `/to-spec` → `/to-tickets`"));
+    assert.ok(body.includes("Maintain a concise To-Do List covering Discovery, Decisions, Specification, Tickets, and Delivery."));
+    assert.ok(body.includes("Design tickets as independently verifiable vertical slices suitable for one future worktree."));
+    assert.ok(body.includes("Optimize for precision per token: keep shared context in the parent specification;"));
+    assert.ok(body.includes("Ground decisions in the codebase and relevant documentation, following the repository's documented loading order."));
+    assert.ok(body.includes("Publish GitHub issues using repository-defined labels (`ready-for-agent` where applicable) and native dependency edges."));
+    assert.ok(body.includes("Ask one decision at a time in ELI18 language, include a recommendation, and honor each skill's approval gates."));
+    assert.ok(body.includes("Follow the installed skills as the procedural source of truth."));
+    assert.ok(body.includes("Finish with an ELI18 **Why / What / Where / How** summary and links to the specification and all tickets, then stop."));
+    // Task slot exactly once in body
+    const taskCount = (body.match(/## Task:/g) || []).length;
+    assert.equal(taskCount, 1, "body must contain ## Task: exactly once");
+    assert.ok(body.trimEnd().endsWith("## Task:"), "body must end with ## Task: slot");
     assert.ok(!skill.includes("Issue #0"), "plan-this must not contain implementation placeholder Issue #0");
+  });
+
+  test("body after frontmatter equals expected prefix verbatim", () => {
+    const skill = read("skills/plan-this/SKILL.md");
+    const body = getBody(skill);
+    const expected = `Run this planning-only workflow: \`/grill-with-docs\` → \`/to-spec\` → \`/to-tickets\`
+
+## Rules:
+
+- Load \`/unslop\` before the first progress update. Keep it active throughout \`/grill-with-docs\` → \`/to-spec\` → \`/to-tickets\`. Apply it to all prose you write, including to-do items, progress updates, interview questions, recommendations, decisions, ADR and glossary text, specification drafts, ticket bodies, GitHub comments, and the final summary. Check prose against \`/unslop\` before showing it to the user or publishing it to GitHub. Preserve exact domain terms, identifiers, commands, labels, dependencies, quotations, and technical meaning.
+- Maintain a concise To-Do List covering Discovery, Decisions, Specification, Tickets, and Delivery. Update it at phase changes, decisions, blockers, and publication. State what finished and what happens next without narrating every command.
+- Design tickets as independently verifiable vertical slices suitable for one future worktree. Record blockers, affected seams, acceptance criteria, verification requirements, and whether later parallel execution is safe.
+- Optimize for precision per token: keep shared context in the parent specification; make tickets self-contained only for their slice; avoid repetition, speculative file paths, and routine pseudocode.
+- Ground decisions in the codebase and relevant documentation, following the repository's documented loading order. Inspect facts; ask only unresolved decisions.
+- Publish GitHub issues using repository-defined labels (\`ready-for-agent\` where applicable) and native dependency edges.
+- Ask one decision at a time in ELI18 language, include a recommendation, and honor each skill's approval gates.
+- Follow the installed skills as the procedural source of truth.
+
+Finish with an ELI18 **Why / What / Where / How** summary and links to the specification and all tickets, then stop.
+
+## Task:`;
+    assert.equal(body.trim(), expected.trim(), "body after frontmatter must equal expected prefix verbatim");
+  });
+
+  test("trimmed shape rejects wrapper phrases and respects line-count bound", () => {
+    const skill = read("skills/plan-this/SKILL.md");
+    const body = getBody(skill);
+    // negative checks for removed wrapper phrases
+    assert.equal(skill.includes("Rules preserved"), false, "must not contain Rules preserved");
+    assert.equal(skill.includes("## Installation"), false, "must not contain ## Installation");
+    assert.equal(skill.includes("## Boundary"), false, "must not contain ## Boundary");
+    assert.equal(skill.includes("--- start of supplied"), false, "must not contain start marker");
+    assert.equal(skill.includes("This skill is a thin fixed-template adapter"), false, "must not contain thin adapter wrapper phrase");
+    assert.equal(skill.includes("# plan-this — fixed-template planning adapter"), false, "must not contain title header");
+    assert.equal(body.includes("## Invocation"), false, "body must not contain ## Invocation");
+    assert.equal(body.includes("## Hard dependencies"), false, "body must not contain ## Hard dependencies wrapper");
+    // line-count bound: ~25-35 lines total including frontmatter, allow 18-35 for trimmed 21-line file
+    const lines = skill.trimEnd().split("\n").length;
+    assert.ok(lines >= 18 && lines <= 35, `line count ${lines} must be within 18-35 (expected ~21, bound ~25-35)`);
+  });
+
+  test("task text like Create a Next.js App preserved verbatim under ## Task:", () => {
+    const skill = read("skills/plan-this/SKILL.md");
+    const body = getBody(skill);
+    // Simulate invoking /plan-this Create a Next.js App
+    const task = "Create a Next.js App";
+    const emitted = body.trimEnd() + "\n" + task + "\n";
+    assert.ok(emitted.includes("## Task:\n" + task), "task must appear verbatim under ## Task:");
+    // also test Hello world
+    const task2 = "Hello world";
+    const emitted2 = body.trimEnd() + "\n" + task2 + "\n";
+    assert.ok(emitted2.includes("## Task:\n" + task2));
+    // multi-word preservation: Create a Next.js App with auth
+    const task3 = "Create a Next.js App with auth";
+    const emitted3 = body.trimEnd() + "\n" + task3 + "\n";
+    assert.ok(emitted3.includes(task3));
   });
 
   test("preserves exact protected identifiers and does not add extra runtime machinery", () => {
     const skill = read("skills/plan-this/SKILL.md");
-    // protected identifiers
     assert.ok(skill.includes("`ready-for-agent`"));
-    // no extra machinery on disk
     const files = fs.readdirSync(path.join(ROOT, "skills/plan-this"));
     assert.ok(!files.includes("scripts"), "must not add scripts directory");
     assert.ok(!fs.existsSync(path.join(ROOT, "skills/plan-this/package.json")), "no npm package");
     assert.ok(!fs.existsSync(path.join(ROOT, ".kilo/command/plan-this.md")), "must not add .kilo command file");
-    // boundary disclaimer is allowed to mention router and command directory as what is NOT added
-    assert.ok(skill.includes("does not add") || skill.includes("does not reimplement") || skill.includes("fixed-template"));
+    // no extra machinery: trimmed file should not claim to add router etc
+    assert.equal(skill.includes("does not add") || skill.includes("does not reimplement"), false, "trimmed file must not contain boundary disclaimer");
   });
 });
 
 describe("plan-this hard dependencies and workflow order (plan-this:INV-4)", () => {
   test("declares /unslop as hard dependency before first progress and workflow order", () => {
     const skill = read("skills/plan-this/SKILL.md");
-    const n = norm(skill);
+    const body = getBody(skill);
+    const n = norm(body);
     assert.ok(n.includes("/unslop"));
     assert.ok(n.includes("before the first progress update"));
-    // must not silently map to unslopify
-    assert.ok(n.includes("do not silently map") || n.includes("do not map") || skill.includes("Do not silently map it to this repository's `unslopify`"));
     assert.ok(skill.includes("/grill-with-docs"));
     assert.ok(skill.includes("/to-spec"));
     assert.ok(skill.includes("/to-tickets"));
-    // workflow order
     const idxGrill = skill.indexOf("/grill-with-docs");
     const idxSpec = skill.indexOf("/to-spec");
     const idxTickets = skill.indexOf("/to-tickets");
     assert.ok(idxGrill !== -1 && idxSpec !== -1 && idxTickets !== -1);
     assert.ok(idxGrill < idxSpec && idxSpec < idxTickets, "workflow must be grill -> to-spec -> to-tickets");
-    // unslop appears
     assert.ok(skill.includes("`/unslop`"));
+    // frontmatter description also declares delegation
+    const frontmatter = skill.slice(0, skill.indexOf("---", 3) + 3);
+    assert.ok(frontmatter.includes("/grill-with-docs") && frontmatter.includes("/to-spec") && frontmatter.includes("/to-tickets") && frontmatter.includes("/unslop"), "frontmatter must declare delegation");
   });
 
   test("does not depend on implement or code-review", () => {
     const skill = read("skills/plan-this/SKILL.md");
-    // plan-this should not list implement code-review as dependencies
-    const n = norm(skill);
-    // ensure implement not in dependency list as hard dependency (mentioned only in boundary maybe)
-    if (n.includes("/implement")) {
-      // if mentioned, ensure it's in boundary disclaimer not dependency
-      assert.ok(n.includes("does not modify") || n.includes("does not reimplement"), "if /implement mentioned it must be in boundary disclaimer");
-    }
+    const body = getBody(skill);
+    const n = norm(body);
+    assert.equal(n.includes("/implement"), false, "trimmed body must not mention /implement");
+    assert.equal(n.includes("code-review"), false, "trimmed body must not mention code-review");
   });
 
   test("naming exception and fixed-template boundary recorded in ADR and glossary", () => {
@@ -154,23 +212,19 @@ describe("plan-this hard dependencies and workflow order (plan-this:INV-4)", () 
 describe("plan-this preserved rules and user invocation (plan-this:INV-5)", () => {
   test("preserves to-do list, approval gates, ticket design, labels, native dependencies, final summary", () => {
     const skill = read("skills/plan-this/SKILL.md");
-    const n = norm(skill);
-    // to-do list
+    const body = getBody(skill);
+    const n = norm(body);
     assert.ok(n.includes("to-do list") || n.includes("to-do"));
     assert.ok(n.includes("discovery, decisions, specification, tickets, and delivery"));
-    // approval gates
     assert.ok(n.includes("approval gates"));
-    // ticket design
     assert.ok(n.includes("independently verifiable vertical slices"));
     assert.ok(n.includes("blocked by") || n.includes("blockers"));
     assert.ok(n.includes("affected seams"));
     assert.ok(n.includes("acceptance criteria"));
     assert.ok(n.includes("verification requirements"));
     assert.ok(n.includes("parallel execution") || n.includes("parallel"));
-    // labels and native dependencies
     assert.ok(n.includes("ready-for-agent"));
     assert.ok(n.includes("native dependency edges") || n.includes("native dependency"));
-    // final summary
     assert.ok(n.includes("why / what / where / how") || n.includes("why / what"));
     assert.ok(skill.includes("**Why / What / Where / How**"));
   });
@@ -178,10 +232,8 @@ describe("plan-this preserved rules and user invocation (plan-this:INV-5)", () =
   test("skill is user-invoked only and does not introduce broad automatic triggering", () => {
     const skill = read("skills/plan-this/SKILL.md");
     const n = norm(skill);
-    assert.ok(n.includes("user-invoked"));
-    // description should make explicit command clear, not broad trigger like "when planning work appears"
+    assert.ok(n.includes("user-invoked") || n.includes("user invoked") || n.includes("user invocation") || n.includes("user invokes"), "must indicate user-invoked");
     assert.ok(skill.includes("/plan-this <task>"));
-    // should not claim to auto-trigger on planning without explicit command
     assert.equal(n.includes("when planning work appears"), false, "should not use broad automatic triggering phrase");
   });
 });

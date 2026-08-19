@@ -1,4 +1,4 @@
-<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-19 · Sources: docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md, docs/leaves/unslopify.md, docs/leaves/plan-this.md, docs/leaves/implement-this.md -->
+<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-19 · Sources: docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md, docs/leaves/unslopify.md, docs/leaves/plan-this.md, docs/leaves/implement-this.md, docs/leaves/release-skills.md -->
 
 # How information moves — in plain words
 
@@ -77,5 +77,5 @@ Where information rests: authored knowledge rests in the technical tree;
 plain-language knowledge rests in the human pages, always one honest
 regeneration behind its sources, never ahead of them.
 
-depth: docs/leaves/document-for-agents.md · docs/leaves/document-for-humans.md · docs/leaves/unslopify.md · docs/leaves/plan-this.md · docs/leaves/implement-this.md
+depth: docs/leaves/document-for-agents.md · docs/leaves/document-for-humans.md · docs/leaves/unslopify.md · docs/leaves/plan-this.md · docs/leaves/implement-this.md · docs/leaves/release-skills.md
 
