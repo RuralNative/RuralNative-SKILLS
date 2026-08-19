@@ -33,9 +33,19 @@ The gate's check set is defined in `reference/harness.md`; this repo's
 3. **INV-3** — Reference files resolve relative to `SKILL.md`; no absolute
    paths.
 4. **INV-4** — Distribution stays on the registry lane; the copy-based
-   install is a convenience, not a channel (ADR-0001).
+    install is a convenience, not a channel (ADR-0001).
 5. **INV-5** — This repo's own install artifacts (`.agents/`,
-   `skills-lock.json`) are never committed.
+    `skills-lock.json`) are never committed.
+6. **INV-6** — `unslopify` loads before any user-visible prose and audits it
+    again before publication; parent scope and parent decisions outrank prose
+    rewrites; missing `unslopify` stops the workflow with the exact
+    registry-lane install instruction `npx skills add
+    RuralNative/RuralNative-SKILLS --skill unslopify`, missing Python does not
+    stop it; the skill does not copy the `AIT-*` catalog. Mechanism:
+    hard dependency declared in `SKILL.md` load order, final-audit order,
+    parent-owned scope, precedence rule, missing-dependency stop, and
+    catalog-ownership note; dependency visible in `INSTALL.md`; composition
+    tests in `skills/document-for-agents/tests/` encode the invariant.
 
 ## Links
 

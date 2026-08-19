@@ -33,7 +33,17 @@ freshness for `docs/human/`, dormant until the tree exists.
 3. **INV-3** — Every human doc carries `Derived:`/`Sources:` headers.
 4. **INV-4** — One-way bridges only: no AI doc links into `docs/human/`.
 5. **INV-5** — Regenerating is an agent duty; citing as ground truth is
-   forbidden.
+    forbidden.
+6. **INV-6** — `unslopify` loads before any user-visible prose and audits it
+    again before publication; parent scope and parent decisions outrank prose
+    rewrites; missing `unslopify` stops the workflow with the exact
+    registry-lane install instruction `npx skills add
+    RuralNative/RuralNative-SKILLS --skill unslopify`, missing Python does not
+    stop it; the skill does not copy the `AIT-*` catalog. Mechanism:
+    hard dependency declared in `SKILL.md` load order, final-audit order,
+    parent-owned scope, precedence rule, missing-dependency stop, and
+    catalog-ownership note; dependency visible in `INSTALL.md`; composition
+    tests in `skills/document-for-humans/tests/` encode the invariant.
 
 ## Links
 

@@ -8,7 +8,10 @@ description: >-
   or out of sync with code, wants docs restructured around the why (decisions,
   invariants, vocabulary) instead of restated what (file lists, schema dumps),
   or wants a lightweight ADR process. Other skills can reach this skill when a
-  documentation system is needed for their workflow.
+  documentation system is needed for their workflow. Hard dependency on
+  `unslopify` for prose quality — load it before any user-visible prose and run
+  a final audit before publishing; parent scope and decisions outrank prose
+  rewrites.
 ---
 
 # document-for-agents — the doc-cache lifecycle
@@ -21,6 +24,50 @@ the source. This skill runs the coherence protocol.
 A **seam** is a module with one distinct responsibility that an agent edits as
 a unit: its own directory, entry files, tests, and — once the tree is
 established — its own leaf doc.
+
+## Hard dependency: `unslopify` — prose quality
+
+This skill declares `unslopify` as a hard dependency. The prose-quality
+contract in `skills/unslopify/SKILL.md` must be active for every workflow that
+produces user-visible prose.
+
+**Load order.** Load `skills/unslopify/SKILL.md` before the first interview
+question, progress update, draft, comment, issue body, or final summary. Keep
+its scope, protected-content, and rewrite contracts active while drafting and
+revising. Do not publish or complete a documentation change without a final
+`unslopify` audit on the exact prose the reader will see.
+
+**Scope belongs to the caller.** This skill owns scope. Standalone audits may
+request a repository sweep; routine maintenance passes only changed prose. Pass
+the chosen scope to `unslopify` without expansion. When `unslopify` runs as a
+standalone cleanup, it uses explicit scope the human provides; when it runs
+under this skill, this skill's chosen scope governs.
+
+**Parent decisions outrank prose rewrites.** Factual correctness, tier routing
+from `reference/classify.md`, glossary terms and their forbidden synonyms, seam
+invariants, derivation rules for generated content, and approval gates are
+authoritative. `unslopify` may not override an ADR, glossary entry, leaf
+invariant, or workflow decision, and it may not change facts, numbers, dates,
+citations, or invented sources to satisfy a style finding. If a style finding
+conflicts with a parent decision, the parent decision stands and the finding is
+rejected with reason.
+
+**Missing dependency.** If `skills/unslopify/SKILL.md` is absent, stop the
+workflow before the first user-visible prose and emit the exact registry-lane
+install instruction: `npx skills add RuralNative/RuralNative-SKILLS --skill
+unslopify` then retry. Do not draft, file an issue, or publish. Missing Python
+for the optional scanner at `skills/unslopify/scanner.py` does not stop the
+workflow; continue model-only without weakening scope or preservation.
+
+**Catalog ownership.** This skill does not copy the `AIT-*` pattern catalog. It
+references `unslopify` for all lexical, structural, formatting, conversational,
+evidence, and voice findings. Do not duplicate rule definitions here; see
+`skills/unslopify/reference/parity.md` for the canonical catalog.
+
+**Completion audit.** Before marking a workflow complete or publishing an
+issue, PR description, or generated doc, run `unslopify` on the final prose
+and record its completion report: scope used, accepted and rejected findings,
+scanner availability, protected-content status, and preservation audit result.
 
 ## Principles — every branch obeys these
 
@@ -77,7 +124,8 @@ seams) is code-architecture work, not this skill's job.
    work-docs policy whose default is "work docs live in the issue tracker, not
    the repo." The glossary, the policy set, the debt registry, and the
    vendor-facts entry are created per the templates in `reference/templates.md`.
-   *Done when: the index's coverage table matches the docs on disk.*
+    *Done when: the index's coverage table matches the docs on disk, and the
+    final `unslopify` audit on all created prose passes before publishing.*
 5. **Wire the harness.** Install the change-aware gate from
    `reference/harness.md` — ten checks: coverage ↔ disk, same-diff freshness,
    new-seam-requires-doc, decision status parse, work-doc expiry, seam-table
@@ -85,8 +133,9 @@ seams) is code-architecture work, not this skill's job.
    invariant identifier integrity. Hook it into the project's standard check
    path — a script entry, pre-commit hook, or CI job — so it runs without
    being remembered.
-   *Done when: the harness fails on a deliberate violation and passes after
-   the fix — proven by running both.*
+    *Done when: the harness fails on a deliberate violation and passes after
+    the fix — proven by running both, and the final `unslopify` audit on the
+    harness prose passes.*
 
 ## Branch B — Audit: diagnose an existing doc system
 
@@ -113,8 +162,9 @@ seams) is code-architecture work, not this skill's job.
 4. **Finish with a plan, not a report.** Output the tree delta (files created,
    edited, deleted), harness changes, and the token cost of the post-change
    re-orientation read.
-   *Done when: the output is diff-able — an executor can apply it without
-   re-deriving the analysis.*
+    *Done when: the output is diff-able — an executor can apply it without
+    re-deriving the analysis, and the final `unslopify` audit on the plan prose
+    passes before publishing.*
 
 ## Branch C — Maintain: keep the cache coherent during normal work
 
@@ -134,8 +184,10 @@ seams) is code-architecture work, not this skill's job.
 4. **Supersede, don't rewrite.** A changed decision gets a new ADR; the
    original record is left verbatim.
 5. **Work docs die with the work.** Plans and audits are mined for durable
-   facts and deleted; nothing durable cites them.
-6. **Run the harness.** Keep the scorecard current: coverage, stale counts,
+    facts and deleted; nothing durable cites them.
+6. **Run the `unslopify` final audit and the harness.** Run `unslopify` on the
+    exact prose the reader will see, record its completion report, then keep
+    the scorecard current: coverage, stale counts,
    ADR statuses, invariant re-verification. A red harness is a work item, not
    a warning.
 

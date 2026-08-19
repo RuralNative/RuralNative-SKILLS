@@ -9,19 +9,30 @@ at any time.
 ## Requirements
 
 - A repo with an AI-first doc tree (the document-for-agents skill's output).
-- Nothing else. The skill has no dependencies, no runtime, no language or
-  framework requirements.
+- `unslopify` as a hard dependency. Install it before this skill — prose
+  quality checks load before any user-visible prose and run a final audit
+  before publishing. Missing `unslopify` stops the workflow with an install
+  instruction; missing Python for the optional scanner does not stop it.
+  The skill otherwise has no runtime or framework requirements.
 
 ## Install
 
 ### Via the skills registry (recommended)
 
+Install the hard dependency first, then this skill. Both commands must succeed
+before running a human-docs workflow — missing `unslopify` stops the workflow
+with the install instruction below, while missing Python does not stop it.
+
 ```bash
+npx skills add RuralNative/RuralNative-SKILLS --skill unslopify
 npx skills add RuralNative/RuralNative-SKILLS --skill document-for-humans
 ```
 
-The registry CLI clones the repository, resolves the skill by name, and
-installs it into your agent's standard skills directory.
+The registry CLI clones the repository, resolves each skill by name, and
+installs it into your agent's standard skills directory. If
+`skills/unslopify/SKILL.md` is absent the workflow stops and emits the exact
+instruction `npx skills add RuralNative/RuralNative-SKILLS --skill unslopify`
+before any draft is published.
 
 ### Manual install (copy-based fallback)
 
@@ -36,23 +47,30 @@ git clone https://github.com/RuralNative/RuralNative-SKILLS.git
 cd RuralNative-SKILLS
 ```
 
-From that clone's root, copy the folder into your skill directory. The
-destination folder must be named `document-for-humans` and contain `SKILL.md` at
+From that clone's root, copy both the dependency and this skill into your
+skill directory. The dependency must be present before any human-docs workflow.
+Each destination folder must be named for its skill and contain `SKILL.md` at
 its root, alongside the `reference/` directory:
 
 ```
-# Anthropic Claude Code (user-wide)
+# Anthropic Claude Code (user-wide) — install dependency first
+cp -r skills/unslopify ~/.claude/skills/unslopify
 cp -r skills/document-for-humans ~/.claude/skills/document-for-humans
 
 # Kilo (project scope)
+cp -r skills/unslopify .kilo/skills/unslopify
 cp -r skills/document-for-humans .kilo/skills/document-for-humans
 
 # Kilo (user-wide)
+cp -r skills/unslopify ~/.agents/skills/unslopify
 cp -r skills/document-for-humans ~/.agents/skills/document-for-humans
 ```
 
-For other platforms, place `SKILL.md` and `reference/` in whatever location
-your agent loads skills from, keeping the folder name `document-for-humans`.
+For other platforms, place each `SKILL.md` and `reference/` in whatever
+location your agent loads skills from, keeping the folder names `unslopify` and
+`document-for-humans`. Verify `skills/unslopify/SKILL.md` exists before running
+a workflow — the workflow stops with `npx skills add
+RuralNative/RuralNative-SKILLS --skill unslopify` if it is absent.
 
 ## Verify
 

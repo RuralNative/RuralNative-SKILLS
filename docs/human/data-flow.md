@@ -19,7 +19,18 @@ edits, and self-audits plus a preservation audit while leaving protected spans
 byte for byte and reporting rejected candidates, scanner availability, and
 needs-info items. The scanner never writes source, so a before-and-after hash
 stays identical, and it exits zero for findings and nonzero for bad input
-without partial JSON.
+without partial JSON. When the change is a documentation workflow, that same
+prose-quality contract is already active: `document-for-agents` and
+`document-for-humans` load `unslopify` before the first interview question,
+draft, or summary and keep its protected-content and rewrite rules active while
+drafting, then run a final `unslopify` audit on the exact prose the reader will
+see and record the completion report. The parent skill owns scope — routine
+maintenance passes only changed prose, an audit may pass a repository sweep —
+and parent decisions, tier routing, glossary terms, invariants, derivation
+rules, and approval gates outrank any style finding. If `unslopify` is absent
+the parent workflow stops before user-visible prose with `npx skills add
+RuralNative/RuralNative-SKILLS --skill unslopify`; missing Python does not stop
+it and the model-only path continues without weakening scope or preservation.
 The change is pushed to the shared trunk, where the checker runs: it confirms
 every listed document exists, that changed code arrived with its changed summary,
 and that every plain-language page is at least as new as the documents it was

@@ -10,8 +10,8 @@ own docs.
 
 | Seam | Responsibility | Code root | Tests | Doc |
 |---|---|---|---|---|
-| document-for-agents | publishable agent instructions for the doc-cache lifecycle | skills/document-for-agents/ | install smoke via `npx skills add`; identity == folder check | docs/leaves/document-for-agents.md |
-| document-for-humans | plain-language derived documentation for human stakeholders | skills/document-for-humans/ | gate extension via scripts/docs-check.sh | docs/leaves/document-for-humans.md |
+| document-for-agents | publishable agent instructions for the doc-cache lifecycle | skills/document-for-agents/ | install smoke via `npx skills add`; identity == folder check; composition via `skills/document-for-agents/tests/` | docs/leaves/document-for-agents.md |
+| document-for-humans | plain-language derived documentation for human stakeholders | skills/document-for-humans/ | gate extension via scripts/docs-check.sh; composition via `skills/document-for-humans/tests/` | docs/leaves/document-for-humans.md |
 | unslopify | AI-tell detection and meaning-safe prose revision | skills/unslopify/ | scanner contract via `skills/unslopify/scanner.py` and parity catalog via `skills/unslopify/reference/parity.md`; identity == folder check | docs/leaves/unslopify.md |
 
 A new directory under `skills/` is a new seam: it needs a row here, a leaf

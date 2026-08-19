@@ -8,7 +8,8 @@ proven way, and anyone can install one and load it into their agent. Most
 skill names start with the doing-word and say who they serve; the shelf
 currently holds three: document-for-agents, document-for-humans, and
 unslopify, the audience-neutral utility that cleans AI tells from explicit prose
-while keeping meaning, evidence, and tone.
+while keeping meaning, evidence, and tone. Both documentation skills declare
+`unslopify` as a hard dependency and will not publish prose without it.
 
 Why it exists: an agent starts every session from scratch. Loading a skill
 hands it instructions that already work, so the agent spends its effort on
@@ -16,7 +17,16 @@ the task instead of rediscovering how the task should be done. For prose
 cleanup, the caller names the scope, the skill checks only that scope,
 protected content such as code, links, and verbatim ranges stays untouched,
 and an optional Python scanner can add repeatable evidence without writing
-source or blocking the gate.
+source or blocking the gate. For documentation work, `document-for-agents` and
+`document-for-humans` load `unslopify` before the first user-visible prose,
+keep its contract active while drafting, and run a final audit before
+publishing; parent scope and parent decisions outrank style fixes, missing
+`unslopify` stops the workflow with `npx skills add
+RuralNative/RuralNative-SKILLS --skill unslopify` and missing Python does not
+stop it, and the catalog is never copied into the parent skills. Standalone
+cleanup uses explicit human-provided scope; under a parent the parent's chosen
+scope governs — routine work passes changed prose, an audit may sweep the
+repository.
 
 Who it serves: agent users who install skills from the public registry to get
 reliable, pre-built workflows without building them from scratch each time.

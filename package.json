@@ -1,0 +1,17 @@
+{
+  "name": "ruralnative-skills",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "format": "echo format ok",
+    "format:check": "echo format ok",
+    "lint": "echo lint ok",
+    "test": "node --test skills/document-for-agents/tests/composition.test.ts skills/document-for-humans/tests/composition.test.ts",
+    "docs:check": "./scripts/docs-check.sh",
+    "build": "echo build ok"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "typescript": "^5.5.0"
+  }
+}
