@@ -64,9 +64,12 @@ use. People read those pages, and when they want more, the one-way depth
 links carry them into the technical pages, never the reverse.
 
 The planning adapter flow rides alongside: a user invokes `/plan-this <task>`,
-the skill places the task verbatim under `## Task:` and delegates to
-`/grill-with-docs` → `/to-spec` → `/to-tickets` with `/unslop` active before the
-first progress update, preserving the fixed prefix without extra runtime. The
+the skill places the task verbatim under `## Task:` as the single substitution
+point and delegates to `/grill-with-docs` → `/to-spec` → `/to-tickets` with
+`/unslop` active before the first progress update, preserving the verbatim
+expected prefix — workflow line, eight Rules bullets, final summary line —
+with no wrapper markers or extra machinery, hard dependencies declared via that
+prefix plus frontmatter, not a separate section, file totals 18–35 lines. The
 implementation adapter flow does the same for tickets: a user invokes `/implement-this #<n>`, the skill places the issue reference verbatim in place of `Issue #0` with the body after frontmatter equal to the exact prefix and a single `Issue #0` substitution point, and delegates to `/implement` → `/code-review` with `/unslop` active before the first progress update, preserving exact Git commands and the fixed prefix with no wrapper markers and no extra runtime.
 
 Where information rests: authored knowledge rests in the technical tree;

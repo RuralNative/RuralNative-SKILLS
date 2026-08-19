@@ -85,18 +85,22 @@ one, the checker goes red. One line per promise.
 - The one-line install for plan-this must keep installing that exact skill
   with the explicit invocation `/plan-this <task>` preserved as example
   `/plan-this Create a Next.js App`. (depth: docs/leaves/plan-this.md)
-- The planning template keeps the exact supplied prefix and substitutes only
-  the task under `## Task:`, preserving `ready-for-agent`, dependency names,
-  quotations, and technical meaning, with no router, command files, runtime
-  scripts, or model evals. (depth: docs/leaves/plan-this.md)
+- The planning template keeps the verbatim expected prefix — workflow line,
+  eight Rules bullets, final summary line, single `## Task:` substitution
+  point — preserving `ready-for-agent`, dependency names, quotations, and
+  technical meaning, with no wrapper markers (`Rules preserved`, `## Installation`,
+  `## Boundary`, `--- start of supplied`) and no router, command files, runtime
+  scripts, or model evals, file totals 18–35 lines. (depth: docs/leaves/plan-this.md)
 - Hard dependencies are `/unslop`, `/grill-with-docs`, `/to-spec`,
   `/to-tickets` with workflow order `/grill-with-docs` → `/to-spec` →
-  `/to-tickets` and `/unslop` active before the first progress update; the
-  local `unslopify` stays unchanged. (depth: docs/leaves/plan-this.md)
-- The skill is user-invoked only via `/plan-this <task>` and preserves the
-  concise to-do list, approval gates, vertical-slice ticket design, labels,
-  native dependency edges, and the final ELI18 Why / What / Where / How
-  summary. (depth: docs/leaves/plan-this.md)
+  `/to-tickets` and `/unslop` active before the first progress update, declared
+  via the workflow line and first Rules bullet plus frontmatter, not a separate
+  Hard dependencies section; the local `unslopify` stays unchanged. (depth: docs/leaves/plan-this.md)
+- The skill is user-invoked only via `/plan-this <task>` and preserves those
+  eight bullets as they appear — To-Do List, vertical slices, precision, ground
+  decisions, labels, ELI18 question, follow skills — plus the final ELI18 Why /
+  What / Where / How summary, without a separate `## Rules preserved` section in
+  `SKILL.md`. (depth: docs/leaves/plan-this.md)
 - The name inside implement-this must match its folder — the same front-door
   rule for the implementation adapter. (depth: docs/leaves/implement-this.md)
 - The one-line install for implement-this must keep installing that exact
