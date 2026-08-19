@@ -274,6 +274,14 @@ describe("supervise-this composition coverage and seam docs (supervise-this:INV-
     assert.ok(leaf.includes("composition test"), "leaf must link invariants to composition test mechanism");
   });
 
+  test("leaf doc declares execution invariants INV-8 through INV-12", () => {
+    const leaf = read("docs/leaves/supervise-this.md");
+    for (let i = 8; i <= 12; i++) {
+      assert.ok(leaf.includes(`INV-${i}`), `leaf must contain INV-${i}`);
+    }
+    assert.ok(leaf.includes("INV-8") && leaf.includes("INV-12"));
+  });
+
   test("skill does not contain hard-coded model allowlist and does not claim to change current session model", () => {
     const skill = read("skills/supervise-this/SKILL.md");
     const n = norm(skill);
@@ -291,8 +299,9 @@ describe("supervise-this composition coverage and seam docs (supervise-this:INV-
   test("skill contains no invented Agent Manager state file edit", () => {
     const skill = read("skills/supervise-this/SKILL.md");
     const n = norm(skill);
-    assert.equal(n.includes("edit .kilo/agent-manager.json"), false, "must not edit agent-manager.json");
-    assert.equal(n.includes("invent session"), false, "must not invent session");
+    assert.ok(n.includes("never edits `.kilo/agent-manager.json`") || n.includes("never edits .kilo/agent-manager.json"), "must state never edits agent-manager.json");
+    assert.ok(n.includes("or invents session") || n.includes("invents session and section ids"), "must state never invents session");
+    assert.ok(n.includes("never edits") && n.includes("agent-manager.json"), "must explicitly ban state-file edits");
   });
 
   test("derived human docs will be updated — check that leaf and adr are covered", () => {
@@ -316,5 +325,248 @@ describe("supervise-this composition coverage and seam docs (supervise-this:INV-
     assert.ok(n.includes("unavailable") && n.includes("ambiguous"), "test must cover unavailable selections");
     assert.ok(n.includes("local") && n.includes("planning"), "test must cover local planning-session routing");
     assert.ok(n.includes("silent fallback") || n.includes("no fallback") || n.includes("ban on silent fallback"), "test must cover ban on silent fallback");
+  });
+});
+
+describe("supervise-this execution frontier and review base (supervise-this:INV-8)", () => {
+  test("reads the structured model configuration recorded by #67 before starting implementation", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("reads the structured model configuration recorded by #67 before starting implementation") || (n.includes("reads the structured model configuration") && n.includes("before starting implementation")), "must read structured config before implementation");
+  });
+
+  test("records a fixed implementation review base on the parent before starting the first implementation worktree", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("records a fixed implementation review base on the parent before starting the first implementation worktree"), "must record fixed base before first worktree");
+  });
+
+  test("ready frontier contains only open child tickets with no open native blocker, the ready-for-agent label, and no assignee", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("ready frontier contains only open child tickets with no open native blocker") && n.includes("ready-for-agent") && n.includes("no assignee"), "must define ready frontier correctly");
+  });
+
+  test("does not schedule blocked or assigned tickets", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("does not schedule blocked or assigned tickets") || n.includes("does not schedule blocked"), "must ban blocked scheduling");
+  });
+});
+
+describe("supervise-this worktree creation and model routing (supervise-this:INV-9)", () => {
+  test("creates one Agent Manager worktree per selected ticket and keeps no more than three implementation worktrees active", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("creates one agent manager worktree per selected ticket") && n.includes("keeps no more than three implementation worktrees active"), "must create one worktree per ticket and cap at three");
+  });
+
+  test("every worker receives one delegated implement-this issue plus the exact confirmed implementation model and variant", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("every worker receives one delegated `implement-this` issue plus the exact confirmed implementation model and variant") || (n.includes("every worker receives one delegated") && n.includes("implement-this") && n.includes("exact confirmed implementation model and variant")), "must route implementation selection to workers");
+  });
+
+  test("every follow-up implementation session uses the same confirmed implementation selection", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("every follow-up implementation session") && n.includes("same confirmed implementation selection"), "must state follow-ups use same selection");
+  });
+
+  test("never replaces an unavailable implementation model or variant with an inherited or cheaper fallback", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("never replaces an unavailable implementation model or variant with an inherited or cheaper fallback"), "must never replace unavailable implementation model");
+  });
+
+  test("uses Agent Manager list for live session IDs and states and never edits persisted Agent Manager state", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("uses agent manager `list` for live session ids and states") || n.includes("uses agent manager list for live session ids and states"), "must use list for live IDs");
+    assert.ok(n.includes("never edits persisted agent manager state"), "must never edit persisted state");
+  });
+
+  test("does not copy the planning or implementation prefixes", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("does not copy the planning or implementation prefixes") || n.includes("does not copy"), "must not copy prefixes");
+  });
+
+  test("never invents session and section IDs and never edits .kilo/agent-manager.json", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("never edits `.kilo/agent-manager.json`") || n.includes("never edits .kilo/agent-manager.json"));
+    assert.ok(n.includes("invents session") || n.includes("invents session and section ids"));
+  });
+});
+
+describe("supervise-this durable completion and slot refilling (supervise-this:INV-10)", () => {
+  test("a ticket counts as complete only when GitHub shows it closed, acceptance evidence exists, and its commit is reachable from origin/main", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("a ticket counts as complete only when github shows it closed, acceptance evidence exists, and its commit is reachable from `origin/main`") || (n.includes("a ticket counts as complete") && n.includes("github shows it closed") && n.includes("acceptance evidence exists") && n.includes("reachable from `origin/main`") || n.includes("reachable from origin/main")) , "must define durable completion");
+  });
+
+  test("does not treat idle as success", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("agent manager idle state alone does not satisfy completion") || n.includes("does not treat idle as success"), "must not treat idle as success");
+  });
+
+  test("completed work frees a slot and the supervisor starts newly unblocked tickets in parent order", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("completed work frees a slot and the supervisor starts newly unblocked tickets in parent order"), "must refill slots in parent order");
+  });
+});
+
+describe("supervise-this verification and integrated review (supervise-this:INV-11)", () => {
+  test("after all planned children land, the supervisor runs full repository verification", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("after all planned children land, the supervisor runs full repository verification"), "must run full verification after children land");
+    assert.ok(skill.includes("npm run format && npm test && npm run lint && npx tsc --noEmit && npm run docs:check && npm run build"), "must include full verification command");
+  });
+
+  test("integrated code-review starts in a local Agent Manager session with the exact confirmed review model and variant, the recorded base, and #62 as authority", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("integrated `code-review` starts in a local agent manager session with the exact confirmed review model and variant, the recorded base, and #62 as authority") || (n.includes("integrated") && n.includes("code-review") && n.includes("local agent manager session") && n.includes("exact confirmed review model and variant") && n.includes("recorded base") && n.includes("#62")), "must start integrated review correctly");
+  });
+
+  test("the final review session does not inherit the supervisor or implementation model unless that model is the recorded review selection", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("the final review session does not inherit the supervisor or implementation model unless that model is the recorded review selection"), "must not inherit supervisor model");
+  });
+});
+
+describe("supervise-this parent evidence and closure (supervise-this:INV-12)", () => {
+  test("the supervisor posts parent evidence with all phase model selections, review base, checks, commits, ticket links, and review outcome", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("the supervisor posts parent evidence with all phase model selections, review base, checks, commits, ticket links, and review outcome"), "must post parent evidence");
+  });
+
+  test("the supervisor closes #62 only when all children are closed, checks pass, and the integrated review has no confirmed finding", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("the supervisor closes #62 only when all children are closed, checks pass, and the integrated review has no confirmed finding"), "must close #62 only when gated");
+  });
+
+  test("closes the parent only when every planned and follow-up ticket is closed and does not close the parent early", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("closes the parent only when every planned and follow-up ticket is closed") || n.includes("closes the parent only when"), "must gate parent closure");
+    assert.ok(n.includes("does not close the parent early") || n.includes("does not create more than three active worktrees"), "must not close early");
+  });
+
+  test("does not create more than three active worktrees", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("does not create more than three active worktrees") || n.includes("keeps no more than three implementation worktrees active"), "must cap worktrees");
+  });
+});
+
+describe("supervise-this negative boundaries for execution", () => {
+  test("rejects copied adapter instructions", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("does not copy the planning or implementation prefixes"), "must reject copied instructions");
+  });
+
+  test("rejects blocked or assigned scheduling", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("does not schedule blocked or assigned tickets") || n.includes("does not schedule blocked"), "must reject blocked scheduling");
+  });
+
+  test("rejects more than three active worktrees", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("keeps no more than three implementation worktrees active"), "must reject more than three");
+  });
+
+  test("rejects unapproved model fallback", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("never replaces an unavailable") && n.includes("fallback"), "must reject fallback");
+    assert.equal(n.includes("fallback to a cheaper") && n.includes("automatically choose"), false, "must not contain fallback chooser");
+  });
+
+  test("rejects invented IDs", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("invents session") || n.includes("invents session and section ids"));
+    assert.ok(n.includes("never edits") || n.includes("never invents") || n.includes("or invents session"));
+  });
+
+  test("rejects state-file edits", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("never edits persisted agent manager state") || n.includes("never edits `.kilo/agent-manager.json`"));
+  });
+
+  test("rejects idle-equals-success", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("does not treat idle as success") || n.includes("agent manager idle state alone does not satisfy completion"));
+  });
+
+  test("rejects early parent closure", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("does not close the parent early") || n.includes("closes the parent only when every planned"), "must reject early closure");
+  });
+
+  test("skill still contains no hard-coded allowlist and uses agent_manager_models", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(skill.includes("agent_manager_models"));
+    assert.ok(skill.includes("no hard-coded model allowlist"));
+  });
+});
+
+describe("supervise-this seam documentation and derived human docs describe implementation and final-review model routing", () => {
+  test("leaf doc describes implementation and final-review model routing", () => {
+    const leaf = read("docs/leaves/supervise-this.md");
+    const n = norm(leaf);
+    assert.ok(n.includes("every worker receives one delegated") && n.includes("implementation model and variant"), "leaf must describe implementation routing");
+    assert.ok(n.includes("final review") && n.includes("review model and variant"), "leaf must describe final-review routing");
+    assert.ok(n.includes("implementation and final-review model routing") || (n.includes("implementation") && n.includes("final-review") && n.includes("model routing")), "leaf must mention implementation and final-review routing");
+  });
+
+  test("human overview describes implementation and final-review routing", () => {
+    const overview = read("docs/human/overview.md");
+    const n = norm(overview);
+    assert.ok(n.includes("implementation model and variant") || n.includes("implementation selection"), "overview must mention implementation routing");
+    assert.ok(n.includes("review model and variant") || n.includes("review selection"), "overview must mention review routing");
+  });
+
+  test("human data-flow describes implementation and final-review routing", () => {
+    const flow = read("docs/human/data-flow.md");
+    const n = norm(flow);
+    assert.ok(n.includes("confirmed implementation model and variant") || n.includes("implementation model and variant"), "data-flow must describe implementation routing");
+    assert.ok(n.includes("confirmed review model and variant") || n.includes("review model and variant"), "data-flow must describe review routing");
+    assert.ok(n.includes("does not inherit") || n.includes("final review session does not inherit"), "data-flow must mention no inheritance");
+  });
+
+  test("INSTALL documents happy-path execution and model routing", () => {
+    const install = read("skills/supervise-this/INSTALL.md");
+    const n = norm(install);
+    assert.ok(n.includes("happy-path execution") || n.includes("happy path"), "install must mention happy-path execution");
+    assert.ok(n.includes("one agent manager worktree per selected ticket"), "install must document worktree per ticket");
+    assert.ok(n.includes("keeps no more than three") || n.includes("three implementation worktrees"), "install must document cap");
+    assert.ok(n.includes("a ticket counts as complete only when") && n.includes("github shows it closed"), "install must document durable completion");
+    assert.ok(n.includes("integrated `code-review` starts") || n.includes("integrated code-review"), "install must document integrated review");
+  });
+
+  test("CONTEXT supervised run describes implementation and final-review routing", () => {
+    const glossary = read("CONTEXT.md");
+    const n = norm(glossary);
+    assert.ok(n.includes("reads the structured model configuration recorded by #67"), "glossary must mention reading structured config");
+    assert.ok(n.includes("at most three") && n.includes("implement-this"), "glossary must mention three worktrees");
+    assert.ok(n.includes("exact confirmed review model and variant") || n.includes("review model and variant"), "glossary must mention review routing");
+    assert.ok(n.includes("does not inherit") || n.includes("final review does not inherit"), "glossary must mention no inheritance");
   });
 });
