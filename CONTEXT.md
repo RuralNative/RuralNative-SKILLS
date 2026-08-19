@@ -21,10 +21,10 @@ the suffix names who serves or reads (document-for-agents,
 document-for-humans). Per ADR-0004, with a narrow exception for
 audience-neutral utilities such as `unslopify` where one behavior applies
 unchanged across audiences and a suffix would invent a false distinction
-(ADR-0005), and for task-scoped fixed-template workflow adapters such as
-`plan-this` and `implement-this` where the identity is the user-facing
-slash command and a suffix would obscure the explicit invocation contract.
-See ADR-0006.
+(ADR-0005), and for task-scoped fixed-template workflow adapters and
+coordinators such as `plan-this`, `implement-this`, and `supervise-this`
+where the identity is the user-facing slash command and a suffix would
+obscure the explicit invocation contract. See ADR-0006 and ADR-0007.
 _Avoid_: noun-phrase names (documentation-for-ai), router prefixes (docs/)
 
 **AI tell**:
@@ -115,3 +115,7 @@ _Avoid_: changelog
 **Bridge link**:
 A one-way pointer from a human doc to an AI-first doc for depth.
 _Avoid_: cross-reference (when one-way is meant)
+
+**Supervised run**:
+The lifecycle managed by `supervise-this` from model preflight through planning, implementation, and review. The user supplies explicit planning and implementation model and variant selections plus an optional review pair that defaults to planning, the supervisor resolves every choice through `agent_manager_models` and requires approval before any session, planning runs as a local Agent Manager session delegating to `plan-this`, GitHub issues and native dependencies provide durability, and Agent Manager `list` is the live-state source.
+_Avoid_: supervised workflow, auto-run

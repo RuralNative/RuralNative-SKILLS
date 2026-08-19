@@ -16,6 +16,7 @@ prose (ADR-0005).
 | **unslopify** | Removes AI tells from explicit prose while keeping meaning — the 31-pattern cleanup you run on named files or changed prose. Hard dependency of both documentation skills and reusable standalone. |
 | **plan-this** | Applies the planning prefix as a fixed template — invoke as `/plan-this <task>` to run `/grill-with-docs` → `/to-spec` → `/to-tickets` with `/unslop` active. User-invoked only; task text is placed verbatim under `## Task:`. |
 | **implement-this** | Applies the implementation prefix as a fixed template — invoke as `/implement-this #<n>` directly or as one issue delegated by an active `supervise-this` run in a dedicated Agent Manager worktree to run `/implement` → `/code-review` with `/unslop` active. User-invoked direct or delegated single-issue use; issue reference replaces `Issue #0` verbatim. |
+| **supervise-this** | Coordinates model-aware planning via `/supervise-this <task>` and `/supervise-this #<spec>` with explicit planning, implementation, and optional review model and variant resolved through `agent_manager_models`, approval before execution, and a local `plan-this` delegation. |
 
 Both documentation skills load `unslopify` by skill identity before any user-visible prose and run a final audit before publishing; see Getting Started for order and see Technical Requirements for the optional scanner.
 
@@ -38,6 +39,8 @@ routing lives here, as a table:
 | Documentation cleanup before publishing (outside doc skills) | unslopify | Final audit on named files (standalone) |
 | You have a task and want the planning workflow without pasting the prefix | plan-this | /plan-this <task> (user-invoked) |
 | You have a ticket number and want the implementation workflow without pasting the prefix | implement-this | /implement-this #<n> direct, or one issue via active `supervise-this` delegation |
+| You want a full run from planning through implementation with chosen models per phase | supervise-this | /supervise-this <task> with planning, implementation, optional review model+variant via `agent_manager_models` |
+| You interrupted a supervised run and want to resume | supervise-this | /supervise-this #<spec> resumes from the recorded parent configuration |
 
 Rule of thumb: **the audience picks the skill, the codebase's doc state
 picks the mode.** The three lifecycle modes are branches inside one skill,
@@ -221,11 +224,12 @@ shortcut registry, each with a note for when to revisit it.
      resolves `unslopify` by skill identity, not by a repository-relative path.
 
        ```bash
-       npx skills add RuralNative/RuralNative-SKILLS --skill unslopify
-       npx skills add RuralNative/RuralNative-SKILLS --skill document-for-agents
-       npx skills add RuralNative/RuralNative-SKILLS --skill document-for-humans
-       npx skills add RuralNative/RuralNative-SKILLS --skill plan-this
-       npx skills add RuralNative/RuralNative-SKILLS --skill implement-this
+        npx skills add RuralNative/RuralNative-SKILLS --skill unslopify
+        npx skills add RuralNative/RuralNative-SKILLS --skill document-for-agents
+        npx skills add RuralNative/RuralNative-SKILLS --skill document-for-humans
+        npx skills add RuralNative/RuralNative-SKILLS --skill plan-this
+        npx skills add RuralNative/RuralNative-SKILLS --skill implement-this
+        npx skills add RuralNative/RuralNative-SKILLS --skill supervise-this
        ```
 
      Install the two doc skills if you want the full system: `unslopify` first,
@@ -245,25 +249,28 @@ shortcut registry, each with a note for when to revisit it.
      cd RuralNative-SKILLS
 
        # Anthropic Claude Code (all your projects) — dependency first
-       cp -r skills/unslopify ~/.claude/skills/unslopify
-       cp -r skills/document-for-agents ~/.claude/skills/document-for-agents
-       cp -r skills/document-for-humans ~/.claude/skills/document-for-humans
-       cp -r skills/plan-this ~/.claude/skills/plan-this
-       cp -r skills/implement-this ~/.claude/skills/implement-this
+        cp -r skills/unslopify ~/.claude/skills/unslopify
+        cp -r skills/document-for-agents ~/.claude/skills/document-for-agents
+        cp -r skills/document-for-humans ~/.claude/skills/document-for-humans
+        cp -r skills/plan-this ~/.claude/skills/plan-this
+        cp -r skills/implement-this ~/.claude/skills/implement-this
+        cp -r skills/supervise-this ~/.claude/skills/supervise-this
 
-       # Kilo (this project only)
-       cp -r skills/unslopify .kilo/skills/unslopify
-       cp -r skills/document-for-agents .kilo/skills/document-for-agents
-       cp -r skills/document-for-humans .kilo/skills/document-for-humans
-       cp -r skills/plan-this .kilo/skills/plan-this
-       cp -r skills/implement-this .kilo/skills/implement-this
+        # Kilo (this project only)
+        cp -r skills/unslopify .kilo/skills/unslopify
+        cp -r skills/document-for-agents .kilo/skills/document-for-agents
+        cp -r skills/document-for-humans .kilo/skills/document-for-humans
+        cp -r skills/plan-this .kilo/skills/plan-this
+        cp -r skills/implement-this .kilo/skills/implement-this
+        cp -r skills/supervise-this .kilo/skills/supervise-this
 
-       # Kilo (all your projects)
-       cp -r skills/unslopify ~/.agents/skills/unslopify
-       cp -r skills/document-for-agents ~/.agents/skills/document-for-agents
-       cp -r skills/document-for-humans ~/.agents/skills/document-for-humans
-       cp -r skills/plan-this ~/.agents/skills/plan-this
-       cp -r skills/implement-this ~/.agents/skills/implement-this
+        # Kilo (all your projects)
+        cp -r skills/unslopify ~/.agents/skills/unslopify
+        cp -r skills/document-for-agents ~/.agents/skills/document-for-agents
+        cp -r skills/document-for-humans ~/.agents/skills/document-for-humans
+        cp -r skills/plan-this ~/.agents/skills/plan-this
+        cp -r skills/implement-this ~/.agents/skills/implement-this
+        cp -r skills/supervise-this ~/.agents/skills/supervise-this
      ```
 
    Other tools: put the folder wherever your agent loads skills from. Full

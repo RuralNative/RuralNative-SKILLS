@@ -1,4 +1,4 @@
-<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-19 · Sources: docs/adr/0001-distribute-as-public-catalog-shelf.md, docs/adr/0002-adopt-ten-check-gate.md, docs/adr/0003-human-first-derived-artifacts.md, docs/adr/0004-verb-named-skills-flat-shelf.md, docs/adr/0005-unslopify-utility-identity-and-hard-dependency.md, docs/adr/0006-plan-this-fixed-template-adapter.md -->
+<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-19 · Sources: docs/adr/0001-distribute-as-public-catalog-shelf.md, docs/adr/0002-adopt-ten-check-gate.md, docs/adr/0003-human-first-derived-artifacts.md, docs/adr/0004-verb-named-skills-flat-shelf.md, docs/adr/0005-unslopify-utility-identity-and-hard-dependency.md, docs/adr/0006-plan-this-fixed-template-adapter.md, docs/adr/0007-supervise-this-coordinator.md -->
 
 # Decision journal — in plain words
 
@@ -92,3 +92,13 @@ Why: pasting long prefixes wastes tokens, weakens prompt caching, and lets workf
 What it costs you: the shelf now lists four skills; the naming convention carries a narrow task-scoped exception for these adapters, and `/unslop` stays the external prose dependency.
 
 Object or discuss: ADR 0006 — the [decision record](https://github.com/RuralNative/RuralNative-SKILLS/blob/main/docs/adr/0006-plan-this-fixed-template-adapter.md) and its [issue](https://github.com/RuralNative/RuralNative-SKILLS/issues/51).
+
+### 2026-08-19 — Supervise-this coordinates model-aware runs
+
+What changed: a coordinator skill `supervise-this` joined the shelf. It takes explicit planning, implementation, and optional review model and variant choices, resolves each through `agent_manager_models` with no hard-coded allowlist, shows the exact resolved configuration for approval, starts planning as a local Agent Manager session that delegates to `plan-this`, and records the resolved configuration on the parent for later resume.
+
+Why: planning and implementation need different cost and quality levels, and manual worktree and spec handling is slow. Validating choices against the live catalog, asking once for missing input, confirming the exact resolved names, and reusing existing adapter contracts keeps the supervisor thin and avoids stale lists.
+
+What it costs you: you supply planning and implementation model and variant before the task, review defaults to planning when both are omitted, a partial review or missing field asks one ELI18 question before any session, and an unavailable model or variant pauses without a silent fallback. The coordinator never claims to change the current Kilo session model.
+
+Object or discuss: ADR 0007 — the [decision record](https://github.com/RuralNative/RuralNative-SKILLS/blob/main/docs/adr/0007-supervise-this-coordinator.md) and its [issue](https://github.com/RuralNative/RuralNative-SKILLS/issues/62).

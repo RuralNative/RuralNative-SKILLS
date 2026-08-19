@@ -1,4 +1,4 @@
-<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-19 · Regenerated: #63 supervised planning delegation · Sources: docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md, docs/leaves/unslopify.md, docs/leaves/plan-this.md, docs/leaves/implement-this.md, docs/leaves/release-skills.md -->
+<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-19 · Regenerated: #67 supervised planning preflight · Sources: docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md, docs/leaves/unslopify.md, docs/leaves/plan-this.md, docs/leaves/implement-this.md, docs/leaves/supervise-this.md, docs/leaves/release-skills.md -->
 
 # How information moves — in plain words
 
@@ -63,13 +63,15 @@ one-way Bridge links for depth, and explains or links glossary terms on first
 use. People read those pages, and when they want more, the one-way depth
 links carry them into the technical pages, never the reverse.
 
+The supervised coordinator flow rides above both adapters: the user invokes `/supervise-this <task>` with planning model+variant, implementation model+variant, and optional review model+variant, or `/supervise-this #<spec>` to resume; the supervisor checks that every required field is present and that review is either both omitted or both supplied, otherwise returns one ELI18 decision before any session, resolves every model name and variant through `agent_manager_models` accepting catalog names and qualified provider and model identifiers with no hard-coded allowlist, verifies each variant, shows the exact resolved planning, implementation, and review selections and waits for one confirmation, then starts planning as an Agent Manager local session with the confirmed planning model and variant and a delegated `plan-this` task without claiming to change the current Kilo session. The delegated planning session honors all `plan-this` approval gates and returns the published specification and ticket references; after publication the supervisor posts one structured parent comment recording the resolved planning, implementation, and review selections before implementation so a later resume can revalidate from GitHub.
+
 The planning adapter flow rides alongside: the skill accepts either a direct user invocation `/plan-this <task>` or narrow delegation from an active `supervise-this` run, places the task verbatim under `## Task:` as the single substitution point and delegates to `/grill-with-docs` → `/to-spec` → `/to-tickets` with `/unslop` active before the first progress update, preserving the verbatim expected prefix — workflow line, eight Rules bullets, final summary line — with no wrapper markers or extra machinery and the same byte-for-byte body across both paths, rejecting unrelated invocation; standalone completion stops after the ELI18 summary while delegated completion returns the published parent specification and ticket references to the supervisor instead of ending the whole run, with no second planning contract, hard dependencies declared via that prefix plus frontmatter, not a separate section, file totals 18–35 lines. The implementation adapter flow does the same for tickets: a user invokes `/implement-this #<n>` directly or an active `supervise-this` run delegates one assigned issue in its dedicated Agent Manager worktree, the skill places the issue reference verbatim in place of `Issue #0` with the body after frontmatter equal to the exact prefix and a single `Issue #0` substitution point, and delegates to `/implement` → `/code-review` with `/unslop` active before the first progress update, preserving exact Git commands and the fixed prefix with no wrapper markers and no extra runtime, stopping if the assigned issue has an open native blocker and otherwise keeping worktree safety, verification, review, rebase, push, evidence, label removal, and single-ticket closure.
 
 Where information rests: authored knowledge rests in the technical tree;
 plain-language knowledge rests in the human pages, always one honest
 regeneration behind its sources, never ahead of them.
 
-depth: docs/leaves/document-for-agents.md · docs/leaves/document-for-humans.md · docs/leaves/unslopify.md · docs/leaves/plan-this.md · docs/leaves/implement-this.md · docs/leaves/release-skills.md
+depth: docs/leaves/document-for-agents.md · docs/leaves/document-for-humans.md · docs/leaves/unslopify.md · docs/leaves/plan-this.md · docs/leaves/implement-this.md · docs/leaves/supervise-this.md · docs/leaves/release-skills.md
 
-<!-- regenerated: 2026-08-19 for #63 supervised planning delegation -->
+<!-- regenerated: 2026-08-19 for #67 supervised planning preflight -->
 

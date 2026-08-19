@@ -1,0 +1,41 @@
+# Seam: supervise-this
+
+## Purpose
+
+The skill that coordinates model-aware planning and implementation. It accepts an explicit planning model and variant plus an implementation model and variant before the task or parent specification reference, with an optional review model and variant that defaults together to the confirmed planning selection. It resolves every choice through the live Agent Manager model catalog, shows the exact resolved configuration for approval, starts `plan-this` in a local Agent Manager session with the confirmed planning model and variant, and records the resolved phase configuration on the parent specification for later execution and resume.
+
+## Scope & boundaries
+
+Owns: the content under `skills/supervise-this/` — `SKILL.md`, `INSTALL.md`, `tests/`. Delegates: the planning workflow to `plan-this` (`/grill-with-docs` → `/to-spec` → `/to-tickets` with `/unslop` active via that adapter) and per-ticket implementation to `implement-this` (`/implement` → `/code-review`); prose quality to `/unslop` through those adapters. The seam is a coordinator — it does not copy the planning or implementation prefixes, does not maintain a hard-coded model allowlist, and does not change the model of the current Kilo session. Installation uses the registry lane only. The current slice implements the first complete path for model preflight and planning; execution, resume, worktree caps, and final review land in follow-up slices.
+
+## Key files & data flow
+
+`SKILL.md` is the entry point; its frontmatter `name` is the skill identity `supervise-this` and its `description` declares the explicit invocations `/supervise-this <task>` and `/supervise-this #<spec>` plus delegation to `plan-this` and `implement-this` via `agent_manager_models` with no hard-coded allowlist. The consumption path is: user invokes `/supervise-this <task>` with planning model+variant, implementation model+variant, optional review model+variant → supervisor validates that every required field is present and that review is either both omitted or both supplied, otherwise produces one ELI18 decision before any session starts → resolves every model name and variant through `agent_manager_models`, accepting catalog model names and qualified provider and model identifiers, verifying each variant against the resolved model → shows the exact resolved planning, implementation, and review selections and requires one confirmation before execution → starts planning as an Agent Manager local session with the confirmed planning model and variant and a delegated `plan-this` task. The delegated planning session honors all `plan-this` approval gates and returns the published specification and ticket references to the supervisor. After planning publishes the parent specification and child tickets, the supervisor records the resolved phase configuration in one structured parent comment before implementation starts. Resume mode (`/supervise-this #<spec>`) reuses that comment as authority and revalidates through `agent_manager_models`. `INSTALL.md` documents the registry lane `npx skills add RuralNative/RuralNative-SKILLS --skill supervise-this` and the manual copy `cp -r skills/supervise-this`. The registry discovery walks `skills/supervise-this/` and a consumer installs by skill identity. The repo never carries its own install — `.agents/` and `skills-lock.json` are ignored. Tests live in `skills/supervise-this/tests/` and assert the seam at the composition boundary without mocking Kilo or Agent Manager internals.
+
+## Non-negotiables
+
+1. **INV-1** — `SKILL.md` frontmatter `name` equals the folder name `supervise-this`. Mechanism: identity check — harness check 3 and composition test verify `name: supervise-this` matches folder.
+
+2. **INV-2** — The registry-lane command in `INSTALL.md` installs this seam as `npx skills add RuralNative/RuralNative-SKILLS --skill supervise-this` with matching manual copy `cp -r skills/supervise-this`; discovery text names the explicit invocations `/supervise-this <task>` and `/supervise-this #<spec>` and preserves the planning and implementation fields. Mechanism: composition test verifies exact install command, manual copy, and invocation phrasing in `SKILL.md` and `INSTALL.md`.
+
+3. **INV-3** — Invocation accepts task text plus planning model, planning variant, implementation model, and implementation variant fields; review model and review variant may be supplied together and when both are omitted they default to the confirmed planning selection. A partial review selection or any missing required field produces one ELI18 decision before any session starts. Mechanism: composition test verifies `SKILL.md` declares the four required fields, the optional review pair, the default-to-planning rule, and the single ELI18 decision gate before session creation, and that `INSTALL.md` documents complete, missing, review-defaulting, and partial-review scenarios.
+
+4. **INV-4** — Every model name and variant is resolved through `agent_manager_models`; the skill contains no hard-coded model allowlist. The supervisor accepts catalog model names and qualified provider and model identifiers and verifies each variant against the resolved model. Mechanism: composition test checks `SKILL.md` contains `agent_manager_models` and the literal `no hard-coded model allowlist`, checks acceptance of catalog names and qualified `provider/model` identifiers, and fails if any hard-coded allowlist appears; `INSTALL.md` documents catalog and qualified identifier examples.
+
+5. **INV-5** — The user sees and approves the exact resolved planning, implementation, and review selections before execution. An unavailable or ambiguous model or variant pauses planning and never triggers an unapproved fallback. Mechanism: composition test verifies `SKILL.md` contains the approval gate with exact resolved selections and that unavailable or ambiguous selections pause with one ELI18 decision and that no fallback phrasing exists.
+
+6. **INV-6** — The planning phase starts as an Agent Manager local session with the confirmed planning model and variant and a delegated `plan-this` task. The skill does not claim to change the model of the current Kilo session. The delegated planning session honors all `plan-this` approval gates and returns the published specification and ticket references to the supervisor. Mechanism: composition test verifies `SKILL.md` contains `Agent Manager local session` with `plan-this`, the literal `does not claim to change the model of the current Kilo session`, and the return of published specification and ticket references.
+
+7. **INV-7** — Before implementation starts, one structured parent comment records the resolved planning, implementation, and review model and variant selections. The skill owns coordination and model routing only. Mechanism: composition test verifies `SKILL.md` contains the structured parent comment recording and that it precedes implementation, and that leaf doc explains the recording and coordination boundary.
+
+## Further notes
+
+The first slice (#67) covers model preflight and planning only. Later slices add bounded implementation worktree creation, native-dependency frontier calculation, recovery, whole-spec review, and parent closure. The planning adapter `plan-this` and implementation adapter `implement-this` remain byte-for-byte unchanged as the single sources for their workflows; this seam delegates to them rather than copying their prefixes. The glossary term supervised run names the lifecycle, and ADR 0007 records the task-scoped identity, delegated adapter invocation, explicit model routing, GitHub durability, and Agent Manager live-state boundaries.
+
+## Links
+
+- Glossary: `CONTEXT.md` — Skill, skill identity, skill naming convention, distribution shelf, registry lane, supervised run.
+- Decision: `docs/adr/0007-supervise-this-coordinator.md` — task-scoped coordinator, delegation, model routing, durability, live-state.
+- Decision: `docs/adr/0006-plan-this-fixed-template-adapter.md` — task-scoped exception and template boundary reused for this coordinator.
+- Harness: `scripts/docs-check.sh`.
+- Template: `skills/document-for-agents/reference/templates.md` — the shape this leaf doc follows.

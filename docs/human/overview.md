@@ -1,4 +1,4 @@
-<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-19 · Sources: ARCHITECTURE.md, CONTEXT.md, docs/leaves/plan-this.md -->
+<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-19 · Sources: ARCHITECTURE.md, CONTEXT.md, docs/leaves/supervise-this.md, docs/leaves/plan-this.md, docs/leaves/implement-this.md -->
 
 # RuralNative-SKILLS — in plain words
 
@@ -6,7 +6,7 @@ What this is: a public shelf of skills for AI coding agents. A skill is a
 ready-made pack of instructions that teaches an agent how to do a job the
 proven way, and anyone can install one and load it into their agent. Most
 skill names start with the doing-word and say who they serve; the shelf
-currently holds six: document-for-agents, document-for-humans, unslopify, the
+currently holds seven: document-for-agents, document-for-humans, unslopify, the
 audience-neutral utility that cleans AI tells from explicit prose while keeping
 meaning, evidence, and tone, plan-this, the fixed-template planning adapter
 invoked either directly as `/plan-this <task>` or via narrow delegation from an
@@ -15,7 +15,7 @@ active `supervise-this` run that preserves the planning prefix verbatim under
 with `/unslop` active and rejects unrelated invocation, implement-this, the
 fixed-template implementation adapter invoked as `/implement-this #<n>` directly or as one issue delegated by an active `supervise-this` run in a dedicated Agent Manager worktree that preserves the
 implementation prefix verbatim in place of `Issue #0` and delegates to
-`/implement` → `/code-review` with `/unslop` active, and release-skills, the
+`/implement` → `/code-review` with `/unslop` active, supervise-this, the coordinator that takes explicit planning, implementation, and optional review model and variant choices, resolves each through `agent_manager_models` with no hard-coded allowlist, shows the exact resolved configuration for approval, starts planning as a local Agent Manager session that delegates to `plan-this`, and records the resolved configuration on the parent for later resume, and release-skills, the
 universal release workflow that auto-detects version files and changelogs. Both
 documentation skills declare `unslopify` as a hard dependency and will not
 publish prose without it.

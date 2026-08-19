@@ -1,4 +1,4 @@
-<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-19 · Regenerated: #63 supervised planning delegation · Sources: docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md, docs/leaves/unslopify.md, docs/leaves/plan-this.md, docs/leaves/implement-this.md, docs/leaves/release-skills.md -->
+<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-19 · Regenerated: #67 supervised planning preflight · Sources: docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md, docs/leaves/unslopify.md, docs/leaves/plan-this.md, docs/leaves/implement-this.md, docs/leaves/supervise-this.md, docs/leaves/release-skills.md -->
 
 # Guardrails — in plain words
 
@@ -107,11 +107,18 @@ one, the checker goes red. One line per promise.
 - Hard dependencies are `/unslop`, `/implement`, and `/code-review` with workflow order `/implement` → `/code-review` and `/unslop` active before the first progress update, declared via the prefix plus frontmatter description, not a separate Hard dependencies section; the local `unslopify` stays unchanged. (depth: docs/leaves/implement-this.md)
 - The skill is user-invoked only via `/implement-this #<n>` and via one issue delegated by an active `supervise-this` run in a dedicated Agent Manager worktree and preserves worktree checks, ticket authority, claiming, verification, documentation, review, rebase, push, issue comment, label removal, and closure with the final ELI18 Why / What / Where / How summary, without requiring a separate `## Rules preserved` section. (depth: docs/leaves/implement-this.md)
 - Direct `/implement-this #<n>` use and one issue delegated by an active `supervise-this` run are the only allowed paths, and delegated use still works on only the assigned issue, stops if its blocker is open, keeps worktree safety, verification, review, rebase, push, evidence, label removal, and closure, with the template byte for byte unchanged — rejected are unrelated invokers or multi-ticket assignment. (depth: docs/leaves/implement-this.md)
+- The name inside supervise-this must match its folder — the same front-door rule for the coordinator. (depth: docs/leaves/supervise-this.md)
+- The one-line install for supervise-this must keep installing that exact skill with explicit invocations `/supervise-this <task>` and `/supervise-this #<spec>` and the planning and implementation fields preserved. (depth: docs/leaves/supervise-this.md)
+- Invocation accepts task text plus planning model, planning variant, implementation model, and implementation variant, with review model and review variant together defaulting to the confirmed planning selection when both are omitted; a partial review or any missing required field produces one ELI18 decision before any session starts. (depth: docs/leaves/supervise-this.md)
+- Every model name and variant is resolved through `agent_manager_models` with no hard-coded model allowlist; catalog model names and qualified provider and model identifiers are accepted and each variant is verified against the resolved model. (depth: docs/leaves/supervise-this.md)
+- The user sees and approves the exact resolved planning, implementation, and review selections before execution; an unavailable or ambiguous model or variant pauses planning and never triggers an unapproved fallback. (depth: docs/leaves/supervise-this.md)
+- The planning phase starts as an Agent Manager local session with the confirmed planning model and variant and a delegated `plan-this` task, the skill does not claim to change the model of the current Kilo session, and the delegated session honors all `plan-this` approval gates and returns the published specification and ticket references to the supervisor. (depth: docs/leaves/supervise-this.md)
+- Before implementation starts, one structured parent comment records the resolved planning, implementation, and review model and variant selections. (depth: docs/leaves/supervise-this.md)
 - The name inside release-skills must match its folder — the same front-door
   rule for the release workflow. (depth: docs/leaves/release-skills.md)
 - The release workflow is invoked via release trigger phrases and auto-detects
   version files and changelogs without manual configuration. (depth:
   docs/leaves/release-skills.md)
 
-<!-- regenerated: 2026-08-19 for #63 supervised planning delegation -->
+<!-- regenerated: 2026-08-19 for #67 supervised planning preflight -->
 
