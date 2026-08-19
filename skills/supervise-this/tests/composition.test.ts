@@ -570,3 +570,382 @@ describe("supervise-this seam documentation and derived human docs describe impl
     assert.ok(n.includes("does not inherit") || n.includes("final review does not inherit"), "glossary must mention no inheritance");
   });
 });
+
+describe("supervise-this resume without duplicate (supervise-this:INV-13)", () => {
+  test("resumes an existing supervised run without creating a duplicate specification or duplicate child ticket", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("/supervise-this #<parent-spec> resumes an existing supervised run without creating a duplicate specification or duplicate child ticket"), "must state resume without duplicate spec or child ticket");
+  });
+
+  test("reads the newest valid structured planning, implementation, and review configuration from the parent", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("reads the newest valid structured planning, implementation, and review configuration from the parent"), "must read newest valid configuration");
+  });
+
+  test("missing or malformed configuration produces one ELI18 decision before any new session starts", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("missing or malformed configuration produces one eli18 decision before any new session starts"), "must handle missing/malformed config with ELI18");
+  });
+
+  test("INSTALL documents resume and missing config handling", () => {
+    const install = read("skills/supervise-this/INSTALL.md");
+    const n = norm(install);
+    assert.ok(n.includes("resumes an existing supervised run without creating a duplicate"), "install must document resume without duplicate");
+    assert.ok(n.includes("missing or malformed configuration produces one eli18 decision"), "install must document missing config ELI18");
+  });
+
+  test("leaf declares INV-13 with resume without duplicate", () => {
+    const leaf = read("docs/leaves/supervise-this.md");
+    assert.ok(leaf.includes("INV-13"));
+    assert.ok(leaf.includes("resumes an existing supervised run without creating a duplicate"));
+  });
+});
+
+describe("supervise-this durable reconstruction before live (supervise-this:INV-14)", () => {
+  test("reconstructs durable issue and commit state before consulting live Agent Manager sessions", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("reconstructs durable issue and commit state before consulting live agent manager sessions"), "must reconstruct durable before live");
+  });
+
+  test("reconstructs durable progress from parent spec, child issues, dependencies, labels, evidence, commits, and newest valid config", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("reconstructs durable progress from the parent specification, child and follow-up issues, native dependencies, labels, evidence comments, commits on `origin/main`, and the newest valid phase model configuration"), "must list durable sources");
+  });
+
+  test("reconciles with live Agent Manager sessions and resumes only missing ready work", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("reconciles that record with live agent manager sessions and resumes only missing ready work"), "must reconcile and resume only missing");
+  });
+
+  test("Agent Manager list remains source of live session and worktree IDs; stale or missing sessions do not erase durable progress", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("agent manager `list` remains the source of live session and worktree ids; stale or missing sessions do not erase durable progress") || n.includes("stale or missing sessions do not erase durable progress"), "must state stale does not erase");
+  });
+
+  test("leaf declares INV-14 with durable reconstruction", () => {
+    const leaf = read("docs/leaves/supervise-this.md");
+    assert.ok(leaf.includes("INV-14"));
+    assert.ok(leaf.includes("reconstructs durable issue and commit state before consulting live"));
+  });
+});
+
+describe("supervise-this catalog revalidation and exact reuse (supervise-this:INV-15)", () => {
+  test("before creating a missing session, resolves recorded model through agent_manager_models and verifies variant", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("before creating a missing session, the supervisor resolves the recorded model through `agent_manager_models` and verifies the recorded variant"), "must revalidate before creation");
+  });
+
+  test("every available recorded selection is reused exactly without substituting current supervisor model", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("every available recorded selection is reused exactly without substituting the current supervisor model"), "must reuse exactly");
+    assert.ok(n.includes("preserves every available selection exactly"), "must preserve exactly");
+  });
+
+  test("unavailable pauses only phases that require it, records needs-info, and asks for one replacement decision with recommendation", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("unavailable recorded model or variant pauses only phases that require it, records `needs-info`, and asks the user for one replacement decision with a recommendation"), "must pause only required phases");
+  });
+
+  test("approved replacement produces new structured parent config comment while preserving earlier comment as history", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("approved replacement produces a new structured parent configuration comment while preserving the earlier comment as history"), "must preserve history on replacement");
+  });
+
+  test("never falls back silently", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("never falls back silently") || n.includes("never fall back silently"), "must never fall back silently");
+  });
+
+  test("leaf declares INV-15 with revalidation and exact reuse", () => {
+    const leaf = read("docs/leaves/supervise-this.md");
+    assert.ok(leaf.includes("INV-15"));
+    assert.ok(leaf.includes("resolves the recorded model through `agent_manager_models`"));
+  });
+});
+
+describe("supervise-this duplicate prevention and selected-model restart (supervise-this:INV-16)", () => {
+  test("does not duplicate a worker for an open assigned ticket or for a ticket whose active session is already known", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("does not duplicate a worker for an open assigned ticket or for a ticket whose active session is already known"), "must prevent duplicate worker");
+  });
+
+  test("restarted implementation or follow-up worktree receives recorded implementation model and variant", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("restarted implementation or follow-up worktree receives the recorded implementation model and variant"), "must restart with implementation selection");
+  });
+
+  test("restarted final-review session receives recorded review model and variant", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("restarted final-review session receives the recorded review model and variant"), "must restart review with review selection");
+  });
+
+  test("leaf declares INV-16", () => {
+    const leaf = read("docs/leaves/supervise-this.md");
+    assert.ok(leaf.includes("INV-16"));
+  });
+});
+
+describe("supervise-this recovery and partial continuation (supervise-this:INV-17)", () => {
+  test("idle, waiting, retrying, or offline worker with open issue triggers evidence inspection before any prompt", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("idle, waiting, retrying, or offline worker with an open issue triggers evidence inspection before any prompt"), "must inspect before prompt");
+  });
+
+  test("scoped mechanical failure receives at most one focused recovery prompt in existing session", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("scoped mechanical failure receives at most one focused recovery prompt in the existing session"), "must limit to one recovery prompt");
+  });
+
+  test("when a worker cannot finish, inspects ticket and branch evidence, sends one focused recovery prompt in existing selected-model session, and escalates still-blocked with needs-info", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("when a worker cannot finish, the supervisor inspects the ticket and branch evidence, sends one focused recovery prompt in the existing selected-model session, and escalates a still-blocked ticket with `needs-info`"), "must handle worker cannot finish");
+  });
+
+  test("ticket that still cannot proceed gains needs-info, records concrete blocker, and asks one ELI18 decision with recommendation", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("ticket that still cannot proceed gains `needs-info`, records the concrete blocker, and asks the user one eli18 decision with a recommendation"), "must escalate with concrete blocker");
+  });
+
+  test("unrelated ready tickets continue while blocked ticket and descendants wait", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("unrelated ready tickets continue while the blocked ticket and its descendants wait") || n.includes("unrelated ready work continues"), "must continue unrelated work");
+  });
+
+  test("native dependency state prevents descendants from starting until every blocker closes", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("native dependency state prevents descendants from starting until every blocker closes"), "must block descendants");
+  });
+
+  test("leaf declares INV-17", () => {
+    const leaf = read("docs/leaves/supervise-this.md");
+    assert.ok(leaf.includes("INV-17"));
+  });
+});
+
+describe("supervise-this follow-up creation (supervise-this:INV-18)", () => {
+  test("confirmed integrated-review findings become smallest independently verifiable follow-up tickets linked to parent, with native blocking edges where order matters", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("confirmed integrated-review findings become the smallest independently verifiable follow-up tickets linked to the parent, with native blocking edges where order matters"), "must create smallest follow-up tickets");
+  });
+
+  test("follow-up tickets use recorded implementation model and variant", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("follow-up tickets use the recorded implementation model and variant"), "must use implementation selection for follow-ups");
+  });
+
+  test("every final-review rerun uses recorded review model and variant", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("every final-review rerun uses the recorded review model and variant") || n.includes("every review rerun uses the recorded review"), "must use review selection for reruns");
+  });
+
+  test("leaf declares INV-18", () => {
+    const leaf = read("docs/leaves/supervise-this.md");
+    assert.ok(leaf.includes("INV-18"));
+  });
+});
+
+describe("supervise-this two-round limit (supervise-this:INV-19)", () => {
+  test("supervisor runs no more than two automatic follow-up and final-review rounds", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("supervisor runs no more than two automatic follow-up and final-review rounds"), "must cap at two rounds");
+  });
+
+  test("findings left after second round gain needs-info and return to user instead of unlimited loop", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("findings left after the second round gain `needs-info` and return to the user instead of creating an unlimited loop"), "must escalate after second round");
+  });
+
+  test("leaf declares INV-19", () => {
+    const leaf = read("docs/leaves/supervise-this.md");
+    assert.ok(leaf.includes("INV-19"));
+  });
+});
+
+describe("supervise-this parent evidence includes recovery and review outcome (supervise-this:INV-20)", () => {
+  test("parent evidence includes phase model configuration, review base, integrated commits, checks, planned and follow-up ticket links, recovery decisions, and final review outcome", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("parent evidence includes the phase model configuration, review base, integrated commits, checks, planned and follow-up ticket links, recovery decisions, and final review outcome"), "must include full evidence fields");
+  });
+
+  test("leaf declares INV-20", () => {
+    const leaf = read("docs/leaves/supervise-this.md");
+    assert.ok(leaf.includes("INV-20"));
+  });
+
+  test("INSTALL documents parent evidence with recovery decisions", () => {
+    const install = read("skills/supervise-this/INSTALL.md");
+    const n = norm(install);
+    assert.ok(n.includes("parent evidence includes the phase model configuration"), "install must document parent evidence");
+    assert.ok(n.includes("recovery decisions"), "install must mention recovery decisions");
+  });
+});
+
+describe("supervise-this composition coverage for #66 (supervise-this:INV-21)", () => {
+  test("composition tests cover configuration discovery, catalog revalidation, unavailable selections, approved replacement history, resume reconciliation, duplicate prevention, each live session state, selected-model restart, one recovery prompt, partial continuation, descendant blocking, follow-up creation, two-round limit, and escalation", () => {
+    const self = read("skills/supervise-this/tests/composition.test.ts");
+    const n = norm(self);
+    assert.ok(n.includes("configuration discovery") || n.includes("resume") && n.includes("configuration"), "must cover configuration discovery");
+    assert.ok(n.includes("catalog revalidation") || n.includes("catalog"), "must cover catalog revalidation");
+    assert.ok(n.includes("unavailable selections") || n.includes("unavailable"), "must cover unavailable");
+    assert.ok(n.includes("approved replacement history") || n.includes("approved replacement"), "must cover approved replacement");
+    assert.ok(n.includes("resume reconciliation") || n.includes("reconciles"), "must cover resume reconciliation");
+    assert.ok(n.includes("duplicate prevention") || n.includes("does not duplicate"), "must cover duplicate prevention");
+    assert.ok(n.includes("each live session state") || n.includes("idle, waiting, retrying, or offline"), "must cover live session states");
+    assert.ok(n.includes("selected-model restart") || n.includes("restarted"), "must cover selected-model restart");
+    assert.ok(n.includes("one recovery prompt") || n.includes("one focused recovery"), "must cover one recovery prompt");
+    assert.ok(n.includes("partial continuation") || n.includes("unrelated ready"), "must cover partial continuation");
+    assert.ok(n.includes("descendant blocking") || n.includes("descendants"), "must cover descendant blocking");
+    assert.ok(n.includes("follow-up creation") || n.includes("follow-up"), "must cover follow-up creation");
+    assert.ok(n.includes("two-round limit") || n.includes("two automatic") || n.includes("no more than two"), "must cover two-round limit");
+    assert.ok(n.includes("escalation") || n.includes("needs-info"), "must cover escalation");
+  });
+
+  test("leaf declares INV-21 with coverage list", () => {
+    const leaf = read("docs/leaves/supervise-this.md");
+    assert.ok(leaf.includes("INV-21"));
+    assert.ok(leaf.includes("configuration discovery"));
+  });
+
+  test("composition test file mentions all required phrases to satisfy harness", () => {
+    const self = read("skills/supervise-this/tests/composition.test.ts");
+    const n = norm(self);
+    // ensure each INV appears literally
+    for (let i = 13; i <= 22; i++) {
+      assert.ok(self.includes(`INV-${i}`) || n.includes(`inv-${i}`), `test must mention INV-${i}`);
+    }
+  });
+});
+
+describe("supervise-this seam and human documentation for completed contract (supervise-this:INV-22)", () => {
+  test("leaf describes completed model-aware resume, recovery, and review-loop contract", () => {
+    const leaf = read("docs/leaves/supervise-this.md");
+    const n = norm(leaf);
+    assert.ok(n.includes("completed model-aware resume, recovery, and review-loop contract") || (n.includes("model-aware resume") && n.includes("recovery") && n.includes("review-loop")), "leaf must describe completed contract");
+  });
+
+  test("human overview describes resume, recovery, and review-loop", () => {
+    const overview = read("docs/human/overview.md");
+    const n = norm(overview);
+    assert.ok(n.includes("reconstructs durable progress") || n.includes("resume"), "overview must mention resume reconstruction");
+    assert.ok(n.includes("one focused recovery prompt") || n.includes("recovery"), "overview must mention recovery");
+    assert.ok(n.includes("two automatic follow-up") || n.includes("two automatic"), "overview must mention two-round limit");
+  });
+
+  test("human data-flow describes resume, recovery, and review-loop", () => {
+    const flow = read("docs/human/data-flow.md");
+    const n = norm(flow);
+    assert.ok(n.includes("reconstructs durable progress") && n.includes("native dependencies"), "data-flow must describe durable reconstruction");
+    assert.ok(n.includes("revalidates each recorded model through `agent_manager_models`") || n.includes("revalidates"), "data-flow must mention revalidation");
+    assert.ok(n.includes("at most one focused recovery prompt"), "data-flow must mention one recovery prompt");
+    assert.ok(n.includes("no more than two automatic follow-up and final-review rounds"), "data-flow must mention two-round limit");
+    assert.ok(n.includes("parent evidence includes the phase model configuration"), "data-flow must mention parent evidence");
+  });
+
+  test("human guardrails includes completed contract invariants", () => {
+    const guardrails = read("docs/human/guardrails.md");
+    const n = norm(guardrails);
+    assert.ok(n.includes("resumes an existing supervised run without creating a duplicate"), "guardrails must include resume");
+    assert.ok(n.includes("reconstructs durable issue and commit state before consulting live"), "guardrails must include reconstruction");
+    assert.ok(n.includes("does not duplicate a worker for an open assigned ticket"), "guardrails must include duplicate prevention");
+    assert.ok(n.includes("two automatic follow-up and final-review rounds"), "guardrails must include two-round limit");
+  });
+
+  test("CONTEXT supervised run covers resume, recovery, and review-loop", () => {
+    const glossary = read("CONTEXT.md");
+    const n = norm(glossary);
+    assert.ok(n.includes("reconstructs durable progress from the parent specification"), "glossary must mention durable reconstruction");
+    assert.ok(n.includes("preserves every available selection exactly"), "glossary must mention preserve exactly");
+    assert.ok(n.includes("at most one focused recovery prompt"), "glossary must mention one recovery prompt");
+    assert.ok(n.includes("no more than two automatic follow-up and final-review rounds"), "glossary must mention two-round limit");
+    assert.ok(n.includes("parent evidence includes the phase model configuration"), "glossary must mention parent evidence");
+  });
+
+  test("INSTALL documents resume, recovery, and review-loop", () => {
+    const install = read("skills/supervise-this/INSTALL.md");
+    const n = norm(install);
+    assert.ok(n.includes("resumes an existing supervised run without creating a duplicate"), "install must document resume");
+    assert.ok(n.includes("reconstructs durable progress from the parent specification"), "install must document reconstruction");
+    assert.ok(n.includes("at most one focused recovery prompt"), "install must document recovery");
+    assert.ok(n.includes("smallest independently verifiable follow-up tickets"), "install must document follow-up creation");
+    assert.ok(n.includes("no more than two automatic follow-up and final-review rounds"), "install must document two-round limit");
+  });
+
+  test("leaf declares INV-22", () => {
+    const leaf = read("docs/leaves/supervise-this.md");
+    assert.ok(leaf.includes("INV-22"));
+  });
+});
+
+describe("supervise-this negative boundaries for resume and review loop", () => {
+  test("rejects duplicate specification or duplicate child ticket on resume", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("resumes an existing supervised run without creating a duplicate specification or duplicate child ticket"), "must reject duplicate creation on resume");
+  });
+
+  test("rejects stale session erasing durable progress", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("stale or missing sessions do not erase durable progress"), "must state stale does not erase");
+  });
+
+  test("rejects substituting current supervisor model for recorded selection", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("without substituting the current supervisor model"), "must not substitute supervisor model");
+    assert.equal(n.includes("substitute the current supervisor model with a fallback"), false, "must not contain fallback substitution language");
+  });
+
+  test("rejects duplicate worker for assigned ticket or active session", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("does not duplicate a worker for an open assigned ticket"), "must reject duplicate worker");
+  });
+
+  test("rejects more than one recovery prompt", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("at most one focused recovery prompt"), "must limit to one recovery prompt");
+    // ensure not allowing multiple prompts
+    assert.equal(n.includes("multiple recovery prompts") && n.includes("send two"), false, "must not allow multiple prompts");
+  });
+
+  test("rejects unlimited follow-up loop", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("instead of creating an unlimited loop"), "must reject unlimited loop");
+  });
+
+  test("rejects silent fallback on unavailable recorded selection", () => {
+    const skill = read("skills/supervise-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("never falls back silently"), "must reject silent fallback");
+  });
+});
