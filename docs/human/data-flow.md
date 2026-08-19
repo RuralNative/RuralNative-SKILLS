@@ -1,4 +1,4 @@
-<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-19 · Regenerated: #57 drift guard align bound · Sources: docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md, docs/leaves/unslopify.md, docs/leaves/plan-this.md, docs/leaves/implement-this.md, docs/leaves/release-skills.md -->
+<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-19 · Regenerated: #63 supervised planning delegation · Sources: docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md, docs/leaves/unslopify.md, docs/leaves/plan-this.md, docs/leaves/implement-this.md, docs/leaves/release-skills.md -->
 
 # How information moves — in plain words
 
@@ -63,14 +63,7 @@ one-way Bridge links for depth, and explains or links glossary terms on first
 use. People read those pages, and when they want more, the one-way depth
 links carry them into the technical pages, never the reverse.
 
-The planning adapter flow rides alongside: a user invokes `/plan-this <task>`,
-the skill places the task verbatim under `## Task:` as the single substitution
-point and delegates to `/grill-with-docs` → `/to-spec` → `/to-tickets` with
-`/unslop` active before the first progress update, preserving the verbatim
-expected prefix — workflow line, eight Rules bullets, final summary line —
-with no wrapper markers or extra machinery, hard dependencies declared via that
-prefix plus frontmatter, not a separate section, file totals 18–35 lines. The
-implementation adapter flow does the same for tickets: a user invokes `/implement-this #<n>` directly or an active `supervise-this` run delegates one assigned issue in its dedicated Agent Manager worktree, the skill places the issue reference verbatim in place of `Issue #0` with the body after frontmatter equal to the exact prefix and a single `Issue #0` substitution point, and delegates to `/implement` → `/code-review` with `/unslop` active before the first progress update, preserving exact Git commands and the fixed prefix with no wrapper markers and no extra runtime, stopping if the assigned issue has an open native blocker and otherwise keeping worktree safety, verification, review, rebase, push, evidence, label removal, and single-ticket closure.
+The planning adapter flow rides alongside: the skill accepts either a direct user invocation `/plan-this <task>` or narrow delegation from an active `supervise-this` run, places the task verbatim under `## Task:` as the single substitution point and delegates to `/grill-with-docs` → `/to-spec` → `/to-tickets` with `/unslop` active before the first progress update, preserving the verbatim expected prefix — workflow line, eight Rules bullets, final summary line — with no wrapper markers or extra machinery and the same byte-for-byte body across both paths, rejecting unrelated invocation; standalone completion stops after the ELI18 summary while delegated completion returns the published parent specification and ticket references to the supervisor instead of ending the whole run, with no second planning contract, hard dependencies declared via that prefix plus frontmatter, not a separate section, file totals 18–35 lines. The implementation adapter flow does the same for tickets: a user invokes `/implement-this #<n>` directly or an active `supervise-this` run delegates one assigned issue in its dedicated Agent Manager worktree, the skill places the issue reference verbatim in place of `Issue #0` with the body after frontmatter equal to the exact prefix and a single `Issue #0` substitution point, and delegates to `/implement` → `/code-review` with `/unslop` active before the first progress update, preserving exact Git commands and the fixed prefix with no wrapper markers and no extra runtime, stopping if the assigned issue has an open native blocker and otherwise keeping worktree safety, verification, review, rebase, push, evidence, label removal, and single-ticket closure.
 
 Where information rests: authored knowledge rests in the technical tree;
 plain-language knowledge rests in the human pages, always one honest
@@ -78,5 +71,5 @@ regeneration behind its sources, never ahead of them.
 
 depth: docs/leaves/document-for-agents.md · docs/leaves/document-for-humans.md · docs/leaves/unslopify.md · docs/leaves/plan-this.md · docs/leaves/implement-this.md · docs/leaves/release-skills.md
 
-<!-- regenerated: 2026-08-19 for implement-this drift guard -->
+<!-- regenerated: 2026-08-19 for #63 supervised planning delegation -->
 

@@ -1,4 +1,4 @@
-<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-19 · Sources: ARCHITECTURE.md, CONTEXT.md -->
+<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-19 · Sources: ARCHITECTURE.md, CONTEXT.md, docs/leaves/plan-this.md -->
 
 # RuralNative-SKILLS — in plain words
 
@@ -9,14 +9,16 @@ skill names start with the doing-word and say who they serve; the shelf
 currently holds six: document-for-agents, document-for-humans, unslopify, the
 audience-neutral utility that cleans AI tells from explicit prose while keeping
 meaning, evidence, and tone, plan-this, the fixed-template planning adapter
-invoked as `/plan-this <task>` that preserves the planning prefix verbatim
-under `## Task:` and delegates to `/grill-with-docs` → `/to-spec` →
-`/to-tickets` with `/unslop` active, implement-this, the fixed-template
-implementation adapter invoked as `/implement-this #<n>` directly or as one issue delegated by an active `supervise-this` run in a dedicated Agent Manager worktree that preserves the
+invoked either directly as `/plan-this <task>` or via narrow delegation from an
+active `supervise-this` run that preserves the planning prefix verbatim under
+`## Task:` and delegates to `/grill-with-docs` → `/to-spec` → `/to-tickets`
+with `/unslop` active and rejects unrelated invocation, implement-this, the
+fixed-template implementation adapter invoked as `/implement-this #<n>` directly or as one issue delegated by an active `supervise-this` run in a dedicated Agent Manager worktree that preserves the
 implementation prefix verbatim in place of `Issue #0` and delegates to
 `/implement` → `/code-review` with `/unslop` active, and release-skills, the
-universal release workflow that auto-detects version files and changelogs. Both documentation skills
-declare `unslopify` as a hard dependency and will not publish prose without it.
+universal release workflow that auto-detects version files and changelogs. Both
+documentation skills declare `unslopify` as a hard dependency and will not
+publish prose without it.
 
 Why it exists: an agent starts every session from scratch. Loading a skill
 hands it instructions that already work, so the agent spends its effort on

@@ -1,4 +1,4 @@
-<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-19 · Regenerated: #57 drift guard align bound · Sources: docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md, docs/leaves/unslopify.md, docs/leaves/plan-this.md, docs/leaves/implement-this.md, docs/leaves/release-skills.md -->
+<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-19 · Regenerated: #63 supervised planning delegation · Sources: docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md, docs/leaves/unslopify.md, docs/leaves/plan-this.md, docs/leaves/implement-this.md, docs/leaves/release-skills.md -->
 
 # Guardrails — in plain words
 
@@ -96,11 +96,7 @@ one, the checker goes red. One line per promise.
   `/to-tickets` and `/unslop` active before the first progress update, declared
   via the workflow line and first Rules bullet plus frontmatter, not a separate
   Hard dependencies section; the local `unslopify` stays unchanged. (depth: docs/leaves/plan-this.md)
-- The skill is user-invoked only via `/plan-this <task>` and preserves those
-  eight bullets as they appear — To-Do List, vertical slices, precision, ground
-  decisions, labels, ELI18 question, follow skills — plus the final ELI18 Why /
-  What / Where / How summary, without a separate `## Rules preserved` section in
-  `SKILL.md`. (depth: docs/leaves/plan-this.md)
+- The skill accepts direct user invocation `/plan-this <task>` and narrow delegation from an active `supervise-this` run and rejects unrelated invocation, and preserves those eight bullets as they appear — To-Do List, vertical slices, precision, ground decisions, labels, ELI18 question, follow skills — plus the final ELI18 Why / What / Where / How summary, without a separate `## Rules preserved` section in `SKILL.md`; standalone stops after that summary while delegated completion returns the published parent specification and ticket references to the supervisor, and the fixed-template body stays byte-for-byte unchanged across both paths with no second planning contract. (depth: docs/leaves/plan-this.md)
 - The name inside implement-this must match its folder — the same front-door
   rule for the implementation adapter. (depth: docs/leaves/implement-this.md)
 - The one-line install for implement-this must keep installing that exact
@@ -117,5 +113,5 @@ one, the checker goes red. One line per promise.
   version files and changelogs without manual configuration. (depth:
   docs/leaves/release-skills.md)
 
-<!-- regenerated: 2026-08-19 for implement-this drift guard -->
+<!-- regenerated: 2026-08-19 for #63 supervised planning delegation -->
 
