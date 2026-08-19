@@ -69,14 +69,16 @@ Object or discuss: ADR 0004 — the [decision record](https://github.com/RuralNa
 What changed: a third skill, unslopify, joined the shelf to clean AI tells
 from explicit prose. It carries the 31 upstream patterns with stable `AIT-*`
 identifiers and the upstream MIT notice, and both documentation skills now
-list it as an approved hard dependency that later slices will wire in.
+enforce it as a hard dependency that loads before user-visible prose and
+audits again before publication.
 
 Why: the same AI-tell patterns appear in agent docs and human docs. A single
 utility avoids copying the same 31 rules into two places and inventing a false
 audience split with two suffixed names.
 
 What it costs you: `unslopify` installs alone with one command for prose
-cleanup; documentation workflows will require it once the wiring lands, and
-until then they do not yet enforce it.
+cleanup, and documentation workflows require it. If the skill is absent the
+workflow stops with `npx skills add RuralNative/RuralNative-SKILLS --skill
+unslopify`; missing Python does not block because scanning stays advisory.
 
 Object or discuss: ADR 0005 — the [decision record](https://github.com/RuralNative/RuralNative-SKILLS/blob/main/docs/adr/0005-unslopify-utility-identity-and-hard-dependency.md) and its [issue](https://github.com/RuralNative/RuralNative-SKILLS/issues/40).

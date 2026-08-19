@@ -25,7 +25,8 @@ Consequences:
 - ADR-0004 remains accepted as the default; this decision does not permit
   router skills and does not change the flat shelf.
 - The architecture index adds the `unslopify` seam, its leaf doc, and this ADR.
-- Until later slices wire the dependency, the documentation skills do not yet
-  enforce `unslopify` at runtime and their entry points have no behavioral diff.
-- Failure mode when `unslopify` is absent will be a clear install instruction;
+- Slice U4 (#44) wired the dependency, so both documentation skills now load
+  `unslopify` before user-visible prose and run a final audit before
+  publication; the entry points enforce the hard dependency.
+- Failure mode when `unslopify` is absent is a clear install instruction;
   missing Python does not block completion because scanning remains advisory.
