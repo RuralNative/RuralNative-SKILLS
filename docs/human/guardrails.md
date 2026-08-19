@@ -49,7 +49,8 @@ one, the checker goes red. One line per promise.
   languages or invent voice. (depth: docs/leaves/unslopify.md)
 - Scanning is advisory, hash-stable, and never blocks the gate, the scanner
   masks protected regions and non-English before measuring eight repeatable
-  signals with versioned JSON and advisory thresholds, absent Python falls back
-  model-only without weakening scope, and a final preservation audit checks
-  protected content and factual equality — because style signals are clues, not
-  proof, and meaning must survive cleanup. (depth: docs/leaves/unslopify.md)
+  signals with versioned JSON and advisory thresholds (uniform rhythm uses one
+  `AIT-STR-011` for both levels), absent Python falls back model-only without
+  weakening scope, and a final preservation audit checks protected content and
+  factual equality — because style signals are clues, not proof, and meaning
+  must survive cleanup. (depth: docs/leaves/unslopify.md)

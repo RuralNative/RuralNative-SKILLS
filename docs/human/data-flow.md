@@ -11,13 +11,15 @@ skill passes it, including a repository sweep when requested, and unslopify
 validates verbatim markers, inventories protected content such as code, frontmatter,
 links, and verbatim ranges, optionally runs the Python advisory scanner that
 masks protected and non-English regions before emitting repeatable evidence for
-eight signals with versioned JSON and advisory thresholds, scans candidates
-across six families, judges each in context to reject exact technical terms and
-quotations, rewrites only supported spans with minimal English-only edits, and
-self-audits plus a preservation audit while leaving protected spans byte for byte
-and reporting rejected candidates, scanner availability, and needs-info items.
-The scanner never writes source, so a before-and-after hash stays identical,
-and it exits zero for findings and nonzero for bad input without partial JSON.
+eight signals with versioned JSON and advisory thresholds (sentence and
+paragraph uniformity share `AIT-STR-011` with level in evidence), scans
+candidates across six families, judges each in context to reject exact technical
+terms and quotations, rewrites only supported spans with minimal English-only
+edits, and self-audits plus a preservation audit while leaving protected spans
+byte for byte and reporting rejected candidates, scanner availability, and
+needs-info items. The scanner never writes source, so a before-and-after hash
+stays identical, and it exits zero for findings and nonzero for bad input
+without partial JSON.
 The change is pushed to the shared trunk, where the checker runs: it confirms
 every listed document exists, that changed code arrived with its changed summary,
 and that every plain-language page is at least as new as the documents it was

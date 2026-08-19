@@ -466,8 +466,6 @@ def detect_punctuation_density(masked, original, path):
     total_visible = len(re.sub(r"\s", "", masked))
     if total_visible == 0:
         return findings
-    em_count = masked.count("—") + masked.count("—".encode().decode() if False else "—")
-    # Also count em dash char
     em_count = masked.count("\u2014") + masked.count("\u2013")  # em and en dash
     colon_count = masked.count(":")
     # Em dash density
@@ -619,17 +617,11 @@ def detect_paragraph_uniformity(masked, original, path):
     var = sum((x - mean_len) ** 2 for x in lengths) / len(lengths)
     stdev = math.sqrt(var)
     cv = stdev / mean_len if mean_len else 1
-    # For paragraph uniformity, we want separate finding even if sentence uniformity already fired
-    # Use threshold slightly higher
     if cv < THRESHOLDS["paragraph_uniformity_cv"]:
-        # Only emit if not already emitted sentence uniformity with same CV? Emit separate with different evidence
-        # Check if sentence uniformity already would have fired; still emit para as distinct but allow both
         line_start = 1
         line_end = original.count("\n") + 1
         excerpt = excerpt_for(original, 0, 120)
         evidence = f"paragraph length CV {cv:.3f} below threshold {THRESHOLDS['paragraph_uniformity_cv']}: mean {mean_len:.1f} words"
-        # Use same id but different measured; to keep unique, we include count distinction in evidence
-        # Avoid duplicate id in same file if sentence uniformity already emitted: append suffix? Keep same id but second finding
         findings.append({
             "id": "AIT-STR-011",
             "family": "STR",

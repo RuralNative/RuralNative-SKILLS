@@ -93,10 +93,11 @@ Python is absent, and scanner thresholds never fail the gate.
    workflow without weakening scope or preservation. The completion report also
    names rejected findings, scanner availability, protected-content status, and
    unresolved `needs-info` items, and a final preservation audit checks
-   protected-content equality and factual equality. Mechanism: scanner present
-   in `skills/unslopify/scanner.py` and parsed by contract tests; SKILL
-   advisory section and prose invariant preserve model-only path and advisory
-   thresholds.
+   protected-content equality and factual equality. Uniform rhythm uses
+   `AIT-STR-011` for both sentence and paragraph uniformity with evidence
+   distinguishing the level. Mechanism: scanner present in
+   `skills/unslopify/scanner.py` and parsed by contract tests; SKILL advisory
+   section and prose invariant preserve model-only path and advisory thresholds.
 
 ## Links
 
