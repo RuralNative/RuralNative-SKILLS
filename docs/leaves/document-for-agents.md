@@ -42,8 +42,11 @@ The gate's check set is defined in `reference/harness.md`; this repo's
     registry-lane install instruction `npx skills add
     RuralNative/RuralNative-SKILLS --skill unslopify`, missing Python does not
     stop it; the skill does not copy the `AIT-*` catalog. Mechanism:
-    hard dependency declared in `SKILL.md` load order, final-audit order,
-    parent-owned scope, precedence rule, missing-dependency stop, and
+    hard dependency declared in `SKILL.md` load order (interview questions,
+    progress prose, drafts, comments, issues, final summaries), final-audit
+    order, parent-owned scope (routine passes changed prose, an audit may sweep),
+    precedence rule (factual correctness, tier routing, glossary, invariants,
+    derivation rules, approval gates), missing-dependency stop, and
     catalog-ownership note; dependency visible in `INSTALL.md`; composition
     tests in `skills/document-for-agents/tests/` encode the invariant.
 

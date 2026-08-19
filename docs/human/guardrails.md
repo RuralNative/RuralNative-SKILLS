@@ -60,9 +60,12 @@ one, the checker goes red. One line per promise.
   workflow with `npx skills add RuralNative/RuralNative-SKILLS --skill
   unslopify` while missing Python does not, and the skill does not copy the
   `AIT-*` catalog. (depth: docs/leaves/document-for-agents.md)
-- The human-docs skill loads `unslopify` before derived drafts and audits again
-  before publishing — parent scope and parent decisions outrank style fixes,
-  missing `unslopify` stops the workflow with `npx skills add
+- The human-docs skill loads `unslopify` before interview questions, progress
+  prose, derived drafts, comments, issues, and summaries and audits again
+  before publishing — parent scope (routine passes changed sources, an audit may
+  sweep) and parent decisions (factual correctness, tier routing, derivation
+  rules, glossary, invariants, approval gates) outrank style fixes, missing
+  `unslopify` stops the workflow with `npx skills add
   RuralNative/RuralNative-SKILLS --skill unslopify` while missing Python does
   not, and the skill does not copy the `AIT-*` catalog. (depth:
   docs/leaves/document-for-humans.md)

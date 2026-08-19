@@ -26,7 +26,8 @@ contract in `skills/unslopify/SKILL.md` must be active for every workflow that
 produces user-visible prose.
 
 **Load order.** Load `skills/unslopify/SKILL.md` before the first interview
-question, progress update, derived draft, or final summary. Keep its scope,
+question, progress prose, derived draft, comment, issue body, or final summary.
+Keep its scope,
 protected-content, and rewrite contracts active while drafting human pages and
 while revising them. Do not publish or complete a human-doc change without a
 final `unslopify` audit on the exact prose the reader will see.
@@ -38,9 +39,10 @@ without expansion. When `unslopify` runs as a standalone cleanup, it uses
 explicit scope the human provides; when it runs under this skill, this skill's
 chosen scope governs.
 
-**Parent decisions outrank prose rewrites.** Derivation rules from
-`reference/routing.md`, tone and plain-language budgets, glossary terms and
-their forbidden synonyms, seam invariants, and approval gates are authoritative.
+**Parent decisions outrank prose rewrites.** Factual correctness, tier routing
+from `reference/classify.md`, derivation rules from `reference/routing.md`,
+tone and plain-language budgets, glossary terms and their forbidden synonyms,
+seam invariants, and approval gates are authoritative.
 `unslopify` may not override a decision, glossary entry, leaf invariant,
 derivation source, or workflow decision, and it may not change facts, numbers,
 dates, citations, quotations, or invented sources to satisfy a style finding.

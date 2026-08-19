@@ -37,8 +37,8 @@ its scope, protected-content, and rewrite contracts active while drafting and
 revising. Do not publish or complete a documentation change without a final
 `unslopify` audit on the exact prose the reader will see.
 
-**Scope belongs to the caller.** This skill owns scope. Standalone audits may
-request a repository sweep; routine maintenance passes only changed prose. Pass
+**Scope belongs to the caller.** This skill owns scope. Routine maintenance
+passes only changed prose; an audit may request a repository sweep. Pass
 the chosen scope to `unslopify` without expansion. When `unslopify` runs as a
 standalone cleanup, it uses explicit scope the human provides; when it runs
 under this skill, this skill's chosen scope governs.

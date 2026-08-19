@@ -53,9 +53,10 @@ describe("document-for-agents hard dependency (document-for-agents:INV-6)", () =
     const n = norm(skill);
     assert.ok(n.includes("scope belongs to the caller"));
     assert.ok(n.includes("this skill owns scope"));
-    assert.ok(n.includes("standalone audits may"));
+    assert.ok(n.includes("routine maintenance"));
     assert.ok(n.includes("repository sweep"));
     assert.ok(n.includes("routine maintenance passes only changed prose"));
+    assert.ok(n.includes("an audit may request a repository sweep"));
     assert.ok(n.includes("pass the chosen scope to `unslopify` without expansion"));
   });
 

@@ -29,7 +29,10 @@ describe("document-for-humans hard dependency (document-for-humans:INV-6)", () =
     assert.ok(n.includes("hard dependency:"));
     assert.ok(skill.includes("Load `skills/unslopify/SKILL.md` before"));
     assert.ok(n.includes("interview"));
+    assert.ok(n.includes("progress prose"));
     assert.ok(n.includes("derived draft"));
+    assert.ok(n.includes("comment"));
+    assert.ok(n.includes("issue body"));
     assert.ok(n.includes("final summary"));
   });
 
