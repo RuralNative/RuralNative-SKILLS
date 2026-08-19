@@ -65,6 +65,9 @@ one, the checker goes red. One line per promise.
   catalog and installed runtime resolves by skill identity, not by a
   repository-relative path.
   (depth: docs/leaves/document-for-agents.md)
+- When code and its docs disagree, code wins: the agent fixes the doc in the
+  same change and flags the discrepancy. A changed rule needs a new decision.
+  (depth: docs/leaves/document-for-agents.md)
 - The human-docs skill loads `unslopify` by skill identity before any
   user-visible prose and audits again before publication — parent scope
   (routine passes changed sources, an audit may sweep) and parent decisions

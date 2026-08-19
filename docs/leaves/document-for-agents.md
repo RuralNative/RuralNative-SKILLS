@@ -24,6 +24,8 @@ RuralNative/RuralNative-SKILLS --skill document-for-agents`. The repo never
 carries its own install, `.agents/` and `skills-lock.json` are ignored. The
 gate's check set is defined in `reference/harness.md`; this repo's
 `scripts/docs-check.sh` enforces it, and its ten checks are immutable.
+During Maintain, code wins a doc conflict: the agent fixes the doc in the same
+change and flags the discrepancy; changing the rule requires a new decision.
 
 ## Non-negotiables
 

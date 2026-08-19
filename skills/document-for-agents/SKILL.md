@@ -155,9 +155,10 @@ Entry: a seam change or re-orientation.
 1. **Re-verify invariants and read the loading protocol.** Before a seam
    change or after re-orientation, read the loading protocol in
    `reference/templates.md` and that seam's Non-negotiables and confirm each
-   still holds. On a violation, code wins: fix the code or supersede the
-   invariant via a decision. See `reference/classify.md` for the invariant
-   lifecycle and `reference/harness.md` for check detail.
+   still holds. If code and the invariant conflict, trust the code, fix the
+   doc in the same change, and flag the discrepancy. If the rule itself must
+   change, supersede the invariant via a decision. See `reference/classify.md`
+   for the invariant lifecycle and `reference/harness.md` for check detail.
 2. **Same diff.** A change touching a seam updates its doc in the same commit.
    A fact discovered mid-work lands on its tier in the same change. A rule
    the skill is silent on is born in the repo's official structures, policy,

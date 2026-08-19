@@ -162,6 +162,7 @@ describe("document-for-agents hard dependency (document-for-agents:INV-6)", () =
     assert.ok(n.includes("non-negotiables") || n.includes("seam invariants"));
     assert.ok(n.includes("same diff"));
     assert.ok(n.includes("code wins"));
+    assert.ok(n.includes("fix the doc") && n.includes("flag the discrepancy"));
     assert.ok(n.includes("decision gate") && n.includes("supersed"));
     assert.ok(n.includes("prose audit and harness both pass") || (n.includes("prose audit") && n.includes("harness")));
   });
