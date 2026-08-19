@@ -1,4 +1,4 @@
-<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-19 · Regenerated: #66 supervised resume and recovery · Sources: ARCHITECTURE.md, CONTEXT.md, docs/leaves/supervise-this.md, docs/leaves/plan-this.md, docs/leaves/implement-this.md -->
+<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-20 · Sources: ARCHITECTURE.md, CONTEXT.md, docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md, docs/leaves/unslopify.md, docs/leaves/release-skills.md, docs/leaves/plan-this.md, docs/leaves/implement-this.md, docs/leaves/supervise-this.md -->
 
 # RuralNative-SKILLS — in plain words
 
