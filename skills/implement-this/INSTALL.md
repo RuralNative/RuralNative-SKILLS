@@ -1,6 +1,6 @@
 # Installing implement-this
 
-`implement-this` is a user-invoked skill: the agent runs it only when you invoke `/implement-this #<n>`. It applies the exact implementation prefix and substitutes your issue reference in place of `Issue #0`, then delegates to `/implement` → `/code-review` with `/unslop` active.
+`implement-this` is a user-invoked skill: the agent runs it either when you invoke `/implement-this #<n>` directly or when an active `supervise-this` run delegates one assigned issue in a dedicated Agent Manager worktree. It applies the exact implementation prefix and substitutes your issue reference in place of `Issue #0`, then delegates to `/implement` → `/code-review` with `/unslop` active. Delegated use still works on only the assigned issue, stops if its native blocker is open, and keeps worktree safety, verification, review, rebase, push, evidence, label removal, and single-ticket closure.
 
 ## Requirements
 
@@ -57,7 +57,7 @@ Invoke explicitly:
 
 > /implement-this #100
 
-A healthy run loads `/unslop` before the first progress update, runs `/implement` followed by `/code-review` in order, and places the requested reference in place of `Issue #0` — for example `Issue #100` for `/implement-this #100` — without other substitution, matching the trimmed `SKILL.md`. The exact Git commands `git branch --show-current`, `git status --short`, `git fetch origin`, `gh issue edit <n> --add-assignee @me`, `npm ci`, `npm run format && npm test && npm run lint && npx tsc --noEmit && npm run docs:check && npm run build`, `BASE=$(git merge-base origin/main HEAD)`, `git rebase origin/main`, and `git push origin HEAD:main` remain unchanged.
+A healthy run loads `/unslop` before the first progress update, runs `/implement` followed by `/code-review` in order, and places the requested reference in place of `Issue #0` — for example `Issue #100` for `/implement-this #100` — without other substitution, matching the trimmed `SKILL.md`. An active `supervise-this` run delegating one issue uses the same single-issue substitution and retains the same worktree checks, ticket authority, blocker gate, verification, documentation, review, rebase, push, evidence, label removal, and single-ticket closure contract. The exact Git commands `git branch --show-current`, `git status --short`, `git fetch origin`, `gh issue edit <n> --add-assignee @me`, `npm ci`, `npm run format && npm test && npm run lint && npx tsc --noEmit && npm run docs:check && npm run build`, `BASE=$(git merge-base origin/main HEAD)`, `git rebase origin/main`, and `git push origin HEAD:main` remain unchanged.
 
 ## Files
 

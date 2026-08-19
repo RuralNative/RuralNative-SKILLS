@@ -12,7 +12,7 @@ meaning, evidence, and tone, plan-this, the fixed-template planning adapter
 invoked as `/plan-this <task>` that preserves the planning prefix verbatim
 under `## Task:` and delegates to `/grill-with-docs` → `/to-spec` →
 `/to-tickets` with `/unslop` active, implement-this, the fixed-template
-implementation adapter invoked as `/implement-this #<n>` that preserves the
+implementation adapter invoked as `/implement-this #<n>` directly or as one issue delegated by an active `supervise-this` run in a dedicated Agent Manager worktree that preserves the
 implementation prefix verbatim in place of `Issue #0` and delegates to
 `/implement` → `/code-review` with `/unslop` active, and release-skills, the
 universal release workflow that auto-detects version files and changelogs. Both documentation skills

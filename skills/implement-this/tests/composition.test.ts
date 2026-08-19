@@ -3,6 +3,7 @@
 // implement-this:INV-3 — fixed-template boundary preserves exact prefix and substitutes only issue reference
 // implement-this:INV-4 — hard dependencies and workflow order with /unslop before first progress
 // implement-this:INV-5 — user-invoked only and preserved rules
+// implement-this:INV-6 — narrow delegation from active supervise-this run for one issue
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -269,5 +270,132 @@ describe("implement-this preserved rules and user invocation (implement-this:INV
     assert.ok(n.includes("user-invoked") || n.includes("user invoked") || n.includes("user invocation") || n.includes("user invokes"));
     assert.ok(skill.includes("/implement-this #<n>"));
     assert.equal(n.includes("when implementation work appears"), false);
+  });
+});
+
+describe("implement-this delegated invocation (implement-this:INV-6)", () => {
+  test("invocation contract accepts direct /implement-this #<n> use and one issue delegated by an active supervise-this run", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const front = skill.split("---")[1] ?? "";
+    const n = norm(front);
+    // direct path
+    assert.ok(front.includes("/implement-this #<n>") || front.includes("/implement-this #"), "frontmatter must declare direct /implement-this #<n>");
+    // delegated path
+    assert.ok(n.includes("supervise-this"), "must mention supervise-this");
+    assert.ok(n.includes("delegat"), "must mention delegated/delegation");
+    assert.ok(n.includes("active"), "must mention active supervise-this run");
+    assert.ok(front.includes("one issue") || front.includes("one assigned issue") || n.includes("one issue"), "must specify one issue delegation");
+    assert.ok(n.includes("agent manager") || front.includes("Agent Manager"), "must mention Agent Manager worktree");
+    // both paths present
+    assert.ok(skill.includes("/implement-this #<n>"));
+    assert.ok(norm(skill).includes("supervise-this"));
+  });
+
+  test("delegated use still works on only the assigned issue and stops if its native blocker is open", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const body = bodyAfterFrontmatter(skill);
+    const leaf = read("docs/leaves/implement-this.md");
+    // body still contains blocker check
+    assert.ok(body.includes("Stop if any blocker is open"), "body must retain blocker gate");
+    assert.ok(body.includes("Read the ticket, comments, linked parent specification, and native dependencies"), "body must retain native dependency read");
+    // leaf explains delegated still stops on blocker
+    const nLeaf = norm(leaf);
+    assert.ok(nLeaf.includes("stops if its native blocker is open") || nLeaf.includes("stop if") || nLeaf.includes("blocker is open"), "leaf must explain blocker stop for delegated use");
+    assert.ok(nLeaf.includes("only the assigned issue") || nLeaf.includes("only one issue") || nLeaf.includes("single-issue") || nLeaf.includes("one issue"), "leaf must clarify single-issue scope");
+  });
+
+  test("delegated use retains existing worktree safety checks, full verification, per-ticket code review, rebase, direct integration, evidence comment, label removal, ticket closure", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const body = bodyAfterFrontmatter(skill);
+    const leaf = read("docs/leaves/implement-this.md");
+    // body still preserves all retained behaviors — checked via existing INV-3/INV-5 but re-assert here for delegation
+    const n = norm(body);
+    assert.ok(n.includes("git branch --show-current"));
+    assert.ok(n.includes("git status --short"));
+    assert.ok(n.includes("npm run format &&"));
+    assert.ok(n.includes("npx tsc --noemit"));
+    assert.ok(n.includes("npm run docs:check"));
+    assert.ok(body.includes("BASE=$(git merge-base origin/main HEAD)"));
+    assert.ok(body.includes("Pass `$BASE` as the fixed point to `/code-review`"));
+    assert.ok(body.includes("git rebase origin/main"));
+    assert.ok(body.includes("git push origin HEAD:main"));
+    assert.ok(body.includes("Never force-push"));
+    assert.ok(body.includes("comment with evidence"));
+    assert.ok(body.includes("remove `ready-for-agent`"));
+    assert.ok(body.includes("close only the assigned ticket"));
+    // leaf must state retains
+    const nLeaf = norm(leaf);
+    assert.ok(nLeaf.includes("retains") || nLeaf.includes("retain") || nLeaf.includes("keeps"));
+    assert.ok(nLeaf.includes("worktree safety") || nLeaf.includes("worktree checks"));
+    assert.ok(nLeaf.includes("full verification") || nLeaf.includes("npm run format"));
+    assert.ok(nLeaf.includes("code-review") || nLeaf.includes("code review"));
+    assert.ok(nLeaf.includes("rebase"));
+    assert.ok(nLeaf.includes("evidence comment") || nLeaf.includes("evidence"));
+    assert.ok(nLeaf.includes("ready-for-agent"));
+  });
+
+  test("fixed-template body, issue slot, command order, prose rules, delivery gates remain byte-for-byte unchanged", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const body = bodyAfterFrontmatter(skill);
+    // body must still be ~83 lines and contain exactly one Issue #0
+    const lines = skill.split("\n").length;
+    assert.ok(lines < 100 && lines > 60, `line count ${lines} must remain trimmed`);
+    const issueMatches = body.match(/Issue #0/g) ?? [];
+    assert.equal(issueMatches.length, 1, "body must still contain Issue #0 exactly once under delegation");
+    // body must not have been extended with delegation wording
+    assert.equal(body.includes("supervise-this"), false, "body must not contain delegation — only frontmatter may");
+    assert.equal(body.includes("delegated"), false, "body must not contain delegated — keeps byte-for-byte prefix");
+    // command order still intact
+    const idxImpl = body.indexOf("/implement");
+    const idxReview = body.indexOf("/code-review");
+    assert.ok(idxImpl < idxReview, "command order /implement → /code-review preserved");
+    assert.ok(body.includes("`/unslop`") || norm(body).includes("/unslop"));
+  });
+
+  test("rejects unrelated model invocation", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const front = skill.split("---")[1] ?? "";
+    const nFront = norm(front);
+    const nSkill = norm(skill);
+    // must not allow arbitrary model or broad triggering
+    assert.equal(nSkill.includes("when implementation work appears"), false);
+    assert.equal(nSkill.includes("any model"), false);
+    assert.equal(nSkill.includes("any agent"), false);
+    assert.equal(nFront.includes("any model"), false);
+    // frontmatter must restrict to supervise-this as the only delegated invoker
+    assert.ok(nFront.includes("supervise-this"), "delegated invoker must be supervise-this only");
+    // body must not mention other potential delegators
+    const body = bodyAfterFrontmatter(skill);
+    assert.equal(norm(body).includes("supervise-this"), false, "body must not mention supervise-this — delegation lives in contract, not template");
+  });
+
+  test("rejects multi-ticket assignment", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const front = skill.split("---")[1] ?? "";
+    const body = bodyAfterFrontmatter(skill);
+    const nFront = norm(front);
+    // frontmatter must specify one issue, not multiple
+    assert.ok(nFront.includes("one issue"), "must specify one issue delegation");
+    assert.equal(nFront.includes("multiple issues"), false, "must not mention multiple issues");
+    assert.equal(nFront.includes("multi-ticket"), false);
+    // body still has single Issue #0 — proves per-ticket isolation
+    const issueMatches = body.match(/Issue #0/g) ?? [];
+    assert.equal(issueMatches.length, 1, "body must have single Issue #0 — multi-ticket would need multiple slots");
+    // ensure no phrasing that suggests batch assignment
+    assert.equal(nFront.includes("two issues"), false);
+    assert.equal(nFront.includes("several issues"), false);
+  });
+
+  test("seam documentation explains the narrow delegation rule and preserves the existing fixed-template invariants", () => {
+    const leaf = read("docs/leaves/implement-this.md");
+    const n = norm(leaf);
+    assert.ok(n.includes("supervise-this"), "leaf must explain narrow delegation");
+    assert.ok(n.includes("one issue") || n.includes("single-issue") || n.includes("one assigned issue"), "leaf must state single-issue delegation");
+    assert.ok(n.includes("dedicated agent manager worktree") || n.includes("agent manager worktree"), "leaf must mention dedicated Agent Manager worktree");
+    assert.ok(leaf.includes("INV-6"), "leaf must declare INV-6 for delegation");
+    assert.ok(leaf.includes("INV-3"), "leaf must preserve INV-3 fixed-template boundary");
+    assert.ok(leaf.includes("INV-5"), "leaf must preserve INV-5 preserved rules");
+    assert.ok(n.includes("byte-for-byte unchanged") || n.includes("byte for byte unchanged"), "leaf must state byte-for-byte unchanged");
+    assert.ok(n.includes("unrelated") || n.includes("reject"), "leaf must mention rejection of unrelated/multi-ticket");
   });
 });

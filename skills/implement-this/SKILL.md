@@ -1,6 +1,6 @@
 ---
 name: implement-this
-description: Apply the implementation prefix as a fixed template. Use when the user invokes /implement-this #<n> — substitutes only the issue reference in place of Issue #0 and delegates to /implement and /code-review with /unslop active. Requires explicit user invocation as /implement-this #<n>.
+description: Apply the implementation prefix as a fixed template. Use when the user invokes /implement-this #<n> — substitutes only the issue reference in place of Issue #0 and delegates to /implement and /code-review with /unslop active. Also accepts one issue delegated by an active supervise-this run in a dedicated Agent Manager worktree. Requires explicit user-invoked use as /implement-this #<n> or delegation from an active supervise-this run for one issue.
 ---
 
 Implement the GitHub ticket in this dedicated worktree: `/implement` → `/code-review`
