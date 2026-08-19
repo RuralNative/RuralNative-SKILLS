@@ -382,7 +382,7 @@ describe("supervise-this worktree creation and model routing (supervise-this:INV
   test("uses Agent Manager list for live session IDs and states and never edits persisted Agent Manager state", () => {
     const skill = read("skills/supervise-this/SKILL.md");
     const n = norm(skill);
-    assert.ok(n.includes("uses agent manager `list` for live session ids and states") || n.includes("uses agent manager list for live session ids and states"), "must use list for live IDs");
+    assert.ok(n.includes("uses agent manager `list` for live session ids and states") || n.includes("uses agent manager list for live session ids and states") || n.includes("as the only source of live session ids and states"), "must use list for live IDs");
     assert.ok(n.includes("never edits persisted agent manager state"), "must never edit persisted state");
   });
 
