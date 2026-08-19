@@ -174,14 +174,14 @@ finding. Preserve meaning, evidence, certainty, and causality. Do not add facts,
 sources, numbers, or claims. Do not delete qualifications that change meaning.
 
 Visible prose inside tables may be reviewed, but structure stays. Every edit
-touches one finding and one span. Report the changed-line ratio in the completion
-report.
+touches one finding and one span. Report changed spans and the changed-line
+ratio in the completion report.
 
 ## Finding format and completion report
 
 Every accepted finding reports its stable identifier, family, source span,
 evidence, confidence, and action. A scanner finding also reports the measured
-value and threshold when available.
+value and threshold when present.
 
 The completion report states:
 
@@ -193,7 +193,7 @@ The completion report states:
 - protected-content status (inventory and byte-equality)
 - unresolved `needs-info` items
 - preservation audit result
-- changed-line ratio
+- changed spans and changed-line ratio
 
 ## Model-only path
 
