@@ -1,4 +1,4 @@
-<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-18 · Sources: docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md -->
+<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-19 · Sources: docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md, docs/leaves/unslopify.md -->
 
 # Guardrails — in plain words
 
@@ -33,3 +33,16 @@ one, the checker goes red. One line per promise.
 - Agents rewrite these pages but never treat them as the truth — because
   writing and trusting are different permissions. (depth:
   docs/leaves/document-for-humans.md)
+- The name inside unslopify must match its folder — the same front-door rule
+  for the utility. (depth: docs/leaves/unslopify.md)
+- The 31 upstream patterns map one-to-one to stable `AIT-*` identifiers and the
+  MIT notice ships — because parity must be traceable and legal. (depth:
+  docs/leaves/unslopify.md)
+- Scope stays with the caller and protected content stays byte for byte —
+  because a prose pass must not break code, links, or facts. (depth:
+  docs/leaves/unslopify.md)
+- Only English prose is revised, other languages stay unchanged — because
+  English heuristics would damage them. (depth: docs/leaves/unslopify.md)
+- Scanning is advisory and never blocks the gate — because style signals are
+  clues, not proof. (depth: docs/leaves/unslopify.md)
+

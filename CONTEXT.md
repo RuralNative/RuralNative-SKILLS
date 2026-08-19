@@ -18,8 +18,18 @@ _Avoid_: Slug, skill name (when the folder name is meant)
 **Skill naming convention**:
 Verb-first, audience-suffixed skill identities — the verb names the job,
 the suffix names who serves or reads (document-for-agents,
-document-for-humans). Per ADR-0004.
+document-for-humans). Per ADR-0004, with a narrow exception for
+audience-neutral utilities such as `unslopify` where one behavior applies
+unchanged across audiences and a suffix would invent a false distinction.
+See ADR-0005.
 _Avoid_: noun-phrase names (documentation-for-ai), router prefixes (docs/)
+
+**AI tell**:
+A lexical, structural, formatting, conversational, evidence, or voice pattern
+associated with model-generated prose, such as puffery, promotional language,
+stock vocabulary, uniform cadence, or canned framing. An AI tell names a
+writing pattern, not an author verdict or authorship detection claim.
+_Avoid_: Slop (when a specific pattern is meant), AI content, AI authorship
 
 **Distribution shelf**:
 The `skills/` directory at the repository root. The registry's discovery

@@ -1,4 +1,4 @@
-<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-18 · Sources: docs/adr/0001-distribute-as-public-catalog-shelf.md, docs/adr/0002-adopt-ten-check-gate.md, docs/adr/0003-human-first-derived-artifacts.md, docs/adr/0004-verb-named-skills-flat-shelf.md -->
+<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-19 · Sources: docs/adr/0001-distribute-as-public-catalog-shelf.md, docs/adr/0002-adopt-ten-check-gate.md, docs/adr/0003-human-first-derived-artifacts.md, docs/adr/0004-verb-named-skills-flat-shelf.md, docs/adr/0005-unslopify-utility-identity-and-hard-dependency.md -->
 
 # Decision journal — in plain words
 
@@ -63,3 +63,20 @@ What it costs you: if you installed a skill under its old name, the install
 command changes — reinstall with the new name.
 
 Object or discuss: ADR 0004 — the [decision record](https://github.com/RuralNative/RuralNative-SKILLS/blob/main/docs/adr/0004-verb-named-skills-flat-shelf.md) and its [issue](https://github.com/RuralNative/RuralNative-SKILLS/issues/35).
+
+### 2026-08-19 — Unslopify arrives as an audience-neutral utility
+
+What changed: a third skill, unslopify, joined the shelf to clean AI tells
+from explicit prose. It carries the 31 upstream patterns with stable `AIT-*`
+identifiers and the upstream MIT notice, and both documentation skills now
+list it as an approved hard dependency that later slices will wire in.
+
+Why: the same AI-tell patterns appear in agent docs and human docs. A single
+utility avoids copying the same 31 rules into two places and inventing a false
+audience split with two suffixed names.
+
+What it costs you: `unslopify` installs alone with one command for prose
+cleanup; documentation workflows will require it once the wiring lands, and
+until then they do not yet enforce it.
+
+Object or discuss: ADR 0005 — the [decision record](https://github.com/RuralNative/RuralNative-SKILLS/blob/main/docs/adr/0005-unslopify-utility-identity-and-hard-dependency.md) and its [issue](https://github.com/RuralNative/RuralNative-SKILLS/issues/40).
