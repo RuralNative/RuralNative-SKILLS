@@ -1,4 +1,4 @@
-<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-19 · Sources: docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md, docs/leaves/unslopify.md, docs/leaves/plan-this.md -->
+<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-19 · Sources: docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md, docs/leaves/unslopify.md, docs/leaves/plan-this.md, docs/leaves/implement-this.md -->
 
 # Guardrails — in plain words
 
@@ -97,4 +97,25 @@ one, the checker goes red. One line per promise.
   concise to-do list, approval gates, vertical-slice ticket design, labels,
   native dependency edges, and the final ELI18 Why / What / Where / How
   summary. (depth: docs/leaves/plan-this.md)
+- The name inside implement-this must match its folder — the same front-door
+  rule for the implementation adapter. (depth: docs/leaves/implement-this.md)
+- The one-line install for implement-this must keep installing that exact
+  skill with the explicit invocation `/implement-this #<n>` preserved as
+  example `Issue #100` in place of `Issue #0`. (depth:
+  docs/leaves/implement-this.md)
+- The implementation template keeps the exact supplied prefix and substitutes
+  only the issue reference in place of `Issue #0`, preserving exact Git
+  commands, `ready-for-agent`, `AGENTS.md`, `docs/agents/issue-tracker.md`,
+  dependency names, quotations, and technical meaning, with no router, command
+  files, runtime scripts, or model evals. (depth:
+  docs/leaves/implement-this.md)
+- Hard dependencies are `/unslop`, `/implement`, and `/code-review` with
+  workflow order `/implement` → `/code-review` and `/unslop` active before the
+  first progress update; the local `unslopify` stays unchanged. (depth:
+  docs/leaves/implement-this.md)
+- The skill is user-invoked only via `/implement-this #<n>` and preserves
+  worktree checks, ticket authority, claiming, verification, documentation,
+  review, rebase, push, issue comment, label removal, and closure with the
+  final ELI18 Why / What / Where / How summary. (depth:
+  docs/leaves/implement-this.md)
 

@@ -1,4 +1,4 @@
-<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-19 · Sources: docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md, docs/leaves/unslopify.md, docs/leaves/plan-this.md -->
+<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-19 · Sources: docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md, docs/leaves/unslopify.md, docs/leaves/plan-this.md, docs/leaves/implement-this.md -->
 
 # How information moves — in plain words
 
@@ -66,11 +66,16 @@ links carry them into the technical pages, never the reverse.
 The planning adapter flow rides alongside: a user invokes `/plan-this <task>`,
 the skill places the task verbatim under `## Task:` and delegates to
 `/grill-with-docs` → `/to-spec` → `/to-tickets` with `/unslop` active before the
-first progress update, preserving the fixed prefix without extra runtime.
+first progress update, preserving the fixed prefix without extra runtime. The
+implementation adapter flow does the same for tickets: a user invokes
+`/implement-this #<n>`, the skill places the issue reference verbatim in place
+of `Issue #0` and delegates to `/implement` → `/code-review` with `/unslop`
+active, preserving exact Git commands and the fixed prefix without extra
+runtime.
 
 Where information rests: authored knowledge rests in the technical tree;
 plain-language knowledge rests in the human pages, always one honest
 regeneration behind its sources, never ahead of them.
 
-depth: docs/leaves/document-for-agents.md · docs/leaves/document-for-humans.md · docs/leaves/unslopify.md · docs/leaves/plan-this.md
+depth: docs/leaves/document-for-agents.md · docs/leaves/document-for-humans.md · docs/leaves/unslopify.md · docs/leaves/plan-this.md · docs/leaves/implement-this.md
 

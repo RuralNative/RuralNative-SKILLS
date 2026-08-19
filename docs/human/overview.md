@@ -6,13 +6,16 @@ What this is: a public shelf of skills for AI coding agents. A skill is a
 ready-made pack of instructions that teaches an agent how to do a job the
 proven way, and anyone can install one and load it into their agent. Most
 skill names start with the doing-word and say who they serve; the shelf
-currently holds four: document-for-agents, document-for-humans, unslopify, the
+currently holds five: document-for-agents, document-for-humans, unslopify, the
 audience-neutral utility that cleans AI tells from explicit prose while keeping
-meaning, evidence, and tone, and plan-this, the fixed-template planning
-adapter invoked as `/plan-this <task>` that preserves the planning prefix
-verbatim under `## Task:` and delegates to `/grill-with-docs` → `/to-spec` →
-`/to-tickets` with `/unslop` active. Both documentation skills declare
-`unslopify` as a hard dependency and will not publish prose without it.
+meaning, evidence, and tone, plan-this, the fixed-template planning adapter
+invoked as `/plan-this <task>` that preserves the planning prefix verbatim
+under `## Task:` and delegates to `/grill-with-docs` → `/to-spec` →
+`/to-tickets` with `/unslop` active, and implement-this, the fixed-template
+implementation adapter invoked as `/implement-this #<n>` that preserves the
+implementation prefix verbatim in place of `Issue #0` and delegates to
+`/implement` → `/code-review` with `/unslop` active. Both documentation skills
+declare `unslopify` as a hard dependency and will not publish prose without it.
 
 Why it exists: an agent starts every session from scratch. Loading a skill
 hands it instructions that already work, so the agent spends its effort on

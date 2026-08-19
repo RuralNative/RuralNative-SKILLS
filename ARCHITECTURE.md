@@ -14,6 +14,7 @@ own docs.
 | document-for-humans | plain-language derived documentation for human stakeholders | skills/document-for-humans/ | gate extension via scripts/docs-check.sh; composition via `skills/document-for-humans/tests/` | docs/leaves/document-for-humans.md |
 | unslopify | AI-tell detection and meaning-safe prose revision | skills/unslopify/ | scanner contract via `skills/unslopify/scanner.py` and parity catalog via `skills/unslopify/reference/parity.md`; identity == folder check | docs/leaves/unslopify.md |
 | plan-this | fixed-template planning adapter that applies the planning prefix and delegates to `/grill-with-docs`, `/to-spec`, `/to-tickets`, and `/unslop` | skills/plan-this/ | composition via `skills/plan-this/tests/`; identity == folder check | docs/leaves/plan-this.md |
+| implement-this | fixed-template implementation adapter that applies the implementation prefix and delegates to `/implement`, `/code-review`, and `/unslop` | skills/implement-this/ | composition via `skills/implement-this/tests/`; identity == folder check | docs/leaves/implement-this.md |
 
 A new directory under `skills/` is a new seam: it needs a row here, a leaf
 doc, and a `SKILL.md` whose frontmatter `name` matches its folder (harness
@@ -75,6 +76,7 @@ parsed from, so they are not listed here.
 | docs/leaves/document-for-humans.md | leaf |
 | docs/leaves/unslopify.md | leaf |
 | docs/leaves/plan-this.md | leaf |
+| docs/leaves/implement-this.md | leaf |
 | docs/debt.md | debt |
 | docs/human/overview.md | human |
 | docs/human/decision-journal.md | human |
