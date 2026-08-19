@@ -33,7 +33,7 @@ Resume mode reconstructs durable issue and commit state before consulting live A
 
 Before creating a missing session, the supervisor resolves the recorded model through `agent_manager_models` and verifies the recorded variant. Every available recorded selection is reused exactly without substituting the current supervisor model. It preserves every available selection exactly. If a recorded choice is no longer available, it asks the user for one replacement decision and never falls back silently.
 
-An unavailable recorded model or variant pauses only phases that require it, records `needs-info`, and asks the user for one replacement decision with a recommendation. An approved replacement produces a new structured parent configuration comment while preserving the earlier comment as history. The approved replacement produces a new structured parent configuration comment while preserving the earlier comment as history.
+An unavailable recorded model or variant pauses only phases that require it, records `needs-info`, and asks the user for one replacement decision with a recommendation. An approved replacement produces a new structured parent configuration comment while preserving the earlier comment as history.
 
 The supervisor does not duplicate a worker for an open assigned ticket or for a ticket whose active session is already known. A restarted implementation or follow-up worktree receives the recorded implementation model and variant. A restarted final-review session receives the recorded review model and variant.
 
