@@ -1,6 +1,6 @@
 # Installing plan-this
 
-`plan-this` is a user-invoked skill: the agent runs it only when you invoke `/plan-this <task>`. It applies the exact planning prefix and inserts your invocation text under `## Task:`, then delegates to `/grill-with-docs` → `/to-spec` → `/to-tickets` with `/unslop` active.
+`plan-this` is invoked either directly by the user as `/plan-this <task>` or via narrow delegation from an active `supervise-this` run. In either case it applies the exact planning prefix and inserts the invocation task under `## Task:`, then delegates to `/grill-with-docs` → `/to-spec` → `/to-tickets` with `/unslop` active. Unrelated invocation is rejected and no second planning contract is created.
 
 ## Requirements
 
@@ -60,9 +60,15 @@ Invoke explicitly:
 
 A healthy run loads `/unslop` before the first progress update and keeps it active throughout `/grill-with-docs` → `/to-spec` → `/to-tickets`, runs those three delegated skills in order, and places the full task `Create a Next.js App` verbatim under `## Task:` without truncation or other substitution — matching the trimmed `SKILL.md` body exactly (workflow line, `## Rules:` with eight bullets, final `**Why / What / Where / How**` line, and single `## Task:` slot).
 
+Delegated use:
+
+> supervise-this delegates planning for the same task
+
+The same prefix executes, and completion returns the published parent specification and ticket references to the active supervisor instead of ending the whole run. Standalone completion still stops after its ELI18 summary. Both paths share the byte-for-byte body and single `## Task:` slot.
+
 ## Drift guard
 
-Former wrapper sections — Invocation details, Hard dependencies exposition, Rules preserved summary, Installation and discovery, and Boundary — now live only in `docs/leaves/plan-this.md`, this `INSTALL.md`, and `docs/adr/0006-plan-this-fixed-template-adapter.md`, not in `SKILL.md`. `SKILL.md` must stay within 18–35 lines including frontmatter (~21, target ~25-35) and must not contain wrapper phrases `Rules preserved`, `## Installation`, `## Boundary`, `--- start of supplied`, or `This skill is a thin fixed-template adapter`. The composition test in `skills/plan-this/tests/composition.test.ts` enforces this bound and the negative checks.
+Former wrapper sections — Invocation details, Hard dependencies exposition, Rules preserved summary, Installation and discovery, and Boundary — now live only in `docs/leaves/plan-this.md`, this `INSTALL.md`, and `docs/adr/0006-plan-this-fixed-template-adapter.md`, not in `SKILL.md`. `SKILL.md` must stay within 18–35 lines including frontmatter (~21, target ~25-35) and must not contain wrapper phrases `Rules preserved`, `## Installation`, `## Boundary`, `--- start of supplied`, or `This skill is a thin fixed-template adapter`. The composition test in `skills/plan-this/tests/composition.test.ts` enforces this bound, the negative checks, the byte-for-byte body preservation, and the allowed-invocation contract (direct `/plan-this <task>` and narrow `supervise-this` delegation, rejecting unrelated invocation).
 
 ## Files
 
