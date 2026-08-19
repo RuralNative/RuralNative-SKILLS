@@ -3,37 +3,6 @@ name: implement-this
 description: Apply the implementation prefix as a fixed template. Use when the user invokes /implement-this #<n> — substitutes only the issue reference in place of Issue #0 and delegates to /implement and /code-review with /unslop active. Requires explicit user invocation as /implement-this #<n>.
 ---
 
-# implement-this — fixed-template implementation adapter
-
-This skill is a thin fixed-template adapter. It does not reimplement `/implement`, `/code-review`, or `/unslop`. It loads and delegates to those hard dependencies in the order stated by the supplied prefix. The exact prefix text is the contract. Commands, identifiers, labels, dependency names, quotations, and technical meaning stay unchanged except for the issue reference in place of `Issue #0`.
-
-## Invocation
-
-User-invoked only. The user runs:
-
-```text
-/implement-this #<n>
-```
-
-The skill preserves the requested issue reference verbatim in place of `Issue #0`. For example, `/implement-this #100` supplies `Issue #100`; `/implement-this #53` supplies `Issue #53`. It does not reinterpret or normalize the reference. The ticket, its comments, and its linked parent specification remain the task authority.
-
-## Hard dependencies
-
-Load `/unslop` before the first progress update. Apply it throughout the session to all prose you write, including to-do items, progress updates, questions, decisions, documentation, code comments, commit messages, GitHub comments, and the final summary. Before publishing prose, check it against `/unslop`. Do not rewrite commands, identifiers, logs, test output, generated output, or quoted ticket text. Treat `/unslop` as the external dependency identity supplied by the user. Do not silently map it to this repository's `unslopify` identity.
-
-Delegated workflow order remains:
-
-1. `/implement`
-2. `/code-review`
-
-The implementation workflow remains `/implement` followed by `/code-review`. Hard dependencies, in order, are `/implement`, `/code-review`, and `/unslop`, following the supplied implementation prefix.
-
-## Fixed template — implementation prefix
-
-The following is the exact implementation prefix. Substitute only the issue reference in place of `Issue #0`.
-
---- start of supplied implementation prefix ---
-
 Implement the GitHub ticket in this dedicated worktree: `/implement` → `/code-review`
 
 Treat the ticket, its comments, and its linked parent specification as the task authority. Do not assume access to earlier sessions.
@@ -112,33 +81,3 @@ Never force-push. If `main` advances, fetch, rebase, verify, and retry. Stop if 
 ## Ticket
 
 Issue #0
-
---- end of supplied implementation prefix ---
-
-Place the requested issue reference in place of `Issue #0` (for example, `Issue #100` for `/implement-this #100`). No other substitution, renaming, or reinterpretation. The skill does not add `.kilo/command/` files, a router skill, runtime scripts, model-based evals, or a prompt-generation service.
-
-## Rules preserved
-
-The prefix preserves the supplied rules for worktree checks (`git branch --show-current` and `git status --short`), ticket and specification authority, dependency checks, claiming (`gh issue edit <n> --add-assignee @me`), verification (`npm run format && npm test && npm run lint && npx tsc --noEmit && npm run docs:check && npm run build`), documentation (update leaf doc same commit, keep tests co-located as `*.test.ts`, use fakes, put scratch files in `/tmp/kilo`), review (`BASE=$(git merge-base origin/main HEAD)` and pass `$BASE` to `/code-review`), rebase (`git rebase origin/main`), push (`git push origin HEAD:main` with never force-push), issue comment, label removal, and closure, with the final ELI18 Why / What / Where / How summary including commit SHA, verification results, and closed ticket link.
-
-## Installation and discovery
-
-Registry lane:
-
-```bash
-npx skills add RuralNative/RuralNative-SKILLS --skill implement-this
-```
-
-Manual copy:
-
-```bash
-git clone https://github.com/RuralNative/RuralNative-SKILLS.git
-cd RuralNative-SKILLS
-cp -r skills/implement-this ~/.agents/skills/implement-this
-```
-
-Discovery text for explicit user invocation: invoke as `/implement-this #<n>` — for example, `/implement-this #100` preserves `Issue #100` in place of `Issue #0` and runs `/implement` → `/code-review` with `/unslop` active.
-
-## Boundary
-
-This skill is a fixed-template adapter. It does not reimplement delegated skills, does not copy the `AIT-*` catalog, does not add npm packaging, and does not modify `/implement`, `/code-review`, `/unslop`, or the existing `unslopify` skill.
