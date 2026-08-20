@@ -58,7 +58,7 @@ Invoke explicitly:
 
 > /plan-this Create a Next.js App
 
-A healthy run loads `/unslop` before the first progress update and keeps it active throughout `/grill-with-docs` → `/to-spec` → `/to-tickets`, runs those three delegated skills in order, and places the full task `Create a Next.js App` verbatim under `## Task:` without truncation or other substitution — matching the trimmed `SKILL.md` body exactly (workflow line, `## Rules:` with eight bullets, final `**Why / What / Where / How**` line, and single `## Task:` slot).
+A healthy run loads `/unslop` before the first progress update and keeps it active throughout `/grill-with-docs` → `/to-spec` → `/to-tickets`, runs those three delegated skills in order, and places the full task `Create a Next.js App` verbatim under `## Task:` without truncation or other substitution — matching the trimmed `SKILL.md` body exactly (workflow line, `## Rules:` with ten bullets, final `**Why / What / Where / How**` line, and single `## Task:` slot).
 
 Delegated use:
 
