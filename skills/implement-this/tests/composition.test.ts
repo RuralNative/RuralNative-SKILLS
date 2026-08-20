@@ -106,7 +106,7 @@ describe("dependencies and verification (INV-4)", () => {
     const leaf = read("docs/leaves/implement-this.md");
     const pkg = JSON.parse(read("package.json"));
     const n = norm(skill);
-    assert.ok(n.includes("load `/unslop` before the first progress update"));
+    assert.ok(n.includes("load `/unslopify` before the first progress update"));
     assert.ok(skill.indexOf("/implement") < skill.indexOf("/code-review"));
     for (const content of [skill, install, leaf]) {
       assert.ok(content.includes("npm run verify"), "verification must use npm run verify");
@@ -210,5 +210,26 @@ describe("single-ticket ownership and boundary (INV-7)", () => {
     assert.ok(n.includes("pull-request"));
     assert.ok(n.includes("ao"));
     for (let i = 1; i <= 7; i++) assert.ok(leaf.includes(`INV-${i}`), `leaf must contain INV-${i}`);
+  });
+});
+
+describe("implement-this unslopify/doc-cache/scope contract (issue #100)", () => {
+  test("(a) uses /unslopify and does not use legacy /unslop", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    assert.ok(skill.includes("/unslopify"), "must use /unslopify");
+    assert.equal(skill.replaceAll("/unslopify", "").includes("/unslop"), false, "must not contain legacy /unslop");
+  });
+  test("(b) declares scope, protected content, preservation, and completion report", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("scope"), "must declare scope");
+    assert.ok(n.includes("protected"), "must declare protected content");
+    assert.ok(n.includes("preservation") || n.includes("preserve"), "must declare preservation");
+    assert.ok(n.includes("completion report") || n.includes("completion"), "must declare completion report");
+  });
+  test("(c) follows focused doc-cache route without preloading document-for-humans", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    assert.ok(skill.includes("document-for-agents") || norm(skill).includes("doc-cache"), "must reference doc-cache route");
+    assert.equal(skill.includes("document-for-humans"), false, "must not preload document-for-humans");
   });
 });

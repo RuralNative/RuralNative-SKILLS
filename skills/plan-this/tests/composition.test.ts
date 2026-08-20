@@ -1,7 +1,7 @@
 // plan-this:INV-1 — identity == folder
 // plan-this:INV-2 — registry-lane install and explicit invocation
 // plan-this:INV-3 — fixed-template boundary preserves exact prefix and substitutes only task under ## Task:
-// plan-this:INV-4 — hard dependencies and workflow order with /unslop before first progress
+// plan-this:INV-4 — hard dependencies and workflow order with /unslopify before first progress
 // plan-this:INV-5 — dual invocation (direct and delegated), preserved rules, stop semantics, byte-for-byte body
 // plan-this:INV-6 — narrow delegation without second planning contract
 import { describe, test } from "node:test";
@@ -83,8 +83,8 @@ describe("plan-this fixed template and task substitution (plan-this:INV-3)", () 
     assert.ok(body.includes("Run this planning-only workflow: `/grill-with-docs` → `/to-spec` → `/to-tickets`"));
     // Rules header
     assert.ok(body.includes("## Rules:"));
-    // all ten rule bullets verbatim
-    assert.ok(body.includes("Load `/unslop` before the first progress update. Keep it active throughout `/grill-with-docs` → `/to-spec` → `/to-tickets`"));
+    // all rule bullets verbatim
+    assert.ok(body.includes("Load `/unslopify` before the first progress update. Keep it active throughout `/grill-with-docs` → `/to-spec` → `/to-tickets`"));
     assert.ok(body.includes("Maintain a concise To-Do List covering Discovery, Decisions, Specification, Tickets, and Delivery."));
     assert.ok(body.includes("Design tickets as independently verifiable vertical slices suitable for one future worktree."));
     assert.ok(body.includes("Optimize for precision per token: keep shared context in the parent specification;"));
@@ -105,11 +105,11 @@ describe("plan-this fixed template and task substitution (plan-this:INV-3)", () 
     const body = getBody(skill);
     const expected = `Run this planning-only workflow: \`/grill-with-docs\` → \`/to-spec\` → \`/to-tickets\`
 
-\`/grill-with-docs\`, \`/to-spec\`, and \`/to-tickets\` require explicit human invocation; an agent cannot traverse the chain unattended. \`/unslop\` remains model-invocable.
+\`/grill-with-docs\`, \`/to-spec\`, and \`/to-tickets\` require explicit human invocation; an agent cannot traverse the chain unattended. \`/unslopify\` remains model-invocable.
 
 ## Rules:
 
-- Load \`/unslop\` before the first progress update. Keep it active throughout \`/grill-with-docs\` → \`/to-spec\` → \`/to-tickets\`. Apply it to all prose you write, including to-do items, progress updates, interview questions, recommendations, decisions, ADR and glossary text, specification drafts, ticket bodies, GitHub comments, and the final summary. Check prose against \`/unslop\` before showing it to the user or publishing it to GitHub. Preserve exact domain terms, identifiers, commands, labels, dependencies, quotations, and technical meaning.
+- Load \`/unslopify\` before the first progress update. Keep it active throughout \`/grill-with-docs\` → \`/to-spec\` → \`/to-tickets\`. Apply it to all prose you write, including to-do items, progress updates, interview questions, recommendations, decisions, ADR and glossary text, specification drafts, ticket bodies, GitHub comments, and the final summary. Check prose against \`/unslopify\` before showing it to the user or publishing it to GitHub. Preserve exact domain terms, identifiers, commands, labels, dependencies, quotations, and technical meaning.
 - Maintain a concise To-Do List covering Discovery, Decisions, Specification, Tickets, and Delivery. Update it at phase changes, decisions, blockers, and publication. State what finished and what happens next without narrating every command.
 - Require a parent specification that separates in-scope behavior from out-of-scope non-goals, states acceptance criteria, affected seams, structural constraints, and the smallest test-first verification plan that proves the result.
 - Design tickets as independently verifiable vertical slices suitable for one future worktree. Each ticket states its independently verifiable behavior, blockers, affected seams, acceptance criteria, verification requirements, and whether later parallel execution is safe.
@@ -119,6 +119,8 @@ describe("plan-this fixed template and task substitution (plan-this:INV-3)", () 
 - Publish GitHub issues using repository-defined labels (\`ready-for-agent\` where applicable) and native dependency edges via blocked_by with database IDs (read each issue's database ID before creating the edge); keep human-readable Blocked by text as fallback, native edge is canonical; blocked label state follows native blockers (open → blocked without ready-for-agent, all closed → unblocked + ready-for-agent, blocked removed).
 - Ask one decision at a time in ELI18 language, include a recommendation, and honor each skill's approval gates.
 - Follow the installed skills as the procedural source of truth.
+- Follow the focused doc-cache route via document-for-agents; do not preload the human-facing derived docs.
+- Respect scope boundaries, protected content, and preservation requirements; finish with a completion report.
 
 Finish with an ELI18 **Why / What / Where / How** summary and links to the specification and all tickets, then stop.
 
@@ -173,11 +175,11 @@ Finish with an ELI18 **Why / What / Where / How** summary and links to the speci
 });
 
 describe("plan-this hard dependencies and workflow order (plan-this:INV-4)", () => {
-  test("declares /unslop as hard dependency before first progress and workflow order", () => {
+  test("declares /unslopify as hard dependency before first progress and workflow order", () => {
     const skill = read("skills/plan-this/SKILL.md");
     const body = getBody(skill);
     const n = norm(body);
-    assert.ok(n.includes("/unslop"));
+    assert.ok(n.includes("/unslopify"));
     assert.ok(n.includes("before the first progress update"));
     assert.ok(skill.includes("/grill-with-docs"));
     assert.ok(skill.includes("/to-spec"));
@@ -187,10 +189,10 @@ describe("plan-this hard dependencies and workflow order (plan-this:INV-4)", () 
     const idxTickets = skill.indexOf("/to-tickets");
     assert.ok(idxGrill !== -1 && idxSpec !== -1 && idxTickets !== -1);
     assert.ok(idxGrill < idxSpec && idxSpec < idxTickets, "workflow must be grill -> to-spec -> to-tickets");
-    assert.ok(skill.includes("`/unslop`"));
+    assert.ok(skill.includes("`/unslopify`"));
     // frontmatter description also declares delegation
     const frontmatter = skill.slice(0, skill.indexOf("---", 3) + 3);
-    assert.ok(frontmatter.includes("/grill-with-docs") && frontmatter.includes("/to-spec") && frontmatter.includes("/to-tickets") && frontmatter.includes("/unslop"), "frontmatter must declare delegation");
+    assert.ok(frontmatter.includes("/grill-with-docs") && frontmatter.includes("/to-spec") && frontmatter.includes("/to-tickets") && frontmatter.includes("/unslopify"), "frontmatter must declare delegation");
   });
 
   test("does not depend on implement or code-review", () => {
@@ -213,7 +215,7 @@ describe("plan-this hard dependencies and workflow order (plan-this:INV-4)", () 
     assert.ok(glossary.includes("fixed-template") || glossary.includes("task-scoped"));
   });
 
-  test("distinguishes locked dependencies (/grill-with-docs, /to-spec, /to-tickets) from unlocked (/unslop) and states human-invocation requirement", () => {
+  test("distinguishes locked dependencies (/grill-with-docs, /to-spec, /to-tickets) from unlocked (/unslopify) and states human-invocation requirement", () => {
     const skill = read("skills/plan-this/SKILL.md");
     const leaf = read("docs/leaves/plan-this.md");
     const nSkill = norm(skill);
@@ -227,14 +229,14 @@ describe("plan-this hard dependencies and workflow order (plan-this:INV-4)", () 
     // body names the locked skills
     assert.ok(nSkill.includes("/grill-with-docs") && nSkill.includes("/to-spec") && nSkill.includes("/to-tickets"), "body must name locked skills");
     // body names the unlocked skill
-    assert.ok(nSkill.includes("/unslop") && nSkill.includes("model-invocable"), "body must state /unslop remains model-invocable");
+    assert.ok(nSkill.includes("/unslopify") && nSkill.includes("model-invocable"), "body must state /unslopify remains model-invocable");
     // INV-4 itself must state the classification (scoped, not whole-leaf)
     assert.ok(nInv4.includes("disable-model-invocation"), "INV-4 must reference disable-model-invocation");
     assert.ok(nInv4.includes("explicit human invocation"), "INV-4 must state explicit human invocation");
     assert.ok(nInv4.includes("cannot traverse the chain unattended") || nInv4.includes("cannot traverse the delegation chain unattended"), "INV-4 must state agent cannot traverse unattended");
     assert.ok(nInv4.includes("model-invocable"), "INV-4 must name model-invocable skills");
     assert.ok(nInv4.includes("/grill-with-docs") && nInv4.includes("/to-spec") && nInv4.includes("/to-tickets"), "INV-4 must name locked skills");
-    assert.ok(nInv4.includes("/unslop") && nInv4.includes("no such lock"), "INV-4 must distinguish /unslop as model-invocable with no such lock");
+    assert.ok(nInv4.includes("/unslopify") && nInv4.includes("no such lock"), "INV-4 must distinguish /unslopify as model-invocable with no such lock");
     // ADR-0009 exists and records the decision
     const adr = read("docs/adr/0009-delegation-invariants-human-invocation.md");
     assert.ok(adr.includes("Status: accepted"), "ADR-0009 must be accepted");
@@ -284,11 +286,11 @@ describe("plan-this preserved rules and user invocation (plan-this:INV-5)", () =
     const body = getBody(skill);
     const expected = `Run this planning-only workflow: \`/grill-with-docs\` → \`/to-spec\` → \`/to-tickets\`
 
-\`/grill-with-docs\`, \`/to-spec\`, and \`/to-tickets\` require explicit human invocation; an agent cannot traverse the chain unattended. \`/unslop\` remains model-invocable.
+\`/grill-with-docs\`, \`/to-spec\`, and \`/to-tickets\` require explicit human invocation; an agent cannot traverse the chain unattended. \`/unslopify\` remains model-invocable.
 
 ## Rules:
 
-- Load \`/unslop\` before the first progress update. Keep it active throughout \`/grill-with-docs\` → \`/to-spec\` → \`/to-tickets\`. Apply it to all prose you write, including to-do items, progress updates, interview questions, recommendations, decisions, ADR and glossary text, specification drafts, ticket bodies, GitHub comments, and the final summary. Check prose against \`/unslop\` before showing it to the user or publishing it to GitHub. Preserve exact domain terms, identifiers, commands, labels, dependencies, quotations, and technical meaning.
+- Load \`/unslopify\` before the first progress update. Keep it active throughout \`/grill-with-docs\` → \`/to-spec\` → \`/to-tickets\`. Apply it to all prose you write, including to-do items, progress updates, interview questions, recommendations, decisions, ADR and glossary text, specification drafts, ticket bodies, GitHub comments, and the final summary. Check prose against \`/unslopify\` before showing it to the user or publishing it to GitHub. Preserve exact domain terms, identifiers, commands, labels, dependencies, quotations, and technical meaning.
 - Maintain a concise To-Do List covering Discovery, Decisions, Specification, Tickets, and Delivery. Update it at phase changes, decisions, blockers, and publication. State what finished and what happens next without narrating every command.
 - Require a parent specification that separates in-scope behavior from out-of-scope non-goals, states acceptance criteria, affected seams, structural constraints, and the smallest test-first verification plan that proves the result.
 - Design tickets as independently verifiable vertical slices suitable for one future worktree. Each ticket states its independently verifiable behavior, blockers, affected seams, acceptance criteria, verification requirements, and whether later parallel execution is safe.
@@ -298,6 +300,8 @@ describe("plan-this preserved rules and user invocation (plan-this:INV-5)", () =
 - Publish GitHub issues using repository-defined labels (\`ready-for-agent\` where applicable) and native dependency edges via blocked_by with database IDs (read each issue's database ID before creating the edge); keep human-readable Blocked by text as fallback, native edge is canonical; blocked label state follows native blockers (open → blocked without ready-for-agent, all closed → unblocked + ready-for-agent, blocked removed).
 - Ask one decision at a time in ELI18 language, include a recommendation, and honor each skill's approval gates.
 - Follow the installed skills as the procedural source of truth.
+- Follow the focused doc-cache route via document-for-agents; do not preload the human-facing derived docs.
+- Respect scope boundaries, protected content, and preservation requirements; finish with a completion report.
 
 Finish with an ELI18 **Why / What / Where / How** summary and links to the specification and all tickets, then stop.
 
@@ -434,5 +438,27 @@ describe("plan-this bounded planning contract (plan-this:INV-7)", () => {
     assert.ok(body.includes("Design tickets as independently verifiable vertical slices"));
     const lines = skill.trimEnd().split("\n").length;
     assert.ok(lines >= 18 && lines <= 35, `INV-7 bound 18-35, got ${lines}`);
+  });
+});
+
+describe("plan-this unslopify/doc-cache/scope contract (issue #100)", () => {
+  test("(a) uses /unslopify and does not use legacy /unslopify", () => {
+    const skill = read("skills/plan-this/SKILL.md");
+    assert.ok(skill.includes("/unslopify"), "must use /unslopify");
+    // ensure legacy /unslopify not present as distinct token (exclude /unslopify)
+    assert.equal(skill.replaceAll("/unslopify", "").includes("/unslopify"), false, "must not contain legacy /unslopify");
+  });
+  test("(b) declares scope, protected content, preservation, and completion report", () => {
+    const skill = read("skills/plan-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("scope"), "must declare scope");
+    assert.ok(n.includes("protected"), "must declare protected content");
+    assert.ok(n.includes("preservation") || n.includes("preserve"), "must declare preservation");
+    assert.ok(n.includes("completion report") || n.includes("completion"), "must declare completion report");
+  });
+  test("(c) follows focused doc-cache route without preloading document-for-humans", () => {
+    const skill = read("skills/plan-this/SKILL.md");
+    assert.ok(skill.includes("document-for-agents") || norm(skill).includes("doc-cache"), "must reference doc-cache route");
+    assert.equal(skill.includes("document-for-humans"), false, "must not preload document-for-humans");
   });
 });

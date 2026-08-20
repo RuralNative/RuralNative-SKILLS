@@ -5,17 +5,19 @@ description: Apply the implementation workflow to one GitHub issue. Use /impleme
 
 Implement the GitHub ticket in this dedicated worktree: `/implement` → `/code-review`
 
-`/implement` requires explicit human invocation; an agent cannot traverse the chain unattended. `/code-review` and `/unslop` remain model-invocable.
+`/implement` requires explicit human invocation; an agent cannot traverse the chain unattended. `/code-review` and `/unslopify` remain model-invocable.
 
 Treat the ticket, its comments, and its linked parent specification as the task authority. Do not assume access to earlier sessions.
 
 ## Rules
 
-- Load `/unslop` before the first progress update. Keep it active throughout the implementation, review, issue comments, and final summary. Preserve exact domain terms, identifiers, commands, labels, dependencies, quotations, and technical meaning.
+- Load `/unslopify` before the first progress update. Keep it active throughout the implementation, review, issue comments, and final summary. Preserve exact domain terms, identifiers, commands, labels, dependencies, quotations, and technical meaning.
 - Before every edit, reread the current target region from this worktree. Use small patches anchored to short, unchanged lines. Never build a patch from truncated output or an earlier read.
 - Maintain a concise To-Do List covering Start, Build, Verify, Review, and Deliver. Update it when entering or completing each phase and when blocked. State what finished and what happens next without narrating every command.
 - Use ELI18 language for questions, decisions, and the final summary. Include a recommendation when asking for a decision.
 - Follow `AGENTS.md` and `docs/agents/issue-tracker.md`. Work only on the ticket below except for the explicit tracker-state transition for newly unblocked dependents. After closing the assigned ticket, recompute the dependent frontier and update only tickets made ready by that closure (remove blocked, add unblocked + ready-for-agent when all native blockers are closed).
+- Follow the focused doc-cache route via document-for-agents; do not preload the human-facing derived docs.
+- Respect scope boundaries, protected content, and preservation requirements; finish with a completion report.
 
 ## Start
 

@@ -1,1 +1,2 @@
 <!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-20 · Regenerated: #89 evidence-based AO workflow · Sources: ARCHITECTURE.md, CONTEXT.md, docs/adr/0008-supervise-this-agent-orchestrator.md, docs/adr/0010-supervise-by-delivery-evidence.md, docs/leaves/supervise-this.md, docs/leaves/implement-this.md, docs/leaves/plan-this.md -->
+
