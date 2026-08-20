@@ -6,7 +6,7 @@
     "format": "echo format ok",
     "format:check": "echo format ok",
     "lint": "echo lint ok",
-    "test": "node --test skills/*/tests/*.test.ts",
+    "test": "node --test skills/*/tests/*.test.ts tests/*.test.ts",
     "docs:check": "./scripts/docs-check.sh",
     "build": "echo build ok",
     "verify": "npm ci && npm run format && npm test && npm run lint && npx tsc --noEmit && npm run docs:check && npm run build"
