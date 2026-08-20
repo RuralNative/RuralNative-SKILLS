@@ -5,6 +5,8 @@ description: Apply the planning prefix as a fixed template. Use when the user in
 
 Run this planning-only workflow: `/grill-with-docs` → `/to-spec` → `/to-tickets`
 
+`/grill-with-docs`, `/to-spec`, and `/to-tickets` require explicit human invocation; an agent cannot traverse the chain unattended. `/unslop` remains model-invocable.
+
 ## Rules:
 
 - Load `/unslop` before the first progress update. Keep it active throughout `/grill-with-docs` → `/to-spec` → `/to-tickets`. Apply it to all prose you write, including to-do items, progress updates, interview questions, recommendations, decisions, ADR and glossary text, specification drafts, ticket bodies, GitHub comments, and the final summary. Check prose against `/unslop` before showing it to the user or publishing it to GitHub. Preserve exact domain terms, identifiers, commands, labels, dependencies, quotations, and technical meaning.

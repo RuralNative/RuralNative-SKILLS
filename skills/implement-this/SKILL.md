@@ -5,6 +5,8 @@ description: Apply the implementation workflow to one GitHub issue. Use /impleme
 
 Implement the GitHub ticket in this dedicated worktree: `/implement` → `/code-review`
 
+`/implement` requires explicit human invocation; an agent cannot traverse the chain unattended. `/code-review` and `/unslop` remain model-invocable.
+
 Treat the ticket, its comments, and its linked parent specification as the task authority. Do not assume access to earlier sessions.
 
 ## Rules

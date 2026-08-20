@@ -66,6 +66,31 @@ describe("implementation workflow and substitution (INV-3)", () => {
       assert.equal(emitted.includes("Issue #0"), false);
     }
   });
+
+  test("distinguishes locked dependency (/implement) from unlocked (/code-review, /unslop) and states human-invocation requirement", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const leaf = read("docs/leaves/implement-this.md");
+    const nSkill = norm(skill);
+    const nLeaf = norm(leaf);
+    // body states the human-invocation requirement
+    assert.ok(nSkill.includes("explicit human invocation"), "body must state explicit human invocation");
+    assert.ok(nSkill.includes("cannot traverse the chain unattended"), "body must state agent cannot traverse unattended");
+    // body names the locked skill
+    assert.ok(nSkill.includes("/implement"), "body must name locked skill /implement");
+    // body names the unlocked skills
+    assert.ok(nSkill.includes("/code-review") && nSkill.includes("model-invocable"), "body must state /code-review remains model-invocable");
+    assert.ok(nSkill.includes("/unslop") && nSkill.includes("model-invocable"), "body must state /unslop remains model-invocable");
+    // leaf documents the same constraint
+    assert.ok(nLeaf.includes("disable-model-invocation"), "leaf must reference disable-model-invocation");
+    assert.ok(nLeaf.includes("explicit human invocation"), "leaf must state explicit human invocation");
+    assert.ok(nLeaf.includes("cannot traverse the chain unattended"), "leaf must state agent cannot traverse unattended");
+    assert.ok(nLeaf.includes("model-invocable"), "leaf must name model-invocable skills");
+    // ADR-0009 exists and records the decision
+    const adr = read("docs/adr/0009-delegation-invariants-human-invocation.md");
+    assert.ok(adr.includes("Status: accepted"), "ADR-0009 must be accepted");
+    assert.ok(adr.includes("disable-model-invocation"), "ADR-0009 must reference disable-model-invocation");
+    assert.ok(adr.includes("rejected") && adr.includes("removing"), "ADR-0009 must state removing locks was rejected");
+  });
 });
 
 describe("dependencies and verification (INV-4)", () => {

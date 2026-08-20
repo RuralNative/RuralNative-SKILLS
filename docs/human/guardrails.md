@@ -1,4 +1,4 @@
-<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-20 · Regenerated: #72 AO supervisor pivot · Sources: docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md, docs/leaves/unslopify.md, docs/leaves/plan-this.md, docs/leaves/implement-this.md, docs/leaves/supervise-this.md, docs/leaves/release-skills.md -->
+<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-20 · Regenerated: #77 delegation invariants · Sources: docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md, docs/leaves/unslopify.md, docs/leaves/plan-this.md, docs/leaves/implement-this.md, docs/leaves/supervise-this.md, docs/leaves/release-skills.md -->
 
 # Guardrails in plain words
 
@@ -8,9 +8,9 @@ These are the promises the skills make.
 - The public registry is the official install path. Local install leftovers stay out of the repository.
 - Documentation changes update their technical leaf in the same change.
 - Prose cleanup keeps commands, code, links, quotations, and facts intact.
-- Planning runs `/grill-with-docs`, `/to-spec`, and `/to-tickets` in order.
+- Planning runs `/grill-with-docs`, `/to-spec`, and `/to-tickets` in order. These skills require explicit human invocation; an agent cannot run the planning chain unattended.
 - Planning publishes ready tickets with native blockers and asks about unresolved decisions.
-- Implementation handles one issue and stops when a native blocker is open.
+- Implementation handles one issue and stops when a native blocker is open. `/implement` requires explicit human invocation.
 - Standalone implementation pushes directly to `main` only after checks, review, and rebase.
 - AO implementation opens a pull request and leaves merge and issue closure to AO and the supervisor.
 - AO supervision runs inside the persistent project orchestrator and does not end after planning or worker creation.

@@ -31,10 +31,13 @@ Owns the content under `skills/supervise-this/`: the coordinator contract, AO se
 
 ADR-0007 remains the historical Agent Manager design. ADR-0008 supersedes its execution backend and live-session rules. The implementation adapter retains direct-main delivery for standalone use and adds an AO pull-request branch for this seam.
 
+Planning delegation does not run unattended. `plan-this` depends on `/grill-with-docs`, `/to-spec`, and `/to-tickets`, which each require explicit human invocation; an agent cannot traverse the planning chain without human input at each locked stage. Similarly, `implement-this` depends on `/implement`, which requires explicit human invocation. See ADR-0009.
+
 ## Links
 
 - Specification: [#72](https://github.com/RuralNative/RuralNative-SKILLS/issues/72)
 - Decision: `docs/adr/0008-supervise-this-agent-orchestrator.md`.
+- Decision: `docs/adr/0009-delegation-invariants-human-invocation.md` — locked delegation chains and human-invocation requirement.
 - Historical decision: `docs/adr/0007-supervise-this-coordinator.md`.
 - Harness: `scripts/docs-check.sh`.
 - Template: `skills/document-for-agents/reference/templates.md`.

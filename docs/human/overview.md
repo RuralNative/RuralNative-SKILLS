@@ -1,10 +1,10 @@
-<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-20 · Regenerated: #72 AO supervisor pivot · Sources: ARCHITECTURE.md, CONTEXT.md, docs/adr/0008-supervise-this-agent-orchestrator.md, docs/leaves/supervise-this.md, docs/leaves/implement-this.md, docs/leaves/plan-this.md -->
+<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-20 · Regenerated: #77 delegation invariants · Sources: ARCHITECTURE.md, CONTEXT.md, docs/adr/0008-supervise-this-agent-orchestrator.md, docs/adr/0009-delegation-invariants-human-invocation.md, docs/leaves/supervise-this.md, docs/leaves/implement-this.md, docs/leaves/plan-this.md -->
 
 # RuralNative-SKILLS in plain words
 
 This repository publishes reusable skills for coding agents. The shelf includes documentation workflows, prose cleanup, planning, implementation, supervision, and release work.
 
-`plan-this` runs the planning interview, specification, and ticket workflow. `implement-this` handles one ticket. `supervise-this` connects those pieces inside Agent Orchestrator.
+`plan-this` runs the planning interview, specification, and ticket workflow. The downstream planning skills require explicit human invocation; an agent cannot run the planning chain unattended. `implement-this` handles one ticket. `supervise-this` connects those pieces inside Agent Orchestrator.
 
 An AO project orchestrator owns a supervised run. It plans in the same persistent session, then starts Kilo Code workers in separate AO worktrees. GitHub issues and their native blockers decide what may start. Each worker opens a pull request. AO routes CI failures, review requests, and merge conflicts back to the worker that owns the branch.
 
