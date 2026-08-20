@@ -66,6 +66,27 @@ describe("implementation workflow and substitution (INV-3)", () => {
       assert.equal(emitted.includes("Issue #0"), false);
     }
   });
+
+  test("states human-invocation requirement and distinguishes locked from unlocked (implement-this:INV-3, ADR-0009)", () => {
+    const leaf = read("docs/leaves/implement-this.md");
+    const nLeaf = norm(leaf);
+    assert.ok(nLeaf.includes("cannot be traversed unattended"), "INV-3 must state chain cannot be traversed unattended");
+    assert.ok(nLeaf.includes("disable-model-invocation: true"), "must flag /implement with disable-model-invocation: true");
+    assert.ok(nLeaf.includes("require explicit human invocation") || nLeaf.includes("requires explicit human invocation"), "must state /implement requires explicit human invocation");
+    assert.ok(nLeaf.includes("/implement") && nLeaf.includes("/code-review"), "must name both stages");
+    assert.ok(nLeaf.includes("/code-review") && nLeaf.includes("no such lock") && nLeaf.includes("model-invocable"), "must distinguish /code-review as model-invocable with no such lock");
+    assert.ok(fs.existsSync(path.join(ROOT, "docs/adr/0009-delegation-locks-require-human-invocation.md")), "ADR-0009 must exist");
+    const adr = read("docs/adr/0009-delegation-locks-require-human-invocation.md");
+    const nAdr = norm(adr);
+    assert.ok(nAdr.includes("lifting the locks was considered and rejected"), "ADR Why must state lifting locks was considered and rejected");
+    assert.ok(adr.includes("Status: accepted") && adr.includes("Decision:") && adr.includes("Why:") && adr.includes("Consequences:"), "ADR must have Status/Date/Decision/Why/Consequences");
+    const arch = read("ARCHITECTURE.md");
+    assert.ok(arch.includes("docs/adr/0009-delegation-locks-require-human-invocation.md"), "ARCHITECTURE must list ADR-0009");
+    const supLeaf = read("docs/leaves/supervise-this.md");
+    const nSup = norm(supLeaf);
+    assert.ok(nSup.includes("neither delegated chain runs unattended") || nSup.includes("cannot be traversed unattended") || nSup.includes("require explicit human invocation"), "supervise-this leaf must not claim unattended delegation");
+    assert.equal(nSup.includes("runs unattended") && !nSup.includes("cannot") && !nSup.includes("require explicit"), false, "supervise-this must not contain surviving unattended claim");
+  });
 });
 
 describe("dependencies and verification (INV-4)", () => {

@@ -6,11 +6,11 @@
 
 ## Scope & boundaries
 
-Owns the content under `skills/supervise-this/`: the coordinator contract, AO setup guide, and composition tests. It delegates planning to `plan-this` and one-issue delivery to `implement-this`. AO owns worker sessions, worktrees, CI feedback, review feedback, merge conflicts, and session recovery. GitHub owns specifications, child tickets, native dependencies, labels, comments, pull requests, checks, and closure evidence. This seam does not schedule through Agent Manager, KiloClaw, or retired AO configuration.
+Owns the content under `skills/supervise-this/`: the coordinator contract, AO setup guide, and composition tests. It delegates planning to `plan-this` and one-issue delivery to `implement-this`; neither delegated chain runs unattended — planning via `plan-this` traverses `/grill-with-docs` → `/to-spec` → `/to-tickets` where those three carry `disable-model-invocation: true` and require explicit human invocation (only `/unslop` remains model-invocable), and implementation via `implement-this` traverses `/implement` → `/code-review` where `/implement` carries `disable-model-invocation: true` and requires explicit human invocation while `/code-review` remains model-invocable (see ADR-0009). AO owns worker sessions, worktrees, CI feedback, review feedback, merge conflicts, and session recovery. GitHub owns specifications, child tickets, native dependencies, labels, comments, pull requests, checks, and closure evidence. This seam does not schedule through Agent Manager, KiloClaw, or retired AO configuration.
 
 ## Key files & data flow
 
-`SKILL.md` is consumed by the AO project orchestrator. New-task flow is `/supervise-this <task>` → AO preflight → inline `/plan-this` → structured parent comment → GitHub ready frontier → `ao spawn` Kilo Code workers → AO completion or handoff event → GitHub reconciliation → later frontier. Resume uses `/supervise-this #<spec>` and reads GitHub before AO sessions. Worker prompts invoke `/implement-this #<n>` with AO pull-request delivery. After all planned pull requests merge, the orchestrator runs `/code-review` from a fixed base, creates bounded follow-up tickets for confirmed findings, and closes the parent only after the final review passes.
+`SKILL.md` is consumed by the AO project orchestrator. New-task flow is `/supervise-this <task>` → AO preflight → inline `/plan-this` (whose delegated stages `/grill-with-docs`, `/to-spec`, `/to-tickets` require explicit human invocation per ADR-0009 and cannot be traversed unattended; only `/unslop` remains model-invocable) → structured parent comment → GitHub ready frontier → `ao spawn` Kilo Code workers → AO completion or handoff event → GitHub reconciliation → later frontier. Resume uses `/supervise-this #<spec>` and reads GitHub before AO sessions. Worker prompts invoke `/implement-this #<n>` with AO pull-request delivery (whose `/implement` stage requires explicit human invocation per ADR-0009 while `/code-review` remains model-invocable). After all planned pull requests merge, the orchestrator runs `/code-review` from a fixed base, creates bounded follow-up tickets for confirmed findings, and closes the parent only after the final review passes.
 
 ## Non-negotiables
 
@@ -29,12 +29,13 @@ Owns the content under `skills/supervise-this/`: the coordinator contract, AO se
 
 ## Further notes
 
-ADR-0007 remains the historical Agent Manager design. ADR-0008 supersedes its execution backend and live-session rules. The implementation adapter retains direct-main delivery for standalone use and adds an AO pull-request branch for this seam.
+ADR-0007 remains the historical Agent Manager design. ADR-0008 supersedes its execution backend and live-session rules. ADR-0009 records that delegation locks on `/grill-with-docs`, `/to-spec`, `/to-tickets`, and `/implement` are deliberate and require explicit human invocation, so neither planning nor implementation delegation runs unattended. The implementation adapter retains direct-main delivery for standalone use and adds an AO pull-request branch for this seam.
 
 ## Links
 
 - Specification: [#72](https://github.com/RuralNative/RuralNative-SKILLS/issues/72)
 - Decision: `docs/adr/0008-supervise-this-agent-orchestrator.md`.
+- Decision: `docs/adr/0009-delegation-locks-require-human-invocation.md`.
 - Historical decision: `docs/adr/0007-supervise-this-coordinator.md`.
 - Harness: `scripts/docs-check.sh`.
 - Template: `skills/document-for-agents/reference/templates.md`.

@@ -189,6 +189,30 @@ describe("plan-this hard dependencies and workflow order (plan-this:INV-4)", () 
     assert.ok(frontmatter.includes("/grill-with-docs") && frontmatter.includes("/to-spec") && frontmatter.includes("/to-tickets") && frontmatter.includes("/unslop"), "frontmatter must declare delegation");
   });
 
+  test("states human-invocation requirement and distinguishes locked from unlocked dependencies (plan-this:INV-4, ADR-0009)", () => {
+    const leaf = read("docs/leaves/plan-this.md");
+    const nLeaf = norm(leaf);
+    assert.ok(nLeaf.includes("cannot be traversed unattended"), "INV-4 must state chain cannot be traversed unattended");
+    assert.ok(nLeaf.includes("disable-model-invocation: true"), "must flag locked skills with disable-model-invocation: true");
+    assert.ok(nLeaf.includes("require explicit human invocation") || nLeaf.includes("requires explicit human invocation"), "must state locked skills require explicit human invocation");
+    assert.ok(nLeaf.includes("/grill-with-docs") && nLeaf.includes("/to-spec") && nLeaf.includes("/to-tickets"), "must name locked skills");
+    assert.ok(nLeaf.includes("/unslop") && nLeaf.includes("no such lock") && nLeaf.includes("model-invocable"), "must distinguish /unslop as model-invocable with no such lock");
+    assert.ok(fs.existsSync(path.join(ROOT, "docs/adr/0009-delegation-locks-require-human-invocation.md")), "ADR-0009 must exist");
+    const adr = read("docs/adr/0009-delegation-locks-require-human-invocation.md");
+    const nAdr = norm(adr);
+    assert.ok(nAdr.includes("lifting the locks was considered and rejected"), "ADR Why must state lifting locks was considered and rejected");
+    assert.ok(adr.includes("Status: accepted") && adr.includes("Decision:") && adr.includes("Why:") && adr.includes("Consequences:"), "ADR must have Status/Date/Decision/Why/Consequences");
+    const arch = read("ARCHITECTURE.md");
+    assert.ok(arch.includes("docs/adr/0009-delegation-locks-require-human-invocation.md"), "ARCHITECTURE must list ADR-0009");
+    const planSkill = read("skills/plan-this/SKILL.md");
+    const implSkill = read("skills/implement-this/SKILL.md");
+    assert.equal(planSkill.includes("disable-model-invocation"), false, "plan-this must not gain disable-model-invocation flag");
+    assert.equal(implSkill.includes("disable-model-invocation"), false, "implement-this must not gain disable-model-invocation flag");
+    const supLeaf = read("docs/leaves/supervise-this.md");
+    const nSup = norm(supLeaf);
+    assert.ok(nSup.includes("neither delegated chain runs unattended") || nSup.includes("cannot be traversed unattended") || nSup.includes("require explicit human invocation"), "supervise-this leaf must not claim unattended delegation");
+  });
+
   test("does not depend on implement or code-review", () => {
     const skill = read("skills/plan-this/SKILL.md");
     const body = getBody(skill);
