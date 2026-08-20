@@ -20,6 +20,7 @@ These are the promises the skills make.
 - Progress requires a tracked change or later delivery artifact. Idle and activity timestamps prove nothing.
 - Resume reconciles pull requests, sessions, branches, assignees, and issue links before a spawn.
 - Infrastructure, task, and implementation failures have separate recovery limits.
+- Workflow commands require explicit JSON or a regular input file. They do not wait on stdin.
 - Review and merge preserve the reviewed commit. Same-account review cannot satisfy an approval-only policy.
 - The supervisor allows two automatic follow-up review rounds, then asks the user.
 

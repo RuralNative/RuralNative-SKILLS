@@ -10,7 +10,7 @@ An AO project orchestrator owns a supervised run. It delegates planning in the s
 
 The supervisor stays active after planning and worker creation. It counts a tracked change, pull request, review, merge, evidence, or closure as progress. An idle label or recent activity time does not count. A merged blocker can open the next dependency wave.
 
-Recovery has separate limits for infrastructure trouble, task continuation, and code correction. Review keeps the reviewed commit fixed. A same-account verdict works only when the recorded policy allows it.
+Recovery has separate limits for infrastructure trouble, task continuation, and code correction. The workflow helper accepts explicit JSON or a regular input file, so a missing input or pipe fails instead of waiting. Review keeps the reviewed commit fixed. A same-account verdict works only when the recorded policy allows it.
 
 People install skills from the public registry. The technical details live in the agent-facing documents linked below.
 

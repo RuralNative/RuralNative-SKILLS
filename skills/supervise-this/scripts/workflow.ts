@@ -53,6 +53,10 @@ function resolved(profile: RoleProfile | undefined): profile is RoleProfile {
   return profile !== undefined && profile.agent.length > 0 && Boolean(profile.model?.trim()) && profile.modelResolved;
 }
 
+function isSessionMode(mode: unknown): mode is SessionMode {
+  return mode === "chat" || mode === "tui";
+}
+
 export function runPreflight(input: PreflightInput): PreflightResult {
   const errors: string[] = [];
   if (!input.daemonHealthy) errors.push("AO_UNHEALTHY");
@@ -65,9 +69,10 @@ export function runPreflight(input: PreflightInput): PreflightResult {
   else if (!resolved(input.worker)) errors.push("WORKER_MODEL_UNRESOLVED");
   if (!input.reviewerPolicy) errors.push("REVIEWER_POLICY_MISSING");
 
+  const supportedModes = input.worker?.supportedModes.filter(isSessionMode) ?? [];
   const requested = input.requestedMode ?? input.worker?.preferredMode;
-  const mode = requested ?? (input.worker?.supportedModes.includes("chat") ? "chat" : input.worker?.supportedModes[0]);
-  if (!mode || !input.worker?.supportedModes.includes(mode)) errors.push("WORKER_MODE_UNSUPPORTED");
+  const mode = requested ?? (supportedModes.includes("chat") ? "chat" : supportedModes[0]);
+  if (!isSessionMode(mode) || !supportedModes.includes(mode)) errors.push("WORKER_MODE_UNSUPPORTED");
 
   return errors.length > 0
     ? { ok: false, errors: [...new Set(errors)] }
@@ -145,22 +150,15 @@ export type DeliveryFacts = {
 };
 
 export function deliveryState(facts: DeliveryFacts): DeliveryState {
-  let state: DeliveryState = "READY";
-  const gates: Array<[boolean, DeliveryState]> = [
-    [facts.claimed, "CLAIMED"],
-    [facts.baseCurrent, "BASE_CURRENT"],
-    [facts.trackedChange, "EDITING"],
-    [facts.pullRequestOpen, "PR_OPEN"],
-    [facts.reviewed, "REVIEWED"],
-    [facts.merged, "MERGED"],
-    [facts.evidenced, "EVIDENCED"],
-    [facts.closed, "CLOSED"],
-  ];
-  for (const [passed, next] of gates) {
-    if (!passed) break;
-    state = next;
-  }
-  return state;
+  if (facts.closed && facts.evidenced && facts.merged) return "CLOSED";
+  if (facts.evidenced && facts.merged) return "EVIDENCED";
+  if (facts.merged) return "MERGED";
+  if (facts.reviewed) return "REVIEWED";
+  if (facts.pullRequestOpen) return "PR_OPEN";
+  if (facts.trackedChange) return "EDITING";
+  if (facts.baseCurrent) return "BASE_CURRENT";
+  if (facts.claimed) return "CLAIMED";
+  return "READY";
 }
 
 export function idleSignal(input: {
@@ -274,8 +272,19 @@ function readInput(args: string[]): unknown {
   if (extra.length > 0 || !value || (flag !== "--json" && flag !== "--input")) {
     throw new Error("input required: use --json <json> or --input <path>");
   }
-  if (flag === "--input" && !fs.statSync(value).isFile()) throw new Error("--input must name a regular file");
-  return JSON.parse(flag === "--json" ? value : fs.readFileSync(value, "utf8"));
+  if (flag === "--json") return JSON.parse(value);
+  let descriptor: number;
+  try {
+    descriptor = fs.openSync(value, fs.constants.O_RDONLY | fs.constants.O_NONBLOCK);
+  } catch {
+    throw new Error("--input must name a readable regular file");
+  }
+  try {
+    if (!fs.fstatSync(descriptor).isFile()) throw new Error("--input must name a readable regular file");
+    return JSON.parse(fs.readFileSync(descriptor, "utf8"));
+  } finally {
+    fs.closeSync(descriptor);
+  }
 }
 
 export function runCli(args: string[]): { exitCode: number; stdout: string; stderr: string } {

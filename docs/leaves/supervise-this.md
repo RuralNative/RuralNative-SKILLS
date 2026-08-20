@@ -10,7 +10,7 @@ Owns the content under `skills/supervise-this/`: the coordinator contract, setup
 
 ## Key files & data flow
 
-`SKILL.md` is consumed by the AO project orchestrator. New-task flow is `/supervise-this <task>` → collect AO, GitHub, and base facts → `scripts/workflow.ts preflight` → `/plan-this` delegation → ownership reconciliation → configured worker spawn → evidence-state updates → dependency waves. Resume uses `/supervise-this #<spec>` and runs the same ownership reconciliation before any write. `workflow.ts` exports pure decisions and a JSON command-line interface with explicit `--input` or `--json` input. `tests/workflow.test.ts` puts a timeout around every CLI operation and exercises the failure and resume paths without AO, GitHub, or browser access.
+`SKILL.md` is consumed by the AO project orchestrator. New-task flow is `/supervise-this <task>` → collect AO, GitHub, and base facts → `scripts/workflow.ts preflight` → `/plan-this` delegation → ownership reconciliation → configured worker spawn → evidence-state updates → dependency waves. Resume uses `/supervise-this #<spec>` and runs the same ownership reconciliation before any write. `workflow.ts` exports pure decisions and a JSON command-line interface with explicit `--input` or `--json` input. Its input reader opens files without blocking and rejects non-regular files. `tests/workflow.test.ts` calls every CLI operation through the synchronous dispatcher and exercises the failure and resume paths without AO, GitHub, or browser access.
 
 ## Non-negotiables
 

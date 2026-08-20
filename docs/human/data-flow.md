@@ -4,7 +4,7 @@
 
 The technical flow starts with a task in an AO project orchestrator.
 
-1. The orchestrator checks AO health, explicit-repository GitHub access, role models, worker mode, review policy, and the current default branch.
+1. The orchestrator passes explicit JSON or a regular input file to the workflow helper, which checks AO health, explicit-repository GitHub access, role models, worker mode, review policy, and the current default branch.
 2. It delegates planning to `/plan-this` in the persistent orchestrator session.
 3. Planning publishes a parent specification, child tickets, and native GitHub dependency edges. The planning stages `/grill-with-docs`, `/to-spec`, and `/to-tickets` need a person to start them, so planning pauses until someone invokes each one.
 4. The supervisor records the AO project and role information on the parent issue.

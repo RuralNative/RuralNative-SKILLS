@@ -123,6 +123,16 @@ describe("executable AO preflight", () => {
     if (!result.ok) assert.ok(result.errors.includes("WORKER_MODE_UNSUPPORTED"));
   });
 
+  test("rejects catalog modes outside chat and TUI", () => {
+    const input = {
+      ...healthyPreflight(),
+      worker: { agent: "worker", model: "model", modelResolved: true, supportedModes: ["batch"] },
+    };
+    const result = runCli(["preflight", "--json", JSON.stringify(input)]);
+    assert.equal(result.exitCode, 0);
+    assert.ok(JSON.parse(result.stdout).errors.includes("WORKER_MODE_UNSUPPORTED"));
+  });
+
   test("rejects an unresolved worker model", () => {
     const result = runPreflight({
       ...healthyPreflight(),
@@ -169,6 +179,20 @@ describe("ownership and delivery evidence", () => {
   });
 
   test("delivery state ignores activity labels and advances on artifacts", () => {
+    assert.equal(
+      deliveryState({
+        claimed: false,
+        baseCurrent: false,
+        trackedChange: false,
+        pullRequestOpen: true,
+        reviewed: false,
+        merged: false,
+        evidenced: false,
+        closed: false,
+      }),
+      "PR_OPEN",
+      "a durable PR must survive missing earlier session facts on resume",
+    );
     assert.equal(
       deliveryState({
         claimed: true,
