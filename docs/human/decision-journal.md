@@ -20,6 +20,10 @@ Technical docs guide agents. Human pages explain the same decisions in plain lan
 
 `supervise-this` connects planning, tickets, implementation, and review. The first design targeted Agent Manager and ended when its parent turn ended.
 
+### 2026-08-20 — Use repository-owned unslopify and focused cache for planning/implementation
+
+`plan-this` and `implement-this` now depend on repository-owned `unslopify` (not external `unslop`) and enforce its scope, protected-content, preservation, and completion-report contracts. Agents read only the focused cache `AGENTS.md → ARCHITECTURE.md → seam leaf → CONTEXT.md → relevant ADRs` owned by `document-for-agents`; `document-for-humans` output remains derived and is not preloaded.
+
 ### 2026-08-20 — Make Agent Orchestrator the runtime
 
 AO now owns the persistent supervisor. Planning runs delegated in the same persistent orchestrator session. Kilo Code workers run in AO worktrees, open pull requests, and receive CI and review feedback through AO. GitHub remains the source of task and dependency state.

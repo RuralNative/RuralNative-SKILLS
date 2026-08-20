@@ -212,3 +212,40 @@ describe("single-ticket ownership and boundary (INV-7)", () => {
     for (let i = 1; i <= 7; i++) assert.ok(leaf.includes(`INV-${i}`), `leaf must contain INV-${i}`);
   });
 });
+
+describe("implement-this unslopify and focused doc-cache (Phase 1 red)", () => {
+  test("names unslopify and no longer requires unslop", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("/unslopify"), "must name /unslopify");
+    assert.ok(n.includes("unslopify"), "must name unslopify dependency");
+    const hasBareUnslop = /\/unslop(?!ify)/.test(skill);
+    assert.equal(hasBareUnslop, false, "must not reference /unslop — replaced by /unslopify");
+  });
+
+  test("applies unslopify preservation, protected-content, and completion-report contract", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("protected-content") || n.includes("protected content"), "must name protected-content contract");
+    assert.ok(n.includes("preservation"), "must name preservation contract");
+    assert.ok(n.includes("completion report"), "must require completion report");
+    assert.ok(n.includes("scope"), "must name scope contract");
+  });
+
+  test("requires focused orientation route AGENTS, ARCHITECTURE, seam leaf, CONTEXT, ADRs", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    assert.ok(skill.includes("AGENTS.md"), "must require AGENTS.md");
+    assert.ok(skill.includes("ARCHITECTURE.md"), "must require ARCHITECTURE.md");
+    assert.ok(skill.includes("CONTEXT.md"), "must require CONTEXT.md");
+    assert.ok(skill.includes("docs/leaves/") || norm(skill).includes("seam leaf"), "must require affected seam leaf doc");
+    assert.ok(norm(skill).includes("adr"), "must require relevant ADRs");
+  });
+
+  test("does not require broad preload or derived human docs", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("does not require") || n.includes("do not preload") || n.includes("focused"), "must state focused loading / no broad preload");
+    assert.ok(skill.includes("document-for-humans") || n.includes("human docs") || n.includes("derived human"), "must exclude derived human docs");
+    assert.equal(n.includes("preload all docs") || n.includes("read all documentation"), false, "must not require broad preload");
+  });
+});
