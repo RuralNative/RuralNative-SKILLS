@@ -27,7 +27,7 @@ Wrapper material removed from `SKILL.md` in #55 — Invocation details, Hard dep
 
 Delegation for supervised planning (#63, parent #62) extends only the invocation contract: direct `/plan-this <task>` and delegation from an active `supervise-this` run share the byte-for-byte fixed-template body, single `## Task:` slot, dependency order, prose rules, and approval gates. Delegated completion returns parent specification and ticket references to the supervisor; standalone completion still stops after its ELI18 summary. No second planning contract is created.
 
-Parity debt: `implement-this` still carries the pre-trim wrapper pattern (83 lines with the same five wrapper sections) and should be pruned for parity in a follow-up slice without changing that seam here. See `DEBT-7` in `docs/debt.md` for the tracked follow-up.
+Former parity debt with `implement-this` (DEBT-7) was resolved 2026-08-20. Verified against `skills/implement-this/SKILL.md` at 48 lines including frontmatter with no wrapper sections; the trimmed contract now matches across both adapters with wrapper reference material in leaf/INSTALL/ADR.
 
 ## Links
 
