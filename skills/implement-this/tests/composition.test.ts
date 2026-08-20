@@ -66,6 +66,21 @@ describe("implementation workflow and substitution (INV-3)", () => {
       assert.equal(emitted.includes("Issue #0"), false);
     }
   });
+
+  test("INV-3 states the human-invocation requirement and distinguishes locked from unlocked dependencies", () => {
+    const leaf = read("docs/leaves/implement-this.md");
+    const n = norm(leaf);
+    assert.ok(n.includes("explicit human invocation"), "leaf must state explicit human invocation");
+    assert.ok(n.includes("cannot traverse the implementation chain unattended") || n.includes("cannot traverse the chain unattended"), "leaf must state the chain cannot be traversed unattended");
+    assert.ok(n.includes("disable-model-invocation"), "leaf must name the disable-model-invocation setting");
+    assert.ok(n.includes("/implement") && n.includes("disable-model-invocation"), "leaf must say /implement is locked");
+    assert.ok(n.includes("`/code-review` carries no such lock") || n.includes("/code-review carries no such lock"), "leaf must say /code-review carries no lock");
+    assert.ok(n.includes("model-invocable"), "leaf must say /code-review remains model-invocable");
+    // ADR-0009 records the decision
+    const adr = read("docs/adr/0009-model-locked-delegated-stages-require-human-invocation.md");
+    assert.ok(adr.includes("Status: accepted"), "ADR-0009 must parse as accepted");
+    assert.ok(norm(adr).includes("lifting the locks was considered and rejected"), "ADR-0009 must record that lifting the locks was considered and rejected");
+  });
 });
 
 describe("dependencies and verification (INV-4)", () => {

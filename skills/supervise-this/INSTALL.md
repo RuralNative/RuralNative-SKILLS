@@ -1,6 +1,6 @@
 # Installing supervise-this
 
-`supervise-this` is an AO-first coordinator. Run it inside the Agent Orchestrator project orchestrator. It runs `/plan-this` inline, creates Kilo Code TUI workers in AO worktrees, and stays active across worker completion, pull-request review, merge, dependency waves, recovery, and final review. Planning and implementation models come from AO project role profiles, not per-spawn flags.
+`supervise-this` is an AO-first coordinator. Run it inside the Agent Orchestrator project orchestrator. It delegates planning to `/plan-this`, whose locked delegated stages require explicit human invocation, creates Kilo Code TUI workers in AO worktrees, and stays active across worker completion, pull-request review, merge, dependency waves, recovery, and final review. Planning and implementation models come from AO project role profiles, not per-spawn flags.
 
 ## Requirements
 

@@ -197,6 +197,21 @@ describe("plan-this hard dependencies and workflow order (plan-this:INV-4)", () 
     assert.equal(n.includes("code-review"), false, "trimmed body must not mention code-review");
   });
 
+  test("INV-4 states the human-invocation requirement and distinguishes locked from unlocked dependencies", () => {
+    const leaf = read("docs/leaves/plan-this.md");
+    const n = norm(leaf);
+    assert.ok(n.includes("explicit human invocation"), "leaf must state explicit human invocation");
+    assert.ok(n.includes("cannot traverse the delegation chain unattended") || n.includes("cannot traverse the chain unattended"), "leaf must state the chain cannot be traversed unattended");
+    assert.ok(n.includes("disable-model-invocation"), "leaf must name the disable-model-invocation setting");
+    assert.ok(n.includes("/grill-with-docs") && n.includes("/to-spec") && n.includes("/to-tickets"), "leaf must name the locked delegated stages");
+    assert.ok(n.includes("`/unslop` carries no such lock") || n.includes("/unslop carries no such lock"), "leaf must say /unslop carries no lock");
+    assert.ok(n.includes("model-invocable"), "leaf must say /unslop remains model-invocable");
+    // ADR-0009 records the decision
+    const adr = read("docs/adr/0009-model-locked-delegated-stages-require-human-invocation.md");
+    assert.ok(adr.includes("Status: accepted"), "ADR-0009 must parse as accepted");
+    assert.ok(norm(adr).includes("lifting the locks was considered and rejected"), "ADR-0009 must record that lifting the locks was considered and rejected");
+  });
+
   test("naming exception and fixed-template boundary recorded in ADR and glossary", () => {
     const adr = read("docs/adr/0006-plan-this-fixed-template-adapter.md");
     const glossary = read("CONTEXT.md");

@@ -6,17 +6,17 @@
 
 ## Scope & boundaries
 
-Owns `skills/implement-this/`: the one-issue adapter, installation guide, and composition tests. It does not create worktrees, schedule dependency waves, choose AO models, or copy the supervisor contract. The direct path pushes only after rebase and verification. The AO path creates or updates a pull request and leaves CI, review feedback, merge, session recovery, and issue closure to AO and `supervise-this`.
+Owns `skills/implement-this/`: the one-issue adapter, installation guide, and composition tests. It does not create worktrees, schedule dependency waves, choose AO models, or copy the supervisor contract. The direct path pushes only after rebase and verification. The AO path creates or updates a pull request and leaves CI, review feedback, merge, session recovery, and issue closure to AO and `supervise-this`. The delegated stage `/implement` requires explicit human invocation — an agent cannot traverse the implementation chain unattended — while `/code-review` carries no such lock and remains model-invocable.
 
 ## Key files & data flow
 
-`SKILL.md` substitutes one requested issue for `Issue #0`. The worker reads the issue and native blockers, claims it, runs `/implement`, updates the affected leaf and tests, verifies the repository, runs `/code-review`, then chooses delivery from AO context. AO context is present when `AO_SESSION_ID` and `AO_PROJECT_ID` exist or the active supervisor names AO pull-request delivery. The worker reports the PR and evidence to AO and never pushes directly to `main` in that branch.
+`SKILL.md` substitutes one requested issue for `Issue #0`. The worker reads the issue and native blockers, claims it, runs `/implement`, updates the affected leaf and tests, verifies the repository, runs `/code-review`, then chooses delivery from AO context. `/implement` sets `disable-model-invocation: true` and requires explicit human invocation — the worker cannot run it unattended — while `/code-review` carries no such lock and remains model-invocable. AO context is present when `AO_SESSION_ID` and `AO_PROJECT_ID` exist or the active supervisor names AO pull-request delivery. The worker reports the PR and evidence to AO and never pushes directly to `main` in that branch.
 
 ## Non-negotiables
 
 1. **INV-1** — `SKILL.md` frontmatter `name` equals the folder name `implement-this`. Mechanism: identity composition test and docs harness.
 2. **INV-2** — `INSTALL.md` uses `npx skills add RuralNative/RuralNative-SKILLS --skill implement-this`, gives a matching manual copy, and documents direct and AO single-issue invocation. Mechanism: composition test.
-3. **INV-3** — The workflow contains the `/implement` → `/code-review` order, one `Issue #0` substitution point, ticket authority, blocker checks, and the repository verification command. Mechanism: composition test.
+3. **INV-3** — The workflow contains the `/implement` → `/code-review` order, one `Issue #0` substitution point, ticket authority, blocker checks, and the repository verification command. `/implement` sets `disable-model-invocation: true` and requires explicit human invocation; an agent cannot traverse the implementation chain unattended, so a supervised run pauses at `/implement` until a human invokes it. `/code-review` carries no such lock and remains model-invocable. Mechanism: composition test.
 4. **INV-4** — `/unslop` loads before the first progress update, and the worker verifies formatting, tests, lint, TypeScript, docs, and build before delivery. Mechanism: composition test.
 5. **INV-5** — Standalone delivery keeps the fixed direct-main path: fixed review base, valid findings fixed, rebase, verification, `git push origin HEAD:main`, evidence, label removal, and assigned-ticket closure. Mechanism: composition test.
 6. **INV-6** — AO delivery creates or updates a pull request after local verification and review, does not push directly to `main`, and does not close the issue before merge. AO owns worker lifecycle and feedback. Mechanism: composition test.
@@ -32,12 +32,13 @@ npm run verify
 
 ## Further notes
 
-ADR-0006 records the original fixed-template adapter. ADR-0008 adds the AO delivery branch without changing the direct-main path. `/supervise-this` is the only delegated coordinator named by this seam.
+ADR-0006 records the original fixed-template adapter. ADR-0008 adds the AO delivery branch without changing the direct-main path. ADR-0009 records that the delegated `/implement` stage requires explicit human invocation. `/supervise-this` is the only delegated coordinator named by this seam.
 
 ## Links
 
 - Specification: [#72](https://github.com/RuralNative/RuralNative-SKILLS/issues/72).
 - Decision: `docs/adr/0008-supervise-this-agent-orchestrator.md`.
+- Decision: `docs/adr/0009-model-locked-delegated-stages-require-human-invocation.md`.
 - Historical template decision: `docs/adr/0006-plan-this-fixed-template-adapter.md`.
 - Glossary: `CONTEXT.md`.
 - Harness: `scripts/docs-check.sh`.
