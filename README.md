@@ -1,6 +1,6 @@
 # RuralNative-SKILLS
 
-A focused shelf of three installable skills that make agent output more reliable without carrying extra prose. `document-for-agents` keeps the agent-facing doc tree honest, `document-for-humans` derives plain-language pages from that tree for stakeholders, and `unslopify` cleans model-generated phrasing on explicit scope before anything ships. Together they work as a cache: docs hold the unrecoverable where-and-why context — decisions, vocabulary, invariants — and agents use it as a codebase cache for the unrecoverable where-and-why context, with focused loading instead of reading all docs before acting, so re-orientation stays on the doc cache instead of a full read of the code.
+A focused shelf of three installable skills that make agent output more reliable without carrying extra prose. `document-for-agents` keeps the agent-facing doc tree honest. `document-for-humans` derives plain-language pages from that tree for stakeholders. `unslopify` cleans model-generated phrasing on explicit scope before anything ships. The docs work as a cache for decisions, vocabulary, and invariants that code alone cannot recover. Agents use it as a codebase cache for the unrecoverable where-and-why context, with focused loading instead of reading all docs before acting.
 
 ## Installation
 
