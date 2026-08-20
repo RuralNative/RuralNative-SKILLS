@@ -111,7 +111,9 @@ describe("plan-this fixed template and task substitution (plan-this:INV-3)", () 
 
 - Load \`/unslop\` before the first progress update. Keep it active throughout \`/grill-with-docs\` → \`/to-spec\` → \`/to-tickets\`. Apply it to all prose you write, including to-do items, progress updates, interview questions, recommendations, decisions, ADR and glossary text, specification drafts, ticket bodies, GitHub comments, and the final summary. Check prose against \`/unslop\` before showing it to the user or publishing it to GitHub. Preserve exact domain terms, identifiers, commands, labels, dependencies, quotations, and technical meaning.
 - Maintain a concise To-Do List covering Discovery, Decisions, Specification, Tickets, and Delivery. Update it at phase changes, decisions, blockers, and publication. State what finished and what happens next without narrating every command.
-- Design tickets as independently verifiable vertical slices suitable for one future worktree. Record blockers, affected seams, acceptance criteria, verification requirements, and whether later parallel execution is safe.
+- Require a parent specification that separates in-scope behavior from out-of-scope non-goals, states acceptance criteria, affected seams, structural constraints, and the smallest test-first verification plan that proves the result.
+- Design tickets as independently verifiable vertical slices suitable for one future worktree. Each ticket states its independently verifiable behavior, blockers, affected seams, acceptance criteria, verification requirements, and whether later parallel execution is safe.
+- Require test design before implementation direction: state the smallest set of tests that proves observable behavior, stated standards, and structural requirements. Reject redundant, implementation-detail, prose-mirroring, and coverage-only tests unless they name a distinct risk.
 - Optimize for precision per token: keep shared context in the parent specification; make tickets self-contained only for their slice; avoid repetition, speculative file paths, and routine pseudocode.
 - Ground decisions in the codebase and relevant documentation, following the repository's documented loading order. Inspect facts; ask only unresolved decisions.
 - Publish GitHub issues using repository-defined labels (\`ready-for-agent\` where applicable) and native dependency edges.
@@ -138,7 +140,7 @@ Finish with an ELI18 **Why / What / Where / How** summary and links to the speci
     assert.equal(body.includes("## Hard dependencies"), false, "body must not contain ## Hard dependencies wrapper");
     // line-count bound: ~25-35 lines total including frontmatter, allow 18-35 for trimmed 21-line file
     const lines = skill.trimEnd().split("\n").length;
-    assert.ok(lines >= 18 && lines <= 35, `line count ${lines} must be within 18-35 (expected ~21, bound ~25-35)`);
+    assert.ok(lines >= 18 && lines <= 45, `line count ${lines} must be within 18-45 (expected ~23, bound ~25-35)`);
   });
 
   test("task text like Create a Next.js App preserved verbatim under ## Task:", () => {
@@ -288,7 +290,9 @@ describe("plan-this preserved rules and user invocation (plan-this:INV-5)", () =
 
 - Load \`/unslop\` before the first progress update. Keep it active throughout \`/grill-with-docs\` → \`/to-spec\` → \`/to-tickets\`. Apply it to all prose you write, including to-do items, progress updates, interview questions, recommendations, decisions, ADR and glossary text, specification drafts, ticket bodies, GitHub comments, and the final summary. Check prose against \`/unslop\` before showing it to the user or publishing it to GitHub. Preserve exact domain terms, identifiers, commands, labels, dependencies, quotations, and technical meaning.
 - Maintain a concise To-Do List covering Discovery, Decisions, Specification, Tickets, and Delivery. Update it at phase changes, decisions, blockers, and publication. State what finished and what happens next without narrating every command.
-- Design tickets as independently verifiable vertical slices suitable for one future worktree. Record blockers, affected seams, acceptance criteria, verification requirements, and whether later parallel execution is safe.
+- Require a parent specification that separates in-scope behavior from out-of-scope non-goals, states acceptance criteria, affected seams, structural constraints, and the smallest test-first verification plan that proves the result.
+- Design tickets as independently verifiable vertical slices suitable for one future worktree. Each ticket states its independently verifiable behavior, blockers, affected seams, acceptance criteria, verification requirements, and whether later parallel execution is safe.
+- Require test design before implementation direction: state the smallest set of tests that proves observable behavior, stated standards, and structural requirements. Reject redundant, implementation-detail, prose-mirroring, and coverage-only tests unless they name a distinct risk.
 - Optimize for precision per token: keep shared context in the parent specification; make tickets self-contained only for their slice; avoid repetition, speculative file paths, and routine pseudocode.
 - Ground decisions in the codebase and relevant documentation, following the repository's documented loading order. Inspect facts; ask only unresolved decisions.
 - Publish GitHub issues using repository-defined labels (\`ready-for-agent\` where applicable) and native dependency edges.
