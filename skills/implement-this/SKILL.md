@@ -28,7 +28,7 @@ Run `/implement`. Follow the affected seam's documentation and update its leaf d
 Run:
 
 ```bash
-npm run format && npm test && npm run lint && npx tsc --noEmit && npm run docs:check && npm run build
+npm run verify
 ```
 
 Commit the verified work on the feature branch and include the issue number in the commit message.

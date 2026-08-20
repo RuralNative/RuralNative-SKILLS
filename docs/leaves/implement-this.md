@@ -22,6 +22,14 @@ Owns `skills/implement-this/`: the one-issue adapter, installation guide, and co
 6. **INV-6** — AO delivery creates or updates a pull request after local verification and review, does not push directly to `main`, and does not close the issue before merge. AO owns worker lifecycle and feedback. Mechanism: composition test.
 7. **INV-7** — The adapter accepts one issue only. An unclear delivery mode produces one ELI18 decision before pushing or creating a PR; scheduling remains the supervisor's job. Mechanism: composition test.
 
+## Verification
+
+Run:
+
+```bash
+npm run verify
+```
+
 ## Further notes
 
 ADR-0006 records the original fixed-template adapter. ADR-0008 adds the AO delivery branch without changing the direct-main path. `/supervise-this` is the only delegated coordinator named by this seam.

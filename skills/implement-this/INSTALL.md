@@ -22,6 +22,14 @@ cd RuralNative-SKILLS
 cp -r skills/implement-this ~/.agents/skills/implement-this
 ```
 
+## Verification
+
+Run:
+
+```bash
+npm run verify
+```
+
 ## Verify direct delivery
 
 > /implement-this #100

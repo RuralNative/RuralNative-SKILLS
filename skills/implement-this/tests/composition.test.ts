@@ -71,13 +71,36 @@ describe("implementation workflow and substitution (INV-3)", () => {
 describe("dependencies and verification (INV-4)", () => {
   test("loads unslop, runs implement before code-review, and verifies the repository", () => {
     const skill = read("skills/implement-this/SKILL.md");
+    const install = read("skills/implement-this/INSTALL.md");
+    const leaf = read("docs/leaves/implement-this.md");
+    const pkg = JSON.parse(read("package.json"));
     const n = norm(skill);
     assert.ok(n.includes("load `/unslop` before the first progress update"));
     assert.ok(skill.indexOf("/implement") < skill.indexOf("/code-review"));
-    for (const phrase of ["npm run format &&", "npm test &&", "npm run lint &&", "npx tsc --noEmit", "npm run docs:check", "npm run build"]) {
-      assert.ok(skill.includes(phrase), `verification must include ${phrase}`);
+    for (const content of [skill, install, leaf]) {
+      assert.ok(content.includes("npm run verify"), "verification must use npm run verify");
+    }
+    assert.ok(pkg.scripts.verify, "package.json must have verify script");
+    const verify = pkg.scripts.verify;
+    for (const phrase of ["npm ci", "npm run format", "npm test", "npm run lint", "npx tsc --noEmit", "npm run docs:check", "npm run build"]) {
+      assert.ok(verify.includes(phrase), `verify script must include ${phrase}`);
     }
     assert.ok(n.includes("stop if any blocker is open"));
+  });
+
+  test("verification sequence is identical across SKILL, INSTALL, and leaf", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const install = read("skills/implement-this/INSTALL.md");
+    const leaf = read("docs/leaves/implement-this.md");
+    const snippet = "npm run verify";
+    assert.ok(skill.includes(snippet));
+    assert.ok(install.includes(snippet));
+    assert.ok(leaf.includes(snippet));
+    // Ensure the fenced block is present identically
+    const block = "```bash\nnpm run verify\n```";
+    assert.ok(skill.includes(block), "SKILL.md must contain runnable verify block");
+    assert.ok(install.includes(block), "INSTALL.md must contain runnable verify block");
+    assert.ok(leaf.includes(block), "leaf must contain runnable verify block");
   });
 });
 
