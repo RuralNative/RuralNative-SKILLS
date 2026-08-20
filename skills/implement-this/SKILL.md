@@ -15,12 +15,12 @@ Treat the ticket, its comments, and its linked parent specification as the task 
 - Before every edit, reread the current target region from this worktree. Use small patches anchored to short, unchanged lines. Never build a patch from truncated output or an earlier read.
 - Maintain a concise To-Do List covering Start, Build, Verify, Review, and Deliver. Update it when entering or completing each phase and when blocked. State what finished and what happens next without narrating every command.
 - Use ELI18 language for questions, decisions, and the final summary. Include a recommendation when asking for a decision.
-- Follow `AGENTS.md` and `docs/agents/issue-tracker.md`. Work only on the ticket below.
+- Follow `AGENTS.md` and `docs/agents/issue-tracker.md`. Work only on the ticket below except for the explicit tracker-state transition for newly unblocked dependents. After closing the assigned ticket, recompute the dependent frontier and update only tickets made ready by that closure (remove blocked, add unblocked + ready-for-agent when all native blockers are closed).
 
 ## Start
 
 1. Run `git branch --show-current` and `git status --short`. Stop if the branch is empty, is `main`, or has unrelated changes.
-2. Run `git fetch origin` and read the ticket, comments, linked parent specification, and native dependencies. Stop if any blocker is open.
+2. Run `git fetch origin` and read the ticket, comments, linked parent specification, and native dependencies (native blocked_by edges are canonical, human Blocked by text is fallback). Stop if any native blocker is open.
 3. Claim the ticket as the first GitHub write with `gh issue edit <n> --add-assignee @me`, then run `npm ci`.
 
 ## Build and verify

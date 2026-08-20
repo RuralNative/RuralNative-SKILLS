@@ -89,7 +89,7 @@ describe("plan-this fixed template and task substitution (plan-this:INV-3)", () 
     assert.ok(body.includes("Design tickets as independently verifiable vertical slices suitable for one future worktree."));
     assert.ok(body.includes("Optimize for precision per token: keep shared context in the parent specification;"));
     assert.ok(body.includes("Ground decisions in the codebase and relevant documentation, following the repository's documented loading order."));
-    assert.ok(body.includes("Publish GitHub issues using repository-defined labels (`ready-for-agent` where applicable) and native dependency edges."));
+    assert.ok(body.includes("Publish GitHub issues using repository-defined labels (`ready-for-agent` where applicable) and native dependency edges"));
     assert.ok(body.includes("Ask one decision at a time in ELI18 language, include a recommendation, and honor each skill's approval gates."));
     assert.ok(body.includes("Follow the installed skills as the procedural source of truth."));
     assert.ok(body.includes("Finish with an ELI18 **Why / What / Where / How** summary and links to the specification and all tickets, then stop."));
@@ -116,7 +116,7 @@ describe("plan-this fixed template and task substitution (plan-this:INV-3)", () 
 - Require test design before implementation direction: state the smallest set of tests that proves observable behavior, stated standards, and structural requirements. Reject redundant, implementation-detail, prose-mirroring, and coverage-only tests unless they name a distinct risk.
 - Optimize for precision per token: keep shared context in the parent specification; make tickets self-contained only for their slice; avoid repetition, speculative file paths, and routine pseudocode.
 - Ground decisions in the codebase and relevant documentation, following the repository's documented loading order. Inspect facts; ask only unresolved decisions.
-- Publish GitHub issues using repository-defined labels (\`ready-for-agent\` where applicable) and native dependency edges.
+- Publish GitHub issues using repository-defined labels (\`ready-for-agent\` where applicable) and native dependency edges via blocked_by with database IDs (read each issue's database ID before creating the edge); keep human-readable Blocked by text as fallback, native edge is canonical; blocked label state follows native blockers (open → blocked without ready-for-agent, all closed → unblocked + ready-for-agent, blocked removed).
 - Ask one decision at a time in ELI18 language, include a recommendation, and honor each skill's approval gates.
 - Follow the installed skills as the procedural source of truth.
 
@@ -295,7 +295,7 @@ describe("plan-this preserved rules and user invocation (plan-this:INV-5)", () =
 - Require test design before implementation direction: state the smallest set of tests that proves observable behavior, stated standards, and structural requirements. Reject redundant, implementation-detail, prose-mirroring, and coverage-only tests unless they name a distinct risk.
 - Optimize for precision per token: keep shared context in the parent specification; make tickets self-contained only for their slice; avoid repetition, speculative file paths, and routine pseudocode.
 - Ground decisions in the codebase and relevant documentation, following the repository's documented loading order. Inspect facts; ask only unresolved decisions.
-- Publish GitHub issues using repository-defined labels (\`ready-for-agent\` where applicable) and native dependency edges.
+- Publish GitHub issues using repository-defined labels (\`ready-for-agent\` where applicable) and native dependency edges via blocked_by with database IDs (read each issue's database ID before creating the edge); keep human-readable Blocked by text as fallback, native edge is canonical; blocked label state follows native blockers (open → blocked without ready-for-agent, all closed → unblocked + ready-for-agent, blocked removed).
 - Ask one decision at a time in ELI18 language, include a recommendation, and honor each skill's approval gates.
 - Follow the installed skills as the procedural source of truth.
 
@@ -385,6 +385,26 @@ describe("plan-this supervised delegation (plan-this:INV-5 and INV-6)", () => {
     // adr still records original task-scoped exception
     assert.ok(adr.includes("plan-this") && adr.includes("implement-this"), "adr still records task-scoped exception");
   });
+
+describe("plan-this native dependency frontier (INV-7 native edges)", () => {
+  test("creates blocked_by edges with database IDs and keeps Blocked by text as fallback", () => {
+    const skill = read("skills/plan-this/SKILL.md");
+    const leaf = read("docs/leaves/plan-this.md");
+    const nSkill = norm(skill);
+    const nLeaf = norm(leaf);
+    assert.ok(nSkill.includes("blocked_by") || nSkill.includes("blocked by"), "must mention blocked_by native edge");
+    assert.ok(nSkill.includes("database id") || nSkill.includes("database ids") || skill.includes("database ID"), "must require reading database IDs before creating edge");
+    assert.ok(nLeaf.includes("database id") || nLeaf.includes("database ids"), "leaf must document database ID read");
+    assert.ok(nLeaf.includes("blocked by") && (nLeaf.includes("fallback") || nLeaf.includes("human-readable")), "leaf must state Blocked by text is fallback");
+    assert.ok(nLeaf.includes("native") && nLeaf.includes("canonical"), "leaf must state native edge is canonical");
+  });
+  test("blocked label state: open blocker has blocked without ready-for-agent; closed has unblocked+ready-for-agent", () => {
+    const leaf = read("docs/leaves/plan-this.md");
+    const n = norm(leaf);
+    assert.ok(n.includes("blocked") && n.includes("ready-for-agent"), "must describe label state");
+    assert.ok(n.includes("unblocked"), "must describe unblocked transition");
+  });
+});
 
   test("task slot remains single substitution point under both invocation paths", () => {
     const skill = read("skills/plan-this/SKILL.md");
