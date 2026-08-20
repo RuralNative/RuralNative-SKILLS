@@ -21,6 +21,7 @@ Owns `skills/implement-this/`: the one-issue adapter, installation guide, and co
 5. **INV-5** — Standalone delivery keeps the fixed direct-main path: fixed review base, valid findings fixed, rebase, verification, `git push origin HEAD:main`, evidence, label removal, and assigned-ticket closure. Mechanism: composition test.
 6. **INV-6** — AO delivery creates or updates a pull request after local verification and review, does not push directly to `main`, and does not close the issue before merge. AO owns worker lifecycle and feedback. Mechanism: composition test.
 7. **INV-7** — The adapter accepts one issue only. An unclear delivery mode produces one ELI18 decision before pushing or creating a PR; scheduling remains the supervisor's job. Mechanism: composition test.
+8. **INV-8** — Native dependency state is canonical (human Blocked by text is fallback). The adapter reads native blocked_by state before claiming and stops while an open native blocker exists. After closing its assigned ticket it recomputes the dependent frontier and updates only newly unblocked dependents (remove blocked, add unblocked + ready-for-agent when all native blockers are closed); it otherwise works only on its assigned ticket except for that explicit tracker-state transition. Mechanism: composition test.
 
 ## Verification
 

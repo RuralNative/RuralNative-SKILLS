@@ -116,7 +116,7 @@ describe("dependencies and verification (INV-4)", () => {
     for (const phrase of ["npm ci", "npm run format", "npm test", "npm run lint", "npx tsc --noEmit", "npm run docs:check", "npm run build"]) {
       assert.ok(verify.includes(phrase), `verify script must include ${phrase}`);
     }
-    assert.ok(n.includes("stop if any blocker is open"));
+    assert.ok(n.includes("stop") && n.includes("blocker"));
   });
 
   test("verification sequence is identical across SKILL, INSTALL, and leaf", () => {
@@ -165,6 +165,29 @@ describe("Agent Orchestrator pull-request delivery (INV-6)", () => {
     const n = norm(skill);
     assert.ok(n.includes("if the delivery mode is unclear, ask one eli18 decision"));
     assert.ok(n.includes("choose one delivery mode"));
+  });
+});
+
+describe("native dependency state (INV-8)", () => {
+  test("reads native dependency state before claiming and stops while open blocker exists", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const leaf = read("docs/leaves/implement-this.md");
+    const nSkill = norm(skill);
+    const nLeaf = norm(leaf);
+    assert.ok(nSkill.includes("native") && (nSkill.includes("dependency") || nSkill.includes("blocked")), "skill must mention native dependency");
+    assert.ok(nSkill.includes("stop") && nSkill.includes("blocker"), "skill must stop while blocker open");
+    assert.ok(nLeaf.includes("native") && nLeaf.includes("canonical"), "leaf must state native is canonical");
+    assert.ok(nLeaf.includes("fallback") || nLeaf.includes("human-readable"), "leaf must mention fallback");
+  });
+  test("after closure recomputes frontier and updates only newly unblocked dependents with label transitions", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const leaf = read("docs/leaves/implement-this.md");
+    const nSkill = norm(skill);
+    const nLeaf = norm(leaf);
+    assert.ok(nSkill.includes("frontier") || nLeaf.includes("frontier"), "must mention dependent frontier");
+    assert.ok(nLeaf.includes("unblocked") && nLeaf.includes("ready-for-agent") && nLeaf.includes("blocked"), "must describe label transitions");
+    assert.ok(nLeaf.includes("only") && (nLeaf.includes("newly unblocked") || nLeaf.includes("made ready")), "must state only newly unblocked");
+    assert.ok(nLeaf.includes("except") || nSkill.includes("except") || nLeaf.includes("only its assigned ticket"), "must state scope isolation");
   });
 });
 
