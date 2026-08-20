@@ -83,7 +83,7 @@ describe("plan-this fixed template and task substitution (plan-this:INV-3)", () 
     assert.ok(body.includes("Run this planning-only workflow: `/grill-with-docs` → `/to-spec` → `/to-tickets`"));
     // Rules header
     assert.ok(body.includes("## Rules:"));
-    // all eight rule bullets verbatim
+    // all ten rule bullets verbatim
     assert.ok(body.includes("Load `/unslop` before the first progress update. Keep it active throughout `/grill-with-docs` → `/to-spec` → `/to-tickets`"));
     assert.ok(body.includes("Maintain a concise To-Do List covering Discovery, Decisions, Specification, Tickets, and Delivery."));
     assert.ok(body.includes("Design tickets as independently verifiable vertical slices suitable for one future worktree."));
@@ -140,7 +140,7 @@ Finish with an ELI18 **Why / What / Where / How** summary and links to the speci
     assert.equal(body.includes("## Hard dependencies"), false, "body must not contain ## Hard dependencies wrapper");
     // line-count bound: ~25-35 lines total including frontmatter, allow 18-35 for trimmed 21-line file
     const lines = skill.trimEnd().split("\n").length;
-    assert.ok(lines >= 18 && lines <= 45, `line count ${lines} must be within 18-45 (expected ~23, bound ~25-35)`);
+    assert.ok(lines >= 18 && lines <= 35, `line count ${lines} must be within 18-35 (expected ~23, bound ~25-35)`);
   });
 
   test("task text like Create a Next.js App preserved verbatim under ## Task:", () => {
@@ -400,5 +400,19 @@ describe("plan-this supervised delegation (plan-this:INV-5 and INV-6)", () => {
     const emittedDelegated = body.trimEnd() + "\n" + task + "\n";
     assert.equal(emittedDirect, emittedDelegated, "both paths must share identical emitted body");
     assert.ok(emittedDirect.includes("## Task:\n" + task), "task appears verbatim in both paths");
+  });
+});
+
+
+describe("plan-this bounded planning contract (plan-this:INV-7)", () => {
+  test("skill enforces bounded scope and lean test criteria", () => {
+    const skill = read("skills/plan-this/SKILL.md");
+    const body = getBody(skill);
+    assert.ok(body.includes("Require a parent specification that separates in-scope behavior from out-of-scope non-goals"));
+    assert.ok(body.includes("Require test design before implementation direction"));
+    assert.ok(body.includes("Reject redundant, implementation-detail, prose-mirroring, and coverage-only tests"));
+    assert.ok(body.includes("Design tickets as independently verifiable vertical slices"));
+    const lines = skill.trimEnd().split("\n").length;
+    assert.ok(lines >= 18 && lines <= 35, `INV-7 bound 18-35, got ${lines}`);
   });
 });
