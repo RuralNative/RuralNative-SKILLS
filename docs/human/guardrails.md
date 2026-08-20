@@ -1,4 +1,4 @@
-<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-20 · Regenerated: #77 human-invocation requirement · Sources: docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md, docs/leaves/unslopify.md, docs/leaves/plan-this.md, docs/leaves/implement-this.md, docs/leaves/supervise-this.md, docs/leaves/release-skills.md -->
+<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-20 · Regenerated: #89 evidence-based AO workflow · Sources: docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md, docs/leaves/unslopify.md, docs/leaves/plan-this.md, docs/leaves/implement-this.md, docs/leaves/supervise-this.md, docs/leaves/release-skills.md, docs/adr/0010-supervise-by-delivery-evidence.md -->
 
 # Guardrails in plain words
 
@@ -14,11 +14,14 @@ These are the promises the skills make.
 - Standalone implementation pushes directly to `main` only after checks, review, and rebase.
 - AO implementation opens a pull request and leaves merge and issue closure to AO and the supervisor.
 - AO supervision runs inside the persistent project orchestrator and does not end after planning or worker creation.
-- The ready frontier contains only open, unblocked, unassigned tickets with `ready-for-agent`.
+- The project worker profile chooses the worker and a supported chat or TUI mode.
+- Preflight stops on missing models, unsupported mode, broken GitHub access, stale base, absent review policy, or existing issue ownership.
 - No more than three AO workers run at once.
-- Worker completion means merged PR, acceptance evidence, and issue closure. Idle is not enough.
-- Resume checks GitHub before AO sessions and avoids duplicate workers or pull requests.
-- A blocked worker gets one focused recovery attempt. Further blockage becomes `needs-info` and a human decision.
+- Progress requires a tracked change or later delivery artifact. Idle and activity timestamps prove nothing.
+- Resume reconciles pull requests, sessions, branches, assignees, and issue links before a spawn.
+- Infrastructure, task, and implementation failures have separate recovery limits.
+- Workflow commands require explicit JSON or a regular input file. They do not wait on stdin.
+- Review and merge preserve the reviewed commit. Same-account review cannot satisfy an approval-only policy.
 - The supervisor allows two automatic follow-up review rounds, then asks the user.
 
 Technical depth lives in the leaf documents named by each line.

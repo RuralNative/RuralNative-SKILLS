@@ -3,16 +3,17 @@
 Status: accepted
 Date: 2026-08-20
 Supersedes: ADR-0007 execution backend and live-session rules
+Amended by: ADR-0010 worker selection, delivery evidence, recovery, review, and merge rules
 
-Decision: `supervise-this` targets the current Agent Orchestrator project orchestrator. AO owns the persistent run, so planning runs inline through `plan-this` and worker creation is an intermediate checkpoint. The supervisor reads GitHub's parent specification, child issues, native `blocked_by` edges, labels, assignees, comments, pull requests, checks, and merged commits before reconciling AO sessions. It starts no more than three Kilo Code TUI workers with verified `ao spawn --project ... --kind worker --issue ... --mode tui` calls, preserving one issue per worker and parent order.
+Decision: `supervise-this` targets the current Agent Orchestrator project orchestrator. AO owns the persistent run, so planning runs inline through `plan-this` and worker creation is an intermediate checkpoint. The supervisor reads GitHub's parent specification, child issues, native `blocked_by` edges, labels, assignees, comments, pull requests, checks, and merged commits before reconciling AO sessions. It starts no more than three project-configured workers, preserving one issue per worker and parent order. ADR-0010 defines worker mode selection and the executable spawn gate.
 
 AO project role profiles are the model boundary. The project orchestrator profile supplies planning and final whole-spec review. The worker profile supplies implementation. The supervisor validates the daemon, project, agent catalog, and role profiles before planning, and it does not invent per-spawn model flags or rewrite profiles during a run.
 
 The delegated `implement-this` path uses pull-request delivery inside AO. The worker runs the implementation and local review workflow, commits, and opens or updates its PR. It does not push directly to `main` or close the issue. AO owns the worker worktree, CI and review feedback, merge-conflict routing, and session recovery. The supervisor owns native dependency scheduling, acceptance evidence, GitHub labels and issue closure, parent state, whole-spec review, and follow-up tickets. Standalone `implement-this` keeps direct-main delivery.
 
-The orchestrator remains active after planning and worker creation. AO completion or handoff events cause reconciliation rather than a terminal summary. Resume reads durable GitHub state before AO state and never creates a duplicate worker or PR. A blocked or permission-waiting worker is not bypassed; one focused recovery message is allowed for a mechanical failure, then the ticket receives `needs-info` and a human decision.
+The orchestrator remains active after planning and worker creation. AO completion or handoff events cause reconciliation rather than a terminal summary. Resume reads durable GitHub state before AO state and never creates a duplicate worker or PR. ADR-0010 replaces activity-only progress and one shared recovery count with delivery states and failure-class counts.
 
-Why: Agent Manager sessions ended when the parent skill turn ended, leaving no process to observe planning or worker completion. AO supplies the persistent orchestrator, worktree lifecycle, Kilo Code worker adapter, session events, PR state, CI feedback, and restartable state needed for a durable outer loop. Keeping GitHub as the task authority prevents AO's read-only tracker intake from becoming a second issue system.
+Why: Agent Manager sessions ended when the parent skill turn ended, leaving no process to observe planning or worker completion. AO supplies the persistent orchestrator, worktree lifecycle, worker adapters, session events, PR state, CI feedback, and restartable state needed for a durable outer loop. Keeping GitHub as the task authority prevents AO's read-only tracker intake from becoming a second issue system.
 
 Consequences:
 

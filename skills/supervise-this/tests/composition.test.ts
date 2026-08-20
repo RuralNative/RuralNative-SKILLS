@@ -44,14 +44,15 @@ describe("AO-first discovery and installation (INV-2)", () => {
 });
 
 describe("AO project and role-profile preflight (INV-3)", () => {
-  test("requires AO health, project, agent, and role configuration", () => {
+  test("routes observed AO and GitHub facts through the executable helper", () => {
     const skill = read("skills/supervise-this/SKILL.md");
     const n = norm(skill);
-    for (const phrase of ["ao status --json", "ao project", "ao agent ls --refresh --json", "ao_project_id", "orchestrator", "worker", "role profiles"]) {
+    for (const phrase of ["ao status --json", "ao agent ls --refresh --json", "reviewer policy", "origin/<default-branch>", "scripts/workflow.ts preflight"]) {
       assert.ok(n.includes(phrase), `skill must mention ${phrase}`);
     }
-    assert.ok(n.includes("do not invent per-spawn model flags"));
-    assert.ok(n.includes("reviewer profile"));
+    const helper = path.join(ROOT, "skills/supervise-this/scripts/workflow.ts");
+    assert.ok(fs.existsSync(helper));
+    assert.notEqual(fs.statSync(helper).mode & 0o111, 0, "workflow helper must be executable");
     assert.ok(n.includes("ask one eli18 decision"));
   });
 });
@@ -69,14 +70,12 @@ describe("inline planning and intermediate checkpoints (INV-4)", () => {
 });
 
 describe("AO frontier and bounded workers (INV-5)", () => {
-  test("uses GitHub blockers, AO sessions, and three-worker cap", () => {
+  test("uses ownership reconciliation and a configured worker mode", () => {
     const skill = read("skills/supervise-this/SKILL.md");
     const n = norm(skill);
-    for (const phrase of ["no open native blocker", "ready-for-agent", "no assignee", "ao session ls", "at most three", "ao spawn", "--kind worker", "--issue <n>"]) {
+    for (const phrase of ["open prs", "sessions", "branches", "assignees", "issue links", "scripts/workflow.ts reconcile", "at most three", "--mode \"$worker_mode\""]) {
       assert.ok(n.includes(phrase), `skill must mention ${phrase}`);
     }
-    assert.ok(n.includes("never duplicate a worker"));
-    assert.ok(n.includes("twenty characters or fewer"));
   });
 });
 
@@ -105,25 +104,24 @@ describe("AO pull-request worker delivery (INV-7)", () => {
 });
 
 describe("durable completion and reconciliation (INV-8)", () => {
-  test("requires merged PR, evidence, issue closure, and dependency refill", () => {
+  test("names evidence states and fixed-head merge handling", () => {
     const skill = read("skills/supervise-this/SKILL.md");
     const n = norm(skill);
-    for (const phrase of ["pr is merged", "acceptance evidence", "issue is closed", "refill free worker slots", "descendants remain unscheduled"]) {
+    for (const phrase of ["ready", "claimed", "base_current", "editing", "pr_open", "reviewed", "merged", "evidenced", "closed", "reviewed head sha", "merge-decision"]) {
       assert.ok(n.includes(phrase), `skill must mention ${phrase}`);
     }
-    assert.ok(n.includes("ao pr merge"));
   });
 });
 
 describe("resume and recovery (INV-9)", () => {
-  test("rebuilds state before AO reconciliation and escalates safely", () => {
+  test("uses idempotent ownership and classified recovery", () => {
     const skill = read("skills/supervise-this/SKILL.md");
     const n = norm(skill);
-    assert.ok(n.includes("must not create a duplicate specification, ticket, worker, or pr"));
-    assert.ok(n.includes("reconcile github first, then ao sessions"));
-    assert.ok(n.includes("one focused recovery message"));
+    assert.ok(n.includes("rebuilds the ownership snapshot"));
+    assert.ok(n.includes("cannot duplicate issues, sessions, branches, or prs"));
+    assert.ok(n.includes("idle-signal"));
+    for (const failureClass of ["infrastructure", "task", "implementation"]) assert.ok(n.includes(failureClass));
     assert.ok(n.includes("add `needs-info`"));
-    assert.ok(n.includes("continue unrelated ready work"));
     assert.ok(n.includes("never silently change the ao project role model"));
   });
 });
@@ -157,11 +155,14 @@ describe("composition and documentation coverage (INV-12)", () => {
   test("leaf, ADR, glossary, and architecture references exist", () => {
     const leaf = read("docs/leaves/supervise-this.md");
     const adr = read("docs/adr/0008-supervise-this-agent-orchestrator.md");
+    const evidenceAdr = read("docs/adr/0010-supervise-by-delivery-evidence.md");
     const glossary = read("CONTEXT.md");
     const arch = read("ARCHITECTURE.md");
     for (let i = 1; i <= 12; i++) assert.ok(leaf.includes(`INV-${i}`), `leaf must contain INV-${i}`);
     assert.ok(adr.includes("Agent Orchestrator"));
+    assert.ok(evidenceAdr.includes("delivery evidence"));
     assert.ok(glossary.includes("Agent Orchestrator run"));
     assert.ok(arch.includes("0008-supervise-this-agent-orchestrator.md"));
+    assert.ok(arch.includes("0010-supervise-by-delivery-evidence.md"));
   });
 });

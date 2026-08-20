@@ -15,7 +15,7 @@ own docs.
 | unslopify | AI-tell detection and meaning-safe prose revision | skills/unslopify/ | scanner contract via `skills/unslopify/scanner.py` and parity catalog via `skills/unslopify/reference/parity.md`; identity == folder check | docs/leaves/unslopify.md |
 | plan-this | fixed-template planning adapter that applies the planning prefix and delegates to `/grill-with-docs`, `/to-spec`, `/to-tickets`, and `/unslop` | skills/plan-this/ | composition via `skills/plan-this/tests/`; identity == folder check | docs/leaves/plan-this.md |
 | implement-this | fixed-template implementation adapter that applies the implementation prefix and delegates to `/implement`, `/code-review`, and `/unslop` | skills/implement-this/ | composition via `skills/implement-this/tests/`; identity == folder check | docs/leaves/implement-this.md |
-| supervise-this | coordinates durable Agent Orchestrator planning, dependency-gated Kilo Code workers, pull requests, recovery, and whole-spec review | skills/supervise-this/ | composition via `skills/supervise-this/tests/`; identity == folder check | docs/leaves/supervise-this.md |
+| supervise-this | coordinates durable Agent Orchestrator planning and evidence-gated pull-request delivery with project-configured workers | skills/supervise-this/ | executable decisions in `skills/supervise-this/scripts/workflow.ts`; composition and regression tests in `skills/supervise-this/tests/` | docs/leaves/supervise-this.md |
 | release-skills | universal release workflow that auto-detects version files and changelogs | skills/release-skills/ | composition via `skills/release-skills/tests/`; identity == folder check | docs/leaves/release-skills.md |
 
 A new directory under `skills/` is a new seam: it needs a row here, a leaf
@@ -42,6 +42,7 @@ harness check 6. A covered doc must be in the seam table or listed here:
 - docs/adr/0007-supervise-this-coordinator.md
 - docs/adr/0008-supervise-this-agent-orchestrator.md
 - docs/adr/0009-delegation-invariants-human-invocation.md
+- docs/adr/0010-supervise-by-delivery-evidence.md
 - docs/leaves/document-for-humans.md
 - docs/human/overview.md
 - docs/human/decision-journal.md
@@ -80,6 +81,7 @@ parsed from, so they are not listed here.
 | docs/adr/0007-supervise-this-coordinator.md | decision |
 | docs/adr/0008-supervise-this-agent-orchestrator.md | decision |
 | docs/adr/0009-delegation-invariants-human-invocation.md | decision |
+| docs/adr/0010-supervise-by-delivery-evidence.md | decision |
 | docs/leaves/document-for-agents.md | leaf |
 | docs/leaves/document-for-humans.md | leaf |
 | docs/leaves/unslopify.md | leaf |
