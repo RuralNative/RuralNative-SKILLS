@@ -16,7 +16,7 @@ own docs.
 | plan-this | fixed-template planning adapter that applies the planning prefix and delegates to `/grill-with-docs`, `/to-spec`, `/to-tickets`, and `/unslop` | skills/plan-this/ | composition via `skills/plan-this/tests/`; identity == folder check | docs/leaves/plan-this.md |
 | implement-this | fixed-template implementation adapter that applies the implementation prefix and delegates to `/implement`, `/code-review`, and `/unslop` | skills/implement-this/ | composition via `skills/implement-this/tests/`; identity == folder check | docs/leaves/implement-this.md |
 | supervise-this | coordinates durable Agent Orchestrator planning, dependency-gated Kilo Code workers, pull requests, recovery, and whole-spec review | skills/supervise-this/ | composition via `skills/supervise-this/tests/`; identity == folder check | docs/leaves/supervise-this.md |
-| release-skills | universal release workflow that auto-detects version files and changelogs | skills/release-skills/ | identity == folder check | docs/leaves/release-skills.md |
+| release-skills | universal release workflow that auto-detects version files and changelogs | skills/release-skills/ | composition via `skills/release-skills/tests/`; identity == folder check | docs/leaves/release-skills.md |
 
 A new directory under `skills/` is a new seam: it needs a row here, a leaf
 doc, and a `SKILL.md` whose frontmatter `name` matches its folder (harness
