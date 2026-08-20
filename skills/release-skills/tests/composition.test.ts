@@ -56,6 +56,17 @@ describe("release-skills discovery and installation (release-skills:INV-1, relea
     assert.ok(manualCount >= 1, "manual copy must appear at least once");
   });
 
+  test("skill prose does not duplicate the install command", () => {
+    const skill = read("skills/release-skills/SKILL.md");
+    // install docs live in INSTALL.md only; SKILL.md must not carry the registry lane
+    assert.equal(
+      skill.includes("npx skills add RuralNative/RuralNative-SKILLS --skill release-skills"),
+      false,
+      "SKILL.md must not duplicate the registry-lane install command"
+    );
+    assert.equal(skill.includes("cp -r skills/release-skills"), false, "SKILL.md must not duplicate the manual copy");
+  });
+
   test("skill description declares registry discovery via skill identity", () => {
     const skill = read("skills/release-skills/SKILL.md");
     const install = read("skills/release-skills/INSTALL.md");

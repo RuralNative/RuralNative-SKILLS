@@ -14,7 +14,7 @@ Owns: the content under `skills/release-skills/` — `SKILL.md`, `INSTALL.md`, `
 
 ## Non-negotiables
 
-1. **INV-1** — `SKILL.md` frontmatter `name` equals the folder name `release-skills`. Mechanism: composition test in `skills/release-skills/tests/` verifies identity, that `INSTALL.md` exists with the registry-lane command `npx skills add RuralNative/RuralNative-SKILLS --skill release-skills` and matching manual copy `cp -r skills/release-skills`, and that the leaf and seam table reference the seam.
+1. **INV-1** — `SKILL.md` frontmatter `name` equals the folder name `release-skills`. Mechanism: composition test in `skills/release-skills/tests/` verifies identity, that `INSTALL.md` exists with the registry-lane command `npx skills add RuralNative/RuralNative-SKILLS --skill release-skills` and matching manual copy `cp -r skills/release-skills`, that `SKILL.md` prose does not duplicate the install command, and that the leaf and seam table reference the seam.
 2. **INV-2** — The skill is invoked via release trigger phrases and auto-detects supported project types without manual configuration. The `description` and body list trigger phrases (`release`, `发布`, `new version`, `bump version`, `push`, `推送`, `release notes`, `GitHub Release`, `回填 Release`) and the Supported Projects table lists `package.json`, `pyproject.toml`, `Cargo.toml`, `marketplace.json`, `VERSION`/`version.txt` with priority order and changelog globs `CHANGELOG*.md`, `HISTORY*.md`, `CHANGES*.md`. Mechanism: composition test in `skills/release-skills/tests/` verifies trigger phrases and supported files against `SKILL.md`.
 
 ## Links
