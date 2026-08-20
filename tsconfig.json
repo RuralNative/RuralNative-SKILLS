@@ -8,7 +8,6 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "noEmit": true,
-    "allowImportingTsExtensions": true,
     "allowJs": true
   },
   "include": ["skills/**/*.test.ts", "skills/**/*.ts"],

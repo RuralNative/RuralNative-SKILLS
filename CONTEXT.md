@@ -21,10 +21,10 @@ the suffix names who serves or reads (document-for-agents,
 document-for-humans). Per ADR-0004, with a narrow exception for
 audience-neutral utilities such as `unslopify` where one behavior applies
 unchanged across audiences and a suffix would invent a false distinction
-(ADR-0005), and for task-scoped fixed-template workflow adapters and
-coordinators such as `plan-this`, `implement-this`, and `supervise-this`
-where the identity is the user-facing slash command and a suffix would
-obscure the explicit invocation contract. See ADR-0006 and ADR-0007.
+(ADR-0005), and for task-scoped fixed-template workflow adapters such as
+`plan-this` and `implement-this` where the identity is the user-facing
+slash command and a suffix would obscure the explicit invocation contract.
+See ADR-0006.
 _Avoid_: noun-phrase names (documentation-for-ai), router prefixes (docs/)
 
 **AI tell**:
@@ -115,7 +115,3 @@ _Avoid_: changelog
 **Bridge link**:
 A one-way pointer from a human doc to an AI-first doc for depth.
 _Avoid_: cross-reference (when one-way is meant)
-
-**Agent Orchestrator run**:
-The lifecycle managed by `supervise-this` inside an AO project orchestrator. AO keeps the orchestrator persistent after planning and worker creation. The supervisor delegates planning to `/plan-this`, whose locked stages require explicit human invocation. Before spawning, it proves AO and explicit-repository GitHub access, resolved role models, a supported worker mode, reviewer policy, current base, and unique issue ownership. The project worker profile selects the agent; Kilo Code is optional. Delivery advances through `READY`, `CLAIMED`, `BASE_CURRENT`, `EDITING`, `PR_OPEN`, `REVIEWED`, `MERGED`, `EVIDENCED`, and `CLOSED`. Activity labels do not count. Recovery caps infrastructure, task, and implementation failures separately. Review and merge preserve the reviewed head SHA, and a GitHub fallback is limited to PRs AO cannot manage. Resume reconciles PRs, sessions, branches, assignees, and issue links before any write.
-_Avoid_: supervised workflow, auto-run

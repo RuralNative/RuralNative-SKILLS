@@ -1,21 +1,47 @@
-<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-20 · Regenerated: #89 evidence-based AO workflow · Sources: ARCHITECTURE.md, CONTEXT.md, docs/adr/0008-supervise-this-agent-orchestrator.md, docs/adr/0010-supervise-by-delivery-evidence.md, docs/leaves/supervise-this.md, docs/leaves/implement-this.md, docs/leaves/plan-this.md -->
+<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-19 · Sources: ARCHITECTURE.md, CONTEXT.md -->
 
-# RuralNative-SKILLS in plain words
+# RuralNative-SKILLS — in plain words
 
-This repository publishes reusable skills for coding agents. The shelf includes documentation workflows, prose cleanup, planning, implementation, supervision, and release work.
+What this is: a public shelf of skills for AI coding agents. A skill is a
+ready-made pack of instructions that teaches an agent how to do a job the
+proven way, and anyone can install one and load it into their agent. Most
+skill names start with the doing-word and say who they serve; the shelf
+currently holds six: document-for-agents, document-for-humans, unslopify, the
+audience-neutral utility that cleans AI tells from explicit prose while keeping
+meaning, evidence, and tone, plan-this, the fixed-template planning adapter
+invoked as `/plan-this <task>` that preserves the planning prefix verbatim
+under `## Task:` and delegates to `/grill-with-docs` → `/to-spec` →
+`/to-tickets` with `/unslop` active, implement-this, the fixed-template
+implementation adapter invoked as `/implement-this #<n>` that preserves the
+implementation prefix verbatim in place of `Issue #0` and delegates to
+`/implement` → `/code-review` with `/unslop` active, and release-skills, the
+universal release workflow that auto-detects version files and changelogs. Both documentation skills
+declare `unslopify` as a hard dependency and will not publish prose without it.
 
-`plan-this` runs the planning interview, specification, and ticket workflow. `implement-this` handles one ticket. `supervise-this` connects those pieces inside Agent Orchestrator.
+Why it exists: an agent starts every session from scratch. Loading a skill
+hands it instructions that already work, so the agent spends its effort on
+the task instead of rediscovering how the task should be done. For prose
+cleanup, the caller names the scope, the skill checks only that scope,
+protected content such as code, links, and verbatim ranges stays untouched,
+and an optional Python scanner can add repeatable evidence without writing
+source or blocking the gate. For documentation work, `document-for-agents` and
+`document-for-humans` load `unslopify` by skill identity before the first
+user-visible prose, keep its contract active while drafting, and run a final
+audit before publishing; parent scope and parent decisions outrank style fixes,
+missing `unslopify` stops the workflow with `npx skills add
+RuralNative/RuralNative-SKILLS --skill unslopify` and missing Python does not
+stop it and the workflow continues model-only without weakening scope or
+preservation, the catalog is never copied into the parent skills, and installed
+runtime resolves by skill identity, not by a repository-relative path.
+Standalone cleanup uses explicit human-provided scope; under a parent the
+parent's chosen scope governs — routine work passes changed prose, an audit may
+sweep the repository.
 
-An AO project orchestrator owns a supervised run. It delegates planning in the same persistent session, then starts the worker configured for that project. Kilo Code is one option, not a requirement. Before a worker starts, the supervisor checks its model and supported mode, GitHub access, the current base branch, review policy, and whether another session or pull request already owns the issue.
+Who it serves: agent users who install skills from the public registry to get
+reliable, pre-built workflows without building them from scratch each time.
 
-The supervisor stays active after planning and worker creation. It counts a tracked change, pull request, review, merge, evidence, or closure as progress. An idle label or recent activity time does not count. A merged blocker can open the next dependency wave.
-
-Recovery has separate limits for infrastructure trouble, task continuation, and code correction. The workflow helper accepts explicit JSON or a regular input file, so a missing input or pipe fails instead of waiting. Review keeps the reviewed commit fixed. A same-account verdict works only when the recorded policy allows it.
-
-People install skills from the public registry. The technical details live in the agent-facing documents linked below.
+Where to object: the decision journal — big changes land there first.
 
 Go deeper:
 
-- `ARCHITECTURE.md` describes the shelf.
-- `docs/leaves/supervise-this.md` describes the coordinator contract.
-- `docs/leaves/implement-this.md` describes direct and AO delivery.
+- depth: ARCHITECTURE.md — how the shelf is organised and what lives where

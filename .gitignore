@@ -2,8 +2,3 @@
 # Local `npx skills add` artifacts would duplicate skills/ and drift.
 .agents/
 skills-lock.json
-
-# Kilo worktrees hold untracked agent checkouts with stale copies of
-# docs/ that mislead grep-based navigation and stay invisible to git
-# and the docs harness, so the directory stays ignored.
-.kilo/worktrees/

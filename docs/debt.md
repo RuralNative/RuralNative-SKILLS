@@ -22,36 +22,16 @@ every pull request without being remembered.
 ### DEBT-3 — Index tables are merge hotspots
 
 Status: open
-Revisit-when: seams > 10 or next ARCHITECTURE.md merge conflict requiring manual resolution — whichever first
+Revisit-when: seams > 3
 What: parallel agents adding seams will collide in `ARCHITECTURE.md`'s seam
-and coverage tables; no merge semantics are defined for them. Verdict
-2026-08-20 at 7 seams: trigger `seams > 3` matured without review as the repo
-grew from 4 to 7 seams. Spot-checked ARCHITECTURE.md: both tables remain
-sequential markdown requiring line-adjacent edits with no defined merge
-strategy, and the #73 slice family touched the same tables serially. Contention
-risk is confirmed and debt still stands. Trigger reset to `seams > 10` to allow
-two more seam additions before mandatory review, or immediate review if a merge
-conflict in ARCHITECTURE.md forces manual resolution — whichever first.
-Reasoning: 10 doubles the window since the missed trigger while any real
-conflict proves semantics are needed sooner than count alone.
+and coverage tables; no merge semantics are defined for them.
 
 ### DEBT-4 — Re-orientation unverified
 
 Status: open
-Revisit-when: next simulated compaction drill or ARCHITECTURE.md loading protocol change
-What: the two-hop re-orientation read (AGENTS.md → ARCHITECTURE.md → leaf →
-CONTEXT.md) is asserted by construction; no drill proves a fresh agent can
-re-orient from the index alone. Verdict 2026-08-20: trigger `a second agent
-works in this repo` matured many times — multiple Kilo and AO workers have
-oriented since the debt was opened, including this #74 slice. No formal
-re-orientation drill has been run (simulate compaction, then one small fixed
-read: ARCHITECTURE.md → task leaf → CONTEXT.md under token budget and report
-gaps). Informal evidence shows second agents do re-orient via the protocol,
-yet this ticket's findings (DEBT-7 at 48 not 83 lines, a former debt naming a seam
-absent from skills/) show the protocol surfaces structure but not claim
-fidelity — false entries survived harness-green. Debt still stands.
-Trigger reset to the next drill (time-boxed fresh agent, compaction
-simulation) or any change to the loading protocol, whichever first.
+Revisit-when: a second agent works in this repo
+What: the two-hop re-orientation read is asserted by construction; no drill
+proves a fresh agent can re-orient from the index alone.
 
 ### DEBT-5 — Layout-agnostic gaps in seam discovery
 
@@ -61,18 +41,24 @@ appears
 What: checks 3 and 6 reason about single directories; seams spanning multiple
 roots and stray root-level code files are not covered by the gate.
 
+### DEBT-6 — Wrapper parity for review-this-spec
+
+Status: open
+Revisit-when: next adapter trim slice after implement-this and plan-this
+What: `review-this-spec` shares a similar wrapper pattern to the pre-trim `implement-this` and `plan-this` adapters and could be pruned for parity to keep a single home for wrapper material outside `SKILL.md`. No code change in this slice; tracked here and in `docs/leaves/implement-this.md` Further Notes for follow-up.
+
 ### DEBT-7 — implement-this wrapper parity with plan-this trim
 
-Status: resolved
-Revisit-when: none — verified 2026-08-20 against skills/implement-this/SKILL.md at 48 lines including frontmatter, with no wrapper sections
-What: before #57, `implement-this` at 83 lines carried the pre-trim wrapper
-pattern that `plan-this` had before #55 — title intro, Invocation, Hard
-dependencies, Rules preserved summary, Installation and discovery, and Boundary
-— duplicated from reference material already in its leaf, INSTALL, and ADR.
-Verified 2026-08-20: `skills/implement-this/SKILL.md` is 48 lines including
-frontmatter and contains none of those five wrapper markers; trimmed shape is
-workflow line → Rules → Start → Build and verify → Delivery → Ticket Issue #0
-with leaf/INSTALL/ADR-0008 as the single home for wrapper reference and
-composition guards for `Rules preserved`, `## Installation`, `## Boundary`, and
-related marker phrases. Payoff completed before #74 and never closed; resolved
-here.
+Status: open
+Revisit-when: next fixed-template adapter grooming slice
+What: `implement-this` at 83 lines still carries the pre-trim wrapper pattern
+that `plan-this` had before #55 — title intro, Invocation, Hard dependencies,
+Rules preserved summary, Installation and discovery, and Boundary — duplicated
+from reference material already in its leaf, INSTALL, and ADR. It should be
+pruned to the same trimmed shape (~25-35 lines including frontmatter, workflow
+line plus Rules plus `## Ticket Issue #0` slot) with leaf/INSTALL/ADR as the
+single home for wrapper reference and with negative composition guards for
+`Rules preserved`, `## Installation`, `## Boundary`, and marker phrases. An
+optional `review-this-spec` slice would share the same pattern if introduced.
+This slice (#57) tracks the debt without editing `implement-this`.
+

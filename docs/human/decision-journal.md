@@ -1,53 +1,94 @@
-<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-20 · Regenerated: #89 evidence-based AO workflow · Sources: docs/adr/0001-distribute-as-public-catalog-shelf.md, docs/adr/0002-adopt-ten-check-gate.md, docs/adr/0003-human-first-derived-artifacts.md, docs/adr/0004-verb-named-skills-flat-shelf.md, docs/adr/0005-unslopify-utility-identity-and-hard-dependency.md, docs/adr/0006-plan-this-fixed-template-adapter.md, docs/adr/0007-supervise-this-coordinator.md, docs/adr/0008-supervise-this-agent-orchestrator.md, docs/adr/0009-delegation-invariants-human-invocation.md, docs/adr/0010-supervise-by-delivery-evidence.md -->
+<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-19 · Sources: docs/adr/0001-distribute-as-public-catalog-shelf.md, docs/adr/0002-adopt-ten-check-gate.md, docs/adr/0003-human-first-derived-artifacts.md, docs/adr/0004-verb-named-skills-flat-shelf.md, docs/adr/0005-unslopify-utility-identity-and-hard-dependency.md, docs/adr/0006-plan-this-fixed-template-adapter.md -->
 
-# Decision journal in plain words
+# Decision journal — in plain words
 
-This is the short record of accepted repository decisions. The full reasoning lives in the ADR files.
+What the repository decided, when, and what it costs you. One entry per
+accepted decision, newest last. Each entry links the full decision record and
+the issue where the decision was made — object there before a big change lands.
 
-### 2026-08-11 — Publish skills through the registry
+### 2026-08-11 — The skill goes public on the registry
 
-The repository is a public shelf. Consumers install skills from the registry, not from an npm package.
+What changed: the repository became a public shelf, and the skill moved into a
+folder named for its identity so the registry can find and install it.
 
-### 2026-08-18 — Keep agent and human docs separate
+Why: a private repository is invisible to the skill registry, and the registry
+lane — not a manual copy — is the official way to distribute the skill.
 
-Technical docs guide agents. Human pages explain the same decisions in plain language and never become an agent's source of truth.
+What it costs you: the repository stays public, and installs happen through
+the registry lane.
 
-### 2026-08-19 — Use fixed-template planning and implementation adapters
+Object or discuss: ADR 0001 — the [decision record](https://github.com/RuralNative/RuralNative-SKILLS/blob/main/docs/adr/0001-distribute-as-public-catalog-shelf.md) and its [issue](https://github.com/RuralNative/RuralNative-SKILLS/issues/1).
 
-`plan-this` and `implement-this` keep their workflow prefixes in one place and substitute only the task or issue reference.
+### 2026-08-18 — The docs gate grows a rule that guards the rules
 
-### 2026-08-19 — Add supervised coordination
+What changed: the documentation checker now also guards the invariants — the
+numbered promises each skill makes — so a duplicated or orphaned rule number
+fails the check instead of slipping through.
 
-`supervise-this` connects planning, tickets, implementation, and review. The first design targeted Agent Manager and ended when its parent turn ended.
+Why: a project using this skill shipped a duplicated rule number through a
+green gate; that is exactly the kind of silent drift the skill exists to stop.
 
-### 2026-08-20 — Make Agent Orchestrator the runtime
+What it costs you: every rule now carries a number and a reason, and a retired
+rule number is never reused.
 
-AO now owns the persistent supervisor. Planning runs delegated in the same persistent orchestrator session. Kilo Code workers run in AO worktrees, open pull requests, and receive CI and review feedback through AO. GitHub remains the source of task and dependency state.
+Object or discuss: ADR 0002 — the [decision record](https://github.com/RuralNative/RuralNative-SKILLS/blob/main/docs/adr/0002-adopt-ten-check-gate.md) and its [issue](https://github.com/RuralNative/RuralNative-SKILLS/issues/20).
 
-Why: a skill turn cannot wake itself after an asynchronous Agent Manager session finishes. AO supplies the persistent project orchestrator and worker lifecycle needed to continue without manual reinvocation.
+### 2026-08-18 — The docs speak in two voices: one for agents, one for people
 
-What it costs: AO project role profiles must be configured before a run. Standalone `implement-this` and AO worker delivery use different merge paths.
+What changed: the repository now keeps plain-language summaries for people —
+this journal, an overview, guardrails, and data-flow stories — and those
+summaries are carved out of the agent-facing docs, never from the code.
 
-Depth: `docs/adr/0008-supervise-this-agent-orchestrator.md`.
+Why: plain-language restatements go stale faster than any other document, and
+the only workforce that can keep them fresh is the agents doing the work — so
+agents regenerate them, and are told never to treat them as the source of
+truth.
 
-### 2026-08-20 — Keep human-gated delegated stages locked
+What it costs you: when a big change lands, this journal is where it shows up
+first, and it is the place to object before the change is final.
 
-Planning and implementation delegate to steps that a model cannot start on its own: `/grill-with-docs`, `/to-spec`, `/to-tickets`, and `/implement`. A supervised run pauses at each of those steps until a person invokes it. The docs now say so instead of implying the chain runs unattended.
+Object or discuss: ADR 0003 — the [decision record](https://github.com/RuralNative/RuralNative-SKILLS/blob/main/docs/adr/0003-human-first-derived-artifacts.md) and its [issue](https://github.com/RuralNative/RuralNative-SKILLS/issues/28).
 
-Why: a live supervised run stalled when it reached planning, and nothing warned that the chain would stop. Unlocking the four skills was considered and rejected because the human gate is the point of the setting.
+### 2026-08-18 — The skills get verb names, and there is no router
 
-What it costs: runs need a person at the locked stages. `/unslop` and `/code-review` remain agent-run.
+What changed: the two skills were renamed to start with a doing-word and say
+who they serve — document-for-agents and document-for-humans — and the shelf
+stays flat: no parent skill that picks between them.
 
-Depth: `docs/adr/0009-delegation-invariants-human-invocation.md`.
+Why: names that lead with the action are easier to choose correctly, and a
+router skill would cost every session a detour to re-learn what the skill
+descriptions already say for free.
 
-### 2026-08-20 — Supervise by delivery evidence
+What it costs you: if you installed a skill under its old name, the install
+command changes — reinstall with the new name.
 
-The AO project chooses its worker and a supported chat or TUI mode. Preflight blocks stale bases, unresolved models, broken GitHub access, missing review policy, and duplicate ownership before a spawn.
+Object or discuss: ADR 0004 — the [decision record](https://github.com/RuralNative/RuralNative-SKILLS/blob/main/docs/adr/0004-verb-named-skills-flat-shelf.md) and its [issue](https://github.com/RuralNative/RuralNative-SKILLS/issues/35).
 
-Progress now means a tracked change, pull request, review, merge, evidence, or closure. Recovery limits are separate for infrastructure, task, and implementation failures. Review and merge keep the reviewed commit fixed.
+### 2026-08-19 — Unslopify arrives as an audience-neutral utility
 
-Why: the #73 run looked active while several tickets had no tracked delivery artifact. Hardcoded worker and merge assumptions also turned routine setup failures into repeated recovery prompts.
+What changed: a third skill, unslopify, joined the shelf to clean AI tells
+from explicit prose. It carries the 31 upstream patterns with stable `AIT-*`
+identifiers and the upstream MIT notice, and both documentation skills now
+enforce it as a hard dependency that loads before user-visible prose and
+audits again before publication.
 
-What it costs: the orchestrator must collect structured facts and run the bundled helper before spawn, recovery, review, and merge decisions.
+Why: the same AI-tell patterns appear in agent docs and human docs. A single
+utility avoids copying the same 31 rules into two places and inventing a false
+audience split with two suffixed names.
 
-Depth: `docs/adr/0010-supervise-by-delivery-evidence.md`.
+What it costs you: `unslopify` installs alone with one command for prose
+cleanup, and documentation workflows require it. If the skill is absent the
+workflow stops with `npx skills add RuralNative/RuralNative-SKILLS --skill
+unslopify`; missing Python does not block because scanning stays advisory.
+
+Object or discuss: ADR 0005 — the [decision record](https://github.com/RuralNative/RuralNative-SKILLS/blob/main/docs/adr/0005-unslopify-utility-identity-and-hard-dependency.md) and its [issue](https://github.com/RuralNative/RuralNative-SKILLS/issues/40).
+
+### 2026-08-19 — Fixed-template workflow adapters for planning and implementation
+
+What changed: two workflow skills, `plan-this` and `implement-this`, joined the shelf as fixed-template adapters. Each preserves its supplied prefix verbatim and substitutes only the task under `## Task:` or the issue reference for `Issue #0`, delegates to its hard dependencies, and stays user-invoked via `/plan-this <task>` and `/implement-this #<n>` with no router or runtime scripts.
+
+Why: pasting long prefixes wastes tokens, weakens prompt caching, and lets workflow rules drift. A thin adapter keeps the process fixed while accepting only the varying input.
+
+What it costs you: the shelf now lists four skills; the naming convention carries a narrow task-scoped exception for these adapters, and `/unslop` stays the external prose dependency.
+
+Object or discuss: ADR 0006 — the [decision record](https://github.com/RuralNative/RuralNative-SKILLS/blob/main/docs/adr/0006-plan-this-fixed-template-adapter.md) and its [issue](https://github.com/RuralNative/RuralNative-SKILLS/issues/51).
