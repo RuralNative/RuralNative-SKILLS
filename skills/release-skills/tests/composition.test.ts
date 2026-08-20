@@ -92,7 +92,7 @@ describe("release-skills discovery and installation (release-skills:INV-1, relea
 describe("release-skills trigger phrases and project detection (release-skills:INV-2)", () => {
   test("skill description lists release trigger phrases", () => {
     const skill = read("skills/release-skills/SKILL.md");
-    // frontmatter description and When to Use section list triggers
+    // frontmatter description and When to use section list triggers
     const triggers = [
       "release",
       "发布",
@@ -107,15 +107,15 @@ describe("release-skills trigger phrases and project detection (release-skills:I
     for (const t of triggers) {
       assert.ok(skill.includes(t), `skill must list trigger phrase "${t}"`);
     }
-    // also check When to Use section exists
-    assert.ok(skill.includes("When to Use"), "skill must have When to Use section");
+    // also check When to use section exists
+    assert.ok(skill.includes("When to use"), "skill must have When to use section");
   });
 
   test("skill advertises universal auto-detection without manual configuration", () => {
     const skill = read("skills/release-skills/SKILL.md");
     const n = norm(skill);
     assert.ok(n.includes("auto-detect") || n.includes("auto-detects"), "skill must advertise auto-detection");
-    assert.ok(skill.includes("Supported Projects") || n.includes("supported projects"), "skill must have Supported Projects");
+    assert.ok(skill.includes("Supported projects") || n.includes("supported projects"), "skill must have Supported projects");
     // phrase indicating no manual configuration needed
     assert.ok(
       n.includes("without manual configuration") ||
@@ -186,13 +186,13 @@ describe("release-skills trigger phrases and project detection (release-skills:I
     const skill = read("skills/release-skills/SKILL.md");
     // spot-check ten-step workflow still present
     const steps = [
-      "Step 1: Detect Project Configuration",
-      "Step 2: Analyze Changes Since Last Tag",
-      "Step 3: Determine Version Bump",
-      "Step 4: Generate Multi-language Changelogs",
-      "Step 7: Generate Changelog and Update Version",
-      "Step 10: Publish Release Artifacts and GitHub Release",
-      "Backfill Existing GitHub Releases",
+      "Step 1: Detect project configuration",
+      "Step 2: Analyze changes since last tag",
+      "Step 3: Determine version bump",
+      "Step 4: Generate multi-language changelogs",
+      "Step 7: Generate changelog and update version",
+      "Step 10: Publish release artifacts and GitHub Release",
+      "Backfill existing GitHub Releases",
     ];
     for (const s of steps) {
       assert.ok(skill.includes(s), `skill must still contain ${s}`);
