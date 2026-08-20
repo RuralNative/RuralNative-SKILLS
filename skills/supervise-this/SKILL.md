@@ -1,6 +1,6 @@
 ---
 name: supervise-this
-description: Run a durable supervised planning and implementation workflow inside an Agent Orchestrator project orchestrator. Use /supervise-this <task> for a new run or /supervise-this #<spec> to resume. Delegates planning to plan-this, creates Kilo Code workers through AO, follows GitHub native blockers, keeps the run open after planning and worker creation, and continues through pull-request merge, final code review, follow-up fixes, and human decisions.
+description: Run a durable supervised planning and implementation workflow inside an Agent Orchestrator project orchestrator. Use /supervise-this <task> for a new run or /supervise-this #<spec> to resume. Delegates planning to plan-this, uses project-configured AO workers, follows GitHub native blockers, and continues through evidence-based pull-request delivery, review, recovery, and closure.
 ---
 
 Run this workflow inside the Agent Orchestrator project orchestrator. AO is the
@@ -15,15 +15,23 @@ intermediate checkpoint, not a reason to return a final summary.
   resume. Reject invocation outside an AO project orchestrator session.
 - Read `AGENTS.md`, `ARCHITECTURE.md`, the supervise-this leaf, `CONTEXT.md`,
   the parent issue when resuming, and the AO project configuration.
+- Set `REPO` from the AO project's configured repository. Pass
+  `--repo "$REPO"` to every `gh` command so reconciliation survives a broken
+  worktree gitdir.
 - Verify `ao status --json`, the current `AO_PROJECT_ID`, the orchestrator
-  session, the project role profiles, and `ao agent ls --refresh --json`.
+  session, project role profiles, `ao agent ls --refresh --json`, GitHub access,
+  and an explicit reviewer policy.
 - Require an orchestrator profile for planning and final review and a worker
-  profile for implementation. AO project role profiles are the model source;
-  do not invent per-spawn model flags or rewrite project configuration.
-- If the AO project has a configured reviewer profile, validate it and let AO
-  use it for pull-request review. The orchestrator still owns whole-spec review.
-- Ask one ELI18 decision with a recommendation if AO, the project, a role
-  profile, the Kilo Code agent, or a required model is unavailable.
+  profile for implementation. Resolve each profile's agent, model, and supported
+  session modes from AO. Choose `chat` or `tui` from the worker's capabilities.
+- Fetch `origin/<default-branch>`. Synchronize the project base or prove it is
+  an ancestor before planning or spawning. A worker repeats that proof before
+  its first edit and reports `BASE_CURRENT`.
+- Feed these observed facts to `scripts/workflow.ts preflight --input <path>`.
+  Stop before a spawn on any returned error. Read the exported input types when
+  preparing JSON. Every helper command requires `--input` or `--json`, so a
+  missing input fails instead of waiting on stdin.
+- Ask one ELI18 decision with a recommendation when preflight cannot pass.
 
 ## Plan
 
@@ -43,16 +51,17 @@ intermediate checkpoint, not a reason to return a final summary.
 - Reconstruct the durable state from GitHub before reading live AO sessions:
   parent issue, child and follow-up issues, native blockers, labels, assignees,
   comments, pull requests, checks, and merged commits.
-- Compute the ready frontier as open child tickets with no open native blocker,
-  the `ready-for-agent` label, and no assignee. Preserve parent order.
-- Inspect `ao session ls --project "$AO_PROJECT_ID" --all --json` before
-  spawning. Never duplicate a worker for an assigned ticket or known AO
-  session.
-- Keep at most three implementation workers active. Start each worker with
-  the documented AO form:
+- Add AO sessions and local or remote branches to that snapshot. Feed open PRs,
+  sessions, branches, assignees, and issue links to `scripts/workflow.ts
+  reconcile`. Its `review`, `resume`, or `spawn` result is the scheduling gate.
+- Before each spawn, rerun preflight with `ownershipClear` true only for the
+  helper's `spawn` result. `DUPLICATE_OWNERSHIP` is a stop signal.
+- Preserve parent order and keep at most three implementation workers active.
+  A merged blocker makes its descendants eligible for the next wave. Start each
+  worker with the mode returned by preflight:
 
   ```bash
-  ao spawn --project "$AO_PROJECT_ID" --kind worker --name "issue-<n>" --issue <n> --mode tui --prompt "Run /implement-this #<n> in AO pull-request delivery mode."
+  ao spawn --project "$AO_PROJECT_ID" --kind worker --name "issue-<n>" --issue <n> --mode "$WORKER_MODE" --prompt "Run /implement-this #<n> in AO pull-request delivery mode. Prove origin/<default-branch> is an ancestor before editing."
   ```
 
 - Use names of twenty characters or fewer. The project worker profile chooses
@@ -70,25 +79,31 @@ intermediate checkpoint, not a reason to return a final summary.
 - AO owns the worker session, worktree, CI feedback, review feedback, merge
   conflict routing, and session recovery. The supervisor owns the dependency
   graph, acceptance evidence, issue labels, and parent state.
+- Track only these delivery states: `READY`, `CLAIMED`, `BASE_CURRENT`,
+  `EDITING`, `PR_OPEN`, `REVIEWED`, `MERGED`, `EVIDENCED`, and `CLOSED`.
+  Derive them with `scripts/workflow.ts`; AO activity labels never advance work.
 - Use `ao session get <id> --json` and `ao send --session <id> --message "..."`
   for targeted recovery. A blocked or permission-waiting worker receives no
   automatic prompt that would bypass its approval.
-- A worker is complete only after its PR is merged, its acceptance evidence is
-  present, and its issue is closed with that evidence. Use `ao pr merge` only
-  when checks and review policy permit it; pause for branch protection or
-  human approval.
+- A worker is complete at `CLOSED`, after merge and acceptance evidence.
 - After a merge, re-read native blockers and refill free worker slots in parent
-  order. Descendants remain unscheduled until every blocker closes.
+  order. Descendants remain unscheduled until every blocker reaches `MERGED` or
+  a later delivery state.
 
 ## Resume and recovery
 
-- `/supervise-this #<spec>` must not create a duplicate specification, ticket,
-  worker, or PR. Reconcile GitHub first, then AO sessions.
-- If a worker exits, loses signal, waits for input, or fails, inspect its AO
-  session, PR, checks, and issue evidence before sending one focused recovery
-  message. Continue unrelated ready work.
+- `/supervise-this #<spec>` rebuilds the ownership snapshot and runs
+  `scripts/workflow.ts reconcile` before any write. Repeated evidence collapses
+  to one action, so resume cannot duplicate issues, sessions, branches, or PRs.
+- Evaluate an idle worker with `scripts/workflow.ts idle-signal`. An open issue
+  with no matching PR and no tracked change is red, regardless of
+  `lastActivityAt`.
+- Classify each failure as `infrastructure`, `task`, or `implementation`. Track
+  retry counts per class with the helper. Finish infrastructure recovery before
+  sending task continuation; send implementation correction only for the last
+  class.
 - Add `needs-info`, record the concrete blocker, and ask one ELI18 decision when
-  the worker cannot continue. Preserve the AO session and issue history.
+  a class exceeds its cap. Preserve the AO session and issue history.
 - Record replacement decisions in a new parent comment. Never silently change
   the AO project role model or use a cheaper replacement.
 
@@ -97,6 +112,13 @@ intermediate checkpoint, not a reason to return a final summary.
 - After every planned child PR merges, record a fixed base and run full
   repository verification. Then run `/code-review` in the AO orchestrator
   against that base and the parent specification.
+- Apply the configured reviewer policy through `scripts/workflow.ts
+  review-decision`. Same-account review may record a `verdict` but cannot
+  satisfy an approval-only policy.
+- Record the reviewed head SHA. Feed current head, reviewed head, repository,
+  and AO manageability to `scripts/workflow.ts merge-decision`. Stop if the head
+  changed. Use its AO command for managed PRs. Use its explicit-repository
+  GitHub fallback only when AO cannot manage a legacy unclaimed PR.
 - Turn each confirmed in-scope finding into the smallest independently
   verifiable follow-up ticket with native blockers where needed. Spawn follow-up
   workers through the same AO worker profile and PR contract.

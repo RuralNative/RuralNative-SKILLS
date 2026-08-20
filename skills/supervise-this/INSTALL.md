@@ -1,14 +1,15 @@
 # Installing supervise-this
 
-`supervise-this` is an AO-first coordinator. Run it inside the Agent Orchestrator project orchestrator. It delegates planning to `/plan-this`, whose locked delegated stages require explicit human invocation, creates Kilo Code TUI workers in AO worktrees, and stays active across worker completion, pull-request review, merge, dependency waves, recovery, and final review. Planning and implementation models come from AO project role profiles, not per-spawn flags.
+`supervise-this` is an AO-first coordinator. Run it inside the Agent Orchestrator project orchestrator. It delegates planning to `/plan-this`, whose locked delegated stages require explicit human invocation, and starts the project's configured worker in a supported chat or TUI mode. The bundled workflow helper blocks unsafe spawns and turns AO and GitHub facts into delivery decisions.
 
 ## Requirements
 
 - A GitHub repository with a parent specification, child tickets, and native dependency edges.
 - Agent Orchestrator with a configured project and persistent project orchestrator.
-- The Kilo Code harness installed and authenticated for AO workers.
+- Node.js 24 or newer for `scripts/workflow.ts`.
 - `plan-this`, `implement-this`, `implement`, `code-review`, and `/unslop` available to the relevant agents.
-- AO worker and orchestrator role profiles configured before the run. The orchestrator profile supplies planning and final review; the worker profile supplies implementation.
+- AO worker and orchestrator role profiles with resolved models. The worker agent must support chat or TUI sessions.
+- An explicit review policy. Same-account verdicts are valid only when the policy permits verdict review instead of GitHub approval.
 
 ## Install
 
@@ -43,7 +44,16 @@ ao project get <project-id> --json
 ao agent ls --refresh --json
 ```
 
-The project must have an `orchestrator` role and a `worker` role. Configure their `agent` and `agentConfig.model` values in AO Project Settings or with the documented `ao project set-config` command. Use the `kilocode` agent for workers and an AO-supported strong agent for the orchestrator. If a reviewer profile is configured, AO uses it for pull-request review. Do not rewrite these profiles during a run.
+The project must have `orchestrator` and `worker` roles. Configure each role's `agent` and `agentConfig.model` values in AO Project Settings or with the documented `ao project set-config` command. The worker profile selects the agent; Kilo Code remains supported but is not required. Record whether the review policy requires GitHub approval or permits a documented verdict. Do not rewrite profiles during a run.
+
+The supervisor passes observed state to the bundled helper before spawning or merging:
+
+```bash
+node skills/supervise-this/scripts/workflow.ts preflight --input preflight.json
+node skills/supervise-this/scripts/workflow.ts reconcile --input ownership.json
+```
+
+The helper also exposes `delivery-state`, `idle-signal`, `recovery-decision`, `review-decision`, and `merge-decision`. Pass input through `--input <path>` or `--json <json>`; a command without explicit input fails immediately. Its exported TypeScript input types define each JSON shape.
 
 ## Verify
 
@@ -51,19 +61,19 @@ Run inside the AO project orchestrator:
 
 > /supervise-this Build a supervised coordinator for the repository
 
-The supervisor verifies AO before planning, runs `/plan-this` in the same persistent orchestrator, records the role configuration on the parent, and starts no more than three workers with the documented form:
+The supervisor verifies AO, GitHub access, role models, worker mode, reviewer policy, and the synchronized default branch before planning. It then runs `/plan-this` in the same persistent orchestrator and starts no more than three workers:
 
 ```bash
-ao spawn --project "$AO_PROJECT_ID" --kind worker --name "issue-123" --issue 123 --mode tui --prompt "Run /implement-this #123 in AO pull-request delivery mode."
+ao spawn --project "$AO_PROJECT_ID" --kind worker --name "issue-123" --issue 123 --mode "$WORKER_MODE" --prompt "Run /implement-this #123 in AO pull-request delivery mode. Prove origin/<default-branch> is an ancestor before editing."
 ```
 
-It does not finish after planning or worker creation. It consumes AO completion messages, re-reads GitHub native blockers, and starts later waves. Workers create pull requests, AO routes CI and review feedback, and the supervisor verifies merged PRs before closing issues.
+It does not finish after planning or worker creation. It consumes AO completion messages, derives progress from tracked changes and pull requests, and starts later waves after blocker merges. Workers create pull requests, AO routes CI and review feedback, and the supervisor preserves each reviewed head SHA through merge.
 
 Resume an interrupted run in the same AO project orchestrator:
 
 > /supervise-this #123
 
-Resume reads GitHub and AO durable state first and does not duplicate existing workers or pull requests.
+Resume reconciles open PRs, AO sessions, branches, assignees, and issue links before any spawn. Existing ownership resumes or reviews the work instead of duplicating it.
 
 ## Unsupported paths
 

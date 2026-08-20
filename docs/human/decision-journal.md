@@ -1,4 +1,4 @@
-<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-20 · Sources: docs/adr/0001-distribute-as-public-catalog-shelf.md, docs/adr/0002-adopt-ten-check-gate.md, docs/adr/0003-human-first-derived-artifacts.md, docs/adr/0004-verb-named-skills-flat-shelf.md, docs/adr/0005-unslopify-utility-identity-and-hard-dependency.md, docs/adr/0006-plan-this-fixed-template-adapter.md, docs/adr/0007-supervise-this-coordinator.md, docs/adr/0008-supervise-this-agent-orchestrator.md, docs/adr/0009-delegation-invariants-human-invocation.md -->
+<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-20 · Regenerated: #89 evidence-based AO workflow · Sources: docs/adr/0001-distribute-as-public-catalog-shelf.md, docs/adr/0002-adopt-ten-check-gate.md, docs/adr/0003-human-first-derived-artifacts.md, docs/adr/0004-verb-named-skills-flat-shelf.md, docs/adr/0005-unslopify-utility-identity-and-hard-dependency.md, docs/adr/0006-plan-this-fixed-template-adapter.md, docs/adr/0007-supervise-this-coordinator.md, docs/adr/0008-supervise-this-agent-orchestrator.md, docs/adr/0009-delegation-invariants-human-invocation.md, docs/adr/0010-supervise-by-delivery-evidence.md -->
 
 # Decision journal in plain words
 
@@ -39,3 +39,15 @@ Why: a live supervised run stalled when it reached planning, and nothing warned 
 What it costs: runs need a person at the locked stages. `/unslop` and `/code-review` remain agent-run.
 
 Depth: `docs/adr/0009-delegation-invariants-human-invocation.md`.
+
+### 2026-08-20 — Supervise by delivery evidence
+
+The AO project chooses its worker and a supported chat or TUI mode. Preflight blocks stale bases, unresolved models, broken GitHub access, missing review policy, and duplicate ownership before a spawn.
+
+Progress now means a tracked change, pull request, review, merge, evidence, or closure. Recovery limits are separate for infrastructure, task, and implementation failures. Review and merge keep the reviewed commit fixed.
+
+Why: the #73 run looked active while several tickets had no tracked delivery artifact. Hardcoded worker and merge assumptions also turned routine setup failures into repeated recovery prompts.
+
+What it costs: the orchestrator must collect structured facts and run the bundled helper before spawn, recovery, review, and merge decisions.
+
+Depth: `docs/adr/0010-supervise-by-delivery-evidence.md`.
