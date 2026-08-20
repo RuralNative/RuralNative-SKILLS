@@ -66,6 +66,37 @@ describe("implementation workflow and substitution (INV-3)", () => {
       assert.equal(emitted.includes("Issue #0"), false);
     }
   });
+
+  test("distinguishes locked dependency (/implement) from unlocked (/code-review, /unslop) and states human-invocation requirement", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const leaf = read("docs/leaves/implement-this.md");
+    const nSkill = norm(skill);
+    // Extract INV-3 block and scope assertions to the amended invariant text
+    const inv3Match = leaf.match(/3\. \*\*INV-3\*\*[\s\S]*?(?=\n4\. \*\*INV-4\*\*|\n## )/);
+    assert.ok(inv3Match, "leaf must contain INV-3");
+    const nInv3 = norm(inv3Match[0]);
+    // body states the human-invocation requirement (skill body is the workflow, whole body is the invariant)
+    assert.ok(nSkill.includes("explicit human invocation"), "body must state explicit human invocation");
+    assert.ok(nSkill.includes("cannot traverse the chain unattended"), "body must state agent cannot traverse unattended");
+    // body names the locked skill
+    assert.ok(nSkill.includes("/implement"), "body must name locked skill /implement");
+    // body names the unlocked skills
+    assert.ok(nSkill.includes("/code-review") && nSkill.includes("model-invocable"), "body must state /code-review remains model-invocable");
+    assert.ok(nSkill.includes("/unslop") && nSkill.includes("model-invocable"), "body must state /unslop remains model-invocable");
+    // INV-3 itself must state the classification (scoped, not whole-leaf)
+    assert.ok(nInv3.includes("disable-model-invocation"), "INV-3 must reference disable-model-invocation");
+    assert.ok(nInv3.includes("explicit human invocation"), "INV-3 must state explicit human invocation");
+    assert.ok(nInv3.includes("cannot traverse the chain unattended"), "INV-3 must state agent cannot traverse unattended");
+    assert.ok(nInv3.includes("model-invocable"), "INV-3 must name model-invocable skills");
+    assert.ok(nInv3.includes("/implement") && nInv3.includes("/code-review"), "INV-3 must name both /implement and /code-review");
+    assert.ok(nInv3.includes("/implement") && nInv3.includes("disable-model-invocation"), "INV-3 must flag /implement as locked");
+    assert.ok(nInv3.includes("/code-review") && nInv3.includes("no such lock"), "INV-3 must distinguish /code-review as model-invocable with no such lock");
+    // ADR-0009 exists and records the decision
+    const adr = read("docs/adr/0009-delegation-invariants-human-invocation.md");
+    assert.ok(adr.includes("Status: accepted"), "ADR-0009 must be accepted");
+    assert.ok(adr.includes("disable-model-invocation"), "ADR-0009 must reference disable-model-invocation");
+    assert.ok(adr.includes("rejected") && adr.includes("removing"), "ADR-0009 must state removing locks was rejected");
+  });
 });
 
 describe("dependencies and verification (INV-4)", () => {
