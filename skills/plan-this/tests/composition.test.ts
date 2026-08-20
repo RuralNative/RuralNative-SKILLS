@@ -215,19 +215,24 @@ describe("plan-this hard dependencies and workflow order (plan-this:INV-4)", () 
     const skill = read("skills/plan-this/SKILL.md");
     const leaf = read("docs/leaves/plan-this.md");
     const nSkill = norm(skill);
-    const nLeaf = norm(leaf);
-    // body states the human-invocation requirement
+    // Extract INV-4 block and scope assertions to the amended invariant text
+    const inv4Match = leaf.match(/4\. \*\*INV-4\*\*[\s\S]*?(?=\n5\. \*\*INV-5\*\*|\n## )/);
+    assert.ok(inv4Match, "leaf must contain INV-4");
+    const nInv4 = norm(inv4Match[0]);
+    // body states the human-invocation requirement (skill body is the fixed template, whole body is the invariant)
     assert.ok(nSkill.includes("explicit human invocation"), "body must state explicit human invocation");
     assert.ok(nSkill.includes("cannot traverse the chain unattended"), "body must state agent cannot traverse unattended");
     // body names the locked skills
     assert.ok(nSkill.includes("/grill-with-docs") && nSkill.includes("/to-spec") && nSkill.includes("/to-tickets"), "body must name locked skills");
     // body names the unlocked skill
     assert.ok(nSkill.includes("/unslop") && nSkill.includes("model-invocable"), "body must state /unslop remains model-invocable");
-    // leaf documents the same constraint
-    assert.ok(nLeaf.includes("disable-model-invocation"), "leaf must reference disable-model-invocation");
-    assert.ok(nLeaf.includes("explicit human invocation"), "leaf must state explicit human invocation");
-    assert.ok(nLeaf.includes("cannot traverse the chain unattended"), "leaf must state agent cannot traverse unattended");
-    assert.ok(nLeaf.includes("model-invocable"), "leaf must name model-invocable skills");
+    // INV-4 itself must state the classification (scoped, not whole-leaf)
+    assert.ok(nInv4.includes("disable-model-invocation"), "INV-4 must reference disable-model-invocation");
+    assert.ok(nInv4.includes("explicit human invocation"), "INV-4 must state explicit human invocation");
+    assert.ok(nInv4.includes("cannot traverse the chain unattended") || nInv4.includes("cannot traverse the delegation chain unattended"), "INV-4 must state agent cannot traverse unattended");
+    assert.ok(nInv4.includes("model-invocable"), "INV-4 must name model-invocable skills");
+    assert.ok(nInv4.includes("/grill-with-docs") && nInv4.includes("/to-spec") && nInv4.includes("/to-tickets"), "INV-4 must name locked skills");
+    assert.ok(nInv4.includes("/unslop") && nInv4.includes("no such lock"), "INV-4 must distinguish /unslop as model-invocable with no such lock");
     // ADR-0009 exists and records the decision
     const adr = read("docs/adr/0009-delegation-invariants-human-invocation.md");
     assert.ok(adr.includes("Status: accepted"), "ADR-0009 must be accepted");
