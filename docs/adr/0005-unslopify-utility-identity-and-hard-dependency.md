@@ -3,12 +3,9 @@
 Status: accepted
 Date: 2026-08-19
 
-Decision: `unslopify` ships as an audience-neutral skill identity: its `SKILL.md`
-frontmatter `name` equals its folder `unslopify` with no audience suffix.
-Both `document-for-agents` and `document-for-humans` declare `unslopify` as a
-hard dependency that later slices will wire to load before user-visible prose
-and to audit again before publication. The wiring itself is not part of this
-slice.
+Decision: `unslopify` ships as a repository-owned, audience-neutral skill identity: its `SKILL.md`
+frontmatter `name` equals its folder `unslopify` with no audience suffix, replacing the external `unslop` dependency.
+`document-for-agents` and `document-for-humans` declare it as a hard dependency, and `plan-this` and `implement-this` (slice #100) also declare it as a hard dependency loaded before the first progress update with scope, protected-content, preservation, and completion-report contracts. Agent work uses the focused doc-cache route `AGENTS.md → ARCHITECTURE.md → affected seam leaf doc → CONTEXT.md → relevant ADRs`; the agent cache is owned by `document-for-agents` and `document-for-humans` remains a derived, human-facing view that agents do not preload.
 
 Why: the 31 AI-tell patterns apply unchanged to agent-facing and human-facing
 prose. Forcing a suffix such as `unslopify-for-agents` would invent a false
