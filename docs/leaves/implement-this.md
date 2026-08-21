@@ -33,7 +33,7 @@ npm run verify
 
 ## Further notes
 
-ADR-0006 records the original fixed-template adapter. ADR-0008 previously added an Agent Orchestrator delivery branch; that branch is retired by the supervise-this retirement (issues #116/#117) and replaced by the manager-worktree path-detection trigger recorded in ADR-0012. ADR-0009 records the decision to keep `disable-model-invocation` locks on `/implement` and to document the human-invocation requirement in the workflow invariant rather than unlock the skill for unattended model traversal. The direct-main path is unchanged by the manager-worktree branch.
+ADR-0006 records the original fixed-template adapter. ADR-0008 previously added an Agent Orchestrator delivery branch; that branch is retired by the supervise-this retirement (issues #116/#117) and replaced by the manager-worktree path-detection trigger recorded in ADR-0012. ADR-0009 records the decision to keep `disable-model-invocation` locks on `/implement` and to document the human-invocation requirement in the workflow invariant rather than unlock the skill for unattended model traversal. The direct-main delivery mode is unchanged by the manager-worktree mode.
 
 ## Links
 
@@ -41,7 +41,6 @@ ADR-0006 records the original fixed-template adapter. ADR-0008 previously added 
 - Decision: `docs/adr/0012-manager-worktree-pull-request-delivery.md` — manager-worktree path-detection trigger.
 - Historical decision (retired): `docs/adr/0008-supervise-this-agent-orchestrator.md`.
 - Decision: `docs/adr/0009-delegation-invariants-human-invocation.md` — locked delegation chains and human-invocation requirement.
-- Decision: `docs/adr/0012-manager-worktree-pull-request-delivery.md` — path-detection trigger for pull-request delivery.
 - Historical template decision: `docs/adr/0006-plan-this-fixed-template-adapter.md`.
 - Glossary: `CONTEXT.md`.
 - Harness: `scripts/docs-check.sh`.

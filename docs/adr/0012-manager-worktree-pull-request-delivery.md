@@ -2,7 +2,8 @@
 
 Status: accepted
 Date: 2026-08-21
-Replaces: the Agent Orchestrator delivery branch added by ADR-0008, retired by the supervise-this retirement (issues #116/#117)
+Replaces: the Agent Orchestrator delivery mode added by ADR-0008, retired by the supervise-this retirement (issues #116/#117)
+Numbering: takes the slot after the retirement ADR reserved by issues #116/#117
 
 Decision: `implement-this` selects its delivery mode from the session worktree
 location. When the current worktree root sits under the Kilo Agent Manager
@@ -39,6 +40,6 @@ Consequences:
   push, evidence, and closure.
 - Delivery mode is determined by worktree path, so a folder path flipping
   delivery semantics is recorded here rather than looking accidental.
-- The prior Agent Orchestrator delivery branch (ADR-0008) is retired by the
-  supervise-this retirement; this trigger is the delivery branch that replaces
+- The prior Agent Orchestrator delivery mode (ADR-0008) is retired by the
+  supervise-this retirement; this trigger is the delivery mode that replaces
   it.

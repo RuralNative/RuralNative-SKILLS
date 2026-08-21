@@ -11,7 +11,7 @@ These are the promises the skills make.
 - Planning publishes ready tickets with native blockers and asks about unresolved decisions.
 - Implementation handles one issue, loads repository-owned `unslopify` before progress with the same prose and focused-cache rules, and stops when a native blocker is open.
 - Standalone implementation pushes directly to `main` only after checks, review, and rebase.
-- AO implementation opens a pull request and leaves merge and issue closure to AO and the supervisor.
+- Implementation inside a Kilo Agent Manager worktree opens a pull request whose body closes its ticket on merge, posts acceptance evidence, and never closes the ticket early.
 - AO supervision runs inside the persistent project orchestrator and does not end after planning or worker creation.
 - The ready frontier contains only open, unblocked, unassigned tickets with `ready-for-agent`.
 - No more than three AO workers run at once.

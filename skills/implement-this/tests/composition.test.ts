@@ -160,7 +160,7 @@ describe("manager-worktree pull-request delivery (INV-6)", () => {
     assert.ok(n.includes("never push directly to `main`"), "must not push directly to main");
     assert.ok(n.includes("never close the ticket before merge"), "must not close before merge");
     assert.ok(n.includes("ready-for-human"), "must add ready-for-human");
-    assert.ok(n.includes("ready-for-agent"), "must reference ready-for-agent");
+    assert.ok(n.includes("remove `ready-for-agent`, and add `ready-for-human`"), "must swap ready-for-agent for ready-for-human in the manager branch");
     assert.ok(n.includes("closes #<n>"), "must put the closing reference in the PR body");
   });
 
@@ -223,7 +223,7 @@ describe("implement-this unslopify and focused doc-cache (Phase 1 red)", () => {
     const n = norm(skill);
     assert.ok(n.includes("/unslopify"), "must name /unslopify");
     assert.ok(n.includes("unslopify"), "must name unslopify dependency");
-    assert.ok(n.includes("load `/unslopify`"), "stale bare-unslop assertion now asserts the unslopify phrase");
+    assert.ok(n.includes("load `/unslopify`"), "must load /unslopify before the first progress update");
   });
 
   test("applies unslopify preservation, protected-content, and completion-report contract", () => {

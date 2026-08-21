@@ -1,6 +1,6 @@
 # Installing implement-this
 
-`implement-this` handles one GitHub issue. Use `/implement-this #<n>` directly for the direct-main workflow, or inside a Kilo Agent Manager worktree for manager-worktree pull-request delivery. A session whose worktree root sits under the Agent Manager worktree location uses the pull-request delivery branch; it pushes the feature branch, opens or updates a pull request, and swaps `ready-for-agent` for `ready-for-human`. The standalone path keeps its direct-main delivery rules. `supervise-this` owns scheduling and model decisions.
+`implement-this` handles one GitHub issue. Use `/implement-this #<n>` directly for the direct-main workflow, or inside a Kilo Agent Manager worktree for manager-worktree pull-request delivery. A session whose worktree root sits under the Agent Manager worktree location uses the pull-request delivery mode; it pushes the feature branch, opens or updates a pull request, and swaps `ready-for-agent` for `ready-for-human`. The standalone path keeps its direct-main delivery rules. `supervise-this` owns scheduling and model decisions.
 
 ## Requirements
 
