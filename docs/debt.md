@@ -81,7 +81,7 @@ here.
 
 Status: open
 Revisit-when: a real formatter or linter is chosen
-What: the verify chain runs dependency install, tests, typecheck, and the docs
+What: the verify chain runs dependency install, tests, TypeScript, and the docs
 harness; nothing guards formatting or lint style. The former `format`,
 `format:check`, `lint`, and `build` scripts were echo stubs that could never
 fail (#121), so their removal narrows the chain to checks that can fail rather
