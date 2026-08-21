@@ -142,9 +142,11 @@ describe("review-this hard dependencies and workflow order (review-this:INV-4)",
     assert.ok(n.includes("/unslopify"));
     assert.ok(n.includes("/code-review"));
     assert.ok(n.includes("before the first progress update"));
-    const idxReview = skill.indexOf("/code-review");
-    const idxUnslopify = skill.indexOf("/unslopify");
-    assert.ok(idxReview !== -1 && idxUnslopify !== -1 && idxReview < idxUnslopify, "workflow must name /code-review before /unslopify loads");
+    // pin body order: /code-review is delegated to, then /unslopify loads
+    const body = getBody(skill);
+    const idxReview = body.indexOf("/code-review");
+    const idxUnslopify = body.indexOf("/unslopify");
+    assert.ok(idxReview !== -1 && idxUnslopify !== -1 && idxReview < idxUnslopify, "body must name /code-review before /unslopify loads");
     // frontmatter description also declares both dependencies
     const frontmatter = skill.slice(0, skill.indexOf("---", 3) + 3);
     assert.ok(frontmatter.includes("/code-review") && frontmatter.includes("/unslopify"), "frontmatter must declare both hard dependencies");

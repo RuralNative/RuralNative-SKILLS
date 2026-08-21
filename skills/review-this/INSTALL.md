@@ -5,7 +5,7 @@
 ## Requirements
 
 - Git history with a non-empty diff against the chosen fixed point.
-- `/code-review` installed through its own registry lane. It carries no `disable-model-invocation` lock and stays model-invocable.
+- `/code-review` installed through its own lane. It is not published by this shelf; install it from its own source before using `review-this`. It carries no `disable-model-invocation` lock and stays model-invocable.
 - `/unslopify` installed through its registry lane: `npx skills add RuralNative/RuralNative-SKILLS --skill unslopify`.
 
 ## Install
