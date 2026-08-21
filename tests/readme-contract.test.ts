@@ -2,7 +2,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-const ROOT = path.resolve(import.meta.dirname ?? ".", "../../..");
+const ROOT = path.resolve(import.meta.dirname ?? ".", "..");
 const readme = fs.readFileSync(path.join(ROOT,"README.md"),"utf8");
 function headings(m:string){ return [...m.matchAll(/^#{1,3}\s+(.+)$/gm)].map(x=>x[1].trim()); }
 
@@ -36,7 +36,8 @@ describe("README contract #107",()=>{
     const instIdx=readme.toLowerCase().indexOf("installation");
     const nextIdx=readme.indexOf("\n## ",instIdx+20);
     const instSec=readme.slice(instIdx, nextIdx===-1? undefined: nextIdx);
-    const cmds=[...instSec.matchAll(/npx skills add RuralNative\/RuralNative-SKILLS --skill (\S+)/g)].map(m=>m[1]);
+    const codeBlock=[...instSec.matchAll(/```bash([\s\S]*?)```/g)].map(m=>m[1]).join("\n");
+    const cmds=[...codeBlock.matchAll(/npx skills add RuralNative\/RuralNative-SKILLS --skill ([a-z-]+)/g)].map(m=>m[1]);
     assert.deepEqual(cmds,["unslopify","document-for-agents","document-for-humans"]);
   });
   test("focused doc-cache purpose language",()=>{

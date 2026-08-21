@@ -7,3 +7,6 @@ skills-lock.json
 # docs/ that mislead grep-based navigation and stay invisible to git
 # and the docs harness, so the directory stays ignored.
 .kilo/worktrees/
+
+# Dependency installs stay local; only package.json and the lockfile are canonical.
+node_modules/

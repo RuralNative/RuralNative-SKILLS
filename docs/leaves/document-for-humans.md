@@ -55,8 +55,10 @@ repository-relative path.
    including fixtures that reject code, issues, commits, and human-first docs as
    sources and behavior-based checks that README routing headings and install
    order hold against the current README without locking whole prose passages;
-   runtime resolution by skill identity is asserted on the skill body, not on
-   the README.
+   the single-source check pins the four section headings (routing, workflow,
+   installation, requirements) and keeps shelf and routing from repeating
+   install commands; runtime resolution by skill identity is asserted on the
+   skill body, not on the README.
 
 ## Links
 

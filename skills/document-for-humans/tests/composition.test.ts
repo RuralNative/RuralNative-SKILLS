@@ -279,11 +279,19 @@ describe("document-for-humans hard dependency (document-for-humans:INV-6)", () =
     assert.ok(readme.includes("cp -r skills/document-for-humans"));
     assert.ok(readme.indexOf("cp -r skills/unslopify") < readme.indexOf("cp -r skills/document-for-agents"), "manual copy order must put unslopify first");
     assert.ok(n.includes("missing python") && n.includes("does not stop"), "Python optional must be stated");
-    // runtime resolution by skill identity is owned by the skill body; README must not teach a repository-relative runtime path
+    // runtime guidance defers to the skills' own identity-load rules (asserted on SKILL.md above) and never teaches a repository-relative path
     assert.ok(!readme.includes("Load `skills/unslopify/SKILL.md` before"), "must not teach repository-relative runtime path");
     // no repeated long dependency block in shelf or elsewhere
     const longBlock = (readme.match(/Requires `unslopify` before any user-visible prose/g) || []).length;
     assert.ok(longBlock <= 0, "repeated long dependency block must not appear");
+    // sections stay single-source: shelf and routing describe instead of repeating installation commands
+    const shelfIdx = readme.indexOf("## Our Shelf");
+    const routeIdx = readme.indexOf("## Which skill and when");
+    assert.ok(shelfIdx !== -1 && routeIdx !== -1, "shelf and routing sections must exist");
+    const shelfSec = readme.slice(shelfIdx, readme.indexOf("## Motivation and Purpose"));
+    assert.ok(!shelfSec.includes("npx skills add"), "shelf must not repeat installation commands");
+    const routeSec = readme.slice(routeIdx, readme.indexOf("## AI-First Workflow Integration"));
+    assert.ok(!routeSec.includes("cp -r skills/"), "routing must not repeat manual-copy installation");
     // stale checks: no minimal-tier rule that creates everything, no issue/commit as allowed source, no old runtime path
     assert.ok(!readme.includes("journal decisions from commit"), "stale journal from commits must not appear");
   });

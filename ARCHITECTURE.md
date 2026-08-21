@@ -22,6 +22,10 @@ A new directory under `skills/` is a new seam: it needs a row here, a leaf
 doc, and a `SKILL.md` whose frontmatter `name` matches its folder (harness
 check 3).
 
+Repo-level contract tests that check published artifacts rather than a
+skill's own seam live in `tests/` at the repository root, outside the seam
+scan; `tests/readme-contract.test.ts` pins the README contract for #107.
+
 ## Non-seam docs
 
 Covered docs that are not seams — the seam table's counterpart, parsed by
