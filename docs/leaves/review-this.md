@@ -1,0 +1,39 @@
+# Seam: review-this
+
+## Purpose
+
+The skill that hosts the `/code-review` workflow as a fixed template. It is invoked directly as `/review-this <fixed-point>` where `<fixed-point>` is a commit SHA, branch, tag, or merge-base expression, preserves the review workflow verbatim, places the supplied fixed point under `## Fixed point:`, and delegates to repository-independent `/code-review` with repository-owned `/unslopify` active under its scope, protected-content, preservation, and completion-report contracts. It reads only the focused agent cache `AGENTS.md → ARCHITECTURE.md → affected seam leaf in docs/leaves/ → CONTEXT.md → relevant ADRs` owned by `document-for-agents`; it does not preload the derived human docs from `document-for-humans`.
+
+## Scope & boundaries
+
+Owns: the content under `skills/review-this/` — `SKILL.md`, `INSTALL.md`, `tests/`. Delegates: the two-axis review workflow to `/code-review`; prose quality to repository-owned `/unslopify`. The seam is a fixed-template adapter — it does not reimplement delegated skills, copy the smell baseline into its own body, add runtime scripts, or create `.kilo/command/` entries. Installation uses the registry lane only. Invocation is explicit; a missing fixed point asks for one and stops. No ticket number is required, but an issue reference may be supplied as the spec source.
+
+## Key files & data flow
+
+`SKILL.md` is the entry point; its frontmatter `name` is the skill identity `review-this` and its `description` declares the explicit invocation `/review-this <fixed-point>` plus delegation to `/code-review` and `/unslopify`. The consumption path is: caller runs `/review-this <fixed-point>` → skill loads `/unslopify` before the first progress update and keeps it active → pins the fixed point (`git diff <fixed-point>...HEAD`, `git rev-parse`) → identifies spec source (commit issue references, caller-supplied path, then a file under `docs/`, `specs/`, or `.scratch/` matching the branch; ask or skip) and standards sources plus the smell baseline → spawns the Standards and Spec sub-agents in parallel → aggregates both reports side by side without merging or reranking. The body carries a single `## Fixed point:` substitution slot hosting only the fixed-point text. The body after frontmatter equals the verbatim expected prefix: the workflow line ``Review the changes since a fixed point: `/code-review` ``, the model-invocation note, `## Rules` bullets, and the `## Fixed point:` slot — staying within 18–35 lines including frontmatter with no wrapper sections, no separate `## Hard dependencies` / `## Installation` / `## Boundary` / `Rules preserved` sections. Hard dependencies are declared via that prefix plus the frontmatter `description`, not via a separate section. `INSTALL.md` documents the registry lane `npx skills add RuralNative/RuralNative-SKILLS --skill review-this`, the manual copy `cp -r skills/review-this`, hard-dependency lanes for `/code-review` and `/unslopify`, and verification via `/review-this main`. Tests live in `skills/review-this/tests/` and encode the invariants below, including a line-count bound, wrapper absence, byte-for-byte body checks, single-slot substitution, workflow order, and absence of extra machinery.
+
+## Non-negotiables
+
+1. **INV-1** — `SKILL.md` frontmatter `name` equals the folder name `review-this`.
+2. **INV-2** — The registry-lane command in `INSTALL.md` installs this seam as `npx skills add RuralNative/RuralNative-SKILLS --skill review-this` with matching manual copy `cp -r skills/review-this`, and documents the explicit invocation `/review-this <fixed-point>` plus verification via `/review-this main`.
+3. **INV-3** — Fixed-template boundary: `SKILL.md` body after frontmatter equals the exact review prefix verbatim, including the workflow line ``Review the changes since a fixed point: `/code-review` ``, the `## Rules` bullets, and the single `## Fixed point:` slot hosting only the fixed-point text; it contains no wrapper phrases `Rules preserved`, `## Installation`, or `## Boundary`, adds no runtime scripts, no `package.json`, and no `.kilo/command/` files, and totals 18–35 lines including frontmatter. Mechanism: composition test guards verbatim equality, single-slot substitution of the fixed point only, wrapper absence, no-extra-machinery checks, and line-count bound.
+4. **INV-4** — Hard dependencies are `/code-review` and `/unslopify` in that order. `/unslopify` loads before the first progress update and stays active under its scope, protected-content, preservation, and completion-report contracts. `/code-review` carries no `disable-model-invocation` lock and remains model-invocable. The focused doc-cache route is `AGENTS.md → ARCHITECTURE.md → affected seam leaf → CONTEXT.md → relevant ADRs` and does not preload derived human docs from `document-for-humans`. Mechanism: composition test verifies dependency names and order appear in body and frontmatter.
+5. **INV-5** — Invocation semantics: `<fixed-point>` is a commit SHA, branch, tag, or merge-base expression; if the caller supplies none, the skill asks for it and stops until it arrives. No ticket number is required; an issue reference may be supplied as the spec source. Mechanism: prose invariant guarded by composition tests asserting the description declares both the invocation form and the ask-and-stop behavior.
+6. **INV-6** — One review contract: spec source order matches `/code-review` (issue references in commit messages, then a caller-supplied path, then a spec file under `docs/`, `specs/`, or `.scratch/` matching the branch, then ask or skip), standards sources always carry the smell baseline unless a documented repo standard overrides it, and the two reports are presented side by side without merging or reranking findings across axes. Mechanism: prose invariant — leaf doc explains the single contract; composition test guards the pinned order and aggregation rules in the body.
+7. **INV-7** — Parallel sub-agent spawning: the Standards and Spec axes run as parallel sub-agents so their contexts stay separate, and aggregation preserves each report verbatim or lightly cleaned under `## Standards` and `## Spec`. Mechanism: composition test asserts parallel-spawning and aggregation phrasing in the body.
+8. **INV-8** — Index coherence: `ARCHITECTURE.md` carries the `review-this` seam row and the `docs/leaves/review-this.md` coverage row, and this leaf follows the document-for-agents leaf template. Mechanism: composition test reads `ARCHITECTURE.md` for both rows and asserts the leaf exists with declared invariants.
+
+## Further notes
+
+The review prefix was extracted from the delivery branches of `implement-this` (#124, parent #123): `implement-this` keeps fixed-base computation for rebase or pull-request creation but no longer runs review internally; callers who relied on that chaining run `/review-this <base>` explicitly with `<base>` from `git merge-base origin/main HEAD` or the PR base. ADR-0006's task-scoped fixed-template exception extends to this seam per #123; #126 owns the ADR and glossary updates for the split.
+
+`/code-review` itself is unchanged by this slice: the two axes, the smell baseline, and the parallel sub-agent prompts are owned by that skill, not by this shelf. This seam only hosts the invocation template.
+
+## Links
+
+- Glossary: `CONTEXT.md` — Skill, skill identity, skill naming convention, distribution shelf, registry lane.
+- Decision: `docs/adr/0006-plan-this-fixed-template-adapter.md` — task-scoped exception and template boundary.
+- Delegated workflow: `/code-review` (installed through its own lane).
+- Prose contract: `skills/unslopify/SKILL.md` — scope, protected-content, preservation, completion report.
+- Harness: `scripts/docs-check.sh`.
+- Template: `skills/document-for-agents/reference/templates.md` — the shape this leaf doc follows.
