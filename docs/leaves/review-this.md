@@ -25,7 +25,7 @@ Owns: the content under `skills/review-this/` — `SKILL.md`, `INSTALL.md`, `tes
 
 ## Further notes
 
-The review prefix was extracted from the delivery branches of `implement-this` (#124, parent #123): `implement-this` keeps fixed-base computation for rebase or pull-request creation but no longer runs review internally; callers who relied on that chaining run `/review-this <base>` explicitly with `<base>` from `git merge-base origin/main HEAD` or the PR base. ADR-0006's task-scoped fixed-template exception extends to this seam per #123; #126 owns the ADR and glossary updates for the split.
+The review prefix was extracted from the delivery branches of `implement-this` (#124, parent #123): `implement-this` keeps fixed-base computation for rebase or pull-request creation but no longer runs review internally; callers who relied on that chaining run `/review-this <base>` explicitly with `<base>` from `git merge-base origin/main HEAD` or the PR base. ADR-0006's task-scoped fixed-template exception extends to this seam per #123, and ADR-0013 records the decoupling. The boundary: this seam hosts only the review invocation template — `implement-this` owns implementation and delivery and does not run review; `/code-review` owns the review workflow itself.
 
 `/code-review` itself is unchanged by this slice: the two axes, the smell baseline, and the parallel sub-agent prompts are owned by that skill, not by this shelf. This seam only hosts the invocation template.
 
@@ -33,6 +33,7 @@ The review prefix was extracted from the delivery branches of `implement-this` (
 
 - Glossary: `CONTEXT.md` — Skill, skill identity, skill naming convention, distribution shelf, registry lane.
 - Decision: `docs/adr/0006-plan-this-fixed-template-adapter.md` — task-scoped exception and template boundary.
+- Decision: `docs/adr/0013-review-this-decoupled-code-review.md` — the split from `implement-this` and the glossary exception.
 - Delegated workflow: `/code-review` (installed through its own lane).
 - Prose contract: `skills/unslopify/SKILL.md` — scope, protected-content, preservation, completion report.
 - Harness: `scripts/docs-check.sh`.

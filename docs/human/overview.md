@@ -1,4 +1,4 @@
-<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-21 · Regenerated: #125 single-stage implement-this · Sources: ARCHITECTURE.md, CONTEXT.md, docs/adr/0011-retire-supervise-this.md, docs/adr/0012-manager-worktree-pull-request-delivery.md, docs/leaves/implement-this.md, docs/leaves/plan-this.md, docs/leaves/review-this.md -->
+<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-21 · Regenerated: #126 ADR and glossary coherence for the review-this split · Sources: ARCHITECTURE.md, CONTEXT.md, docs/adr/0011-retire-supervise-this.md, docs/adr/0012-manager-worktree-pull-request-delivery.md, docs/adr/0013-review-this-decoupled-code-review.md, docs/leaves/implement-this.md, docs/leaves/plan-this.md, docs/leaves/review-this.md -->
 # RuralNative-SKILLS in plain words
 
 This repository publishes reusable skills for coding agents. The shelf includes documentation workflows, prose cleanup, planning, implementation, code review, and release work.
