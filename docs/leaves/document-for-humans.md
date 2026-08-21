@@ -53,8 +53,10 @@ repository-relative path.
    catalog-ownership note); dependency visible in `INSTALL.md`; composition
    tests in `skills/document-for-humans/tests/` encode the invariant
    including fixtures that reject code, issues, commits, and human-first docs as
-   sources and behavior-based checks that README routing and install order hold
-   without locking whole prose passages.
+   sources and behavior-based checks that README routing headings and install
+   order hold against the current README without locking whole prose passages;
+   runtime resolution by skill identity is asserted on the skill body, not on
+   the README.
 
 ## Links
 
