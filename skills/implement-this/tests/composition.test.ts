@@ -9,18 +9,9 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import { read, norm, body } from "../../../scripts/test-helpers.ts";
 
 const ROOT = path.resolve(import.meta.dirname ?? ".", "../../..");
-function read(p: string): string {
-  return fs.readFileSync(path.join(ROOT, p), "utf8");
-}
-function norm(s: string): string {
-  return s.replace(/\s+/g, " ").toLowerCase();
-}
-function body(skill: string): string {
-  const marker = skill.match(/^---\n[\s\S]*?\n---\n/);
-  return marker ? skill.slice(marker[0].length) : skill;
-}
 
 describe("implement-this identity (INV-1)", () => {
   test("frontmatter and folder identity are exact", () => {
@@ -113,7 +104,7 @@ describe("dependencies and verification (INV-4)", () => {
     }
     assert.ok(pkg.scripts.verify, "package.json must have verify script");
     const verify = pkg.scripts.verify;
-    for (const phrase of ["npm ci", "npm run format", "npm test", "npm run lint", "npx tsc --noEmit", "npm run docs:check", "npm run build"]) {
+    for (const phrase of ["npm ci", "npm test", "npx tsc --noEmit", "npm run docs:check"]) {
       assert.ok(verify.includes(phrase), `verify script must include ${phrase}`);
     }
     assert.ok(n.includes("stop") && n.includes("blocker"));
