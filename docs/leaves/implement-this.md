@@ -35,12 +35,13 @@ npm run verify
 
 ADR-0006 records the original fixed-template adapter. ADR-0008 previously added an Agent Orchestrator delivery branch; that branch is retired by the supervise-this retirement (issues #116/#117) and replaced by the manager-worktree path-detection trigger recorded in ADR-0012. ADR-0009 records the decision to keep `disable-model-invocation` locks on `/implement` and to document the human-invocation requirement in the workflow invariant rather than unlock the skill for unattended model traversal. The direct-main delivery mode is unchanged by the manager-worktree mode.
 
-The review stage was extracted from this seam (#124, parent #123): review now lives in the `review-this` seam, and this skill does only implementation and delivery with a single delegated `/implement` stage. #126 owns the ADR and glossary updates for that split; ADR-0009's mention of `/code-review` alongside this seam's workflow invariant is historical until then.
+The review stage was extracted from this seam (#124, parent #123): review now lives in the `review-this` seam (`docs/leaves/review-this.md`), which owns the `/code-review` invocation template and nothing about implementation or delivery. This skill does only implementation and delivery with a single delegated `/implement` stage. ADR-0013 records the decoupling; ADR-0009's mention of `/code-review` alongside this seam's workflow invariant is historical from that decision onward.
 
 ## Links
 
 - Specification: [#72](https://github.com/RuralNative/RuralNative-SKILLS/issues/72).
 - Split decision: [#125](https://github.com/RuralNative/RuralNative-SKILLS/issues/125) — review moved to the `review-this` seam (`docs/leaves/review-this.md`).
+- Decision: `docs/adr/0013-review-this-decoupled-code-review.md` — the review decoupling and glossary exception.
 - Decision: `docs/adr/0012-manager-worktree-pull-request-delivery.md` — manager-worktree path-detection trigger.
 - Historical decision (retired): `docs/adr/0008-supervise-this-agent-orchestrator.md`.
 - Decision: `docs/adr/0009-delegation-invariants-human-invocation.md` — locked delegation chains and human-invocation requirement.
