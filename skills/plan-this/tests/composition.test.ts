@@ -8,19 +8,9 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import { read, norm, body as getBody } from "../../../scripts/test-helpers.ts";
 
 const ROOT = path.resolve(import.meta.dirname ?? ".", "../../..");
-function read(p: string): string {
-  return fs.readFileSync(path.join(ROOT, p), "utf8");
-}
-function norm(s: string): string {
-  return s.replace(/\s+/g, " ").toLowerCase();
-}
-function getBody(skill: string): string {
-  const m = skill.match(/^---\n[\s\S]*?\n---\n/);
-  if (!m) return skill;
-  return skill.slice(m[0].length);
-}
 
 describe("plan-this identity (plan-this:INV-1)", () => {
   test("folder and frontmatter identity are exactly plan-this", () => {

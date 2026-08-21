@@ -4,14 +4,9 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import { read, norm } from "../../../scripts/test-helpers.ts";
 
 const ROOT = path.resolve(import.meta.dirname ?? ".", "../../..");
-function read(p: string): string {
-  return fs.readFileSync(path.join(ROOT, p), "utf8");
-}
-function norm(s: string): string {
-  return s.replace(/\s+/g, " ").toLowerCase();
-}
 
 describe("release-skills identity (release-skills:INV-1)", () => {
   test("folder and frontmatter identity are exactly release-skills", () => {

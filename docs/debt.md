@@ -76,3 +76,14 @@ with leaf/INSTALL/ADR-0008 as the single home for wrapper reference and
 composition guards for `Rules preserved`, `## Installation`, `## Boundary`, and
 related marker phrases. Payoff completed before #74 and never closed; resolved
 here.
+
+### DEBT-8 — No formatter or linter wired
+
+Status: open
+Revisit-when: a real formatter or linter is chosen
+What: the verify chain runs dependency install, tests, typecheck, and the docs
+harness; nothing guards formatting or lint style. The former `format`,
+`format:check`, `lint`, and `build` scripts were echo stubs that could never
+fail (#121), so their removal narrows the chain to checks that can fail rather
+than adopting real tooling. Choosing and wiring a formatter or linter closes
+this entry.

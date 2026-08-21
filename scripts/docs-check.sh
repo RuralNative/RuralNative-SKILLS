@@ -175,7 +175,8 @@ fi
 # unique; every INV-N referenced elsewhere in repo docs resolves to a
 # declared id; tombstoned (Retired) ids satisfy no reference. Numbering gaps
 # are not checked (gap-lenience).
-inv_ids=(); inv_docs=(); inv_fail=0
+inv_fail=0; inv_total=0
+declare -A INV_OWNER
 for s in "${SEAMS[@]}"; do
   doc="${s##*|}"
   [[ -f "$doc" ]] || continue
@@ -188,10 +189,11 @@ for s in "${SEAMS[@]}"; do
     bad "invariant: duplicate $id in $doc"; inv_fail=1
   done
   for id in $(printf '%s\n' "${doc_ids[@]}" | sort -u); do
-    inv_ids+=("$id"); inv_docs+=("$doc")
+    INV_OWNER["$id"]="$doc"
+    inv_total=$((inv_total+1))
   done
 done
-if [[ ${#inv_ids[@]} -eq 0 ]]; then
+if [[ $inv_total -eq 0 ]]; then
   note "invariant integrity: dormant (no invariants yet)"
 else
   mapfile -t INVSCAN < <({ find docs -name '*.md' -type f; printf '%s\n' AGENTS.md ARCHITECTURE.md CONTEXT.md README.md; } | sort)
@@ -200,19 +202,11 @@ else
     while IFS= read -r line; do
       [[ "$line" == *".."* || "$line" == *"(Retired"* ]] && continue
       for id in $(grep -oE 'INV-[0-9]+' <<<"$line" | sort -u); do
-        declared=0; owns=0
-        for k in "${!inv_ids[@]}"; do
-          if [[ "${inv_ids[$k]}" == "$id" ]]; then
-            declared=1
-            [[ "${inv_docs[$k]}" == "$f" ]] && owns=1
-          fi
-        done
-        [[ $owns -eq 1 ]] && continue
-        [[ $declared -eq 1 ]] || { bad "invariant: '$id' referenced in $f but not declared"; inv_fail=1; }
+        [[ -n "${INV_OWNER[$id]+x}" ]] || { bad "invariant: '$id' referenced in $f but not declared"; inv_fail=1; }
       done
     done < "$f"
   done
-  inv_count=$(printf '%s\n' "${inv_ids[@]}" | wc -l | tr -d ' ')
+  inv_count=$inv_total
   [[ $inv_fail -eq 0 ]] && note "invariant: ids unique and references resolve ($inv_count invariants)"
 fi
 

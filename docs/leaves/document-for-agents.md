@@ -51,7 +51,9 @@ change and flags the discrepancy; changing the rule requires a new decision.
     catalog-ownership note); dependency visible in `INSTALL.md`; composition
     tests in `skills/document-for-agents/tests/` encode the invariant
     including a fixture that minimal creates only index, glossary, and
-    conventions policy and that installed runtime uses skill identity.
+    conventions policy and that installed runtime uses skill identity; the
+    tests import the shared file reader and normalizer from
+    `scripts/test-helpers.ts`.
 
 ## Links
 

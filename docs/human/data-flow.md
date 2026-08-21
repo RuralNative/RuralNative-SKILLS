@@ -1,4 +1,4 @@
-<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-21 · Regenerated: #117 supervise-this retirement · Sources: docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md, docs/leaves/unslopify.md, docs/leaves/plan-this.md, docs/leaves/implement-this.md, docs/leaves/release-skills.md, docs/adr/0011-retire-supervise-this.md, docs/adr/0012-manager-worktree-pull-request-delivery.md -->
+<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-21 · Regenerated: #121 ponytail-audit cuts · Sources: docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md, docs/leaves/unslopify.md, docs/leaves/plan-this.md, docs/leaves/implement-this.md, docs/leaves/release-skills.md, docs/adr/0011-retire-supervise-this.md, docs/adr/0012-manager-worktree-pull-request-delivery.md -->
 # How information moves in plain words
 
 The technical flow starts with a task you give to `/plan-this`.
@@ -7,7 +7,7 @@ The technical flow starts with a task you give to `/plan-this`.
 2. Planning publishes a parent specification, child tickets, and native GitHub dependency edges, with prose checked under unslopify scope, protected-content, preservation, and completion-report rules.
 3. You pick a ready ticket — open, unblocked, unassigned — and run `/implement-this #<n>`.
 4. Implementation loads `unslopify` under the same prose contract and focused cache, claims the ticket, and stops while any native blocker is open.
-5. The worker runs `/implement`, updates the affected seam's leaf doc and tests, and verifies the whole repository.
+5. The worker runs `/implement`, updates the affected seam's leaf doc and tests, and verifies the repository: dependency install, tests, TypeScript, and the docs harness.
 6. Review runs from a fixed base. Valid findings get fixed and the full verification runs again.
 7. Delivery depends on where the session runs. Outside a manager worktree the work is rebased on `main`, pushed, and the ticket closes with an evidence comment. Inside a Kilo Agent Manager worktree the feature branch is pushed and a pull request opens with `Closes #<n>` in its body; acceptance evidence lands on the ticket, which closes only when the pull request merges.
 

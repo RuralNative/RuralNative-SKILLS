@@ -3,14 +3,9 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import { read, norm } from "../../../scripts/test-helpers.ts";
 
 const ROOT = path.resolve(import.meta.dirname ?? ".", "../../..");
-function read(p: string): string {
-  return fs.readFileSync(path.join(ROOT, p), "utf8");
-}
-function norm(s: string): string {
-  return s.replace(/\s+/g, " ").toLowerCase();
-}
 
 describe("document-for-agents hard dependency (document-for-agents:INV-6)", () => {
   test("adapter loads unslopify by skill identity before user-visible prose without copying catalog", () => {

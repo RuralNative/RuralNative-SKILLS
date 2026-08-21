@@ -58,7 +58,8 @@ repository-relative path.
    the single-source check pins the four section headings (routing, workflow,
    installation, requirements) and keeps shelf and routing from repeating
    install commands; runtime resolution by skill identity is asserted on the
-   skill body, not on the README.
+   skill body, not on the README. The composition tests import the shared
+   file reader and normalizer from `scripts/test-helpers.ts`.
 
 ## Links
 

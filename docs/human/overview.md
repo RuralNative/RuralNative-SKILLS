@@ -1,4 +1,4 @@
-<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-21 · Regenerated: #117 supervise-this retirement · Sources: ARCHITECTURE.md, CONTEXT.md, docs/adr/0011-retire-supervise-this.md, docs/adr/0012-manager-worktree-pull-request-delivery.md, docs/leaves/implement-this.md, docs/leaves/plan-this.md -->
+<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-21 · Regenerated: #121 ponytail-audit cuts · Sources: ARCHITECTURE.md, CONTEXT.md, docs/adr/0011-retire-supervise-this.md, docs/adr/0012-manager-worktree-pull-request-delivery.md, docs/leaves/implement-this.md, docs/leaves/plan-this.md -->
 # RuralNative-SKILLS in plain words
 
 This repository publishes reusable skills for coding agents. The shelf includes documentation workflows, prose cleanup, planning, implementation, and release work.
