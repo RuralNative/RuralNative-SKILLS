@@ -119,3 +119,11 @@ _Avoid_: cross-reference (when one-way is meant)
 **Agent Orchestrator run**:
 The lifecycle managed by `supervise-this` inside an AO project orchestrator. AO keeps the orchestrator persistent after planning and worker creation. The supervisor delegates planning to `/plan-this`, whose locked stages require explicit human invocation. Before spawning, it proves AO and explicit-repository GitHub access, resolved role models, a supported worker mode, reviewer policy, current base, and unique issue ownership. The project worker profile selects the agent; Kilo Code is optional. Delivery advances through `READY`, `CLAIMED`, `BASE_CURRENT`, `EDITING`, `PR_OPEN`, `REVIEWED`, `MERGED`, `EVIDENCED`, and `CLOSED`. Activity labels do not count. Recovery caps infrastructure, task, and implementation failures separately. Review and merge preserve the reviewed head SHA, and a GitHub fallback is limited to PRs AO cannot manage. Resume reconciles PRs, sessions, branches, assignees, and issue links before any write.
 _Avoid_: supervised workflow, auto-run
+
+**Delivery mode**:
+The rule that selects how `implement-this` hands finished work to the repository, chosen from the session's worktree location: manager-worktree pull-request delivery or direct-main delivery.
+_Avoid_: delivery branch (when the mode is meant)
+
+**Manager worktree**:
+A git worktree whose root sits under the Kilo Agent Manager worktree location; `implement-this` detects it by path and switches to pull-request delivery.
+_Avoid_: agent worktree, AO worktree

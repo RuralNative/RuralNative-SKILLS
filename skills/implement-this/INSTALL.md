@@ -1,12 +1,12 @@
 # Installing implement-this
 
-`implement-this` handles one GitHub issue. Use `/implement-this #<n>` directly for the direct-main workflow, or let an active `/supervise-this` run delegate one issue. A worker inside Agent Orchestrator uses the pull-request delivery branch; AO owns CI, review feedback, merge, recovery, and worktree lifecycle. The standalone path keeps its direct-main delivery rules. `supervise-this` owns scheduling and model decisions.
+`implement-this` handles one GitHub issue. Use `/implement-this #<n>` directly for the direct-main workflow, or inside a Kilo Agent Manager worktree for manager-worktree pull-request delivery. A session whose worktree root sits under the Agent Manager worktree location uses the pull-request delivery branch; it pushes the feature branch, opens or updates a pull request, and swaps `ready-for-agent` for `ready-for-human`. The standalone path keeps its direct-main delivery rules. `supervise-this` owns scheduling and model decisions.
 
 ## Requirements
 
 - A GitHub repository with an issue tracker and a dedicated worktree.
-- `/implement`, `/code-review`, and `/unslop` installed through their own registry lanes.
-- For AO delivery, a Kilo Code worker session created by Agent Orchestrator with `AO_SESSION_ID` and `AO_PROJECT_ID` available.
+- `/implement`, `/code-review`, and `/unslopify` installed through their own registry lanes.
+- For manager-worktree delivery, a session whose worktree root sits under the Kilo Agent Manager worktree location.
 
 ## Install
 
@@ -34,18 +34,19 @@ npm run verify
 
 > /implement-this #100
 
-The skill loads `/unslop`, runs `/implement` followed by `/code-review`, substitutes `Issue #100` for `Issue #0`, verifies the work, rebases, pushes `HEAD:main`, posts evidence, removes `ready-for-agent`, and closes only issue `#100`.
+The skill loads `/unslopify`, runs `/implement` followed by `/code-review`, substitutes `Issue #100` for `Issue #0`, verifies the work, rebases, pushes `HEAD:main`, posts evidence, removes `ready-for-agent`, and closes only issue `#100`.
 
-## Verify AO delivery
+## Verify manager-worktree delivery
 
-The AO project orchestrator starts one worker with:
+Run `/implement-this #100` inside a Kilo Agent Manager worktree:
 
 ```bash
-ao spawn --project "$AO_PROJECT_ID" --kind worker --name "issue-100" --issue 100 --mode tui --prompt "Run /implement-this #100 in AO pull-request delivery mode."
+# worktree root sits under the Kilo Agent Manager worktree location
+/implement-this #100
 ```
 
-The worker runs `/implement-this #100`, creates or updates a pull request after local verification and review, and reports evidence to AO. It does not push directly to `main` or close the issue. AO routes CI and review feedback to the worker, and the supervisor verifies the merged PR before issue closure.
+The skill detects the manager worktree by path, pushes the feature branch, then creates or updates a pull request against `main` whose body carries `Closes #100`. It posts acceptance-criterion evidence on the ticket, removes `ready-for-agent`, and adds `ready-for-human`. It does not close the issue before merge, does not push directly to `main`, and never force-pushes.
 
 ## Boundary
 
-The skill accepts one issue only. It does not create worktrees, choose AO models, schedule dependency waves, or copy the supervisor contract. `supervise-this` owns those decisions.
+The skill accepts one issue only. It does not create worktrees, choose models, schedule dependency waves, or copy the supervisor contract. `supervise-this` owns those decisions.

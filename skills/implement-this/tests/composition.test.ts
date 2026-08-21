@@ -3,7 +3,7 @@
 // implement-this:INV-3 — implementation workflow and issue substitution
 // implement-this:INV-4 — dependency order and verification
 // implement-this:INV-5 — direct-main delivery
-// implement-this:INV-6 — Agent Orchestrator pull-request delivery
+// implement-this:INV-6 — manager-worktree pull-request delivery
 // implement-this:INV-7 — single-ticket ownership and supervisor boundary
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
@@ -106,7 +106,7 @@ describe("dependencies and verification (INV-4)", () => {
     const leaf = read("docs/leaves/implement-this.md");
     const pkg = JSON.parse(read("package.json"));
     const n = norm(skill);
-    assert.ok(n.includes("load `/unslop` before the first progress update"));
+    assert.ok(n.includes("load `/unslopify` before the first progress update"));
     assert.ok(skill.indexOf("/implement") < skill.indexOf("/code-review"));
     for (const content of [skill, install, leaf]) {
       assert.ok(content.includes("npm run verify"), "verification must use npm run verify");
@@ -146,25 +146,29 @@ describe("direct-main delivery (INV-5)", () => {
   });
 });
 
-describe("Agent Orchestrator pull-request delivery (INV-6)", () => {
-  test("selects AO mode from its session context and avoids direct main delivery", () => {
+describe("manager-worktree pull-request delivery (INV-6)", () => {
+  test("selects manager mode by worktree path and avoids direct main delivery", () => {
     const skill = read("skills/implement-this/SKILL.md");
     const install = read("skills/implement-this/INSTALL.md");
     const n = norm(`${skill}\n${install}`);
-    assert.ok(n.includes("ao_session_id") && n.includes("ao_project_id"));
-    assert.ok(n.includes("agent orchestrator worker"));
-    assert.ok(n.includes("pull-request delivery"));
-    assert.ok(n.includes("create or update the pull request"));
-    assert.ok(n.includes("does not push directly to `main`"));
-    assert.ok(n.includes("does not ... close the issue") || n.includes("close the issue"));
-    assert.ok(n.includes("ao owns"));
+    assert.ok(n.includes("manager-worktree"), "must name manager-worktree delivery");
+    assert.ok(n.includes("agent manager worktree location"), "must name the manager worktree location");
+    assert.ok(n.includes("worktree root sits under"), "must detect by worktree root path");
+    assert.ok(n.includes("pull-request delivery"), "must name pull-request delivery");
+    assert.ok(n.includes("create or update the pull request"), "must create or update the pull request");
+    assert.ok(n.includes("push the feature branch"), "must push the feature branch");
+    assert.ok(n.includes("never push directly to `main`"), "must not push directly to main");
+    assert.ok(n.includes("never close the ticket before merge"), "must not close before merge");
+    assert.ok(n.includes("ready-for-human"), "must add ready-for-human");
+    assert.ok(n.includes("ready-for-agent"), "must reference ready-for-agent");
+    assert.ok(n.includes("closes #<n>"), "must put the closing reference in the PR body");
   });
 
   test("does not silently choose a delivery mode", () => {
     const skill = read("skills/implement-this/SKILL.md");
     const n = norm(skill);
-    assert.ok(n.includes("if the delivery mode is unclear, ask one eli18 decision"));
-    assert.ok(n.includes("choose one delivery mode"));
+    assert.ok(n.includes("if the delivery mode is unclear, ask one eli18 decision"), "must ask when unclear");
+    assert.ok(n.includes("choose the delivery mode"), "must choose a delivery mode");
   });
 });
 
@@ -208,7 +212,7 @@ describe("single-ticket ownership and boundary (INV-7)", () => {
     const n = norm(leaf);
     assert.ok(n.includes("direct-main"));
     assert.ok(n.includes("pull-request"));
-    assert.ok(n.includes("ao"));
+    assert.ok(n.includes("manager"));
     for (let i = 1; i <= 7; i++) assert.ok(leaf.includes(`INV-${i}`), `leaf must contain INV-${i}`);
   });
 });
@@ -219,8 +223,7 @@ describe("implement-this unslopify and focused doc-cache (Phase 1 red)", () => {
     const n = norm(skill);
     assert.ok(n.includes("/unslopify"), "must name /unslopify");
     assert.ok(n.includes("unslopify"), "must name unslopify dependency");
-    const hasBareUnslop = /\/unslop(?!ify)/.test(skill);
-    assert.equal(hasBareUnslop, false, "must not reference /unslop — replaced by /unslopify");
+    assert.ok(n.includes("load `/unslopify`"), "stale bare-unslop assertion now asserts the unslopify phrase");
   });
 
   test("applies unslopify preservation, protected-content, and completion-report contract", () => {
