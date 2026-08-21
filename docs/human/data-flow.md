@@ -1,4 +1,4 @@
-<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-20 · Regenerated: #89 evidence-based AO workflow · Sources: docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md, docs/leaves/unslopify.md, docs/leaves/plan-this.md, docs/leaves/implement-this.md, docs/leaves/supervise-this.md, docs/leaves/release-skills.md, docs/adr/0008-supervise-this-agent-orchestrator.md, docs/adr/0010-supervise-by-delivery-evidence.md -->
+<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-21 · Regenerated: #111 manager-worktree delivery · Sources: docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md, docs/leaves/unslopify.md, docs/leaves/plan-this.md, docs/leaves/implement-this.md, docs/leaves/supervise-this.md, docs/leaves/release-skills.md, docs/adr/0008-supervise-this-agent-orchestrator.md, docs/adr/0010-supervise-by-delivery-evidence.md, docs/adr/0012-manager-worktree-pull-request-delivery.md -->
 # How information moves in plain words
 
 The technical flow starts with a task in an AO project orchestrator.
@@ -16,7 +16,7 @@ The technical flow starts with a task in an AO project orchestrator.
 
 GitHub remains the task record. AO supplies persistent sessions and worktrees, but its current issue intake does not replace GitHub's dependency and closure state.
 
-The standalone implementation path is different. `/implement-this #<n>` can push directly to `main` after its checks and review. An AO worker must use pull-request delivery instead, so AO can route feedback and the supervisor can verify merge before closing the issue.
+The standalone implementation path is different. `/implement-this #<n>` can push directly to `main` after its checks and review. A manager-worktree run must use pull-request delivery instead, so the pull request supplies progress telemetry and the issue closes only on merge.
 
 The documentation flow has its own rule. Agents update a seam's technical leaf with the seam, then regenerate these human pages from authored documents. These pages are for people and are never the source of technical truth.
 

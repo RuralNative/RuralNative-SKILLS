@@ -43,6 +43,7 @@ harness check 6. A covered doc must be in the seam table or listed here:
 - docs/adr/0008-supervise-this-agent-orchestrator.md
 - docs/adr/0009-delegation-invariants-human-invocation.md
 - docs/adr/0010-supervise-by-delivery-evidence.md
+- docs/adr/0012-manager-worktree-pull-request-delivery.md
 - docs/leaves/document-for-humans.md
 - docs/human/overview.md
 - docs/human/decision-journal.md
@@ -82,6 +83,7 @@ parsed from, so they are not listed here.
 | docs/adr/0008-supervise-this-agent-orchestrator.md | decision |
 | docs/adr/0009-delegation-invariants-human-invocation.md | decision |
 | docs/adr/0010-supervise-by-delivery-evidence.md | decision |
+| docs/adr/0012-manager-worktree-pull-request-delivery.md | decision |
 | docs/leaves/document-for-agents.md | leaf |
 | docs/leaves/document-for-humans.md | leaf |
 | docs/leaves/unslopify.md | leaf |

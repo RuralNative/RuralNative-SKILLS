@@ -1,6 +1,6 @@
 ---
 name: implement-this
-description: Apply the implementation workflow to one GitHub issue. Use /implement-this #<n> directly, or accept one issue from an active supervise-this run. In a documented Agent Orchestrator worker session, use pull-request delivery and let AO route CI, review, merge, and recovery; otherwise use the direct-main delivery contract.
+description: Apply the implementation workflow to one GitHub issue. Use /implement-this #<n> for direct-main delivery, or run it inside a Kilo Agent Manager worktree for pull-request delivery. The skill detects the manager worktree by path and delivers by pull request; otherwise it keeps the direct-main contract.
 ---
 
 Implement the GitHub ticket in this dedicated worktree: `/implement` → `/code-review`
@@ -37,13 +37,13 @@ Commit the verified work on the feature branch and include the issue number in t
 
 ## Delivery
 
-Choose one delivery mode before review.
+Choose the delivery mode by path detection before review.
 
-**Agent Orchestrator worker.** Use this branch when `AO_SESSION_ID` and `AO_PROJECT_ID` are present, or when the active `supervise-this` prompt names AO pull-request delivery. Run `/code-review` with the fixed base, then create or update the pull request for this branch. Do not push directly to `main`, close the issue, or remove its `ready-for-agent` label. AO owns the worker session, worktree, CI feedback, review feedback, merge, and recovery. Report the PR number and verification evidence to AO.
+**Manager-worktree delivery.** Use this branch when the worktree root sits under the Kilo Agent Manager worktree location (for example `.kilo/worktrees/`). Push the feature branch, then open or update a pull request against `main` whose body closes the assigned ticket on merge (`Closes #<n>`). The agent does not push directly to `main` and does not force-push. After local verification and review it posts acceptance-criterion evidence on the ticket, removes `ready-for-agent`, and adds `ready-for-human`. It never closes the issue before merge, never pushes `main`, and never force-pushes. Agent Manager PR badges supply progress telemetry, so no extra polling is needed.
 
-**Direct delivery.** Outside AO, run `BASE=$(git merge-base origin/main HEAD)`, pass `$BASE` as the fixed point to `/code-review`, fix valid findings, rerun the full verification command, rebase with `git rebase origin/main`, verify again, and push only with `git push origin HEAD:main`. Never force-push. After the push succeeds, comment with evidence, remove `ready-for-agent`, and close only the assigned ticket.
+**Direct delivery.** Outside a manager worktree, run `BASE=$(git merge-base origin/main HEAD)`, pass `$BASE` as the fixed point to `/code-review`, fix valid findings, rerun the full verification command, rebase with `git rebase origin/main`, verify again, and push only with `git push origin HEAD:main`. Never force-push. After the push succeeds, comment with evidence, remove `ready-for-agent`, and close only the assigned ticket.
 
-If the delivery mode is unclear, ask one ELI18 decision before pushing or creating a pull request. Finish with an ELI18 Why / What / Where / How summary that names the delivery mode, commit SHA, verification results, and ticket or PR link.
+If the delivery mode is unclear, ask one ELI18 decision before pushing or opening a pull request. Finish with an ELI18 Why / What / Where / How summary that names the delivery mode, commit SHA, verification results, and ticket or PR link.
 
 ## Ticket
 
