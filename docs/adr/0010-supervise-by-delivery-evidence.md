@@ -1,7 +1,8 @@
 # 0010 — Supervise by delivery evidence
 
-Status: accepted
+Status: superseded
 Date: 2026-08-20
+Superseded by: ADR-0011 — supervise-this retired from the shelf
 Amends: ADR-0008 worker selection, delivery evidence, recovery, review, and merge rules
 
 Decision: `supervise-this` runs the worker profile configured by the AO project. Preflight resolves its model and chooses a supported chat or TUI mode. Kilo Code remains a valid worker but is no longer required. Preflight also proves explicit-repository GitHub access and a current default branch before any spawn.

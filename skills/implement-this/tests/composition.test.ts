@@ -31,12 +31,12 @@ describe("implement-this identity (INV-1)", () => {
 });
 
 describe("implement-this installation and invocation (INV-2)", () => {
-  test("documents direct and supervised one-issue use", () => {
+  test("documents direct and manager-worktree one-issue use", () => {
     const skill = read("skills/implement-this/SKILL.md");
     const install = read("skills/implement-this/INSTALL.md");
     const n = norm(`${skill}\n${install}`);
     assert.ok(n.includes("/implement-this #<n>"));
-    assert.ok(n.includes("supervise-this"));
+    assert.equal(n.includes("supervise-this"), false, "must not name the retired coordinator");
     assert.ok(n.includes("one issue"));
     assert.ok(install.includes("npx skills add RuralNative/RuralNative-SKILLS --skill implement-this"));
     assert.ok(install.includes("cp -r skills/implement-this"));
@@ -196,12 +196,12 @@ describe("native dependency state (INV-8)", () => {
 });
 
 describe("single-ticket ownership and boundary (INV-7)", () => {
-  test("limits delegation to one issue and leaves scheduling to supervise-this", () => {
+  test("limits the adapter to one issue with no scheduling ambitions", () => {
     const skill = read("skills/implement-this/SKILL.md");
     const install = read("skills/implement-this/INSTALL.md");
     const n = norm(`${skill}\n${install}`);
     assert.ok(n.includes("one issue only"));
-    assert.ok(n.includes("supervise-this") && n.includes("owns scheduling and model decisions"));
+    assert.equal(n.includes("supervise-this"), false, "must not name the retired coordinator");
     assert.ok(n.includes("does not create worktrees"));
     assert.ok(n.includes("does not ... schedule dependency waves") || n.includes("schedule dependency waves"));
     assert.equal(n.includes("any model"), false);

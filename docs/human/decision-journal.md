@@ -1,4 +1,4 @@
-<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-20 · Regenerated: #89 evidence-based AO workflow · Sources: docs/adr/0001-distribute-as-public-catalog-shelf.md, docs/adr/0002-adopt-ten-check-gate.md, docs/adr/0003-human-first-derived-artifacts.md, docs/adr/0004-verb-named-skills-flat-shelf.md, docs/adr/0005-unslopify-utility-identity-and-hard-dependency.md, docs/adr/0006-plan-this-fixed-template-adapter.md, docs/adr/0007-supervise-this-coordinator.md, docs/adr/0008-supervise-this-agent-orchestrator.md, docs/adr/0009-delegation-invariants-human-invocation.md, docs/adr/0010-supervise-by-delivery-evidence.md -->
+<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-21 · Regenerated: #117 supervise-this retirement · Sources: docs/adr/0001-distribute-as-public-catalog-shelf.md, docs/adr/0002-adopt-ten-check-gate.md, docs/adr/0003-human-first-derived-artifacts.md, docs/adr/0004-verb-named-skills-flat-shelf.md, docs/adr/0005-unslopify-utility-identity-and-hard-dependency.md, docs/adr/0006-plan-this-fixed-template-adapter.md, docs/adr/0007-supervise-this-coordinator.md, docs/adr/0008-supervise-this-agent-orchestrator.md, docs/adr/0009-delegation-invariants-human-invocation.md, docs/adr/0010-supervise-by-delivery-evidence.md, docs/adr/0011-retire-supervise-this.md, docs/adr/0012-manager-worktree-pull-request-delivery.md -->
 
 # Decision journal in plain words
 
@@ -55,3 +55,23 @@ Why: the #73 run looked active while several tickets had no tracked delivery art
 What it costs: the orchestrator must collect structured facts and run the bundled helper before spawn, recovery, review, and merge decisions.
 
 Depth: `docs/adr/0010-supervise-by-delivery-evidence.md`.
+
+### 2026-08-21 — Deliver pull requests from manager worktrees
+
+When `/implement-this` runs inside a Kilo Agent Manager worktree, detected by path, it pushes the feature branch and opens or updates a pull request against `main` whose body carries `Closes #<n>`. Acceptance evidence lands on the ticket with `ready-for-human`; merge closes it.
+
+Why: standalone work needs a reviewable path that does not push straight to `main`, without reviving a coordinator.
+
+What it costs: two delivery paths now exist, chosen by worktree location; an unclear location asks one decision before pushing.
+
+Depth: `docs/adr/0012-manager-worktree-pull-request-delivery.md`.
+
+### 2026-08-21 — Retire supervise-this
+
+Nothing in the maintained workflow started a supervised multi-worker run anymore, so the coordinator left the shelf whole. `plan-this` now accepts direct invocation only. Three coordination ADRs carry superseded banners pointing at the retirement decision; their numbers are never reused.
+
+Why: keeping the seam forced neighboring contracts to promise delegation and delivery branches that never run.
+
+What it costs: multi-ticket coordination is manual for now — you plan once, then work ready tickets one at a time through the two delivery paths above.
+
+Depth: `docs/adr/0011-retire-supervise-this.md`.

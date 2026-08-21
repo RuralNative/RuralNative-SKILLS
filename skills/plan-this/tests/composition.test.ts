@@ -1,9 +1,9 @@
 // plan-this:INV-1 — identity == folder
 // plan-this:INV-2 — registry-lane install and explicit invocation
 // plan-this:INV-3 — fixed-template boundary preserves exact prefix and substitutes only task under ## Task:
-// plan-this:INV-4 — hard dependencies and workflow order with /unslop before first progress
-// plan-this:INV-5 — dual invocation (direct and delegated), preserved rules, stop semantics, byte-for-byte body
-// plan-this:INV-6 — narrow delegation without second planning contract
+// plan-this:INV-4 — hard dependencies and workflow order with /unslopify before first progress
+// plan-this:INV-5 — single invocation (direct user use), preserved rules, stop semantics, byte-for-byte body
+// plan-this:INV-6 — one planning contract without a second delegated entry point
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -84,7 +84,7 @@ describe("plan-this fixed template and task substitution (plan-this:INV-3)", () 
     // Rules header
     assert.ok(body.includes("## Rules:"));
     // all ten rule bullets verbatim
-    assert.ok(body.includes("Load `/unslop` before the first progress update. Keep it active throughout `/grill-with-docs` → `/to-spec` → `/to-tickets`"));
+    assert.ok(body.includes("Load `/unslopify` before the first progress update. Keep it active throughout `/grill-with-docs` → `/to-spec` → `/to-tickets`"));
     assert.ok(body.includes("Maintain a concise To-Do List covering Discovery, Decisions, Specification, Tickets, and Delivery."));
     assert.ok(body.includes("Design tickets as independently verifiable vertical slices suitable for one future worktree."));
     assert.ok(body.includes("Optimize for precision per token: keep shared context in the parent specification;"));
@@ -103,26 +103,28 @@ describe("plan-this fixed template and task substitution (plan-this:INV-3)", () 
   test("body after frontmatter equals expected prefix verbatim", () => {
     const skill = read("skills/plan-this/SKILL.md");
     const body = getBody(skill);
-    const expected = `Run this planning-only workflow: \`/grill-with-docs\` → \`/to-spec\` → \`/to-tickets\`
+    const expected = `
+Run this planning-only workflow: \`/grill-with-docs\` → \`/to-spec\` → \`/to-tickets\`
 
-\`/grill-with-docs\`, \`/to-spec\`, and \`/to-tickets\` require explicit human invocation; an agent cannot traverse the chain unattended. \`/unslop\` remains model-invocable.
+\`/grill-with-docs\`, \`/to-spec\`, and \`/to-tickets\` require explicit human invocation; an agent cannot traverse the chain unattended. \`/unslopify\` remains model-invocable.
 
 ## Rules:
 
-- Load \`/unslop\` before the first progress update. Keep it active throughout \`/grill-with-docs\` → \`/to-spec\` → \`/to-tickets\`. Apply it to all prose you write, including to-do items, progress updates, interview questions, recommendations, decisions, ADR and glossary text, specification drafts, ticket bodies, GitHub comments, and the final summary. Check prose against \`/unslop\` before showing it to the user or publishing it to GitHub. Preserve exact domain terms, identifiers, commands, labels, dependencies, quotations, and technical meaning.
+- Load \`/unslopify\` before the first progress update. Keep it active throughout \`/grill-with-docs\` → \`/to-spec\` → \`/to-tickets\`. Apply it to all prose you write, including to-do items, progress updates, interview questions, recommendations, decisions, ADR and glossary text, specification drafts, ticket bodies, GitHub comments, and the final summary. Check prose against \`/unslopify\` before showing it to the user or publishing it to GitHub. Preserve exact domain terms, identifiers, commands, labels, dependencies, quotations, and technical meaning. Follow unslopify scope, protected-content, preservation, and completion report contracts.
 - Maintain a concise To-Do List covering Discovery, Decisions, Specification, Tickets, and Delivery. Update it at phase changes, decisions, blockers, and publication. State what finished and what happens next without narrating every command.
 - Require a parent specification that separates in-scope behavior from out-of-scope non-goals, states acceptance criteria, affected seams, structural constraints, and the smallest test-first verification plan that proves the result.
 - Design tickets as independently verifiable vertical slices suitable for one future worktree. Each ticket states its independently verifiable behavior, blockers, affected seams, acceptance criteria, verification requirements, and whether later parallel execution is safe.
 - Require test design before implementation direction: state the smallest set of tests that proves observable behavior, stated standards, and structural requirements. Reject redundant, implementation-detail, prose-mirroring, and coverage-only tests unless they name a distinct risk.
 - Optimize for precision per token: keep shared context in the parent specification; make tickets self-contained only for their slice; avoid repetition, speculative file paths, and routine pseudocode.
-- Ground decisions in the codebase and relevant documentation, following the repository's documented loading order. Inspect facts; ask only unresolved decisions.
+- Ground decisions in the codebase and relevant documentation, following the repository's documented loading order. Use focused doc-cache loading: read AGENTS.md, ARCHITECTURE.md, the affected seam leaf doc in docs/leaves/, CONTEXT.md, and relevant ADRs. This focused route does not require broad preloading and does not require the derived human docs from document-for-humans (docs/human/).
 - Publish GitHub issues using repository-defined labels (\`ready-for-agent\` where applicable) and native dependency edges via blocked_by with database IDs (read each issue's database ID before creating the edge); keep human-readable Blocked by text as fallback, native edge is canonical; blocked label state follows native blockers (open → blocked without ready-for-agent, all closed → unblocked + ready-for-agent, blocked removed).
 - Ask one decision at a time in ELI18 language, include a recommendation, and honor each skill's approval gates.
 - Follow the installed skills as the procedural source of truth.
 
 Finish with an ELI18 **Why / What / Where / How** summary and links to the specification and all tickets, then stop.
 
-## Task:`;
+## Task:
+`;
     assert.equal(body.trim(), expected.trim(), "body after frontmatter must equal expected prefix verbatim");
   });
 
@@ -173,11 +175,11 @@ Finish with an ELI18 **Why / What / Where / How** summary and links to the speci
 });
 
 describe("plan-this hard dependencies and workflow order (plan-this:INV-4)", () => {
-  test("declares /unslop as hard dependency before first progress and workflow order", () => {
+  test("declares /unslopify as hard dependency before first progress and workflow order", () => {
     const skill = read("skills/plan-this/SKILL.md");
     const body = getBody(skill);
     const n = norm(body);
-    assert.ok(n.includes("/unslop"));
+    assert.ok(n.includes("/unslopify"));
     assert.ok(n.includes("before the first progress update"));
     assert.ok(skill.includes("/grill-with-docs"));
     assert.ok(skill.includes("/to-spec"));
@@ -187,10 +189,10 @@ describe("plan-this hard dependencies and workflow order (plan-this:INV-4)", () 
     const idxTickets = skill.indexOf("/to-tickets");
     assert.ok(idxGrill !== -1 && idxSpec !== -1 && idxTickets !== -1);
     assert.ok(idxGrill < idxSpec && idxSpec < idxTickets, "workflow must be grill -> to-spec -> to-tickets");
-    assert.ok(skill.includes("`/unslop`"));
-    // frontmatter description also declares delegation
+    assert.ok(skill.includes("`/unslopify`"));
+    // frontmatter description also declares the dependency order
     const frontmatter = skill.slice(0, skill.indexOf("---", 3) + 3);
-    assert.ok(frontmatter.includes("/grill-with-docs") && frontmatter.includes("/to-spec") && frontmatter.includes("/to-tickets") && frontmatter.includes("/unslop"), "frontmatter must declare delegation");
+    assert.ok(frontmatter.includes("/grill-with-docs") && frontmatter.includes("/to-spec") && frontmatter.includes("/to-tickets") && frontmatter.includes("/unslopify"), "frontmatter must declare the dependency order");
   });
 
   test("does not depend on implement or code-review", () => {
@@ -264,60 +266,60 @@ describe("plan-this preserved rules and user invocation (plan-this:INV-5)", () =
     assert.ok(skill.includes("**Why / What / Where / How**"));
   });
 
-  test("skill accepts direct user invocation and narrow supervise-this delegation, rejects broad triggering", () => {
+  test("skill accepts direct user invocation only and rejects broad triggering", () => {
     const skill = read("skills/plan-this/SKILL.md");
     const n = norm(skill);
     assert.ok(n.includes("user-invoked") || n.includes("user invoked") || n.includes("user invocation") || n.includes("user invokes"), "must indicate user-invoked");
     assert.ok(skill.includes("/plan-this <task>"), "must declare direct invocation");
-    // must also declare delegation from active supervise-this
-    assert.ok(n.includes("supervise-this"), "must declare delegation from supervise-this");
-    assert.ok(n.includes("active") && n.includes("supervise-this"), "must qualify delegation as active supervise-this run");
-    assert.ok(n.includes("narrow delegation") || n.includes("narrow"), "must state narrow delegation");
+    // must not declare delegation from a coordinator
+    assert.equal(n.includes("supervise-this"), false, "must not declare supervise-this delegation");
+    assert.equal(n.includes("narrow delegation"), false, "must not state narrow delegation");
     // must reject unrelated invocation
     assert.ok(n.includes("unrelated") && (n.includes("rejected") || n.includes("reject") || n.includes("is rejected")), "must state unrelated invocation is rejected");
     // still reject broad automatic triggering phrase
     assert.equal(n.includes("when planning work appears"), false, "should not use broad automatic triggering phrase");
   });
 
-  test("body task slot, dependency order, prose rules, approval gates remain byte-for-byte unchanged across both invocation paths", () => {
+  test("body task slot, dependency order, prose rules, approval gates remain byte-for-byte unchanged", () => {
     const skill = read("skills/plan-this/SKILL.md");
     const body = getBody(skill);
-    const expected = `Run this planning-only workflow: \`/grill-with-docs\` → \`/to-spec\` → \`/to-tickets\`
+    const expected = `
+Run this planning-only workflow: \`/grill-with-docs\` → \`/to-spec\` → \`/to-tickets\`
 
-\`/grill-with-docs\`, \`/to-spec\`, and \`/to-tickets\` require explicit human invocation; an agent cannot traverse the chain unattended. \`/unslop\` remains model-invocable.
+\`/grill-with-docs\`, \`/to-spec\`, and \`/to-tickets\` require explicit human invocation; an agent cannot traverse the chain unattended. \`/unslopify\` remains model-invocable.
 
 ## Rules:
 
-- Load \`/unslop\` before the first progress update. Keep it active throughout \`/grill-with-docs\` → \`/to-spec\` → \`/to-tickets\`. Apply it to all prose you write, including to-do items, progress updates, interview questions, recommendations, decisions, ADR and glossary text, specification drafts, ticket bodies, GitHub comments, and the final summary. Check prose against \`/unslop\` before showing it to the user or publishing it to GitHub. Preserve exact domain terms, identifiers, commands, labels, dependencies, quotations, and technical meaning.
+- Load \`/unslopify\` before the first progress update. Keep it active throughout \`/grill-with-docs\` → \`/to-spec\` → \`/to-tickets\`. Apply it to all prose you write, including to-do items, progress updates, interview questions, recommendations, decisions, ADR and glossary text, specification drafts, ticket bodies, GitHub comments, and the final summary. Check prose against \`/unslopify\` before showing it to the user or publishing it to GitHub. Preserve exact domain terms, identifiers, commands, labels, dependencies, quotations, and technical meaning. Follow unslopify scope, protected-content, preservation, and completion report contracts.
 - Maintain a concise To-Do List covering Discovery, Decisions, Specification, Tickets, and Delivery. Update it at phase changes, decisions, blockers, and publication. State what finished and what happens next without narrating every command.
 - Require a parent specification that separates in-scope behavior from out-of-scope non-goals, states acceptance criteria, affected seams, structural constraints, and the smallest test-first verification plan that proves the result.
 - Design tickets as independently verifiable vertical slices suitable for one future worktree. Each ticket states its independently verifiable behavior, blockers, affected seams, acceptance criteria, verification requirements, and whether later parallel execution is safe.
 - Require test design before implementation direction: state the smallest set of tests that proves observable behavior, stated standards, and structural requirements. Reject redundant, implementation-detail, prose-mirroring, and coverage-only tests unless they name a distinct risk.
 - Optimize for precision per token: keep shared context in the parent specification; make tickets self-contained only for their slice; avoid repetition, speculative file paths, and routine pseudocode.
-- Ground decisions in the codebase and relevant documentation, following the repository's documented loading order. Inspect facts; ask only unresolved decisions.
+- Ground decisions in the codebase and relevant documentation, following the repository's documented loading order. Use focused doc-cache loading: read AGENTS.md, ARCHITECTURE.md, the affected seam leaf doc in docs/leaves/, CONTEXT.md, and relevant ADRs. This focused route does not require broad preloading and does not require the derived human docs from document-for-humans (docs/human/).
 - Publish GitHub issues using repository-defined labels (\`ready-for-agent\` where applicable) and native dependency edges via blocked_by with database IDs (read each issue's database ID before creating the edge); keep human-readable Blocked by text as fallback, native edge is canonical; blocked label state follows native blockers (open → blocked without ready-for-agent, all closed → unblocked + ready-for-agent, blocked removed).
 - Ask one decision at a time in ELI18 language, include a recommendation, and honor each skill's approval gates.
 - Follow the installed skills as the procedural source of truth.
 
 Finish with an ELI18 **Why / What / Where / How** summary and links to the specification and all tickets, then stop.
 
-## Task:`;
-    assert.equal(body.trim(), expected.trim(), "body must stay byte-for-byte unchanged across both paths");
+## Task:
+`;
+    assert.equal(body.trim(), expected.trim(), "body must stay byte-for-byte unchanged");
     // also verify single Task slot preserved
     const taskCount = (body.match(/## Task:/g) || []).length;
-    assert.equal(taskCount, 1, "body must still contain ## Task: exactly once after delegation");
+    assert.equal(taskCount, 1, "body must contain ## Task: exactly once");
   });
 });
 
-describe("plan-this supervised delegation (plan-this:INV-5 and INV-6)", () => {
-  test("frontmatter declares both allowed invocation paths: direct and delegated from active supervise-this", () => {
+describe("plan-this single invocation contract (plan-this:INV-5 and INV-6)", () => {
+  test("frontmatter declares only the direct user invocation path", () => {
     const skill = read("skills/plan-this/SKILL.md");
     const frontmatter = skill.slice(skill.indexOf("---") + 3, skill.indexOf("---", 3));
     const n = norm(frontmatter);
     assert.ok(frontmatter.includes("/plan-this <task>"), "frontmatter must declare direct path");
-    assert.ok(n.includes("supervise-this"), "frontmatter must mention supervise-this delegation");
-    assert.ok(n.includes("active supervise-this") || n.includes("active `supervise-this`"), "must qualify as active supervise-this run");
-    assert.ok(n.includes("or when an active") || n.includes("or narrow delegation") || n.includes("delegates planning"), "must join both paths with or");
+    assert.equal(n.includes("supervise-this"), false, "frontmatter must not mention supervise-this delegation");
+    assert.equal(n.includes("delegates planning"), false, "frontmatter must not name a delegated planning entry");
   });
 
   test("composition rejects unrelated model invocation", () => {
@@ -332,45 +334,37 @@ describe("plan-this supervised delegation (plan-this:INV-5 and INV-6)", () => {
     assert.equal(nSkill.includes("any model may invoke"), false, "must not allow any model");
     assert.equal(nSkill.includes("when work appears"), false, "must not use generic trigger");
     assert.equal(nSkill.includes("broad automatic"), false, "must not claim broad automatic triggering is allowed");
-    // leaf must state narrow delegation only
-    assert.ok(nLeaf.includes("narrow delegation") || nLeaf.includes("narrow"), "leaf must state narrow delegation");
-    assert.ok(nLeaf.includes("supervise-this"), "leaf must name supervise-this as only delegated caller");
+    // leaf must state direct user use only
+    assert.ok(nLeaf.includes("direct user use"), "leaf must state direct user use only");
   });
 
-  test("delegated completion returns parent specification and ticket references to supervisor; standalone still stops after ELI18 summary", () => {
+  test("completion stops after the ELI18 summary and returns control to the user", () => {
     const skill = read("skills/plan-this/SKILL.md");
     const leaf = read("docs/leaves/plan-this.md");
     const install = read("skills/plan-this/INSTALL.md");
     const nLeaf = norm(leaf);
     const nInstall = norm(install);
     const body = getBody(skill);
-    // body still ends with stop after summary
-    assert.ok(body.includes("Finish with an ELI18 **Why / What / Where / How** summary and links to the specification and all tickets, then stop."), "body must still declare standalone stop after ELI18 summary");
-    // leaf explains delegated return semantics
-    assert.ok(nLeaf.includes("delegated completion returns") || nLeaf.includes("returns the published parent specification"), "leaf must explain delegated return");
-    assert.ok(nLeaf.includes("parent specification") && nLeaf.includes("ticket references") && nLeaf.includes("supervisor"), "leaf must name published parent specification and ticket references returned to supervisor");
-    assert.ok(nLeaf.includes("standalone completion stops") || nLeaf.includes("standalone still stops"), "leaf must state standalone still stops");
-    // install also documents the difference
-    assert.ok(nInstall.includes("returns the published parent specification") || nInstall.includes("returns the published") || nInstall.includes("return"), "install must document delegated return");
-    assert.ok(nInstall.includes("still stops after its eli18 summary") || nInstall.includes("standalone completion still stops"), "install must document standalone stop");
-    // delegated does not end whole supervised run
-    assert.ok(nLeaf.includes("instead of ending the whole supervised run") || nLeaf.includes("instead of ending"), "leaf must state delegated does not end supervised run");
+    // body ends with stop after summary
+    assert.ok(body.includes("Finish with an ELI18 **Why / What / Where / How** summary and links to the specification and all tickets, then stop."), "body must declare stop after ELI18 summary");
+    // leaf explains the stop semantics
+    assert.ok(nLeaf.includes("completion stops after that summary"), "leaf must state completion stops after the summary");
+    // install documents the same stop
+    assert.ok(nInstall.includes("stops after its eli18 summary"), "install must document the stop");
   });
 
-  test("leaf doc preserves fixed-template invariants and explains narrow delegation without second contract", () => {
+  test("leaf doc preserves fixed-template invariants and states one planning contract", () => {
     const leaf = read("docs/leaves/plan-this.md");
     const n = norm(leaf);
     assert.ok(leaf.includes("INV-5"), "leaf must contain INV-5");
-    assert.ok(leaf.includes("INV-6"), "leaf must contain INV-6 for delegation without second contract");
+    assert.ok(leaf.includes("INV-6"), "leaf must contain INV-6 for the single planning contract");
     assert.ok(n.includes("fixed-template body is the single source") || n.includes("single source of planning behavior"), "must state single source body");
     assert.ok(n.includes("byte-for-byte unchanged") || n.includes("byte-for-byte"), "must state body stays byte-for-byte unchanged");
-    assert.ok(n.includes("no second planning contract") || n.includes("without creating a second"), "must state no second contract created");
-    assert.ok(n.includes("supervise-this"), "must reference supervise-this");
     // invariants 1-4 still present
     assert.ok(leaf.includes("INV-1") && leaf.includes("INV-2") && leaf.includes("INV-3") && leaf.includes("INV-4"), "must preserve INV-1 through INV-4");
   });
 
-  test("composition proves both allowed paths and rejects unrelated — frontmatter, leaf, install are the three documented homes for wrapper and delegation material", () => {
+  test("composition proves the direct path and rejects delegation — frontmatter, leaf, install are the three documented homes for wrapper material", () => {
     const skill = read("skills/plan-this/SKILL.md");
     const leaf = read("docs/leaves/plan-this.md");
     const install = read("skills/plan-this/INSTALL.md");
@@ -379,34 +373,34 @@ describe("plan-this supervised delegation (plan-this:INV-5 and INV-6)", () => {
     assert.equal(skill.includes("## Installation"), false);
     assert.equal(skill.includes("Rules preserved"), false);
     // leaf carries the detailed contract
-    assert.ok(leaf.includes("direct") && leaf.includes("delegated") && leaf.includes("supervise-this"), "leaf must document both paths");
-    // install documents delegation
-    assert.ok(install.includes("supervise-this"), "install must document delegation");
+    assert.ok(leaf.includes("direct") && leaf.includes("/plan-this <task>"), "leaf must document the direct path");
+    // install documents direct invocation
+    assert.ok(install.includes("/plan-this <task>"), "install must document direct invocation");
     // adr still records original task-scoped exception
     assert.ok(adr.includes("plan-this") && adr.includes("implement-this"), "adr still records task-scoped exception");
   });
 
-describe("plan-this native dependency frontier (INV-7 native edges)", () => {
-  test("creates blocked_by edges with database IDs and keeps Blocked by text as fallback", () => {
-    const skill = read("skills/plan-this/SKILL.md");
-    const leaf = read("docs/leaves/plan-this.md");
-    const nSkill = norm(skill);
-    const nLeaf = norm(leaf);
-    assert.ok(nSkill.includes("blocked_by") || nSkill.includes("blocked by"), "must mention blocked_by native edge");
-    assert.ok(nSkill.includes("database id") || nSkill.includes("database ids") || skill.includes("database ID"), "must require reading database IDs before creating edge");
-    assert.ok(nLeaf.includes("database id") || nLeaf.includes("database ids"), "leaf must document database ID read");
-    assert.ok(nLeaf.includes("blocked by") && (nLeaf.includes("fallback") || nLeaf.includes("human-readable")), "leaf must state Blocked by text is fallback");
-    assert.ok(nLeaf.includes("native") && nLeaf.includes("canonical"), "leaf must state native edge is canonical");
+  describe("plan-this native dependency frontier (INV-8 native edges)", () => {
+    test("creates blocked_by edges with database IDs and keeps Blocked by text as fallback", () => {
+      const skill = read("skills/plan-this/SKILL.md");
+      const leaf = read("docs/leaves/plan-this.md");
+      const nSkill = norm(skill);
+      const nLeaf = norm(leaf);
+      assert.ok(nSkill.includes("blocked_by") || nSkill.includes("blocked by"), "must mention blocked_by native edge");
+      assert.ok(nSkill.includes("database id") || nSkill.includes("database ids") || skill.includes("database ID"), "must require reading database IDs before creating edge");
+      assert.ok(nLeaf.includes("database id") || nLeaf.includes("database ids"), "leaf must document database ID read");
+      assert.ok(nLeaf.includes("blocked by") && (nLeaf.includes("fallback") || nLeaf.includes("human-readable")), "leaf must state Blocked by text is fallback");
+      assert.ok(nLeaf.includes("native") && nLeaf.includes("canonical"), "leaf must state native edge is canonical");
+    });
+    test("blocked label state: open blocker has blocked without ready-for-agent; closed has unblocked+ready-for-agent", () => {
+      const leaf = read("docs/leaves/plan-this.md");
+      const n = norm(leaf);
+      assert.ok(n.includes("blocked") && n.includes("ready-for-agent"), "must describe label state");
+      assert.ok(n.includes("unblocked"), "must describe unblocked transition");
+    });
   });
-  test("blocked label state: open blocker has blocked without ready-for-agent; closed has unblocked+ready-for-agent", () => {
-    const leaf = read("docs/leaves/plan-this.md");
-    const n = norm(leaf);
-    assert.ok(n.includes("blocked") && n.includes("ready-for-agent"), "must describe label state");
-    assert.ok(n.includes("unblocked"), "must describe unblocked transition");
-  });
-});
 
-  test("task slot remains single substitution point under both invocation paths", () => {
+  test("task slot remains the single substitution point", () => {
     const skill = read("skills/plan-this/SKILL.md");
     const body = getBody(skill);
     const frontmatter = skill.slice(0, skill.indexOf("---", 3) + 3);
@@ -414,12 +408,10 @@ describe("plan-this native dependency frontier (INV-7 native edges)", () => {
     assert.equal((body.match(/## Task:/g) || []).length, 1, "body must have single ## Task: slot");
     // frontmatter says substitutes only task under ## Task:
     assert.ok(norm(frontmatter).includes("substitutes only the task under ## task"), "frontmatter must state single Task slot");
-    // simulate both invocation paths produce same body
-    const task = "Add supervise-this coordinator";
-    const emittedDirect = body.trimEnd() + "\n" + task + "\n";
-    const emittedDelegated = body.trimEnd() + "\n" + task + "\n";
-    assert.equal(emittedDirect, emittedDelegated, "both paths must share identical emitted body");
-    assert.ok(emittedDirect.includes("## Task:\n" + task), "task appears verbatim in both paths");
+    // simulate an invocation
+    const task = "Plan the next release";
+    const emitted = body.trimEnd() + "\n" + task + "\n";
+    assert.ok(emitted.includes("## Task:\n" + task), "task appears verbatim under ## Task:");
   });
 });
 

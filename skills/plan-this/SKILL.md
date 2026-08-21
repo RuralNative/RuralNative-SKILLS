@@ -1,6 +1,6 @@
 ---
 name: plan-this
-description: Apply the planning prefix as a fixed template. Use when the user invokes /plan-this <task> or when an active supervise-this run delegates planning — substitutes only the task under ## Task: and delegates to /grill-with-docs, /to-spec, /to-tickets, and /unslopify in order. Requires explicit user invocation as /plan-this <task> or narrow delegation from an active supervise-this run; unrelated invocation is rejected.
+description: Apply the planning prefix as a fixed template. Use when the user invokes /plan-this <task> — substitutes only the task under ## Task: and delegates to /grill-with-docs, /to-spec, /to-tickets, and /unslopify in order. Requires explicit user invocation as /plan-this <task>; unrelated invocation is rejected.
 ---
 
 Run this planning-only workflow: `/grill-with-docs` → `/to-spec` → `/to-tickets`

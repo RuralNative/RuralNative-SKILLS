@@ -71,14 +71,16 @@ if grep -rEq '^Expires:' "${COVERED[@]}" 2>/dev/null; then
 fi
 note "work docs: none in the repo"
 
-# Seam-table completeness (check 6): every coverage doc is a seam doc or in the
-# labeled non-seam section; every seam code root exists on disk.
+# Seam-table completeness (check 6): every coverage doc is a seam doc, in the
+# labeled non-seam section, or in the labeled superseded-decisions section;
+# every seam code root exists on disk.
 mapfile -t NONSEAM < <(awk '/^## Non-seam docs/{f=1; next} /^## /{f=0} f && /^- / {sub(/^- /,""); gsub(/[[:space:]]/,""); print}' "$ARCH")
+mapfile -t SUPERSEDED < <(awk '/^## Superseded decisions/{f=1; next} /^## /{f=0} f && /^\| [^|]+\.md/' "$ARCH" | grep -oE '^\| [^|]+\.md' | sed -E 's/^\| //; s/[[:space:]]*$//' | sort -u)
 seam_docs=()
 for s in "${SEAMS[@]}"; do seam_docs+=("${s##*|}"); done
 table_fail=0
 for f in "${COVERED[@]}"; do
-  if ! grep -qxF "$f" <(printf '%s\n' "${seam_docs[@]}") && ! grep -qxF "$f" <(printf '%s\n' "${NONSEAM[@]}"); then
+  if ! grep -qxF "$f" <(printf '%s\n' "${seam_docs[@]}") && ! grep -qxF "$f" <(printf '%s\n' "${NONSEAM[@]}") && ! grep -qxF "$f" <(printf '%s\n' "${SUPERSEDED[@]}"); then
     bad "seam-table: coverage doc '$f' is in neither the seam table nor the non-seam list"; table_fail=1
   fi
 done
@@ -86,7 +88,10 @@ for s in "${SEAMS[@]}"; do
   name="${s%%|*}"; rest="${s#*|}"; root="${rest%%|*}"
   [[ -d "$root" ]] || { bad "seam-table: code root '$root' does not exist on disk"; table_fail=1; }
 done
-[[ $table_fail -eq 0 ]] && note "seam-table: coverage <-> seam/non-seam tables match"
+for f in "${SUPERSEDED[@]}"; do
+  grep -q '^Status: superseded' "$f" || { bad "superseded: '$f' is listed as superseded but its Status line says otherwise"; table_fail=1; }
+done
+[[ $table_fail -eq 0 ]] && note "seam-table: coverage <-> seam/non-seam/superseded tables match"
 
 # Generated freshness (check 7): generated docs embed Generated: YYYY-MM-DD.
 mapfile -t GEN < <(grep -lE '^Generated: [0-9]{4}-[0-9]{2}-[0-9]{2}$' "${COVERED[@]}" 2>/dev/null | sort -u)

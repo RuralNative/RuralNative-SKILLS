@@ -8,5 +8,9 @@ skills-lock.json
 # and the docs harness, so the directory stays ignored.
 .kilo/worktrees/
 
+<<<<<<< HEAD
 # Dependency installs stay local; only package.json and the lockfile are canonical.
+=======
+# Dependency installs are reproducible via npm ci and never distributed.
+>>>>>>> 0045e2d (feat(#117): retire supervise-this and shrink referencing contracts)
 node_modules/

@@ -46,3 +46,8 @@ Consequences:
   pipeline.
 - The composition tests for `plan-this` and `implement-this` cover the
   amended invariant text.
+
+Amendment 2026-08-21: `supervise-this` was retired by ADR-0011 and its leaf
+doc is deleted, so the supervised-run consequences above are historical. The
+locks themselves stay: this decision still governs `plan-this` INV-4 and
+`implement-this` INV-3 for direct use.

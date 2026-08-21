@@ -1,7 +1,8 @@
 # 0008 — Agent Orchestrator as the supervise-this runtime
 
-Status: accepted
+Status: superseded
 Date: 2026-08-20
+Superseded by: ADR-0011 — supervise-this retired from the shelf
 Supersedes: ADR-0007 execution backend and live-session rules
 Amended by: ADR-0010 worker selection, delivery evidence, recovery, review, and merge rules
 

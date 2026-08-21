@@ -1,4 +1,4 @@
-<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-21 · Regenerated: #111 manager-worktree pull-request delivery · Sources: docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md, docs/leaves/unslopify.md, docs/leaves/plan-this.md, docs/leaves/implement-this.md, docs/leaves/supervise-this.md, docs/leaves/release-skills.md, docs/adr/0010-supervise-by-delivery-evidence.md -->
+<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-21 · Regenerated: #117 supervise-this retirement · Sources: docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md, docs/leaves/unslopify.md, docs/leaves/plan-this.md, docs/leaves/implement-this.md, docs/leaves/release-skills.md, docs/adr/0011-retire-supervise-this.md, docs/adr/0012-manager-worktree-pull-request-delivery.md -->
 # Guardrails in plain words
 
 These are the promises the skills make.
@@ -12,12 +12,7 @@ These are the promises the skills make.
 - Implementation handles one issue, loads repository-owned `unslopify` before progress with the same prose and focused-cache rules, and stops when a native blocker is open.
 - Standalone implementation pushes directly to `main` only after checks, review, and rebase.
 - Implementation inside a Kilo Agent Manager worktree opens a pull request whose body closes its ticket on merge, posts acceptance evidence, and never closes the ticket early.
-- AO supervision runs inside the persistent project orchestrator and does not end after planning or worker creation.
 - The ready frontier contains only open, unblocked, unassigned tickets with `ready-for-agent`.
-- No more than three AO workers run at once.
-- Worker completion means merged PR, acceptance evidence, and issue closure. Idle is not enough.
-- Resume checks GitHub before AO sessions and avoids duplicate workers or pull requests.
-- A blocked worker gets one focused recovery attempt. Further blockage becomes `needs-info` and a human decision.
-- The supervisor allows two automatic follow-up review rounds, then asks the user.
+- After a ticket closes, only its newly unblocked dependents get label updates — nothing else moves.
 
 Technical depth lives in the leaf documents named by each line.
