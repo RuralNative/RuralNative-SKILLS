@@ -1,6 +1,6 @@
 // implement-this:INV-1 — identity == folder
 // implement-this:INV-2 — registry install and one-issue invocation
-// implement-this:INV-3 — implementation workflow and issue substitution
+// implement-this:INV-3 — single-stage implementation workflow and issue substitution
 // implement-this:INV-4 — dependency order and verification
 // implement-this:INV-5 — direct-main delivery
 // implement-this:INV-6 — manager-worktree pull-request delivery
@@ -35,10 +35,11 @@ describe("implement-this installation and invocation (INV-2)", () => {
 });
 
 describe("implementation workflow and substitution (INV-3)", () => {
-  test("keeps the implementation and review order with one issue slot", () => {
+  test("keeps the single-stage implementation order with one issue slot", () => {
     const skill = read("skills/implement-this/SKILL.md");
     const emitted = body(skill);
-    assert.ok(emitted.includes("Implement the GitHub ticket in this dedicated worktree: `/implement` → `/code-review`"));
+    assert.ok(emitted.includes("Implement the GitHub ticket in this dedicated worktree: `/implement`"));
+    assert.equal(emitted.includes("/code-review"), false, "body must not host code review");
     assert.ok(emitted.includes("Treat the ticket, its comments, and its linked parent specification as the task authority."));
     assert.ok(emitted.includes("## Rules"));
     assert.ok(emitted.includes("## Start"));
@@ -46,7 +47,7 @@ describe("implementation workflow and substitution (INV-3)", () => {
     assert.ok(emitted.includes("## Delivery"));
     assert.ok(emitted.includes("## Ticket\n\nIssue #0"));
     assert.equal((emitted.match(/Issue #0/g) ?? []).length, 1);
-    assert.ok(emitted.indexOf("/implement") < emitted.indexOf("/code-review"));
+    assert.ok(emitted.indexOf("/implement") < emitted.indexOf("/unslopify"), "/implement must precede /unslopify");
   });
 
   test("substitutes only the requested issue reference", () => {
@@ -58,7 +59,7 @@ describe("implementation workflow and substitution (INV-3)", () => {
     }
   });
 
-  test("distinguishes locked dependency (/implement) from unlocked (/code-review, /unslop) and states human-invocation requirement", () => {
+  test("keeps the /implement human-invocation lock, excludes /code-review, and states the single dependency set", () => {
     const skill = read("skills/implement-this/SKILL.md");
     const leaf = read("docs/leaves/implement-this.md");
     const nSkill = norm(skill);
@@ -66,22 +67,21 @@ describe("implementation workflow and substitution (INV-3)", () => {
     const inv3Match = leaf.match(/3\. \*\*INV-3\*\*[\s\S]*?(?=\n4\. \*\*INV-4\*\*|\n## )/);
     assert.ok(inv3Match, "leaf must contain INV-3");
     const nInv3 = norm(inv3Match[0]);
-    // body states the human-invocation requirement (skill body is the workflow, whole body is the invariant)
+    // body states the human-invocation requirement for /implement
     assert.ok(nSkill.includes("explicit human invocation"), "body must state explicit human invocation");
     assert.ok(nSkill.includes("cannot traverse the chain unattended"), "body must state agent cannot traverse unattended");
-    // body names the locked skill
+    // body names the locked skill and no longer names code review
     assert.ok(nSkill.includes("/implement"), "body must name locked skill /implement");
-    // body names the unlocked skills
-    assert.ok(nSkill.includes("/code-review") && nSkill.includes("model-invocable"), "body must state /code-review remains model-invocable");
-    assert.ok(nSkill.includes("/unslop") && nSkill.includes("model-invocable"), "body must state /unslop remains model-invocable");
+    assert.equal(nSkill.includes("/code-review"), false, "body must not name /code-review");
+    assert.ok(nSkill.includes("/unslopify") && nSkill.includes("model-invocable"), "body must state /unslopify remains model-invocable");
     // INV-3 itself must state the classification (scoped, not whole-leaf)
     assert.ok(nInv3.includes("disable-model-invocation"), "INV-3 must reference disable-model-invocation");
     assert.ok(nInv3.includes("explicit human invocation"), "INV-3 must state explicit human invocation");
     assert.ok(nInv3.includes("cannot traverse the chain unattended"), "INV-3 must state agent cannot traverse unattended");
     assert.ok(nInv3.includes("model-invocable"), "INV-3 must name model-invocable skills");
-    assert.ok(nInv3.includes("/implement") && nInv3.includes("/code-review"), "INV-3 must name both /implement and /code-review");
+    assert.ok(nInv3.includes("/implement"), "INV-3 must name /implement");
     assert.ok(nInv3.includes("/implement") && nInv3.includes("disable-model-invocation"), "INV-3 must flag /implement as locked");
-    assert.ok(nInv3.includes("/code-review") && nInv3.includes("no such lock"), "INV-3 must distinguish /code-review as model-invocable with no such lock");
+    assert.equal(nInv3.includes("/code-review"), false, "INV-3 must not host code review");
     // ADR-0009 exists and records the decision
     const adr = read("docs/adr/0009-delegation-invariants-human-invocation.md");
     assert.ok(adr.includes("Status: accepted"), "ADR-0009 must be accepted");
@@ -91,14 +91,17 @@ describe("implementation workflow and substitution (INV-3)", () => {
 });
 
 describe("dependencies and verification (INV-4)", () => {
-  test("loads unslop, runs implement before code-review, and verifies the repository", () => {
+  test("loads unslop after implement, names only the two hard dependencies, and verifies the repository", () => {
     const skill = read("skills/implement-this/SKILL.md");
     const install = read("skills/implement-this/INSTALL.md");
     const leaf = read("docs/leaves/implement-this.md");
     const pkg = JSON.parse(read("package.json"));
     const n = norm(skill);
     assert.ok(n.includes("load `/unslopify` before the first progress update"));
-    assert.ok(skill.indexOf("/implement") < skill.indexOf("/code-review"));
+    assert.ok(skill.indexOf("/implement") < skill.indexOf("/unslopify"), "/implement must precede /unslopify");
+    assert.equal(n.includes("/code-review"), false, "skill must not name code review");
+    assert.ok(norm(install).includes("/implement") && norm(install).includes("/unslopify"), "install must name both hard dependencies");
+    assert.equal(norm(install).includes("/code-review"), false, "install must not name code review");
     for (const content of [skill, install, leaf]) {
       assert.ok(content.includes("npm run verify"), "verification must use npm run verify");
     }
