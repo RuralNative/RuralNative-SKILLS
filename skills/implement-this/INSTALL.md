@@ -5,7 +5,7 @@
 ## Requirements
 
 - A GitHub repository with an issue tracker and a dedicated worktree.
-- `/implement`, `/code-review`, and `/unslopify` installed through their own registry lanes.
+- `/implement` and `/unslopify` installed through their own registry lanes.
 - For manager-worktree delivery, a session whose worktree root sits under the Kilo Agent Manager worktree location.
 
 ## Install
@@ -34,7 +34,7 @@ npm run verify
 
 > /implement-this #100
 
-The skill loads `/unslopify`, runs `/implement` followed by `/code-review`, substitutes `Issue #100` for `Issue #0`, verifies the work, rebases, pushes `HEAD:main`, posts evidence, removes `ready-for-agent`, and closes only issue `#100`.
+The skill loads `/unslopify`, runs `/implement`, substitutes `Issue #100` for `Issue #0`, verifies the work, rebases, pushes `HEAD:main`, posts evidence, removes `ready-for-agent`, and closes only issue `#100`.
 
 ## Verify manager-worktree delivery
 
