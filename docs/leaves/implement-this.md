@@ -12,6 +12,8 @@ Owns `skills/implement-this/`: the one-issue adapter, installation guide, and co
 
 `SKILL.md` substitutes one requested issue for `Issue #0`. The worker reads the issue and native blockers, claims it, runs `/implement`, updates the affected leaf and tests, verifies the repository, then chooses delivery from the worktree location. A manager worktree is present when the worktree root sits under the Kilo Agent Manager worktree location; in that branch the worker opens or updates a pull request, posts evidence, and swaps the labels, and never pushes directly to `main`. Its composition tests import the shared file reader, normalizer, and frontmatter stripper from `scripts/test-helpers.ts`.
 
+The skill packages a runtime copy of the pure workflow state core at `workflow-state.ts` (#132): a pure decision module that turns observed ticket, worker, pull-request, review, and verification facts into frontier selection, dispatch validation with the three-worker cap and duplicate-ownership rejection, label transitions, one-retry recovery, head freshness, merge eligibility, follow-up creation, and parent completion decisions. The authored source is `scripts/workflow-state.ts`; running `node scripts/generate-workflow-state.ts` regenerates byte-identical copies into all three workflow skills so each registry install is self-contained, and repository verification fails when a copy drifts.
+
 ## Non-negotiables
 
 1. **INV-1** — `SKILL.md` frontmatter `name` equals the folder name `implement-this`. Mechanism: identity composition test and docs harness.
