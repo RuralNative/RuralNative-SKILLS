@@ -1,9 +1,9 @@
-<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-22 · Regenerated: #136 REVIEW.md becomes doc-cache policy; #138 workflow state core review fixes · Sources: ARCHITECTURE.md, CONTEXT.md, REVIEW.md, docs/adr/0011-retire-supervise-this.md, docs/adr/0012-manager-worktree-pull-request-delivery.md, docs/adr/0013-review-this-decoupled-code-review.md, docs/leaves/implement-this.md, docs/leaves/plan-this.md, docs/leaves/review-this.md -->
+<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-22 · Regenerated: #134 implement-this runs bounded ticket sets through isolated workers with pull-request-only delivery · Sources: ARCHITECTURE.md, CONTEXT.md, REVIEW.md, docs/adr/0011-retire-supervise-this.md, docs/adr/0012-manager-worktree-pull-request-delivery.md, docs/adr/0013-review-this-decoupled-code-review.md, docs/leaves/implement-this.md, docs/leaves/plan-this.md, docs/leaves/review-this.md -->
 # RuralNative-SKILLS in plain words
 
 This repository publishes reusable skills for coding agents. The shelf includes documentation workflows, prose cleanup, planning, implementation, code review, and release work.
 
-`plan-this` runs the planning interview, specification, and ticket workflow with repository-owned `unslopify` and the focused agent cache `AGENTS.md → ARCHITECTURE.md → seam leaf → CONTEXT.md → relevant ADRs` (human pages are derived from agent docs and not preloaded). `implement-this` handles one ticket at a time through a single `/implement` stage under the same prose and cache rules; it does not host code review. `review-this` reviews the changes since a fixed point on two axes, Standards and Spec, and reports them side by side whenever you run it. You plan first, then work each ready ticket through one of two delivery paths.
+`plan-this` runs the planning interview, specification, and ticket workflow with repository-owned `unslopify` and the focused agent cache `AGENTS.md → ARCHITECTURE.md → seam leaf → CONTEXT.md → relevant ADRs` (human pages are derived from agent docs and not preloaded). `implement-this` validates one ticket, several ready tickets, or a parent specification against the frontier, then runs each ticket through an isolated worker and a single `/implement` stage under the same prose and cache rules; it does not host code review. `review-this` reviews the changes since a fixed point on two axes, Standards and Spec, and reports them side by side whenever you run it. You plan first, then work ready tickets through isolated workers, and every ticket delivers by pull request.
 
 One written file governs every review. `REVIEW.md` at the repository root says what reviewers check, how findings are graded, and that review subagents only read while the main reviewer verifies each finding. Cloud review reads the same file from the pull-request base branch; setting up that cloud service is separate configuration work outside this repository.
 
@@ -16,6 +16,6 @@ People install skills from the public registry. The technical details live in th
 Go deeper:
 
 - `ARCHITECTURE.md` describes the shelf.
-- `docs/leaves/implement-this.md` covers direct and manager-worktree pull-request delivery.
+- `docs/leaves/implement-this.md` covers bounded ticket sets, isolated workers, and pull-request-only delivery.
 - `docs/leaves/plan-this.md` explains the planning workflow.
 - `docs/leaves/review-this.md` shows how standalone review runs.

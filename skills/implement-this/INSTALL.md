@@ -1,12 +1,19 @@
 # Installing implement-this
 
-`implement-this` handles one GitHub issue. Use `/implement-this #<n>` directly for the direct-main workflow, or inside a Kilo Agent Manager worktree for manager-worktree pull-request delivery. A session whose worktree root sits under the Agent Manager worktree location uses the pull-request delivery mode; it pushes the feature branch, opens or updates a pull request, and swaps `ready-for-agent` for `ready-for-human`. The standalone path keeps its direct-main delivery rules.
+`implement-this` runs one GitHub ticket, several ready tickets, or one parent specification through isolated ticket workers, and every ticket delivers by pull request. Use:
+
+- `/implement-this #<n>` for one ticket.
+- `/implement-this #<n1> #<n2> [#<n3>]` for an explicit set of ready tickets.
+- `/implement-this #<spec>` for a parent specification; it selects up to three current frontier tickets in native child order.
+
+Each ticket gets an isolated worktree, its own feature branch, and its own worker session through the Kilo Agent Manager adapter or another host that provides the same create, prompt, status, and stop capabilities. Every worker pushes its feature branch and opens one pull request against `main`; no path pushes directly to `main`.
 
 ## Requirements
 
-- A GitHub repository with an issue tracker and a dedicated worktree.
+- A GitHub repository with an issue tracker and native sub-issue plus `blocked_by` relationships for parent and dependency state.
 - `/implement` and `/unslopify` installed through their own registry lanes.
-- For manager-worktree delivery, a session whose worktree root sits under the Kilo Agent Manager worktree location.
+- For multi-ticket runs, a host adapter that provides isolated workers. Multi-ticket execution stops before any write when isolation is unavailable.
+- For Kilo Agent Manager dispatch, sessions whose worktree roots sit under the Agent Manager worktree location.
 
 ## Install
 
@@ -32,26 +39,33 @@ Run:
 npm run verify
 ```
 
-## Verify direct delivery
+## Verify a one-ticket run
 
 > /implement-this #100
 
-The skill loads `/unslopify`, runs `/implement`, substitutes `Issue #100` for `Issue #0`, verifies the work, rebases, pushes `HEAD:main`, posts evidence, removes `ready-for-agent`, and closes only issue `#100`.
+The skill validates `#100` against the frontier before any claim, then dispatches an isolated worker. The worker claims only `#100`, loads `/unslopify`, runs `/implement`, verifies the work, pushes the feature branch, opens a pull request against `main` whose body carries `Closes #100`, posts acceptance-criterion evidence on the ticket, removes `ready-for-agent`, and adds `ready-for-human`.
 
-## Verify manager-worktree delivery
-
-Run `/implement-this #100` inside a Kilo Agent Manager worktree:
+## Verify an explicit multi-ticket run
 
 ```bash
-# worktree root sits under the Kilo Agent Manager worktree location
-/implement-this #100
+/implement-this #101 #102 #103
 ```
 
-The skill detects the manager worktree by path, pushes the feature branch, then creates or updates a pull request against `main` whose body carries `Closes #100`. It posts acceptance-criterion evidence on the ticket, removes `ready-for-agent`, and adds `ready-for-human`. It does not close the issue before merge, does not push directly to `main`, and never force-pushes.
+Every listed ticket is validated first; the run stops before any claim or edit if a ticket is closed, blocked, assigned, outside the parent, missing `ready-for-agent`, duplicated, or beyond three active workers. At most three workers run at once, each in its own worktree and pull request.
+
+## Verify a parent-specification run
+
+```bash
+/implement-this #99
+```
+
+Where `#99` is the parent specification, the skill takes up to three current frontier tickets from its open children in native child order and dispatches them like an explicit set.
+
+A failed worker gets one reconciled retry that reuses existing branches, sessions, and pull requests; a second failure adds `needs-info` to that ticket and stops it. When all bounded tickets have open pull requests, the run ends by telling you to review from the control workspace with `/review-this #<spec>`; ticket worktrees do not run review.
 
 ## Boundary
 
-The skill accepts one issue only. It does not create worktrees, choose models, or schedule dependency waves.
+The skill accepts one ticket, several ready tickets, or one parent specification per invocation, capped at three active workers. It does not merge pull requests, close tickets before merge, choose models, or schedule waves across specifications.
 
 ## Source provenance and trust
 

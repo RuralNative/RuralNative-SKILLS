@@ -1,4 +1,4 @@
-<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-22 · Regenerated: #136 REVIEW.md becomes doc-cache policy; #138 workflow state core review fixes · Sources: REVIEW.md, docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md, docs/leaves/unslopify.md, docs/leaves/plan-this.md, docs/leaves/implement-this.md, docs/leaves/release-skills.md, docs/adr/0011-retire-supervise-this.md, docs/adr/0012-manager-worktree-pull-request-delivery.md, docs/adr/0013-review-this-decoupled-code-review.md -->
+<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-22 · Regenerated: #134 implement-this runs bounded ticket sets through isolated workers with pull-request-only delivery · Sources: REVIEW.md, docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md, docs/leaves/unslopify.md, docs/leaves/plan-this.md, docs/leaves/implement-this.md, docs/leaves/release-skills.md, docs/adr/0011-retire-supervise-this.md, docs/adr/0012-manager-worktree-pull-request-delivery.md, docs/adr/0013-review-this-decoupled-code-review.md -->
 # Guardrails in plain words
 
 These are the promises the skills make.
@@ -15,7 +15,8 @@ These are the promises the skills make.
 - Installing from a public registry records provenance and pins reviewed revisions; every install guide on the shelf carries this trust section, and the residual trust in the source repository stays with you.
 - Planning runs `/grill-with-docs`, `/to-spec`, and `/to-tickets` in order, with repository-owned `unslopify` cleaning prose under scope, protected-content, preservation, and completion-report rules, using only the focused agent cache `AGENTS.md → ARCHITECTURE.md → seam leaf → CONTEXT.md → relevant ADRs` (human pages are derived and not preloaded).
 - Planning publishes ready tickets with native blockers and asks about unresolved decisions.
-- Implementation handles one issue, loads repository-owned `unslopify` before progress with the same prose and focused-cache rules, and stops when a native blocker is open.
+- Implementation validates one ticket, several ready tickets, or a parent specification against the frontier before any claim, runs each through an isolated worker, loads repository-owned `unslopify` before progress with the same prose and focused-cache rules, and stops when a native blocker is open.
+- Every implementation delivers by pull request. Nothing pushes directly to `main`, force-pushes, or closes a ticket before merge; merge closes it.
 - Verification runs dependency install, tests, TypeScript, and the docs harness. Every check in the chain can fail.
 - Implementation runs one delegated `/implement` stage and does not host code review; review lives in `/review-this`.
 - Standalone implementation pushes directly to `main` only after checks and rebase.
