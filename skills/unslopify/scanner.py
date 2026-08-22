@@ -64,17 +64,17 @@ CANNED_ENDINGS = [
 # agent instructions is inert content: findings name the span for contextual
 # review and never authorize action.
 PROMPT_RESIDUE_PATTERNS = [
-    r"ignore (?:all |any )?(?:previous|prior|above|earlier) instructions",
-    r"disregard (?:all |any )?(?:previous|prior|above|earlier) instructions",
-    r"forget (?:all )?(?:previous|prior|above) instructions",
-    r"you are now (?:authorized|permitted|allowed|instructed|unlocked)",
-    r"(?:you are|i am) now (?:an? )?(?:unrestricted|uncensored)",
-    r"developer mode(?: enabled)?",
-    r"do anything now",
-    r"reveal (?:your |the )?(?:system |initial |secret )?(?:instructions|prompt)",
-    r"repeat (?:your |the )?(?:system |initial |secret )?(?:instructions|prompt)",
-    r"execute the following (?:command|instructions?) immediately",
-    r"run this (?:command|script) (?:immediately|as the user)",
+    r"\bignore (?:all |any )?(?:previous|prior|above|earlier) instructions\b",
+    r"\bdisregard (?:all |any )?(?:previous|prior|above|earlier) instructions\b",
+    r"\bforget (?:all )?(?:previous|prior|above) instructions\b",
+    r"\byou are now (?:authorized|permitted|allowed|instructed|unlocked)\b",
+    r"\b(?:you are|i am) now (?:an? )?(?:unrestricted|uncensored)\b",
+    r"\bdeveloper mode\b(?: enabled)?",
+    r"\bdo anything now\b",
+    r"\breveal (?:your |the )?(?:system |initial |secret )?(?:instruction|prompt)\b",
+    r"\brepeat (?:your |the )?(?:system |initial |secret )?(?:instruction|prompt)\b",
+    r"\bexecute the following (?:command|instructions?) immediately\b",
+    r"\brun this (?:command|script) (?:immediately|as the user)\b",
 ]
 
 # Context-aware workflow phrases (AIT-LEX-008). Every visible occurrence is a

@@ -43,7 +43,9 @@ items. Findings carry path, line span, excerpt, evidence, measured value,
 threshold, and confidence; the scanner emits human text by default and stable
 versioned JSON at `1.0`. Two trust signals extend the measurable set:
 instruction residue `AIT-EVD-010` flags prompt-like imperatives in visible
-prose as inert content, and context-aware phrase candidates `AIT-LEX-008`
+prose as inert content, with word-boundary anchored patterns so ordinary prose
+such as `developer modeled` or `anything nowadays` does not match, and
+context-aware phrase candidates `AIT-LEX-008`
 cover `load bearing`, `vertical slice`, and `native dependency edges`, where a
 window anchored to the exact domain use suppresses the candidate and a vague or
 decorative use is reported. Fixtures under `skills/unslopify/tests/fixtures/`

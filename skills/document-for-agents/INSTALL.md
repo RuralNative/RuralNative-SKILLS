@@ -46,7 +46,9 @@ cd RuralNative-SKILLS
 
 From that clone's root, copy the dependency first, then this skill. Each
 destination folder must be named for its skill and contain `SKILL.md` at its
-root alongside the `reference/` directory:
+root alongside the `reference/` directory. `cp -r` replaces an existing
+destination silently; check whether the folder already exists first, and
+overwriting an existing install requires the user's explicit approval:
 
 ```
 # Anthropic Claude Code (user-wide)
@@ -100,3 +102,21 @@ diff-able plan. If the repo has no docs yet, run Branch A instead:
 - `reference/harness.md`: the portable change-aware gate.
 - `reference/templates.md`: mini-ADR, leaf doc, index, policy set,
   vendor-facts, glossary, debt registry, loading protocol.
+
+## Source provenance and trust
+
+Installing this skill is a trust decision in its source repository,
+`RuralNative/RuralNative-SKILLS`. Record provenance for what you install:
+note the resolved commit the registry CLI reports, or pin the revision you
+reviewed where the installer accepts a ref. `unslopify` is a hard dependency
+from the same repository; record provenance for it the same way.
+
+Provenance and pinning narrow what can change under you; they do not remove
+the residual trust in the source repository. Snyk's August 2026 audit of this
+shelf reported Critical E005 and Medium W011 for `plan-this` and Medium W011
+for `implement-this` and `unslopify`; treat this skill's install path with the
+same posture. Pinning reviewed revisions addresses that exposure, the findings
+have not gone away, and the underlying repository trust remains yours to make.
+
+Manual installs must not overwrite an existing `document-for-agents` folder
+without the user's explicit approval.

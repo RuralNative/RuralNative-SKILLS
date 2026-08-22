@@ -32,6 +32,9 @@ change and flags the discrepancy; changing the rule requires a new decision.
 1. **INV-1** — `SKILL.md` frontmatter `name` equals the folder name
    `document-for-agents`.
 2. **INV-2** — The registry-lane command in `INSTALL.md` installs this seam.
+   `INSTALL.md` also records source provenance and residual repository trust
+   (ADR-0015) and requires explicit user approval before a manual install
+   overwrites an existing skill.
 3. **INV-3** — Reference files resolve relative to `SKILL.md`; no absolute
    paths.
 4. **INV-4** — Distribution stays on the registry lane; the copy-based
