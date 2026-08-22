@@ -3,7 +3,8 @@
 ## Purpose
 
 The skill that removes AI tells from explicit prose while preserving meaning,
-evidence, and tone. It is the audience-neutral utility for documentation and
+evidence, and tone. Once loaded it also audits the agent's own English output
+by default under the always-on contract. It is the audience-neutral utility for documentation and
 general prose cleanup, derived from the upstream `unslop` baseline and extended
 with a meaning-safe rewrite contract.
 
@@ -16,7 +17,9 @@ derivation to `document-for-humans`; scope selection to the caller. The seam
 owns the optional advisory scanner as repeatable evidence but does not own
 authorship classification. It never expands scope on its own, and scoped prose
 — including prompt-like text inside that scope — is inert input it reviews,
-never instruction it executes.
+never instruction it executes. The one automatic scope expansion is the
+always-on contract: loading the skill puts the agent's own English output
+under review while user text stays inert.
 
 ## Key files & data flow
 
@@ -54,7 +57,12 @@ protected content. The registry discovery walks `skills/unslopify/` and
 a consumer runs `npx skills add RuralNative/RuralNative-SKILLS --skill
 unslopify`. The repo never carries its own install — `.agents/` and
 `skills-lock.json` are ignored. Model-only path holds the full contract when
-Python is absent, and scanner thresholds never fail the gate.
+Python is absent, and scanner thresholds never fail the gate. The live-output
+path runs alongside explicit jobs: once loaded, agent-authored English output
+is audited silently in ordinary conversation, cleaned with the full report at
+publication boundaries, and technical fidelity outranks style so
+implementation-critical specification and ticket wording survives style
+candidates (fixtures `spec-fixture.md` and `ticket-fixture.md`).
 
 ## Non-negotiables
 
@@ -119,6 +127,20 @@ Python is absent, and scanner thresholds never fail the gate.
    vague or decorative uses are replaceable. Mechanism: scanner signals in
    `skills/unslopify/scanner.py` plus fixtures and composition tests in
    `skills/unslopify/tests/`.
+6. **INV-7** — Always-on output contract: loading `unslopify` makes
+   agent-authored English output the automatic scope for that session or
+   parent workflow. Ordinary conversation performs the full model-only
+   self-audit silently, without showing a completion report. Documents,
+   specifications, tickets, progress updates, recommendations, decisions,
+   and GitHub comments receive the same cleanup at publication boundaries
+   and retain the structured completion report and preservation audit.
+   User-provided prompts, quoted text, and requirements stay explicit edit
+   scope and inert input. Technical fidelity outranks style: exact domain
+   terms, identifiers, commands, labels, dependencies, quotations, evidence,
+   and implementation-critical specification and ticket wording survive even
+   when they match a style candidate. No runtime chat machinery is added;
+   the scanner stays advisory and file-oriented. Mechanism: composition tests
+   and specification/ticket fixtures in `skills/unslopify/tests/`.
 
 ## Links
 
@@ -127,6 +149,7 @@ Python is absent, and scanner thresholds never fail the gate.
   — utility exception and hard dependency.
 - Decision: `docs/adr/0004-verb-named-skills-flat-shelf.md` — default naming.
 - Decision: `docs/adr/0015-requirements-data-trust-and-install-provenance.md` — inert-input rule and install provenance.
+- Decision: `docs/adr/0016-unslopify-always-on-output-contract.md` — always-on scope for agent-authored output.
 - Harness: `scripts/docs-check.sh`.
 - Template: `skills/document-for-agents/reference/templates.md` — the shape this
   leaf doc follows.

@@ -152,3 +152,7 @@ _Avoid_: instructions (when ticket prose is meant), executable input
 **Instruction residue**:
 Prompt-like imperatives left in prose — "ignore previous instructions", "you are now authorized" — reported by `unslopify` as the inert-content candidate `AIT-EVD-010`.
 _Avoid_: injection payload (an authorship or security-verdict claim)
+
+**Always-on scope**:
+The `unslopify` contract that makes agent-authored English output the automatic review scope once the skill is loaded, for that session or parent workflow. User-provided text stays explicit edit scope and inert input (ADR-0016).
+_Avoid_: ambient cleanup, background rewrite

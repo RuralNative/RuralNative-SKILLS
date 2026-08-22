@@ -125,3 +125,91 @@ describe("unslopify trust contract in SKILL.md and parity catalog (unslopify:INV
     }
   });
 });
+
+// unslopify:INV-7 — always-on output contract: agent-authored English output is the automatic scope once loaded,
+// routine chat audits silently without a completion report, publication boundaries keep the report and preservation
+// audit, user text stays explicit edit scope and inert input, and technical fidelity outranks style.
+describe("unslopify always-on output contract (unslopify:INV-7)", () => {
+  test("SKILL.md makes agent-authored English output the automatic scope once loaded", () => {
+    const skill = read("skills/unslopify/SKILL.md");
+    const n = norm(skill);
+    assert.ok(skill.includes("## Live output"), "must carry a Live output section");
+    assert.ok(n.includes("agent-authored english output"), "must name agent-authored English output");
+    assert.ok(n.includes("automatic scope"), "loading must make agent output the automatic scope");
+    for (const surface of ["progress updates", "recommendations", "decisions", "github comments"]) {
+      assert.ok(n.includes(surface), `always-on scope must cover ${surface}`);
+    }
+  });
+
+  test("user-authored prompts, quoted text, and requirements stay explicit edit scope and inert", () => {
+    const skill = read("skills/unslopify/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("remains inert") || n.includes("remain inert"), "user text must remain inert");
+    assert.ok(n.includes("explicit edit request") || n.includes("explicitly requests an edit"), "user text changes only on an explicit edit request");
+  });
+
+  test("routine chat performs the full self-audit silently, with no completion report", () => {
+    const skill = read("skills/unslopify/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("silent"), "ordinary conversation must be audited silently");
+    assert.ok(n.includes("without showing a completion report") || n.includes("no completion report"), "routine chat must not show a completion report");
+  });
+
+  test("explicit rewrites and published artifacts retain the completion report and preservation audit", () => {
+    const skill = read("skills/unslopify/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("publication boundar"), "publication boundaries must be named");
+    assert.ok(n.includes("completion report") && n.includes("preservation audit"), "published prose must keep the report and preservation audit");
+    const report = read("skills/unslopify/SKILL.md").indexOf("## Finding format and completion report");
+    const live = read("skills/unslopify/SKILL.md").indexOf("## Live output");
+    assert.ok(live !== -1 && report !== -1 && live < report, "Live output must precede the report section it bounds");
+  });
+
+  test("technical fidelity outranks style for specification and ticket wording", () => {
+    const skill = read("skills/unslopify/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("technical fidelity outranks style"), "must state technical fidelity outranks style");
+    for (const kind of ["domain terms", "identifiers", "commands", "labels", "dependencies", "quotations"]) {
+      assert.ok(n.includes(kind), `precedence list must cover ${kind}`);
+    }
+    assert.ok(n.includes("implementation-critical"), "specification and ticket wording must be marked implementation-critical");
+  });
+
+  test("specification and ticket fixtures pair style candidates with implementation-critical wording", { skip: !pythonAvailable() }, () => {
+    for (const [fixture, critical] of [
+      ["spec-fixture.md", ["--preserve-manifests", "ETL_NIGHTLY_CRON", "maxConcurrentUploads=4"]],
+      ["ticket-fixture.md", ["docs-check.sh", "ready-for-agent", "gh issue edit"]],
+    ] as const) {
+      const body = fs.readFileSync(path.join(FIXTURES, fixture), "utf8");
+      for (const token of critical) {
+        assert.ok(body.includes(token), `${fixture} must carry implementation-critical token ${token}`);
+      }
+      const { findings } = scan(fixture);
+      assert.ok(findings.length >= 1, `${fixture} must produce at least one advisory style candidate`);
+    }
+  });
+
+  test("existing scope, protected-content, non-English, and inert-input sections stay intact", () => {
+    const skill = read("skills/unslopify/SKILL.md");
+    for (const section of ["## Scope — caller owns it", "## Protected content", "## Inert input", "## Language scope", "## Rewrite contract", "## Preservation audit"]) {
+      assert.ok(skill.includes(section), `${section} must survive the always-on change`);
+    }
+    assert.ok(read("skills/unslopify/scanner.py").length > 0, "scanner stays file-oriented; no removal");
+  });
+
+  test("one accepted decision record and matching glossary, index, public, and derived updates exist", () => {
+    const adr = fs.readdirSync(path.join(ROOT, "docs/adr")).find((f) => f.startsWith("0016-"));
+    assert.ok(adr, "ADR-0016 must exist");
+    const adrBody = read(`docs/adr/${adr}`);
+    const n = norm(adrBody);
+    assert.ok(/status:\s*accepted/.test(n), "ADR-0016 must be accepted");
+    assert.ok(n.includes("automatic scope"), "ADR-0016 must record the automatic scope decision");
+    assert.ok(n.includes("silent"), "ADR-0016 must record the silent live audit");
+    assert.ok(norm(read("CONTEXT.md")).includes("always-on scope"), "glossary must define Always-on scope");
+    assert.ok(read("ARCHITECTURE.md").includes(`docs/adr/${adr}`), "architecture index must cover ADR-0016");
+    assert.ok(norm(fs.readFileSync(path.join(ROOT, "README.md"), "utf8")).includes("once loaded"), "public routing text must state the always-on behavior");
+    const leaf = read("docs/leaves/unslopify.md");
+    assert.ok(leaf.includes("INV-7"), "leaf doc must declare INV-7");
+    assert.ok(leaf.includes("skills/unslopify/tests/"), "INV-7 mechanism must name the test location");
+  });
+});

@@ -12,7 +12,7 @@ own docs.
 |---|---|---|---|---|
 | document-for-agents | publishable agent instructions for the doc-cache lifecycle | skills/document-for-agents/ | install smoke via `npx skills add`; identity == folder check; composition via `skills/document-for-agents/tests/` | docs/leaves/document-for-agents.md |
 | document-for-humans | plain-language derived documentation for human stakeholders | skills/document-for-humans/ | gate extension via scripts/docs-check.sh; composition via `skills/document-for-humans/tests/` | docs/leaves/document-for-humans.md |
-| unslopify | AI-tell detection and meaning-safe prose revision | skills/unslopify/ | scanner contract via `skills/unslopify/scanner.py`; parity catalog via `skills/unslopify/reference/parity.md`; fixtures and composition via `skills/unslopify/tests/`; identity == folder check | docs/leaves/unslopify.md |
+| unslopify | AI-tell detection and meaning-safe prose revision, always-on for agent-authored output once loaded | skills/unslopify/ | scanner contract via `skills/unslopify/scanner.py`; parity catalog via `skills/unslopify/reference/parity.md`; fixtures and composition via `skills/unslopify/tests/`; identity == folder check | docs/leaves/unslopify.md |
 | plan-this | fixed-template planning adapter that applies the planning prefix and delegates to `/grill-with-docs`, `/to-spec`, `/to-tickets`, and `/unslop` | skills/plan-this/ | composition via `skills/plan-this/tests/`; identity == folder check | docs/leaves/plan-this.md |
 | implement-this | fixed-template implementation adapter that applies the implementation prefix and delegates to `/implement` and `/unslopify`, dispatching bounded ticket sets to isolated workers with pull-request-only delivery | skills/implement-this/ | composition and worker-adapter tests via `skills/implement-this/tests/`; identity == folder check | docs/leaves/implement-this.md |
 | review-this | owns one pull-request review wave through merge, promotion, and parent closure; reconciles Kilo cloud review with the local Standards and Spec review against each current head and delegates to `/code-review` and `/unslopify` | skills/review-this/ | composition, discovery, reconciliation, and adapter tests via `skills/review-this/tests/`; identity == folder check | docs/leaves/review-this.md |
@@ -47,6 +47,7 @@ harness check 6. A covered doc must be in the seam table or listed here:
 - docs/adr/0011-retire-supervise-this.md
 - docs/adr/0014-three-skill-development-workflow.md
 - docs/adr/0015-requirements-data-trust-and-install-provenance.md
+- docs/adr/0016-unslopify-always-on-output-contract.md
 - docs/leaves/document-for-humans.md
 - docs/human/overview.md
 - docs/human/decision-journal.md
@@ -111,6 +112,7 @@ parsed from, so they are not listed here.
 | docs/adr/0013-review-this-decoupled-code-review.md | decision (superseded by 0014) |
 | docs/adr/0014-three-skill-development-workflow.md | decision |
 | docs/adr/0015-requirements-data-trust-and-install-provenance.md | decision |
+| docs/adr/0016-unslopify-always-on-output-contract.md | decision |
 | docs/leaves/document-for-agents.md | leaf |
 | docs/leaves/document-for-humans.md | leaf |
 | docs/leaves/unslopify.md | leaf |
