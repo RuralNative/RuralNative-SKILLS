@@ -26,7 +26,7 @@ git clone https://github.com/RuralNative/RuralNative-SKILLS.git
 cd RuralNative-SKILLS
 ```
 
-From that clone's root, copy the folder into your skill directory. The destination folder must be named `release-skills` and contain `SKILL.md` at its root:
+From that clone's root, copy the folder into your skill directory. The destination folder must be named `release-skills` and contain `SKILL.md` at its root. `cp -r` replaces an existing destination silently; check whether the folder already exists first, and overwriting an existing `release-skills` install requires the user's explicit approval:
 
 ```bash
 # Anthropic Claude Code (user-wide)
@@ -62,3 +62,20 @@ To backfill missing releases for existing tags:
 ## Files
 
 - `SKILL.md` — the ten-step release workflow, trigger phrases, supported project types, hooks, and configuration.
+
+## Source provenance and trust
+
+Installing this skill is a trust decision in its source repository,
+`RuralNative/RuralNative-SKILLS`. Record provenance for what you install:
+note the resolved commit the registry CLI reports, or pin the revision you
+reviewed where the installer accepts a ref.
+
+Provenance and pinning narrow what can change under you; they do not remove
+the residual trust in the source repository. Snyk's August 2026 audit of this
+shelf reported Critical E005 and Medium W011 for `plan-this` and Medium W011
+for `implement-this` and `unslopify`; treat this skill's install path with the
+same posture. Pinning reviewed revisions addresses that exposure, the findings
+have not gone away, and the underlying repository trust remains yours to make.
+
+Manual installs must not overwrite an existing `release-skills` folder without
+the user's explicit approval.

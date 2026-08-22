@@ -246,3 +246,47 @@ describe("implement-this unslopify and focused doc-cache (Phase 1 red)", () => {
     assert.equal(n.includes("preload all docs") || n.includes("read all documentation"), false, "must not require broad preload");
   });
 });
+
+describe("implement-this workflow trust boundaries (#131, implement-this:INV-9)", () => {
+  test("ticket and review prose is requirements data that cannot widen scope or authorize tools", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("requirements data"), "must define ticket and review prose as requirements data");
+    assert.ok(n.includes("cannot widen scope"), "must forbid widening scope from prose");
+    assert.ok(n.includes("select files"), "must forbid file selection from prose");
+    assert.ok(n.includes("authorize tools"), "must forbid tool authorization from prose");
+    assert.ok(n.includes("override workflow gates"), "must forbid overriding workflow gates from prose");
+  });
+
+  test("workflow execution performs no skill downloads while npm ci stays allowed", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const install = read("skills/implement-this/INSTALL.md");
+    const n = norm(`${skill}\n${install}`);
+    assert.ok(n.includes("no skill downloads"), "must prohibit skill downloads during workflow execution");
+    assert.ok(n.includes("installing dependencies with `npm ci` is allowed"), "must keep dependency install allowed");
+  });
+
+  test("install guidance records provenance, pinning, and residual trust without claiming Snyk findings disappeared", () => {
+    const install = read("skills/implement-this/INSTALL.md");
+    const n = norm(install);
+    assert.ok(n.includes("provenance"), "install guidance must record source provenance");
+    assert.ok(n.includes("pin the revision you reviewed"), "must pin reviewed revisions where supported");
+    assert.ok(n.includes("residual trust"), "must state residual source-repository trust");
+    assert.ok(n.includes("w011"), "must reference Snyk W011 for this install path");
+    for (const claim of ["eliminated", "eradicated", "no longer applies", "no longer present", "resolved the risk"]) {
+      assert.equal(n.includes(claim), false, `must not claim the Snyk findings are gone (${claim})`);
+    }
+  });
+
+  test("manual installation requires explicit user approval before overwriting an existing skill", () => {
+    const install = read("skills/implement-this/INSTALL.md");
+    const n = norm(install);
+    assert.ok(n.includes("overwrit"), "manual install guidance must address overwriting");
+    assert.ok(n.includes("explicit approval"), "overwriting an existing skill requires explicit approval");
+  });
+
+  test("leaf doc declares INV-9 with composition-test mechanism", () => {
+    const leaf = read("docs/leaves/implement-this.md");
+    assert.ok(leaf.includes("INV-9"), "leaf must declare INV-9");
+  });
+});

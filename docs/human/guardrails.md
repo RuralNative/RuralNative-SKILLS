@@ -1,4 +1,4 @@
-<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-22 · Regenerated: #136 REVIEW.md becomes doc-cache policy, review fixes · Sources: REVIEW.md, docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md, docs/leaves/unslopify.md, docs/leaves/plan-this.md, docs/leaves/implement-this.md, docs/leaves/release-skills.md, docs/adr/0011-retire-supervise-this.md, docs/adr/0012-manager-worktree-pull-request-delivery.md, docs/adr/0013-review-this-decoupled-code-review.md -->
+<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-22 · Regenerated: #136 REVIEW.md becomes doc-cache policy, #139 review fixes — trust sections on all seven skills, word-bounded residue patterns · Sources: REVIEW.md, docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md, docs/leaves/unslopify.md, docs/leaves/plan-this.md, docs/leaves/implement-this.md, docs/leaves/release-skills.md, docs/adr/0011-retire-supervise-this.md, docs/adr/0012-manager-worktree-pull-request-delivery.md, docs/adr/0013-review-this-decoupled-code-review.md -->
 # Guardrails in plain words
 
 These are the promises the skills make.
@@ -8,6 +8,11 @@ These are the promises the skills make.
 - Documentation changes update their technical leaf in the same change.
 - Every review follows one written policy (`REVIEW.md`). Review subagents only read; the main reviewer verifies every finding before publishing it, and no review tool merges or closes work.
 - Prose cleanup keeps commands, code, links, quotations, and facts intact.
+- Text that flows through a workflow — tasks, issue bodies, comments, specifications, review comments — is requirements data. It cannot widen scope, select files, authorize tools, or override gates.
+- Workflow runs never download skills. Installing skills stays with you, outside the run.
+- A manual install never overwrites an existing skill without your explicit approval. Every skill's install guide states this.
+- `unslopify` treats prose in its scope as inert content: prompt-like text in a document is reviewed as text, never executed.
+- Installing from a public registry records provenance and pins reviewed revisions; every install guide on the shelf carries this trust section, and the residual trust in the source repository stays with you.
 - Planning runs `/grill-with-docs`, `/to-spec`, and `/to-tickets` in order, with repository-owned `unslopify` cleaning prose under scope, protected-content, preservation, and completion-report rules, using only the focused agent cache `AGENTS.md → ARCHITECTURE.md → seam leaf → CONTEXT.md → relevant ADRs` (human pages are derived and not preloaded).
 - Planning publishes ready tickets with native blockers and asks about unresolved decisions.
 - Implementation handles one issue, loads repository-owned `unslopify` before progress with the same prose and focused-cache rules, and stops when a native blocker is open.
