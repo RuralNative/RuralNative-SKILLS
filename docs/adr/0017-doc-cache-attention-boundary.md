@@ -3,9 +3,9 @@
 Status: accepted
 Date: 2026-08-23
 
-Decision: the doc-cache lifecycle holds two equal outputs, cache accuracy and
+Decision: the doc-cache lifecycle has two equal outputs, cache accuracy and
 attention control. Generated `AGENTS.md` starts with the approved five
-commands, in this order:
+commands in this order:
 
 1. Say the task goal.
 2. Read only the matching row; its budget is a cap.
@@ -14,17 +14,12 @@ commands, in this order:
 5. Put work docs in the tracker; decide invariant conflicts first.
 
 The architecture index does not duplicate them. Loading rows and token budgets
-are hard caps on orientation documents; they never block task-driven code
-inspection inside the affected seam. A missing unrecoverable fact becomes a
-named cache gap recorded in the issue tracker, and the documentation read set
-widens only after owner approval. The standard leaf shape closes Scope &
-boundaries with a `Not here` route that names the owning responsibility in
-stable language, never a file path. A task that conflicts with a numbered
-invariant stops before any change until an approved decision supersedes or
-narrows that invariant; silent workarounds are forbidden, and doc-versus-code
-conflicts keep the code-wins path. The vendor-facts home is the adopting
-repository's singular `reference/vendor-facts.md`, and the `unslopify`
-dependency adapter sits below principles and boundaries in `SKILL.md`.
+cap orientation documents, task-driven code inspection remains allowed, missing
+unrecoverable facts create a named cache gap and require owner approval before
+the documentation read set widens, leaf docs use stable responsibility-based
+`Not here` routes, and numbered invariant conflicts stop until an approved
+decision narrows or supersedes the invariant. Doc-versus-code conflicts keep
+the code-wins path.
 
 Why: loading budgets read as guidance rather than caps, so agents preloaded
 the tree; leaf docs described boundaries without routing wrong-turn work to
@@ -41,6 +36,10 @@ Consequences:
   the top of `AGENTS.md`, cap language in the architecture loading protocol,
   a `Not here` route in every leaf doc, and the glossary terms Attention
   control, Cache gap, and Not here route.
+- The vendor-facts home is the adopting repository's singular
+  `reference/vendor-facts.md`.
+- The `unslopify` dependency adapter sits below principles and boundaries in
+  `SKILL.md`.
 - Derived human pages regenerate with their sources; public README text
   states the cap behavior.
 - The harness stays ten checks; these behaviors are review-level contracts,

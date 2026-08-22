@@ -198,6 +198,7 @@ describe("attention boundary contract (document-for-agents:INV-7)", () => {
     assertOrdered(templates, commands, "templates.md");
     assert.ok(templates.includes("does not duplicate the five commands"));
     const agents = read("AGENTS.md");
+    assert.ok(agents.startsWith(`1. ${commands[0]}\n`), "AGENTS.md must start with command 1");
     assertOrdered(norm(agents), commands, "AGENTS.md");
     assert.ok(
       agents.indexOf(commands[0]) < agents.indexOf("\n## "),
@@ -221,11 +222,15 @@ describe("attention boundary contract (document-for-agents:INV-7)", () => {
   test("missing unrecoverable facts become named cache gaps requiring approval before widening", () => {
     const skill = norm(read(SKILL));
     assert.ok(skill.includes("cache gap"));
-    assert.ok(skill.includes("ask before widening the documentation read set"));
+    assert.ok(skill.includes("ask the owner for approval before widening the documentation read set"));
+    assert.ok(skill.includes("do not widen it until approval"));
     const templates = norm(read(TEMPLATES));
     assert.ok(templates.includes("cache gap"));
-    assert.ok(templates.includes("ask the owner before opening more documentation"));
-    assert.ok(norm(read("ARCHITECTURE.md")).includes("cache gap"));
+    assert.ok(templates.includes("ask the owner for approval before opening more documentation"));
+    assert.ok(templates.includes("do not widen the read set until approval"));
+    const architecture = norm(read("ARCHITECTURE.md"));
+    assert.ok(architecture.includes("cache gap"));
+    assert.ok(architecture.includes("owner for approval"));
   });
 
   test("standard leaf shape requires a Not here route by stable responsibility, not file path", () => {

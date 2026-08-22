@@ -58,14 +58,17 @@ contract, in this order, before any other content:
 
 The architecture index (`ARCHITECTURE.md`) does not duplicate the five
 commands; it carries the seam table, boundaries, coverage, and loading
-protocol that the commands point into. After the commands, `AGENTS.md`
-continues with:
+protocol that the commands point into. When `AGENTS.md` is also the
+architecture index, it continues after the commands with:
 
 - One paragraph: what the system is, as built.
 - Seam table: doc | responsibility | code root | tests.
 - Cross-cutting boundaries: one line each, linking ADRs.
 - Coverage table: every doc, machine-checked against disk.
 - Pointers to glossary, ADRs, policy, README. Link, never restate.
+
+When `AGENTS.md` is a routing index, it keeps its short orientation sections
+and points to `ARCHITECTURE.md` for these details instead of duplicating them.
 
 ## Policy set
 
@@ -148,8 +151,9 @@ trim later. When a task would push the read past the cap, narrow the read set
 instead of continuing wide. The caps never block code inspection inside the
 affected seam: reading the code being changed is task work, not orientation.
 When the orientation documents lack an unrecoverable fact the task needs, name
-a cache gap, record it in the issue tracker, and ask the owner before opening
-more documentation; widening the read set silently is forbidden.
+a cache gap, record it in the issue tracker, and ask the owner for approval
+before opening more documentation; do not widen the read set until approval.
+Widening the read set silently is forbidden.
 
 Rule: an agent's re-orientation is the same small read every time — that
 fixed cost is what makes compaction survivable.

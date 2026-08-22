@@ -165,8 +165,10 @@ Entry: a seam change or re-orientation.
    docs, name the collision, and resume only when an approved decision
    supersedes or narrows the invariant; working around it silently is
    forbidden. When the orientation documents lack an unrecoverable fact the
-   task needs, name a cache gap and ask before widening the documentation
-   read set; the caps never block code inspection inside the affected seam.
+   task needs, name a cache gap, record it in the issue tracker, and ask the
+   owner for approval before widening the documentation read set; do not widen
+   it until approval. The caps never block code inspection inside the affected
+   seam.
    See `reference/classify.md`
    for the invariant lifecycle and `reference/harness.md` for check detail.
 2. **Same diff.** Code changes carry their doc updates in the same commit. A

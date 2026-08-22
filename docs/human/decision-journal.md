@@ -102,7 +102,7 @@ Depth: `docs/adr/0016-unslopify-always-on-output-contract.md`.
 
 ### 2026-08-23 - Bound what agents read (shipped)
 
-Documentation now has two equal jobs: staying true to the code, and bounding attention. Every `AGENTS.md` opens with five commands (state your goal, read only your row as a cap, follow the owning seam's Not-here routes, change code and docs together, put work docs in the tracker and decide invariant conflicts first). Loading budgets are caps on orientation documents, never on reading the code being changed. A missing fact becomes a named cache gap that asks you before more documentation is opened. Work that collides with a numbered rule stops until a decision changes the rule.
+Documentation now has two equal jobs: staying true to the code, and bounding attention. Every `AGENTS.md` opens with five commands (state your goal, read only your row as a cap, follow the owning seam's Not-here routes, change code and docs together, put work docs in the tracker and decide invariant conflicts first). Loading budgets are caps on orientation documents, never on reading the code being changed. A missing fact becomes a named cache gap that requires your approval before more documentation is opened. Work that collides with a numbered rule stops until a decision changes the rule.
 
 What it costs: these are review-level promises, not new automated checks; the harness stays at ten checks.
 

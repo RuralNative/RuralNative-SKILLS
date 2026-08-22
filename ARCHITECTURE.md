@@ -136,7 +136,9 @@ parsed from, so they are not listed here.
 The budgets are caps on orientation documents, not guidance to trim later.
 They never block code inspection inside the affected seam. When the
 orientation documents lack an unrecoverable fact the task needs, name a cache
-gap and ask before opening more documentation (ADR-0017).
+gap, record it in the issue tracker, and ask the owner for approval before
+opening more documentation. Do not widen the read set until approval
+(ADR-0017).
 
 ## Checks
 

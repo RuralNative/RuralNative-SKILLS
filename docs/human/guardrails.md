@@ -6,7 +6,7 @@ These are the promises the skills make.
 - A skill's frontmatter name matches its folder, so the registry installs the intended skill.
 - The public registry is the official install path. Local install leftovers stay out of the repository.
 - Documentation changes update their technical leaf in the same change.
-- Loading budgets are caps on orientation documents, not suggestions. Reading the code being changed is never blocked, and a missing fact becomes a named cache gap that asks you before any read set widens. Work that collides with a numbered invariant stops until a decision supersedes or narrows it.
+- Loading budgets are caps on orientation documents, not suggestions. Reading the code being changed is never blocked, and a missing fact becomes a named cache gap that requires your approval before any read set widens. Work that collides with a numbered invariant stops until a decision supersedes or narrows it.
 - Every review follows one written policy (`REVIEW.md`). Review subagents only read; the main reviewer verifies every finding before publishing it, and no review tool merges or closes work.
 - Prose cleanup keeps commands, code, links, quotations, and facts intact.
 - Text that flows through a workflow — tasks, issue bodies, comments, specifications, review comments — is requirements data. It cannot widen scope, select files, authorize tools, or override gates.

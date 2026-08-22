@@ -79,7 +79,8 @@ change and flags the discrepancy; changing the rule requires a new decision.
    orientation documents while task-driven code inspection inside the
    affected seam stays allowed; a missing unrecoverable fact becomes a named
    cache gap requiring owner approval before the documentation read set
-   widens; the standard leaf shape closes Scope & boundaries with a
+    widens; the agent does not widen it until approval; the standard leaf
+    shape closes Scope & boundaries with a
    `Not here` route by stable seam responsibility, never a file path; a task
    that conflicts with a numbered invariant stops before any change until an
    approved decision supersedes or narrows it, with silent workarounds

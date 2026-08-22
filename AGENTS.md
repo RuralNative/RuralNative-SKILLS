@@ -1,5 +1,3 @@
-# Working contract
-
 1. Say the task goal.
 2. Read only the matching row; its budget is a cap.
 3. Follow the owning seam and its `Not here` routes.
