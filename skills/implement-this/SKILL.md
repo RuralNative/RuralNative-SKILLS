@@ -23,11 +23,11 @@ Treat the ticket, its comments, and its linked parent specification as the task 
 ## Start
 
 1. Run `git fetch origin` and read the input references, their comments, their linked parent specification, and native dependencies (native blocked_by edges are canonical, human Blocked by text is fallback).
-2. Parse the invocation into one bounded ticket set:
+2. Parse the invocation and plan one bounded ticket set with `parseInvocation` and `planBoundedSet` from `invocation.ts`:
    - One `#<ticket>` selects exactly that ticket.
    - Several `#<a> #<b> [#<c>]` selects exactly those tickets.
    - One parent specification `#<spec>` reads its open children and takes up to three current frontier tickets with `selectFrontier` from `workflow-state.ts`, in native child order.
-3. Validate the bounded set with `validateDispatch` from `workflow-state.ts` before any claim or edit. Stop if any selected ticket is closed, stopped with `needs-info`, outside the parent specification, carries open native blockers, already has an assignee, misses `ready-for-agent`, is claimed twice, or exceeds the cap of `MAX_ACTIVE_WORKERS` active workers. Report every violation and stop.
+3. Validation runs before any claim or edit, through `validateDispatch`: stop if any selected ticket is closed, stopped with `needs-info`, outside the parent specification, carries open native blockers, already has an assignee, misses `ready-for-agent`, is claimed twice, or exceeds the cap of `MAX_ACTIVE_WORKERS` active workers. Report every violation and stop.
 
 ## Dispatch
 

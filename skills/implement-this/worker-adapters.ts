@@ -6,16 +6,29 @@
 // supply fakes for this interface; no automated test creates real worktrees
 // or sessions.
 
+import {
+  MAX_ACTIVE_WORKERS,
+  retryDecision,
+} from "./workflow-state.ts";
+
 export type WorkerStatus = "running" | "failed" | "offline" | "stopped";
 
 export interface WorkerSession {
   id: string;
 }
 
+/** One isolated worker: its ticket, worktree, branch, and live session. */
+export interface WorkerSlot {
+  ticket: number;
+  worktree: string;
+  branch: string;
+  session: WorkerSession;
+}
+
 export interface WorkerAdapter {
   readonly name: string;
   createWorktree(ticket: number, branch: string): Promise<string>;
-  startSession(worktree: string, prompt: string): Promise<WorkerSession>;
+  startSession(worktree: string): Promise<WorkerSession>;
   prompt(session: WorkerSession, message: string): Promise<void>;
   status(session: WorkerSession): Promise<WorkerStatus>;
   stop(session: WorkerSession): Promise<void>;
@@ -41,15 +54,17 @@ export function branchFor(ticket: number): string {
 
 /**
  * Dispatch one validated ticket set. Returns the live worker slots.
- * Rejects the whole batch before any write when no adapter is available,
- * so multi-ticket execution never half-starts without isolation.
+ * Rejects the whole batch before any write when no adapter is available or
+ * when the set exceeds the three-worker cap, so execution never half-starts.
+ * Live-worker accounting against already-running sessions stays in
+ * `validateDispatch`; this boundary enforces the batch cap itself.
  */
 export async function dispatchTickets(
   tickets: readonly number[],
   adapter: WorkerAdapter | null,
-  renderPrompt: (ticket: number) => string,
+  renderTemplate: (ticket: number) => string,
 ): Promise<
-  | { ok: true; slots: Array<{ ticket: number; worktree: string; branch: string; session: WorkerSession }> }
+  | { ok: true; slots: WorkerSlot[] }
   | { ok: false; reason: string }
 > {
   if (adapter === null) {
@@ -59,18 +74,43 @@ export async function dispatchTickets(
         "no worker adapter is available; multi-ticket execution stops before any write",
     };
   }
-  const slots: Array<{
-    ticket: number;
-    worktree: string;
-    branch: string;
-    session: WorkerSession;
-  }> = [];
+  if (tickets.length > MAX_ACTIVE_WORKERS) {
+    return {
+      ok: false,
+      reason: `worker cap: at most ${MAX_ACTIVE_WORKERS} ticket workers are active at once`,
+    };
+  }
+  const slots: WorkerSlot[] = [];
   for (const ticket of tickets) {
     const branch = branchFor(ticket);
     const worktree = await adapter.createWorktree(ticket, branch);
-    const session = await adapter.startSession(worktree, renderPrompt(ticket));
-    await adapter.prompt(session, `implement ticket #${ticket}`);
+    const session = await adapter.startSession(worktree);
+    // Exactly one prompt path: the rendered worker template.
+    await adapter.prompt(session, renderTemplate(ticket));
     slots.push({ ticket, worktree, branch, session });
   }
   return { ok: true, slots };
+}
+
+/**
+ * Reconciled recovery for one failed worker. Checks worker state first so a
+ * retry never duplicates artifacts, reuses the same slot, retries once via
+ * `retryDecision`, and stops the ticket with `needs-info` on a second failure.
+ */
+export async function recoverWorker(
+  slot: WorkerSlot,
+  failuresSoFar: number,
+  adapter: WorkerAdapter,
+): Promise<
+  | { action: "retry"; slot: WorkerSlot; observed: WorkerStatus }
+  | { action: "stop-ticket"; addLabels: string[]; observed: WorkerStatus }
+> {
+  const observed = await adapter.status(slot.session);
+  const decision = retryDecision(failuresSoFar);
+  if (decision.action === "stop-ticket") {
+    await adapter.stop(slot.session);
+    return { action: "stop-ticket", addLabels: decision.addLabels, observed };
+  }
+  // Retry reuses the reconciled slot: same ticket, worktree, branch, session.
+  return { action: "retry", slot, observed };
 }

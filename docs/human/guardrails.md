@@ -17,10 +17,9 @@ These are the promises the skills make.
 - Planning publishes ready tickets with native blockers and asks about unresolved decisions.
 - Implementation validates one ticket, several ready tickets, or a parent specification against the frontier before any claim, runs each through an isolated worker, loads repository-owned `unslopify` before progress with the same prose and focused-cache rules, and stops when a native blocker is open.
 - Every implementation delivers by pull request. Nothing pushes directly to `main`, force-pushes, or closes a ticket before merge; merge closes it.
+- A failed worker gets one reconciled retry that reuses its worktree, branch, and session; a second failure stops the ticket with `needs-info`.
 - Verification runs dependency install, tests, TypeScript, and the docs harness. Every check in the chain can fail.
-- Implementation runs one delegated `/implement` stage and does not host code review; review lives in `/review-this`.
-- Standalone implementation pushes directly to `main` only after checks and rebase.
-- Implementation inside a Kilo Agent Manager worktree opens a pull request whose body closes its ticket on merge, posts acceptance evidence, and never closes the ticket early.
+- Implementation runs one delegated `/implement` stage and does not host code review; review lives in `/review-this`, invoked from the control workspace after the implementation run ends.
 - The ready frontier contains only open, unblocked, unassigned tickets with `ready-for-agent`.
 - After a ticket closes, only its newly unblocked dependents get label updates — nothing else moves.
 - One shared decision module, copied byte-identical into all three workflow skills, turns observed facts into next actions: frontier selection, at most three active workers (a worker holds its slot until it is stopped), duplicate ownership rejected, one retry before a `needs-info` stop that holds on every later pass, merge only with green checks, resolved findings, a clean local review, an unchanged reviewed head, and a mergeable pull request. If a blocker reopens, an `unblocked` ticket goes back to `blocked`. Repository verification fails if any copy drifts from the authored source.
