@@ -16,6 +16,7 @@ export interface Finding {
   headSha: string;
   inDiff: boolean;
   verified: boolean;
+  ticket?: number;
 }
 
 export interface ReconciledFinding {
@@ -25,6 +26,7 @@ export interface ReconciledFinding {
   message: string;
   evidence?: string;
   headSha: string;
+  ticket?: number;
 }
 
 export interface ReconciliationResult {
@@ -94,6 +96,7 @@ export function reconcileFindings(
       message: f.message,
       evidence: f.evidence,
       headSha: f.headSha,
+      ticket: f.ticket,
     };
     retained.push(r);
     retainedByAxis[f.source].push(r);
@@ -110,13 +113,38 @@ function normalizeMessage(message: string): string {
  * Route confirmed findings back to the owning worker.
  * The review workspace never fixes a finding itself; it posts the retained
  * finding to the ticket so the worker that owns that ticket addresses it.
+ *
+ * For a single-PR invocation the caller supplies that PR's ticket number.
+ * For a wave the caller should use `routeFixesByTicket` so each finding's
+ * `ticket` field routes to the correct owner.
  */
 export function routeFixesToWorker(
   reconciled: ReconciliationResult,
   ticket: number,
 ): { ticket: number; findings: ReconciledFinding[] } | null {
   if (reconciled.retained.length === 0) return null;
-  return { ticket, findings: reconciled.retained };
+  // If findings already carry a ticket, only route those matching the target ticket.
+  const byTicket = reconciled.retained.filter((f) => f.ticket === undefined || f.ticket === ticket);
+  if (byTicket.length === 0 && reconciled.retained.some((f) => f.ticket !== undefined)) return null;
+  return { ticket, findings: byTicket.length > 0 ? byTicket : reconciled.retained };
+}
+
+/**
+ * Route retained findings across a multi-PR wave to each owning ticket.
+ * Findings without a `ticket` are ignored for wave routing and should be
+ * routed via `routeFixesToWorker` for single-PR cases.
+ */
+export function routeFixesByTicket(
+  reconciled: ReconciliationResult,
+): Map<number, ReconciledFinding[]> {
+  const grouped = new Map<number, ReconciledFinding[]>();
+  for (const f of reconciled.retained) {
+    if (f.ticket === undefined) continue;
+    const arr = grouped.get(f.ticket) ?? [];
+    arr.push(f);
+    grouped.set(f.ticket, arr);
+  }
+  return grouped;
 }
 
 export function hasUnresolvedConfirmedFindings(result: ReconciliationResult): boolean {

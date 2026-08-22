@@ -38,7 +38,7 @@ Workflow runs perform no skill downloads: once installed, `/review-this` never f
 From the control workspace, after an implementation wave has delivered pull requests:
 
 ```
- /review-this #130
+/review-this #130
 ```
 
 The skill discovers the current review wave, collects Kilo cloud summary and inline comments for the current head when available (recording `unavailable` when disabled, absent, failed, or timed out without blocking a complete local review), spawns the Standards and Spec sub-agents in parallel, reconciles cloud and local findings while keeping Standards and Spec axes separate, rejects duplicate, stale, out-of-scope, and unverified findings with evidence, routes confirmed findings to the owning worker (never fixing them in the review workspace), invalidates previous verdicts when a pushed fix changes the head SHA, squash-merges eligible pull requests whose checks are green, findings resolved, local review clean, and reviewed head unchanged, promotes only dependents whose final blocker closed (`unblocked` plus `ready-for-agent`, `blocked` removed), and on the penultimate wave tells you to run `implement-this #<spec>` for the next wave. When every child ticket closes, it checks updated `main` with `npm run verify` and a whole-spec Standards and Spec review, creates the smallest independently verifiable native child ticket for a confirmed integration defect while keeping the parent open, and closes the parent only when all gates pass.

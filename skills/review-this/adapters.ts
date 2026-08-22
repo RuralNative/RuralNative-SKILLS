@@ -65,7 +65,17 @@ export async function collectCloudReview(
   adapter: CloudAdapter,
   currentHeadSha: string,
 ): Promise<CloudReviewResult> {
-  const result = await adapter.collect(currentHeadSha);
+  let result: CloudReviewResult;
+  try {
+    result = await adapter.collect(currentHeadSha);
+  } catch (error) {
+    return {
+      status: "unavailable",
+      headSha: currentHeadSha,
+      inlineComments: [],
+      reason: `cloud collect failed: ${String(error)}`,
+    };
+  }
   // Only comments whose headSha matches the current head are retained; callers
   // should filter with reconcileFindings which will mark stale heads as rejected.
   if (result.status === "available" && result.headSha !== currentHeadSha) {

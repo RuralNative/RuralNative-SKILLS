@@ -23,7 +23,7 @@ Review the parent specification's pull-request wave: `/code-review`
 
 ## Cloud collection
 
-Collect Kilo cloud summary and inline comments for the current head when available through `cloud-adapter.ts`. The adapter returns `available` with summary and inline comments on the exact head SHA, or `unavailable` on disabled, absent, failed, or timed-out cloud review. A cloud result is recorded as `available` or `unavailable` and an `unavailable` cloud review never blocks a complete local review.
+Collect Kilo cloud summary and inline comments for the current head when available through `adapters.ts`. The adapter returns `available` with summary and inline comments on the exact head SHA, or `unavailable` on disabled, absent, failed, or timed-out cloud review. A cloud result is recorded as `available` or `unavailable` and an `unavailable` cloud review never blocks a complete local review.
 
 ## Local review
 
@@ -42,7 +42,7 @@ Confirmed findings return to the ticket's owning worker rather than being fixed 
 
 ## Merge
 
-A pull request is eligible only when `isMergeEligible` from `workflow-state.ts` passes: green required checks, resolved confirmed findings, a clean local review, and an unchanged reviewed head SHA. Merge requires green required checks, resolved confirmed findings, a clean local review, and an unchanged reviewed head SHA. The reviewer verifies every finding against the current head before publishing it; sub-agent output never merges, approves, closes, or labels anything. Eligible pull requests squash-merge and their closing references close the assigned tickets. Merge uses squash-merge with the pull-request body `Closes #<ticket>` so GitHub closure follows delivery evidence. Never close a ticket before merge and never force-push.
+A pull request is eligible only when `isMergeEligible` from `workflow-state.ts` passes. Merge requires green required checks, resolved confirmed findings, a clean local review, and an unchanged reviewed head SHA. The reviewer verifies every finding against the current head before publishing it; sub-agent output never merges, approves, closes, or labels anything. Eligible pull requests squash-merge and their closing references close the assigned tickets. Merge uses squash-merge with the pull-request body `Closes #<ticket>` so GitHub closure follows delivery evidence. Never close a ticket before merge and never force-push.
 
 ## Promotion
 
@@ -50,7 +50,7 @@ Ticket closure updates only dependents whose final open native blocker closed, a
 
 ## Final verification and parent closure
 
-When all child tickets close, checkout updated `main`, run repository verification `npm run verify` on it, and run a whole-spec Standards and Spec review. When all child tickets close, updated `main` passes repository verification and a whole-spec Standards and Spec review before the parent closes. Use `parentClosureReady` and `followUpRequired` from `workflow-state.ts`. A confirmed integration defect becomes the smallest independently verifiable native child ticket and keeps the parent open. State and adapter boundaries in `discovery.ts`, `reconciliation.ts`, `adapters.ts`, and `workflow-state.ts` remain callable by a future persistent coordinator without changing command behavior; the pure helper performs no network, GitHub, git, filesystem mutation, or worker-management calls.
+Checkout updated `main`, run repository verification `npm run verify` on it, and run a whole-spec Standards and Spec review. When all child tickets close, updated `main` passes repository verification and a whole-spec Standards and Spec review before the parent closes. Use `parentClosureReady` and `followUpRequired` from `workflow-state.ts`. A confirmed integration defect becomes the smallest independently verifiable native child ticket and keeps the parent open. State and adapter boundaries in `discovery.ts`, `reconciliation.ts`, `adapters.ts`, and `workflow-state.ts` remain callable by a future persistent coordinator without changing command behavior; the pure helper performs no network, GitHub, git, filesystem mutation, or worker-management calls.
 
 ## Spec
 
