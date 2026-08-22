@@ -35,6 +35,7 @@ The review prefix was extracted from the delivery branches of `implement-this` (
 - Glossary: `CONTEXT.md` — Skill, skill identity, skill naming convention, distribution shelf, registry lane.
 - Decision: `docs/adr/0006-plan-this-fixed-template-adapter.md` — task-scoped exception and template boundary.
 - Decision: `docs/adr/0013-review-this-decoupled-code-review.md` — the split from `implement-this` and the glossary exception.
+- Decision: `docs/adr/0015-requirements-data-trust-and-install-provenance.md` — requirements-data trust boundary and install provenance.
 - Delegated workflow: `/code-review` (installed through its own lane).
 - Prose contract: `skills/unslopify/SKILL.md` — scope, protected-content, preservation, completion report.
 - Harness: `scripts/docs-check.sh`.

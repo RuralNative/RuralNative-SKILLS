@@ -124,6 +124,7 @@ Python is absent, and scanner thresholds never fail the gate.
 - Decision: `docs/adr/0005-unslopify-utility-identity-and-hard-dependency.md`
   — utility exception and hard dependency.
 - Decision: `docs/adr/0004-verb-named-skills-flat-shelf.md` — default naming.
+- Decision: `docs/adr/0015-requirements-data-trust-and-install-provenance.md` — inert-input rule and install provenance.
 - Harness: `scripts/docs-check.sh`.
 - Template: `skills/document-for-agents/reference/templates.md` — the shape this
   leaf doc follows.

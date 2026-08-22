@@ -16,13 +16,13 @@ npx skills add RuralNative/RuralNative-SKILLS --skill implement-this
 
 Manual fallback:
 
+Check whether the destination folder already exists first: `cp -r` replaces it silently, and overwriting an existing `implement-this` install requires the user's explicit approval. Then copy from a clone of the repository:
+
 ```bash
 git clone https://github.com/RuralNative/RuralNative-SKILLS.git
 cd RuralNative-SKILLS
 cp -r skills/implement-this ~/.agents/skills/implement-this
 ```
-
-`cp -r` replaces an existing destination silently. Check whether the destination folder already exists first; overwriting an existing `implement-this` install requires the user's explicit approval.
 
 ## Verification
 

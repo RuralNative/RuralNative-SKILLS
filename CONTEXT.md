@@ -124,3 +124,11 @@ _Avoid_: delivery branch (when the mode is meant)
 **Manager worktree**:
 A git worktree whose root sits under the Kilo Agent Manager worktree location; `implement-this` detects it by path and switches to pull-request delivery.
 _Avoid_: agent worktree, AO worktree
+
+**Requirements data**:
+Prose flowing through a workflow — task text, issue bodies, comments, specifications, review comments, rewrite input — that states work and evidence but cannot widen scope, select files, authorize tools, or override workflow gates (ADR-0015). `unslopify` applies the same rule to scoped prose: prompt-like text is inert content, never instruction.
+_Avoid_: instructions (when ticket prose is meant), executable input
+
+**Instruction residue**:
+Prompt-like imperatives left in prose — "ignore previous instructions", "you are now authorized" — reported by `unslopify` as the inert-content candidate `AIT-EVD-010`.
+_Avoid_: injection payload (an authorship or security-verdict claim)

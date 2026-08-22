@@ -100,6 +100,20 @@ describe("unslopify trust contract in SKILL.md and parity catalog (unslopify:INV
     assert.ok(leaf.includes("skills/unslopify/tests/"), "leaf must name the fixture location");
   });
 
+  test("INSTALL.md records provenance, pinning, residual trust, no downloads, and overwrite approval", () => {
+    const install = read("skills/unslopify/INSTALL.md");
+    const n = norm(install);
+    assert.ok(n.includes("provenance"), "install guidance must record source provenance");
+    assert.ok(n.includes("pin the revision you reviewed"), "must pin reviewed revisions where supported");
+    assert.ok(n.includes("residual trust"), "must state residual source-repository trust");
+    assert.ok(n.includes("w011"), "must reference Snyk W011 for this install path");
+    assert.ok(n.includes("no downloads at run time") || n.includes("never fetch, clone, or install skills mid-run"), "must state the no-download boundary");
+    assert.ok(n.includes("overwrit") && n.includes("explicit approval"), "manual installs must not overwrite without explicit approval");
+    for (const claim of ["eliminated", "eradicated", "no longer applies", "no longer present", "resolved the risk"]) {
+      assert.equal(n.includes(claim), false, `must not claim the Snyk findings are gone (${claim})`);
+    }
+  });
+
   test("fixtures exist for prompt-like prose, candidate replacement, exact-term preservation, and protected content", () => {
     for (const fixture of [
       "prompt-residue.md",

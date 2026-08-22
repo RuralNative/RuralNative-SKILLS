@@ -774,8 +774,8 @@ def detect_context_candidates(masked, original, path):
             # Anchor context stays on the occurrence's own line so an exact
             # use on one line cannot suppress a vague use on the next.
             line_begin = masked.rfind("\n", 0, m.start()) + 1
-            nl = masked.find("\n", m.end())
-            line_finish = len(masked) if nl == -1 else nl
+            next_newline = masked.find("\n", m.end())
+            line_finish = len(masked) if next_newline == -1 else next_newline
             window_start = max(line_begin, m.start() - 160)
             window_end = min(line_finish, m.end() + 160)
             window = masked[window_start:window_end]

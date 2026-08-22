@@ -16,13 +16,13 @@ npx skills add RuralNative/RuralNative-SKILLS --skill review-this
 
 Manual fallback:
 
+Check whether the destination folder already exists first: `cp -r` replaces it silently, and overwriting an existing `review-this` install requires the user's explicit approval. Then copy from a clone of the repository:
+
 ```bash
 git clone https://github.com/RuralNative/RuralNative-SKILLS.git
 cd RuralNative-SKILLS
 cp -r skills/review-this ~/.agents/skills/review-this
 ```
-
-`cp -r` replaces an existing destination silently. Check whether the destination folder already exists first; overwriting an existing `review-this` install requires the user's explicit approval.
 
 ## Source provenance and trust
 

@@ -46,6 +46,7 @@ The review stage was extracted from this seam (#124, parent #123): review now li
 - Decision: `docs/adr/0012-manager-worktree-pull-request-delivery.md` — manager-worktree path-detection trigger.
 - Historical decision (retired): `docs/adr/0008-supervise-this-agent-orchestrator.md`.
 - Decision: `docs/adr/0009-delegation-invariants-human-invocation.md` — locked delegation chains and human-invocation requirement.
+- Decision: `docs/adr/0015-requirements-data-trust-and-install-provenance.md` — requirements-data trust boundary and install provenance.
 - Historical template decision: `docs/adr/0006-plan-this-fixed-template-adapter.md`.
 - Glossary: `CONTEXT.md`.
 - Harness: `scripts/docs-check.sh`.
