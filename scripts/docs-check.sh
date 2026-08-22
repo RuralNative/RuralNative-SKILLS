@@ -13,7 +13,7 @@ bad()  { printf '  FAIL %s\n' "$*"; fail=1; }
 
 # Coverage <-> disk (check 1).
 mapfile -t COVERED < <(grep -oE '^\| [^|]+\.md' "$ARCH" | sed -E 's/^\| //; s/[[:space:]]*$//' | sort -u)
-mapfile -t ONDISK < <({ find docs -name '*.md' -type f; printf '%s\n' CONTEXT.md README.md; } | sort)
+mapfile -t ONDISK < <({ find docs -name '*.md' -type f; for f in CONTEXT.md README.md REVIEW.md; do [[ -f $f ]] && printf '%s\n' "$f"; done; } | sort)
 missing=0
 for f in "${COVERED[@]}"; do [[ -f "$f" ]] || { bad "coverage: listed but not on disk — $f"; missing=1; }; done
 unlisted=0
@@ -125,8 +125,12 @@ else
   [[ $gen_fail -eq 0 ]] && note "generated freshness: all generated docs within threshold"
 fi
 
-# Policy coverage (check 8): policy docs linked from the index, both ways.
-mapfile -t POLICIES < <(find docs/policies -name '*.md' -type f 2>/dev/null | sort)
+# Policy coverage (check 8): policy docs live anywhere the index declares them,
+# including the root review policy, not one fixed subdirectory. Every policy on
+# disk is linked from the index; every policy linked from the index exists; a
+# policy with declared governing sources changes in the same working-tree diff
+# as any modified source.
+mapfile -t POLICIES < <({ find docs/policies -name '*.md' -type f 2>/dev/null; [[ -f REVIEW.md ]] && printf '%s\n' REVIEW.md; } | sort)
 mapfile -t POLICYROWS < <(awk -F'|' '/^\| [^|]+\.md \| policy \|/ {gsub(/ /,"",$2); print $2}' "$ARCH")
 pol_fail=0
 if [[ ${#POLICIES[@]} -eq 0 && ${#POLICYROWS[@]} -eq 0 ]]; then
@@ -138,7 +142,29 @@ else
   for f in "${POLICYROWS[@]}"; do
     [[ -f "$f" ]] || { bad "policy: '$f' linked from the index but missing on disk"; pol_fail=1; }
   done
-  [[ $pol_fail -eq 0 ]] && note "policy coverage: policies linked from the index"
+  if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    # Freshness runs over discovered policies plus every policy path the index
+    # declares, so an adopter-declared location gets the same half.
+    declare -A POLICYSET=()
+    for f in "${POLICIES[@]}"; do [[ -f $f ]] && POLICYSET["$f"]=1; done
+    for f in "${POLICYROWS[@]}"; do [[ -f $f ]] && POLICYSET["$f"]=1; done
+    for f in "${!POLICYSET[@]}"; do
+      gov="$(grep -m1 '^<!-- Governs-from:' "$f" | sed -E 's/^<!-- Governs-from:[[:space:]]*//; s/[[:space:]]*-->$//')"
+      [[ -z "$gov" ]] && continue
+      IFS=',' read -ra GOVSRC <<< "$gov"
+      for src in "${GOVSRC[@]}"; do
+        src="$(sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' <<<"$src")"
+        [[ -n "$src" ]] || continue
+        if [[ ! -e "$src" ]]; then
+          bad "policy: governing source '$src' declared by '$f' does not exist"; pol_fail=1
+        elif [[ -n "$(git status --porcelain -- "$src")" ]] && [[ -z "$(git status --porcelain -- "$f")" ]]; then
+          bad "policy: '$f' not updated although governing source '$src' changed"; pol_fail=1
+        fi
+      done
+    done
+    unset POLICYSET
+  fi
+  [[ $pol_fail -eq 0 ]] && note "policy coverage: policies indexed and fresh"
 fi
 
 # Debt register (check 9): entries well-formed per entry; referenced DEBT-N ids

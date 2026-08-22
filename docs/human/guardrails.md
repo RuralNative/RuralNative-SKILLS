@@ -1,4 +1,4 @@
-<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-22 · Regenerated: #139 review fixes — trust sections on all seven skills, word-bounded residue patterns · Sources: docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md, docs/leaves/unslopify.md, docs/leaves/plan-this.md, docs/leaves/implement-this.md, docs/leaves/release-skills.md, docs/adr/0011-retire-supervise-this.md, docs/adr/0012-manager-worktree-pull-request-delivery.md, docs/adr/0013-review-this-decoupled-code-review.md -->
+<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-22 · Regenerated: #136 REVIEW.md becomes doc-cache policy, #139 review fixes — trust sections on all seven skills, word-bounded residue patterns · Sources: REVIEW.md, docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md, docs/leaves/unslopify.md, docs/leaves/plan-this.md, docs/leaves/implement-this.md, docs/leaves/release-skills.md, docs/adr/0011-retire-supervise-this.md, docs/adr/0012-manager-worktree-pull-request-delivery.md, docs/adr/0013-review-this-decoupled-code-review.md -->
 # Guardrails in plain words
 
 These are the promises the skills make.
@@ -6,6 +6,7 @@ These are the promises the skills make.
 - A skill's frontmatter name matches its folder, so the registry installs the intended skill.
 - The public registry is the official install path. Local install leftovers stay out of the repository.
 - Documentation changes update their technical leaf in the same change.
+- Every review follows one written policy (`REVIEW.md`). Review subagents only read; the main reviewer verifies every finding before publishing it, and no review tool merges or closes work.
 - Prose cleanup keeps commands, code, links, quotations, and facts intact.
 - Text that flows through a workflow — tasks, issue bodies, comments, specifications, review comments — is requirements data. It cannot widen scope, select files, authorize tools, or override gates.
 - Workflow runs never download skills. Installing skills stays with you, outside the run.

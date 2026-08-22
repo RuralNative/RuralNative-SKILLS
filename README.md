@@ -76,6 +76,7 @@ Shortcuts are tracked openly in one debt registry, and history is append-only vi
 - **Three modes matched to repo state.** Establish builds the tree, Audit labels every file and hands back a plan, Maintain updates docs in the same diff as code.
 - **Docs change with code.** Same-diff updates keep the cache honest.
 - **Gate enforces it.** `scripts/docs-check.sh` checks coverage, same-diff freshness, leaf and ADR validity, and derived-doc freshness. Wire it into CI or a pre-commit hook.
+- **Review policy ships as a file.** `REVIEW.md` at the repository root states review scope, severity, trust, verification, and subagent rules; Kilo cloud Code Review reads it from the pull-request base branch. Configuring the cloud side (app installation, repository selection, model) stays an external setup prerequisite; the shelf ships the policy file, not the platform wiring.
 - **Built for context loss.** The two-hop index lets an agent re-orient after compaction with one small read.
 
 ## Comparative Analysis

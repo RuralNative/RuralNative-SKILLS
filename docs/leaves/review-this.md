@@ -37,6 +37,10 @@ The review prefix was extracted from the delivery branches of `implement-this` (
 - Decision: `docs/adr/0013-review-this-decoupled-code-review.md` — the split from `implement-this` and the glossary exception.
 - Decision: `docs/adr/0015-requirements-data-trust-and-install-provenance.md` — requirements-data trust boundary and install provenance.
 - Delegated workflow: `/code-review` (installed through its own lane).
+- Review policy: `REVIEW.md` — the repository's cross-cutting review rules
+  (scope, severity, trust, verification, head freshness, duplicates,
+  evidence, subagent use) govern both local axes and cloud review; this leaf
+  points at them instead of restating them.
 - Prose contract: `skills/unslopify/SKILL.md` — scope, protected-content, preservation, completion report.
 - Harness: `scripts/docs-check.sh`.
 - Template: `skills/document-for-agents/reference/templates.md` — the shape this leaf doc follows.

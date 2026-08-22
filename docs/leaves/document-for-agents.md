@@ -17,8 +17,16 @@ registry; the repo's own docs coherence to this repo's harness.
 `SKILL.md` is the entry point; its frontmatter `name` is the skill identity.
 `reference/` files resolve relative to it; `reference/classify.md` governs
 sizing, tier routing, and the invariant lifecycle, `reference/harness.md`
-defines the gate, `reference/templates.md` holds the artifact shapes. The
-consumption path: edit `skills/document-for-agents/SKILL.md` then push to
+defines the gate, `reference/templates.md` holds the artifact shapes. Repository review
+guidance routes to policy: a root `REVIEW.md` is indexed from
+`ARCHITECTURE.md`, checked by harness check 8 wherever it lives, and updated
+in the same change as the rules it states. Check 8's discovery is
+conventional, not exhaustive: adopters who index a policy at another path
+extend discovery, and every policy row the index declares gets the existence
+and freshness halves. Cloud review reads the policy from the pull-request
+base branch, and configuring that service stays external setup.
+The consumption path: edit
+`skills/document-for-agents/SKILL.md` then push to
 main, registry discovery lists the repo, a consumer runs `npx skills add
 RuralNative/RuralNative-SKILLS --skill document-for-agents`. The repo never
 carries its own install, `.agents/` and `skills-lock.json` are ignored. The
@@ -64,6 +72,8 @@ change and flags the discrepancy; changing the rule requires a new decision.
 - Decision: `docs/adr/0001-distribute-as-public-catalog-shelf.md`.
 - Decision: `docs/adr/0002-adopt-ten-check-gate.md` — the ten-check gate and
   the invariant lifecycle.
+- Review policy: `REVIEW.md` — the root policy artifact this seam classifies,
+  indexes, and keeps fresh.
 - Debt registry: `docs/debt.md`.
 - Harness: `scripts/docs-check.sh`.
 - Template: `skills/document-for-agents/reference/templates.md` — the shape this
