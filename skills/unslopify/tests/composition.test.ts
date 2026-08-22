@@ -151,7 +151,7 @@ describe("unslopify always-on output contract (unslopify:INV-7)", () => {
   test("routine chat performs the full self-audit silently, with no completion report", () => {
     const skill = read("skills/unslopify/SKILL.md");
     const n = norm(skill);
-    assert.ok(n.includes("silent"), "ordinary conversation must be audited silently");
+    assert.ok(n.includes("self-audit silently"), "ordinary conversation must be audited silently");
     assert.ok(n.includes("without showing a completion report") || n.includes("no completion report"), "routine chat must not show a completion report");
   });
 
@@ -188,7 +188,8 @@ describe("unslopify always-on output contract (unslopify:INV-7)", () => {
       }
       const { findings } = scan(fixture);
       assert.ok(findings.length >= 1, `${fixture} must produce at least one advisory style candidate`);
-      const flagged = (line: number) => findings.some((f) => f.line_start <= line && line <= f.line_end);
+      const flagged = (line: number) =>
+        findings.some((f) => f.line_start <= line && line <= f.line_end && f.line_end - f.line_start < 3);
       const paired = critical.some((token) =>
         lines.some((text, i) => text.includes(token) && flagged(i + 1)),
       );

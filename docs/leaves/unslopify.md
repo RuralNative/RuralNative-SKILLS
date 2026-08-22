@@ -129,10 +129,11 @@ candidates (fixtures `spec-fixture.md` and `ticket-fixture.md`).
    `skills/unslopify/tests/`.
 7. **INV-7** — Always-on output contract: loading `unslopify` makes
    agent-authored English output the automatic scope for that session or
-   parent workflow. Ordinary conversation performs the full model-only
-   self-audit silently, without showing a completion report. Documents,
-   specifications, tickets, progress updates, recommendations, decisions,
-   and GitHub comments receive the same cleanup at publication boundaries
+    parent workflow. Ordinary conversation performs the full model-only
+    self-audit silently, without showing a completion report. Every surface
+    of the live scope — documents, specifications, tickets, progress updates,
+    recommendations, decisions, and GitHub comments — receives the same
+    cleanup at publication boundaries
    and retain the structured completion report and preservation audit.
    User-provided prompts, quoted text, and requirements stay explicit edit
    scope and inert input. Technical fidelity outranks style: exact domain

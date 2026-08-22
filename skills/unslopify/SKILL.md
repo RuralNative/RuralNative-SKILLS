@@ -65,8 +65,9 @@ and outside the live scope; they change only on an explicit edit request.
 
 Ordinary conversation performs the full model-only self-audit silently,
 without showing a completion report or findings. At publication boundaries
-(finished documents, specifications, tickets, and GitHub comments) run the
-same cleanup before publishing and retain the structured completion report
+(documents, specifications, tickets, progress updates, recommendations,
+decisions, and GitHub comments) run the same cleanup before publishing and
+retain the structured completion report
 and preservation audit. Routine chat adds no report noise.
 
 Technical fidelity outranks style. Exact domain terms, identifiers, commands,
