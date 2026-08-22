@@ -111,7 +111,8 @@ change and flags the discrepancy; changing the rule requires a new decision.
     guidance; entries accept confirmed mistakes only (confirmed by the user or
     proved from the prompt, code, checks, or docs), use the approved sanitized
     fields, omit raw prompts, code, secrets, personal data, absolute paths,
-    repository remotes, and proprietary names, describe evidence and
+    repository remotes, and proprietary names, record their version-control
+    exclusion at creation, describe evidence and
     correction without becoming a general prohibition or instruction, and are
     evidence for optional user-reviewed submission to the skill developer with
     no upload, network call, or telemetry. Mechanism: composition tests in

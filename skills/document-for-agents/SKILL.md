@@ -94,7 +94,9 @@ where its guidance failed. The record exists only by choice:
    skill never deletes the file without that separate choice.
 4. **The file stays private.** One append-only local file, outside the doc
    cache and outside version control by default, excluded from every normal
-   agent read set. Loading protocols and task guidance never include it. It is
+   agent read set. When creating it, record its version-control exclusion,
+   for example in `.git/info/exclude`, so no commit ever picks it up.
+   Loading protocols and task guidance never include it. It is
    never task guidance: it is evidence for optional user-reviewed submission
    to the skill developer, not policy, debt, an invariant, or task guidance.
 5. **Confirmed mistakes only.** Log a mistake only when it was confirmed by

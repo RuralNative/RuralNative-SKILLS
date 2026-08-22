@@ -37,6 +37,10 @@ describe("opt-in skill diagnostics (document-for-agents:INV-14)", () => {
     assert.ok(n.includes("outside the doc cache"));
     assert.ok(n.includes("outside version control by default"));
     assert.ok(n.includes("private"));
+    assert.ok(
+      n.includes("record its version-control exclusion"),
+      "creating the file must record an exclusion mechanism, e.g. .git/info/exclude"
+    );
   });
 
   test("normal loading protocols and task guidance never include the diagnostics file", () => {
@@ -146,7 +150,10 @@ describe("management marker and provenance states (document-for-agents:INV-15)",
   test("provenance is confirmed only when marker and evidence support it; ambiguous cases use likely or unknown", () => {
     const t = norm(read(TEMPLATES));
     assert.ok(t.includes("confirmed only when the marker plus supporting evidence backs it"));
-    assert.ok(t.includes("likely") && t.includes("unknown"));
+    assert.ok(
+      read(TEMPLATES).includes("Attribution confidence: confirmed | likely | unknown"),
+      "the diagnostics entry must enumerate exactly the three provenance states"
+    );
     assert.ok(t.includes("never guessed certainty"));
     const leaf = norm(read("docs/leaves/document-for-agents.md"));
     assert.ok(leaf.includes("confirmed") && leaf.includes("unknown"));
