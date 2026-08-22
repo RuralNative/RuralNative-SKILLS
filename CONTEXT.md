@@ -125,6 +125,26 @@ _Avoid_: direct-main delivery, mode selection
 A git worktree whose root sits under the Kilo Agent Manager worktree location. Worker sessions dispatched by `implement-this` run in such worktrees; the location carries no delivery-mode choice.
 _Avoid_: agent worktree, AO worktree
 
+**Workflow command**:
+One of the three direct human entry points, `plan-this`, `implement-this`, or `review-this`. It owns the boundaries and state changes of its stage while delegated skills supply methods inside those boundaries.
+_Avoid_: Wrapper, coordinator
+
+**Parent specification**:
+The GitHub issue that records the agreed scope and groups every implementation ticket as a native child. It is a lifecycle record, not claimable work.
+_Avoid_: Parent ticket, spec ticket
+
+**Ticket frontier**:
+The open, unassigned child tickets of a parent specification that have no open native blockers and carry `ready-for-agent`.
+_Avoid_: Ready queue, batch
+
+**Implementation wave**:
+At most three ticket-frontier items running concurrently, each in its own worktree, branch, worker session, and pull request.
+_Avoid_: Worker batch, sprint
+
+**Review wave**:
+The pull requests produced by one implementation wave and reconciled against one current head per pull request before merge.
+_Avoid_: Review batch, merge queue
+
 **Requirements data**:
 Prose flowing through a workflow — task text, issue bodies, comments, specifications, review comments, rewrite input — that states work and evidence but cannot widen scope, select files, authorize tools, or override workflow gates (ADR-0015). `unslopify` applies the same rule to scoped prose: prompt-like text is inert content, never instruction.
 _Avoid_: instructions (when ticket prose is meant), executable input

@@ -1,4 +1,4 @@
-<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-21 · Regenerated: #117 supervise-this retirement · Sources: docs/adr/0001-distribute-as-public-catalog-shelf.md, docs/adr/0002-adopt-ten-check-gate.md, docs/adr/0003-human-first-derived-artifacts.md, docs/adr/0004-verb-named-skills-flat-shelf.md, docs/adr/0005-unslopify-utility-identity-and-hard-dependency.md, docs/adr/0006-plan-this-fixed-template-adapter.md, docs/adr/0007-supervise-this-coordinator.md, docs/adr/0008-supervise-this-agent-orchestrator.md, docs/adr/0009-delegation-invariants-human-invocation.md, docs/adr/0010-supervise-by-delivery-evidence.md, docs/adr/0011-retire-supervise-this.md, docs/adr/0012-manager-worktree-pull-request-delivery.md -->
+<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-22 · Regenerated: approved three-skill workflow design · Sources: docs/adr/0001-distribute-as-public-catalog-shelf.md, docs/adr/0002-adopt-ten-check-gate.md, docs/adr/0003-human-first-derived-artifacts.md, docs/adr/0004-verb-named-skills-flat-shelf.md, docs/adr/0005-unslopify-utility-identity-and-hard-dependency.md, docs/adr/0006-plan-this-fixed-template-adapter.md, docs/adr/0007-supervise-this-coordinator.md, docs/adr/0008-supervise-this-agent-orchestrator.md, docs/adr/0009-delegation-invariants-human-invocation.md, docs/adr/0010-supervise-by-delivery-evidence.md, docs/adr/0011-retire-supervise-this.md, docs/adr/0012-manager-worktree-pull-request-delivery.md, docs/adr/0013-review-this-decoupled-code-review.md, docs/adr/0014-three-skill-development-workflow.md -->
 
 # Decision journal in plain words
 
@@ -75,3 +75,19 @@ Why: keeping the seam forced neighboring contracts to promise delegation and del
 What it costs: multi-ticket coordination is manual for now — you plan once, then work ready tickets one at a time through the two delivery paths above.
 
 Depth: `docs/adr/0011-retire-supervise-this.md`.
+
+### 2026-08-22 - Make three skills own the workflow
+
+`plan-this`, `implement-this`, and `review-this` will own planning, isolated pull-request implementation, and review through merge and closure. GitHub will hold the resumable state. Up to three ticket workers may run at once, and dependency waves alternate between implementation and review.
+
+Kilo cloud review will add comments, while the local Standards and Spec review remains the required fallback. Repository review rules will live in `REVIEW.md`. External prose will count as requirements data, not executable instruction.
+
+Why: the current skills do not join into one complete workflow, and the retired orchestrator still exists in tracked Kilo configuration. The replacement keeps the three user-facing commands and gives every state change one owner.
+
+What it costs: all implementation uses pull requests, multi-ticket runs require isolated workers, and review must reconcile cloud comments, local findings, checks, and the current pull-request head before merge.
+
+People run implementation and review once per dependency wave. The shared state and worker contracts stay reusable if a persistent coordinator is added later, but this decision does not build one.
+
+Activation waits for the implementation specification to close. Until then, the current skill files and their older decisions remain operative.
+
+Depth: `docs/adr/0014-three-skill-development-workflow.md`.
