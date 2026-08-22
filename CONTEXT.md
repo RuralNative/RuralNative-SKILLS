@@ -24,7 +24,7 @@ unchanged across audiences and a suffix would invent a false distinction
 (ADR-0005), and for task-scoped fixed-template workflow adapters such as
 `plan-this`, `implement-this`, and `review-this`
 where the identity is the user-facing slash command and a suffix would
-obscure the explicit invocation contract. See ADR-0006 and ADR-0013.
+obscure the explicit invocation contract. See ADR-0006 and ADR-0013 (superseded by the ADR-0014 workflow contract).
 _Avoid_: noun-phrase names (documentation-for-ai), router prefixes (docs/)
 
 **AI tell**:

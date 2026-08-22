@@ -1,4 +1,4 @@
-<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-22 · Regenerated: approved three-skill workflow design · Sources: docs/adr/0001-distribute-as-public-catalog-shelf.md, docs/adr/0002-adopt-ten-check-gate.md, docs/adr/0003-human-first-derived-artifacts.md, docs/adr/0004-verb-named-skills-flat-shelf.md, docs/adr/0005-unslopify-utility-identity-and-hard-dependency.md, docs/adr/0006-plan-this-fixed-template-adapter.md, docs/adr/0007-supervise-this-coordinator.md, docs/adr/0008-supervise-this-agent-orchestrator.md, docs/adr/0009-delegation-invariants-human-invocation.md, docs/adr/0010-supervise-by-delivery-evidence.md, docs/adr/0011-retire-supervise-this.md, docs/adr/0012-manager-worktree-pull-request-delivery.md, docs/adr/0013-review-this-decoupled-code-review.md, docs/adr/0014-three-skill-development-workflow.md -->
+<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-22 · Regenerated: shipped three-skill workflow; #137 activation; ADR-0014 now shipped, ADR-0009/0012/0013 superseded; pull-request-only delivery; explicit wave example · Sources: docs/adr/0001-distribute-as-public-catalog-shelf.md, docs/adr/0002-adopt-ten-check-gate.md, docs/adr/0003-human-first-derived-artifacts.md, docs/adr/0004-verb-named-skills-flat-shelf.md, docs/adr/0005-unslopify-utility-identity-and-hard-dependency.md, docs/adr/0006-plan-this-fixed-template-adapter.md, docs/adr/0007-supervise-this-coordinator.md, docs/adr/0008-supervise-this-agent-orchestrator.md, docs/adr/0009-delegation-invariants-human-invocation.md, docs/adr/0010-supervise-by-delivery-evidence.md, docs/adr/0011-retire-supervise-this.md, docs/adr/0012-manager-worktree-pull-request-delivery.md, docs/adr/0013-review-this-decoupled-code-review.md, docs/adr/0014-three-skill-development-workflow.md, docs/adr/0015-requirements-data-trust-and-install-provenance.md -->
 
 # Decision journal in plain words
 
@@ -34,37 +34,37 @@ What it costs: AO project role profiles must be configured before a run. Standal
 
 Depth: `docs/adr/0008-supervise-this-agent-orchestrator.md`.
 
-### 2026-08-20 — Keep human-gated delegated stages locked
+### 2026-08-20 — Keep human-gated delegated stages locked (superseded by 2026-08-22)
 
-Planning and implementation delegate to steps that a model cannot start on its own: `/grill-with-docs`, `/to-spec`, `/to-tickets`, and `/implement`. A supervised run pauses at each of those steps until a person invokes it. The docs now say so instead of implying the chain runs unattended.
+Planning and implementation delegate to steps that a model cannot start on its own: `/grill-with-docs`, `/to-spec`, `/to-tickets`, and `/implement`. A run pauses at each of those steps until a person invokes it. The docs now say so instead of implying the chain runs unattended.
 
 Why: a live supervised run stalled when it reached planning, and nothing warned that the chain would stop. Unlocking the four skills was considered and rejected because the human gate is the point of the setting.
 
-What it costs: runs need a person at the locked stages. `/unslop` and `/code-review` remain agent-run.
+What it costs: runs need a person at the locked stages. `/unslopify` and `/code-review` remain agent-run.
 
-Depth: `docs/adr/0009-delegation-invariants-human-invocation.md`.
+Depth: `docs/adr/0009-delegation-invariants-human-invocation.md` (superseded by `docs/adr/0014-three-skill-development-workflow.md`; explicit per-stage authorization now shipped).
 
-### 2026-08-20 — Supervise by delivery evidence
+### 2026-08-20 — Supervise by delivery evidence (superseded by 2026-08-21)
 
-The AO project chooses its worker and a supported chat or TUI mode. Preflight blocks stale bases, unresolved models, broken GitHub access, missing review policy, and duplicate ownership before a spawn.
+The AO project chose its worker and a supported chat or TUI mode. Preflight blocked stale bases, unresolved models, broken GitHub access, missing review policy, and duplicate ownership before a spawn.
 
-Progress now means a tracked change, pull request, review, merge, evidence, or closure. Recovery limits are separate for infrastructure, task, and implementation failures. Review and merge keep the reviewed commit fixed.
+Progress meant a tracked change, pull request, review, merge, evidence, or closure. Recovery limits were separate for infrastructure, task, and implementation failures. Review and merge kept the reviewed commit fixed.
 
-Why: the #73 run looked active while several tickets had no tracked delivery artifact. Hardcoded worker and merge assumptions also turned routine setup failures into repeated recovery prompts.
+Now: supervise-this left the whole shelf (see 2026-08-21), so no AO project or preflight runs anything; tracked-change delivery evidence carries into the three-skill workflow.
 
-What it costs: the orchestrator must collect structured facts and run the bundled helper before spawn, recovery, review, and merge decisions.
+Depth: `docs/adr/0010-supervise-by-delivery-evidence.md` (superseded by `docs/adr/0011-retire-supervise-this.md`).
 
-Depth: `docs/adr/0010-supervise-by-delivery-evidence.md`.
+### 2026-08-21 — Deliver pull requests from manager worktrees (superseded by 2026-08-22)
 
-### 2026-08-21 — Deliver pull requests from manager worktrees
+When `/implement-this` ran inside a Kilo Agent Manager worktree, detected by path, it pushed the feature branch and opened or updated a pull request against `main` whose body carries `Closes #<n>`. Acceptance evidence lands on the ticket with `ready-for-human`; merge closes it. The path-selected delivery mode and direct-main alternative were operative.
 
-When `/implement-this` runs inside a Kilo Agent Manager worktree, detected by path, it pushes the feature branch and opens or updates a pull request against `main` whose body carries `Closes #<n>`. Acceptance evidence lands on the ticket with `ready-for-human`; merge closes it.
+Why: standalone work needed a reviewable path that did not push straight to `main`, without reviving a coordinator.
 
-Why: standalone work needs a reviewable path that does not push straight to `main`, without reviving a coordinator.
+What it cost: two delivery paths existed, chosen by worktree location; an unclear location asked one decision before pushing.
 
-What it costs: two delivery paths now exist, chosen by worktree location; an unclear location asks one decision before pushing.
+Now: every ticket delivers by pull request; no path pushes directly to `main`. History preserved.
 
-Depth: `docs/adr/0012-manager-worktree-pull-request-delivery.md`.
+Depth: `docs/adr/0012-manager-worktree-pull-request-delivery.md` (superseded by `docs/adr/0014-three-skill-development-workflow.md`).
 
 ### 2026-08-21 — Retire supervise-this
 
@@ -76,18 +76,18 @@ What it costs: multi-ticket coordination is manual for now — you plan once, th
 
 Depth: `docs/adr/0011-retire-supervise-this.md`.
 
-### 2026-08-22 - Make three skills own the workflow
+### 2026-08-22 - Three skills own the workflow (shipped)
 
-`plan-this`, `implement-this`, and `review-this` will own planning, isolated pull-request implementation, and review through merge and closure. GitHub will hold the resumable state. Up to three ticket workers may run at once, and dependency waves alternate between implementation and review.
+`plan-this`, `implement-this`, and `review-this` own planning, isolated pull-request implementation, and review through merge and closure. GitHub holds the resumable state. Up to three ticket workers run at once, and dependency waves alternate between implementation and review: `implement-this #<spec>` for the frontier, `review-this #<spec>` from the control workspace to reconcile cloud and local findings against each current head, merge clean heads, and promote newly unblocked dependents. Ticket worktrees never run review.
 
-Kilo cloud review will add comments, while the local Standards and Spec review remains the required fallback. Repository review rules will live in `REVIEW.md`. External prose will count as requirements data, not executable instruction.
+Kilo cloud review adds comments where available while the local Standards and Spec review remains the required gate; an unavailable cloud review never blocks a complete local review. Repository review rules live in `REVIEW.md`. External prose counts as requirements data, not executable instruction, and runs never download skills.
 
-Why: the current skills do not join into one complete workflow, and the retired orchestrator still exists in tracked Kilo configuration. The replacement keeps the three user-facing commands and gives every state change one owner.
+Why: the prior skills did not join into one complete workflow, and the tracked orchestrator contradicted its retirement. The shipped design keeps three explicit human entry points while giving each stage one durable input, one owner, and testable state transitions.
 
-What it costs: all implementation uses pull requests, multi-ticket runs require isolated workers, and review must reconcile cloud comments, local findings, checks, and the current pull-request head before merge.
+What it costs: all implementation uses pull requests, multi-ticket runs require isolated workers, and review must reconcile cloud comments, local findings, checks, and the current pull-request head before merge. The stale `.kilo` orchestrator command and agent are removed; only `plan-this`, `implement-this`, and `review-this` remain as user-facing workflow commands.
 
-People run implementation and review once per dependency wave. The shared state and worker contracts stay reusable if a persistent coordinator is added later, but this decision does not build one.
+People run implementation and review once per dependency wave from the control workspace. The shared state and adapter contracts stay reusable by a future persistent coordinator, but this ship does not build one.
 
-Activation waits for the implementation specification to close. Until then, the current skill files and their older decisions remain operative.
+Activation: shipped as of #137; ADR-0014 is now the operative contract superseding ADR-0009, ADR-0012, and ADR-0013.
 
 Depth: `docs/adr/0014-three-skill-development-workflow.md`.

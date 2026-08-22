@@ -1,4 +1,4 @@
-<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-22 · Regenerated: #133 canonical publication from plan-this; #134 review round two: request-derived specification, malformed-reference refusal, dead-session replacement on the same worktree, mid-batch containment · Sources: REVIEW.md, docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md, docs/leaves/unslopify.md, docs/leaves/plan-this.md, docs/leaves/implement-this.md, docs/leaves/release-skills.md, docs/adr/0011-retire-supervise-this.md, docs/adr/0012-manager-worktree-pull-request-delivery.md, docs/adr/0013-review-this-decoupled-code-review.md -->
+<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-22 · Regenerated: shipped three-skill workflow; #137 activation; stale orchestrator removed; ADR-0014 shipped, ADR-0009/0012/0013 superseded; pull-request-only delivery · Sources: REVIEW.md, docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md, docs/leaves/unslopify.md, docs/leaves/plan-this.md, docs/leaves/implement-this.md, docs/leaves/review-this.md, docs/adr/0014-three-skill-development-workflow.md, docs/adr/0015-requirements-data-trust-and-install-provenance.md -->
 # Guardrails in plain words
 
 These are the promises the skills make.
@@ -19,7 +19,8 @@ These are the promises the skills make.
 - Every implementation delivers by pull request. Nothing pushes directly to `main`, force-pushes, or closes a ticket before merge; merge closes it.
 - A failed worker gets one reconciled retry that reuses its worktree, branch, and session; a second failure stops the ticket with `needs-info`.
 - Verification runs dependency install, tests, TypeScript, and the docs harness. Every check in the chain can fail.
-- Implementation runs one delegated `/implement` stage and does not host code review; review lives in `/review-this`, invoked from the control workspace after the implementation run ends.
+- Implementation runs one delegated `/implement` stage and does not host code review; review lives in `/review-this #<spec>`, invoked once per wave from the control workspace after the implementation wave ends; ticket worktrees never run review.
+- The three user-facing workflow commands are `plan-this`, `implement-this`, and `review-this` only.
 - The ready frontier contains only open, unblocked, unassigned tickets with `ready-for-agent`.
 - After a ticket closes, only its newly unblocked dependents get label updates — nothing else moves.
 - One shared decision module, copied byte-identical into all three workflow skills, turns observed facts into next actions: frontier selection, at most three active workers (a worker holds its slot until it is stopped), duplicate ownership rejected, one retry before a `needs-info` stop that holds on every later pass, merge only with green checks, resolved findings, a clean local review, an unchanged reviewed head, and a mergeable pull request. If a blocker reopens, an `unblocked` ticket goes back to `blocked`. Repository verification fails if any copy drifts from the authored source.
