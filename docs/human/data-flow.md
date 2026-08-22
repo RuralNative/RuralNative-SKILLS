@@ -22,6 +22,6 @@ All three workflow skills share one small decision module, the pure workflow sta
 
 GitHub remains the task record. Native blockers decide what may start, and closure happens only after delivery is proven.
 
-The documentation flow has its own rules. Agents update a seam's technical leaf with the seam, then regenerate these human pages from authored documents. Loading budgets are caps on orientation documents, so an agent states its goal, reads only the matching row, and uses a named cache gap to get owner approval before any read set widens; reading the code being changed is never blocked. These pages are for people and are never the source of technical truth.
+The documentation flow has its own rules. Agents update a seam's technical leaf with the seam, then regenerate these human pages from authored documents. Loading budgets are caps on orientation documents, so an agent states its goal, reads only the matching row, and uses a named cache gap to get owner approval before any read set widens; reading the code being changed is never blocked. These pages are for people and are never the source of technical truth. The document seam records these boundaries as separate invariants.
 
 Depth: `docs/leaves/implement-this.md`, `docs/leaves/plan-this.md`, `docs/leaves/review-this.md`, `docs/adr/0014-three-skill-development-workflow.md`.

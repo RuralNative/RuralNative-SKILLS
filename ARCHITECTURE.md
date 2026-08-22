@@ -133,12 +133,10 @@ parsed from, so they are not listed here.
 | Any change | AGENTS.md → ARCHITECTURE.md → the seam's leaf doc → glossary | small |
 | Re-orient after compaction | ARCHITECTURE.md → task leaf doc → glossary | one small fixed read |
 
-The budgets are caps on orientation documents, not guidance to trim later.
-They never block code inspection inside the affected seam. When the
-orientation documents lack an unrecoverable fact the task needs, name a cache
-gap, record it in the issue tracker, and ask the owner for approval before
-opening more documentation. Do not widen the read set until approval
-(ADR-0017).
+The budgets are hard caps on orientation documents, not guidance to trim later; they
+never block code inspection inside the affected seam. A missing unrecoverable fact
+becomes a named cache gap: record it in the issue tracker, get owner approval
+before opening more documentation, and do not widen the read set until approval (ADR-0017).
 
 ## Checks
 

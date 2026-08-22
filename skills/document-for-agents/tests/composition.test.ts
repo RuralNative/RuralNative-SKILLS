@@ -169,8 +169,14 @@ describe("document-for-agents hard dependency (document-for-agents:INV-6)", () =
   });
 });
 
-// document-for-agents:INV-7 — attention boundary composition (#147): two equal outputs (cache accuracy, attention control); the five-command contract opens generated AGENTS.md and the architecture index does not duplicate it; loading budgets are hard caps on orientation documents while task-driven code reads inside the affected seam stay allowed; missing unrecoverable facts become named cache gaps requiring approval before the documentation read set widens; the standard leaf shape carries a Not here route by stable seam responsibility; a numbered invariant collision stops until an approved decision supersedes or narrows it; vendor-facts live in the adopting repository's singular reference directory; the ten-check harness remains ten.
-describe("attention boundary contract (document-for-agents:INV-7)", () => {
+// document-for-agents:INV-7 — generated AGENTS.md command order and architecture-index separation.
+// document-for-agents:INV-8 — orientation caps and cache-gap approval.
+// document-for-agents:INV-9 — stable Not here ownership routing.
+// document-for-agents:INV-10 — decision-first invariant changes.
+// document-for-agents:INV-11 — adopting-repository vendor-facts location.
+// document-for-agents:INV-12 — unslopify dependency ordering.
+// document-for-agents:INV-13 — ten-check harness preservation.
+describe("attention boundary contract (document-for-agents:INV-7..INV-13)", () => {
   const SKILL = "skills/document-for-agents/SKILL.md";
   const TEMPLATES = "skills/document-for-agents/reference/templates.md";
   const HARNESS = "skills/document-for-agents/reference/harness.md";
@@ -192,6 +198,7 @@ describe("attention boundary contract (document-for-agents:INV-7)", () => {
     }
   }
 
+  // document-for-agents:INV-7
   test("five commands open generated AGENTS.md in approved order and the architecture index does not duplicate them", () => {
     const commands = JSON.parse(read(`${FIXTURES}/five-commands.json`)).commands as string[];
     const templates = norm(read(TEMPLATES));
@@ -210,6 +217,7 @@ describe("attention boundary contract (document-for-agents:INV-7)", () => {
     }
   });
 
+  // document-for-agents:INV-8
   test("loading budgets are hard caps on orientation documents and code reads inside the seam stay allowed", () => {
     const templates = norm(read(TEMPLATES));
     assert.ok(templates.includes("hard caps on orientation documents"));
@@ -219,6 +227,7 @@ describe("attention boundary contract (document-for-agents:INV-7)", () => {
     assert.ok(arch.includes("never block code inspection inside the affected seam"));
   });
 
+  // document-for-agents:INV-8
   test("missing unrecoverable facts become named cache gaps requiring approval before widening", () => {
     const skill = norm(read(SKILL));
     assert.ok(skill.includes("cache gap"));
@@ -233,6 +242,7 @@ describe("attention boundary contract (document-for-agents:INV-7)", () => {
     assert.ok(architecture.includes("owner for approval"));
   });
 
+  // document-for-agents:INV-9
   test("standard leaf shape requires a Not here route by stable responsibility, not file path", () => {
     const templates = norm(read(TEMPLATES));
     assert.ok(templates.includes("`not here` route"));
@@ -248,6 +258,7 @@ describe("attention boundary contract (document-for-agents:INV-7)", () => {
     }
   });
 
+  // document-for-agents:INV-10
   test("a numbered invariant collision stops until an approved decision supersedes or narrows it", () => {
     const skill = norm(read(SKILL));
     assert.ok(skill.includes("stop before changing code or docs"));
@@ -255,6 +266,7 @@ describe("attention boundary contract (document-for-agents:INV-7)", () => {
     assert.ok(skill.includes("working around it silently is forbidden"));
   });
 
+  // document-for-agents:INV-11
   test("vendor-facts live in the adopting repository under the singular reference directory", () => {
     const t = read(TEMPLATES);
     assert.ok(norm(t).includes("in the adopting repository"));
@@ -262,6 +274,7 @@ describe("attention boundary contract (document-for-agents:INV-7)", () => {
     assert.equal(t.includes("references/vendor-facts.md"), false);
   });
 
+  // document-for-agents:INV-13
   test("the ten-check harness remains ten checks", () => {
     const h = read(HARNESS);
     const section = h.slice(h.indexOf("## The ten checks"), h.indexOf("## Scorecard"));
@@ -270,6 +283,7 @@ describe("attention boundary contract (document-for-agents:INV-7)", () => {
     assert.ok(norm(read("ARCHITECTURE.md")).includes("ten checks"));
   });
 
+  // document-for-agents:INV-12
   test("dependency guidance sits below principles and boundaries", () => {
     const s = read(SKILL);
     const principles = s.indexOf("## Principles");

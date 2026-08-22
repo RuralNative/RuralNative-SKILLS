@@ -27,4 +27,6 @@ These are the promises the skills make.
 - After a ticket closes, only its newly unblocked dependents get label updates — nothing else moves.
 - One shared decision module, copied byte-identical into all three workflow skills, turns observed facts into next actions: frontier selection, at most three active workers (a worker holds its slot until it is stopped), duplicate ownership rejected, one retry before a `needs-info` stop that holds on every later pass, merge only with green checks, resolved findings, a clean local review, an unchanged reviewed head, and a mergeable pull request. If a blocker reopens, an `unblocked` ticket goes back to `blocked`. Repository verification fails if any copy drifts from the authored source.
 
+The document seam records its attention, routing, and decision rules as separate invariants.
+
 Technical depth lives in the leaf documents named by each line.

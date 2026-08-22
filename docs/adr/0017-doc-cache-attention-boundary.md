@@ -30,8 +30,8 @@ decision-first collision handling keeps rule changes attached to durable
 reasons instead of per-task judgment calls.
 
 Consequences:
-- The seam leaf declares INV-7 with composition tests and the five-command
-  fixture in `skills/document-for-agents/tests/`.
+- The seam leaf declares INV-7 through INV-13 with composition tests and the
+  five-command fixture in `skills/document-for-agents/tests/`.
 - This repository adopts the contract in the same change: five commands at
   the top of `AGENTS.md`, cap language in the architecture loading protocol,
   a `Not here` route in every leaf doc, and the glossary terms Attention

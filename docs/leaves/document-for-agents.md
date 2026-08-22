@@ -13,9 +13,9 @@ published for consumers, not merely hosted here.
 Owns: the content under `skills/document-for-agents/` — `SKILL.md`, `INSTALL.md`,
 `reference/`. Delegates: the shelf layout and registry behavior to the skills
 registry; the repo's own docs coherence to this repo's harness.
-**Not here**: code architecture and module design stay in normal code work;
-review rules live in the root review policy; prose cleanup belongs to
-`unslopify`.
+**Not here**: code architecture and module design belong to the owning code
+seam; review rules belong to the `review-this` seam; prose cleanup belongs to
+the `unslopify` seam.
 
 ## Key files & data flow
 
@@ -73,22 +73,31 @@ change and flags the discrepancy; changing the rule requires a new decision.
     conventions policy and that installed runtime uses skill identity; the
     tests import the shared file reader and normalizer from
     `scripts/test-helpers.ts`.
-7. **INV-7** — Attention boundary: generated `AGENTS.md` starts with the
-   five approved commands in order and the architecture index does not
-   duplicate them; loading rows and token budgets are hard caps on
-   orientation documents while task-driven code inspection inside the
+7. **INV-7** — Command order: generated `AGENTS.md` starts with the five
+   approved commands in order, and the architecture index does not duplicate
+   them. Mechanism: composition tests use an ordered-command helper and the
+   five-command fixture in `skills/document-for-agents/tests/`.
+8. **INV-8** — Orientation boundary: loading rows and token budgets are hard
+   caps on orientation documents while task-driven code inspection inside the
    affected seam stays allowed; a missing unrecoverable fact becomes a named
-   cache gap requiring owner approval before the documentation read set
-    widens; the agent does not widen it until approval; the standard leaf
-    shape closes Scope & boundaries with a
-   `Not here` route by stable seam responsibility, never a file path; a task
-   that conflicts with a numbered invariant stops before any change until an
-   approved decision supersedes or narrows it, with silent workarounds
-   forbidden; vendor-facts live in the adopting repository's singular
-   `reference/` directory; the harness remains ten checks. Mechanism:
-   composition tests, an ordered-command helper over the shared reader and
-   normalizer, and the five-command fixture in
-   `skills/document-for-agents/tests/`.
+   cache gap recorded in the issue tracker, and the agent does not widen the
+   documentation read set until owner approval. Mechanism: composition tests
+   assert the cap and approval wording across the skill, template, and index.
+9. **INV-9** — Ownership routing: the standard leaf shape closes Scope &
+   boundaries with a `Not here` route by stable seam responsibility, never a
+   file path. Mechanism: composition tests inspect every leaf doc.
+10. **INV-10** — Decision-first invariant changes: a task that conflicts with a
+    numbered invariant stops before any change until an approved decision
+    supersedes or narrows it; silent workarounds are forbidden. Mechanism:
+    composition tests assert the stop language in `SKILL.md`.
+11. **INV-11** — Vendor-facts location: adopting repositories use the singular
+    `reference/vendor-facts.md` path. Mechanism: composition tests assert the
+    singular path and reject the plural form.
+12. **INV-12** — Dependency ordering: the `unslopify` dependency block sits
+    below Principles and Boundaries without losing its tested guarantees.
+    Mechanism: composition tests assert section order.
+13. **INV-13** — Harness size: the documentation harness remains at ten checks.
+    Mechanism: composition tests count the checks in `reference/harness.md`.
 
 ## Links
 
