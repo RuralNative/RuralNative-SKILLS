@@ -1,10 +1,11 @@
 # Installing review-this
 
-`review-this` reviews the changes between `HEAD` and a fixed point along two axes, Standards and Spec. Invoke it explicitly as `/review-this <fixed-point>` where `<fixed-point>` is a commit SHA, branch, tag, or merge-base expression such as `main`, `HEAD~5`, or `$(git merge-base origin/main HEAD)`. If the fixed point is missing, the skill asks for one and stops.
+`review-this` owns one pull-request review wave for a parent specification. Invoke it explicitly as `/review-this #<spec>` where `#<spec>` is the parent specification that groups every implementation ticket as a native sub-issue. The skill discovers native child tickets, linked pull requests, blockers, checks, reviews, and current head SHAs, reconciles Kilo cloud review with the local Standards and Spec review against each current head, routes fixes, squash-merges clean heads, promotes newly unblocked dependents, and closes the specification when final verification passes.
 
 ## Requirements
 
-- Git history with a non-empty diff against the chosen fixed point.
+- A GitHub repository with native sub-issue and `blocked_by` relationships linking child tickets to their parent specification.
+- Open pull requests for the current wave, each against `main` with a closing reference `Closes #<ticket>` and a current head SHA.
 - `/code-review` installed through its own lane. It is not published by this shelf; install it from its own source before using `review-this`. It carries no `disable-model-invocation` lock and stays model-invocable.
 - `/unslopify` installed through its registry lane: `npx skills add RuralNative/RuralNative-SKILLS --skill unslopify`.
 
@@ -34,13 +35,13 @@ Workflow runs perform no skill downloads: once installed, `/review-this` never f
 
 ## Verification
 
-On a branch whose diff against the fixed point is non-empty, run:
+From the control workspace, after an implementation wave has delivered pull requests:
 
 ```
-/review-this main
+ /review-this #130
 ```
 
-The skill pins `main`, identifies the spec and standards sources, spawns the Standards and Spec sub-agents in parallel, and reports both axes side by side without merging or reranking findings.
+The skill discovers the current review wave, collects Kilo cloud summary and inline comments for the current head when available (recording `unavailable` when disabled, absent, failed, or timed out without blocking a complete local review), spawns the Standards and Spec sub-agents in parallel, reconciles cloud and local findings while keeping Standards and Spec axes separate, rejects duplicate, stale, out-of-scope, and unverified findings with evidence, routes confirmed findings to the owning worker (never fixing them in the review workspace), invalidates previous verdicts when a pushed fix changes the head SHA, squash-merges eligible pull requests whose checks are green, findings resolved, local review clean, and reviewed head unchanged, promotes only dependents whose final blocker closed (`unblocked` plus `ready-for-agent`, `blocked` removed), and on the penultimate wave tells you to run `implement-this #<spec>` for the next wave. When every child ticket closes, it checks updated `main` with `npm run verify` and a whole-spec Standards and Spec review, creates the smallest independently verifiable native child ticket for a confirmed integration defect while keeping the parent open, and closes the parent only when all gates pass.
 
 Repository checks run via:
 
@@ -50,4 +51,4 @@ npm run verify
 
 ## Boundary
 
-The skill accepts one invocation only: `/review-this <fixed-point>`. It does not implement tickets, create worktrees, or chain into other workflows; an issue reference may be supplied as the spec source, but no ticket number is required.
+The skill accepts one invocation only: `/review-this #<spec>`. It discovers the current review wave and runs once from the control workspace; it does not implement tickets or create worktrees. It never merges without green required checks, resolved confirmed findings, a clean local review, and an unchanged reviewed head SHA. It never closes a ticket before merge. State and adapter boundaries in `discovery.ts`, `reconciliation.ts`, `adapters.ts`, and the packaged `workflow-state.ts` remain callable by a future persistent coordinator without changing command behavior.
