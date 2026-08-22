@@ -50,7 +50,7 @@ The single-issue contract (#72, trimmed per DEBT-7) grew into the bounded-set co
 - Split decision: [#125](https://github.com/RuralNative/RuralNative-SKILLS/issues/125) — review moved to the `review-this` seam.
 - Decision: `docs/adr/0014-three-skill-development-workflow.md` — shipped three-skill workflow (supersedes ADR-0009, ADR-0012, ADR-0013).
 - Decision: `docs/adr/0015-requirements-data-trust-and-install-provenance.md` — requirements-data trust boundary and install provenance.
-- Historical decisions: `docs/adr/0009-delegation-invariants-human-invocation.md`, `docs/adr/0012-manager-worktree-pull-request-delivery.md`, and `docs/adr/0013-review-this-decoupled-code-review.md` (all superseded by ADR-0014) and `docs/adr/0006-plan-this-fixed-template-adapter.md`.
+- Historical decisions: `docs/adr/0009-delegation-invariants-human-invocation.md`, `docs/adr/0012-manager-worktree-pull-request-delivery.md`, and `docs/adr/0013-review-this-decoupled-code-review.md` (all three superseded by ADR-0014); plus `docs/adr/0006-plan-this-fixed-template-adapter.md`.
 - Review policy: `REVIEW.md` — the cross-cutting review and delivery-trust rules this seam's pull requests are reviewed under; pointed at, not restated.
 - Glossary: `CONTEXT.md`.
 - Harness: `scripts/docs-check.sh`.

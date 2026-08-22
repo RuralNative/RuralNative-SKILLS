@@ -237,7 +237,7 @@ describe("plan-this hard dependencies and workflow order (plan-this:INV-4)", () 
     assert.ok(nInv4.includes("/unslop") && nInv4.includes("no such lock"), "INV-4 must distinguish /unslop as model-invocable with no such lock");
     // ADR-0009 is superseded by ADR-0014 but history is preserved
     const adr = read("docs/adr/0009-delegation-invariants-human-invocation.md");
-    assert.ok(adr.includes("Status: superseded"), "ADR-0009 must be superseded by ADR-0014");
+    assert.ok(adr.includes("Status: superseded"), "ADR-0009 must be marked superseded");
     assert.ok(adr.includes("Superseded by: ADR-0014"), "ADR-0009 must point to ADR-0014");
     assert.ok(adr.includes("disable-model-invocation"), "ADR-0009 must reference disable-model-invocation");
     assert.ok(adr.includes("rejected") && adr.includes("removing"), "ADR-0009 must state removing locks was rejected");

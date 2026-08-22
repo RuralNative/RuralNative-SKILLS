@@ -21,7 +21,7 @@ A specification has five tickets: #101 and #102 have no blockers, #103 is blocke
 
 1. Plan publishes the parent #100 and five children. #101 and #102 get `ready-for-agent`; #103-#105 get `blocked`.
 2. From the control workspace you run `/implement-this #100`. It selects the frontier #101 and #102 (at most three) and dispatches each to its own worktree and pull request.
-3. From the control workspace you run `/review-this #100`. It discovers the two pull requests, reconciles cloud and local findings against each current head, routes confirmed fixes to the owning workers, squash-merges clean heads, and promotes #103 to `unblocked` + `ready-for-agent` when #101 closes (and #104 when both #101 and #102 close).
+3. From the control workspace you run `/review-this #100`. It discovers the two pull requests, reconciles cloud and local findings against each current head, routes confirmed fixes to the owning workers, squash-merges clean heads, and promotes #103 to `unblocked` + `ready-for-agent` (removing `blocked`) when #101 closes (and #104 when both #101 and #102 close).
 4. You run `/implement-this #100` again. It now selects #103 and #104. After that wave you run `/review-this #100` again, which merges them and promotes #105.
 5. You run `/implement-this #100` and `/review-this #100` for the final wave. When #105 merges, `review-this` checks out updated `main`, runs `npm run verify`, and runs a whole-spec Standards and Spec review. If a cross-ticket defect appears it becomes the smallest follow-up child ticket; otherwise the parent #100 closes.
 

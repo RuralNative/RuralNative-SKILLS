@@ -41,7 +41,7 @@ npm run verify
 
 ## Further notes
 
-The review prefix was extracted from the delivery branches of `implement-this` (#124, parent #123): `implement-this` keeps fixed-base computation for pull-request creation but no longer runs review internally; callers who relied on that chaining run `/review-this #<spec>` explicitly. ADR-0006's task-scoped fixed-template exception extends to this seam per #123, ADR-0013 (now superseded by ADR-0014) recorded the decoupling into a wave owner, and ADR-0014 ships the contract where the review wave owns merge, promotion, final verification, and parent closure rather than a fixed-point diff report. The boundary: this seam hosts only the wave review invocation template — `implement-this` owns implementation and delivery and does not run review; `/code-review` owns the two-axis review workflow itself, `REVIEW.md` owns the shared policy.
+The review prefix was extracted from the delivery branches of `implement-this` (#124, parent #123): `implement-this` delivers every ticket by pull request against `main` but no longer runs review internally; callers who relied on that chaining run `/review-this #<spec>` explicitly. ADR-0006's task-scoped fixed-template exception extends to this seam per #123, ADR-0013 (now superseded by ADR-0014) recorded the decoupling into a wave owner, and ADR-0014 ships the contract where the review wave owns merge, promotion, final verification, and parent closure rather than a fixed-point diff report. The boundary: this seam hosts only the wave review invocation template — `implement-this` owns implementation and delivery and does not run review; `/code-review` owns the two-axis review workflow itself, `REVIEW.md` owns the shared policy.
 
 ## Links
 

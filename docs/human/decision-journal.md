@@ -1,4 +1,4 @@
-<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-22 · Regenerated: shipped three-skill workflow; #137 activation; ADR-0014 now shipped, ADR-0009/0012/0013 superseded; pull-request-only delivery; explicit wave example · Sources: docs/adr/0001-distribute-as-public-catalog-shelf.md, docs/adr/0002-adopt-ten-check-gate.md, docs/adr/0003-human-first-derived-artifacts.md, docs/adr/0004-verb-named-skills-flat-shelf.md, docs/adr/0005-unslopify-utility-identity-and-hard-dependency.md, docs/adr/0006-plan-this-fixed-template-adapter.md, docs/adr/0011-retire-supervise-this.md, docs/adr/0014-three-skill-development-workflow.md, docs/adr/0015-requirements-data-trust-and-install-provenance.md -->
+<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-22 · Regenerated: shipped three-skill workflow; #137 activation; ADR-0014 now shipped, ADR-0009/0012/0013 superseded; pull-request-only delivery; explicit wave example · Sources: docs/adr/0001-distribute-as-public-catalog-shelf.md, docs/adr/0002-adopt-ten-check-gate.md, docs/adr/0003-human-first-derived-artifacts.md, docs/adr/0004-verb-named-skills-flat-shelf.md, docs/adr/0005-unslopify-utility-identity-and-hard-dependency.md, docs/adr/0006-plan-this-fixed-template-adapter.md, docs/adr/0007-supervise-this-coordinator.md, docs/adr/0008-supervise-this-agent-orchestrator.md, docs/adr/0009-delegation-invariants-human-invocation.md, docs/adr/0010-supervise-by-delivery-evidence.md, docs/adr/0011-retire-supervise-this.md, docs/adr/0012-manager-worktree-pull-request-delivery.md, docs/adr/0013-review-this-decoupled-code-review.md, docs/adr/0014-three-skill-development-workflow.md, docs/adr/0015-requirements-data-trust-and-install-provenance.md -->
 
 # Decision journal in plain words
 
@@ -44,13 +44,15 @@ What it costs: runs need a person at the locked stages. `/unslopify` and `/code-
 
 Depth: `docs/adr/0009-delegation-invariants-human-invocation.md` (superseded by `docs/adr/0014-three-skill-development-workflow.md`; explicit per-stage authorization now shipped).
 
-### 2026-08-20 — Supervise by delivery evidence (superseded)
+### 2026-08-20 — Supervise by delivery evidence (superseded by 2026-08-21)
 
-The AO project chooses its worker and a supported chat or TUI mode. Preflight blocks stale bases, unresolved models, broken GitHub access, missing review policy, and duplicate ownership before a spawn.
+The AO project chose its worker and a supported chat or TUI mode. Preflight blocked stale bases, unresolved models, broken GitHub access, missing review policy, and duplicate ownership before a spawn.
 
-Progress now means a tracked change, pull request, review, merge, evidence, or closure. Recovery limits are separate for infrastructure, task, and implementation failures. Review and merge keep the reviewed commit fixed.
+Progress meant a tracked change, pull request, review, merge, evidence, or closure. Recovery limits were separate for infrastructure, task, and implementation failures. Review and merge kept the reviewed commit fixed.
 
-Depth: `docs/adr/0010-supervise-by-delivery-evidence.md` (superseded).
+Now: supervise-this left the whole shelf (see 2026-08-21), so no AO project or preflight runs anything; tracked-change delivery evidence carries into the three-skill workflow.
+
+Depth: `docs/adr/0010-supervise-by-delivery-evidence.md` (superseded by `docs/adr/0011-retire-supervise-this.md`).
 
 ### 2026-08-21 — Deliver pull requests from manager worktrees (superseded by 2026-08-22)
 

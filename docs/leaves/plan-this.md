@@ -30,7 +30,7 @@ Wrapper material removed from `SKILL.md` in #55 — Invocation details, Hard dep
 
 Delegation for supervised planning (#63, parent #62) was removed by ADR-0011 when `supervise-this` retired: the invocation contract is direct `/plan-this <task>` only, while the byte-for-byte fixed-template body, single `## Task:` slot, dependency order, prose rules, and approval gates are unchanged from the delegated era. No second planning contract ever existed and none replaces the retired one.
 
-ADR-0009 (now superseded by ADR-0014) recorded the decision to keep `disable-model-invocation` locks on `/grill-with-docs`, `/to-spec`, and `/to-tickets` and to document the human-invocation requirement in the hard-dependency invariant rather than unlock the skills for unattended model traversal; the shipped contract in ADR-0014 carries the explicit per-stage authorization.
+ADR-0009 (now superseded by ADR-0014) recorded the decision to keep `disable-model-invocation` locks on `/grill-with-docs`, `/to-spec`, and `/to-tickets` and to document the human-invocation requirement in the hard-dependency invariant rather than unlock the skills for unattended model traversal; the shipped contract in ADR-0014 carries the explicit per-stage authorization. The composition tests pin the two facts separately: one assertion checks only the `Status: superseded` marker, a second asserts the `Superseded by: ADR-0014` pointer, so a failure names which fact drifted.
 
 Former parity debt with `implement-this` (DEBT-7) was resolved 2026-08-20. Verified against `skills/implement-this/SKILL.md` at 48 lines including frontmatter with no wrapper sections; the trimmed contract now matches across both adapters with wrapper reference material in leaf/INSTALL/ADR.
 
