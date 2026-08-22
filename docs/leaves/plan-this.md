@@ -30,7 +30,7 @@ Wrapper material removed from `SKILL.md` in #55 — Invocation details, Hard dep
 
 Delegation for supervised planning (#63, parent #62) was removed by ADR-0011 when `supervise-this` retired: the invocation contract is direct `/plan-this <task>` only, while the byte-for-byte fixed-template body, single `## Task:` slot, dependency order, prose rules, and approval gates are unchanged from the delegated era. No second planning contract ever existed and none replaces the retired one.
 
-ADR-0009 records the decision to keep `disable-model-invocation` locks on `/grill-with-docs`, `/to-spec`, and `/to-tickets` and to document the human-invocation requirement in the hard-dependency invariant rather than unlock the skills for unattended model traversal.
+ADR-0009 (now superseded by ADR-0014) recorded the decision to keep `disable-model-invocation` locks on `/grill-with-docs`, `/to-spec`, and `/to-tickets` and to document the human-invocation requirement in the hard-dependency invariant rather than unlock the skills for unattended model traversal; the shipped contract in ADR-0014 carries the explicit per-stage authorization.
 
 Former parity debt with `implement-this` (DEBT-7) was resolved 2026-08-20. Verified against `skills/implement-this/SKILL.md` at 48 lines including frontmatter with no wrapper sections; the trimmed contract now matches across both adapters with wrapper reference material in leaf/INSTALL/ADR.
 
@@ -39,7 +39,8 @@ Former parity debt with `implement-this` (DEBT-7) was resolved 2026-08-20. Verif
 - Glossary: `CONTEXT.md` — Skill, skill identity, skill naming convention, distribution shelf, registry lane.
 - Decision: `docs/adr/0004-verb-named-skills-flat-shelf.md` — default naming.
 - Decision: `docs/adr/0006-plan-this-fixed-template-adapter.md` — task-scoped exception and template boundary.
-- Decision: `docs/adr/0009-delegation-invariants-human-invocation.md` — locked delegation chains and human-invocation requirement.
+- Decision: `docs/adr/0014-three-skill-development-workflow.md` — shipped three-skill workflow (supersedes ADR-0009, ADR-0012, ADR-0013).
+- Historical decision: `docs/adr/0009-delegation-invariants-human-invocation.md` (now superseded) — locked delegation chains and human-invocation requirement.
 - Decision: `docs/adr/0015-requirements-data-trust-and-install-provenance.md` — requirements-data trust boundary and install provenance.
 - Harness: `scripts/docs-check.sh`.
 - Template: `skills/document-for-agents/reference/templates.md` — the shape this leaf doc follows.

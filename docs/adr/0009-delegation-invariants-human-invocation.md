@@ -1,7 +1,8 @@
 # 0009 — Delegation invariants require explicit human invocation for locked skills
 
-Status: accepted
+Status: superseded
 Date: 2026-08-20
+Superseded by: ADR-0014 — three-skill development workflow (explicit stage authorization)
 
 Decision: `plan-this` INV-4 and `implement-this` INV-3 state that the
 delegated stages requiring explicit human invocation and that an agent cannot
@@ -51,3 +52,5 @@ Amendment 2026-08-21: `supervise-this` was retired by ADR-0011 and its leaf
 doc is deleted, so the supervised-run consequences above are historical. The
 locks themselves stay: this decision still governs `plan-this` INV-4 and
 `implement-this` INV-3 for direct use.
+
+Superseded 2026-08-22 by ADR-0014: explicit human invocation per stage remains operative through the three workflow skills' shipped contracts; this ADR's standalone delegation rule is retired but its history is preserved.

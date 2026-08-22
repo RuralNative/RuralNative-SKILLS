@@ -1,7 +1,8 @@
 # 0013 — review-this decoupled from code-review hosting
 
-Status: accepted
+Status: superseded
 Date: 2026-08-21
+Superseded by: ADR-0014 — three-skill development workflow (review through closure)
 Parent specification: issue #123
 Split decisions: #124, #125
 
@@ -20,3 +21,5 @@ Consequences:
 - `docs/leaves/review-this.md` and `docs/leaves/implement-this.md` reference this decision and state each other's scope boundaries.
 - `README.md` does not list the workflow adapters on the shelf table; the README contract test pins their absence there.
 - Composition tests for both seams keep encoding the split: single-stage `/implement` flow here, fixed-template review prefix in `review-this`.
+
+Superseded 2026-08-22 by ADR-0014: the review stage no longer reports a fixed-point diff; it owns one pull-request wave through merge, dependent promotion, final verification, and parent closure via `/review-this #<spec>` from the control workspace. History preserved.

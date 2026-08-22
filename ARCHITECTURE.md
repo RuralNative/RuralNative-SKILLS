@@ -44,10 +44,7 @@ harness check 6. A covered doc must be in the seam table or listed here:
 - docs/adr/0004-verb-named-skills-flat-shelf.md
 - docs/adr/0005-unslopify-utility-identity-and-hard-dependency.md
 - docs/adr/0006-plan-this-fixed-template-adapter.md
-- docs/adr/0009-delegation-invariants-human-invocation.md
 - docs/adr/0011-retire-supervise-this.md
-- docs/adr/0012-manager-worktree-pull-request-delivery.md
-- docs/adr/0013-review-this-decoupled-code-review.md
 - docs/adr/0014-three-skill-development-workflow.md
 - docs/adr/0015-requirements-data-trust-and-install-provenance.md
 - docs/leaves/document-for-humans.md
@@ -66,7 +63,10 @@ without the index referencing them as current:
 |---|---|
 | docs/adr/0007-supervise-this-coordinator.md | docs/adr/0011-retire-supervise-this.md |
 | docs/adr/0008-supervise-this-agent-orchestrator.md | docs/adr/0011-retire-supervise-this.md |
+| docs/adr/0009-delegation-invariants-human-invocation.md | docs/adr/0014-three-skill-development-workflow.md |
 | docs/adr/0010-supervise-by-delivery-evidence.md | docs/adr/0011-retire-supervise-this.md |
+| docs/adr/0012-manager-worktree-pull-request-delivery.md | docs/adr/0014-three-skill-development-workflow.md |
+| docs/adr/0013-review-this-decoupled-code-review.md | docs/adr/0014-three-skill-development-workflow.md |
 
 ## Cross-cutting boundaries
 
@@ -104,11 +104,11 @@ parsed from, so they are not listed here.
 | docs/adr/0006-plan-this-fixed-template-adapter.md | decision |
 | docs/adr/0007-supervise-this-coordinator.md | decision (superseded by 0011) |
 | docs/adr/0008-supervise-this-agent-orchestrator.md | decision (superseded by 0011) |
-| docs/adr/0009-delegation-invariants-human-invocation.md | decision |
+| docs/adr/0009-delegation-invariants-human-invocation.md | decision (superseded by 0014) |
 | docs/adr/0010-supervise-by-delivery-evidence.md | decision (superseded by 0011) |
 | docs/adr/0011-retire-supervise-this.md | decision |
-| docs/adr/0012-manager-worktree-pull-request-delivery.md | decision |
-| docs/adr/0013-review-this-decoupled-code-review.md | decision |
+| docs/adr/0012-manager-worktree-pull-request-delivery.md | decision (superseded by 0014) |
+| docs/adr/0013-review-this-decoupled-code-review.md | decision (superseded by 0014) |
 | docs/adr/0014-three-skill-development-workflow.md | decision |
 | docs/adr/0015-requirements-data-trust-and-install-provenance.md | decision |
 | docs/leaves/document-for-agents.md | leaf |

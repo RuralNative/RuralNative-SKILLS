@@ -38,7 +38,7 @@ npm run verify
 
 ## Further notes
 
-ADR-0006 records the original fixed-template adapter. ADR-0009 records the decision to keep `disable-model-invocation` locks on `/implement` and to document the human-invocation requirement in the workflow invariant rather than unlock the skill for unattended model traversal; the bounded-set authorization above extends that lock to child workers. ADR-0012 introduced path-selected delivery modes; the pull-request-only rule supersedes the direct-main branch for this seam, pending the activation reconciliation recorded in spec #130 (issue #137). The review stage lives in the `review-this` seam (`docs/leaves/review-this.md`); this skill does only validation, dispatch, implementation, and pull-request delivery. ADR-0013 records the decoupling. ADR-0015 records the requirements-data trust boundary.
+ADR-0006 records the original fixed-template adapter. ADR-0009 (now superseded by ADR-0014) recorded the decision to keep `disable-model-invocation` locks on `/implement` and to document the human-invocation requirement in the workflow invariant rather than unlock the skill for unattended model traversal; the bounded-set authorization above extends that lock to child workers and ADR-0014 carries the shipped contract. ADR-0012 (now superseded) introduced path-selected delivery modes; the pull-request-only rule shipped in ADR-0014 supersedes the direct-main branch for this seam. The review stage lives in the `review-this` seam (`docs/leaves/review-this.md`); this skill does only validation, dispatch, implementation, and pull-request delivery. ADR-0013 (now superseded) recorded the decoupling. ADR-0015 records the requirements-data trust boundary.
 
 The single-issue contract (#72, trimmed per DEBT-7) grew into the bounded-set contract here (#134, parent #130): multi-input parsing, frontier selection, isolated workers, and pull-request-only delivery replace one-ticket inline delivery. The retired direct-main and manager-worktree mode-selection wording survives only in historical decisions.
 
@@ -48,9 +48,9 @@ The single-issue contract (#72, trimmed per DEBT-7) grew into the bounded-set co
 - Bounded-set ticket: [#134](https://github.com/RuralNative/RuralNative-SKILLS/issues/134) — isolated ticket workers and pull-request-only delivery.
 - Original one-issue specification: [#72](https://github.com/RuralNative/RuralNative-SKILLS/issues/72).
 - Split decision: [#125](https://github.com/RuralNative/RuralNative-SKILLS/issues/125) — review moved to the `review-this` seam.
-- Decision: `docs/adr/0009-delegation-invariants-human-invocation.md` — locked delegation chains and human-invocation requirement.
+- Decision: `docs/adr/0014-three-skill-development-workflow.md` — shipped three-skill workflow (supersedes ADR-0009, ADR-0012, ADR-0013).
 - Decision: `docs/adr/0015-requirements-data-trust-and-install-provenance.md` — requirements-data trust boundary and install provenance.
-- Historical decisions: `docs/adr/0012-manager-worktree-pull-request-delivery.md` (delivery-mode selection, direct-main branch superseded by the pull-request-only rule) and `docs/adr/0006-plan-this-fixed-template-adapter.md`.
+- Historical decisions: `docs/adr/0009-delegation-invariants-human-invocation.md`, `docs/adr/0012-manager-worktree-pull-request-delivery.md`, and `docs/adr/0013-review-this-decoupled-code-review.md` (all superseded by ADR-0014) and `docs/adr/0006-plan-this-fixed-template-adapter.md`.
 - Review policy: `REVIEW.md` — the cross-cutting review and delivery-trust rules this seam's pull requests are reviewed under; pointed at, not restated.
 - Glossary: `CONTEXT.md`.
 - Harness: `scripts/docs-check.sh`.

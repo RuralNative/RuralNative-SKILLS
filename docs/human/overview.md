@@ -1,4 +1,4 @@
-<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-22 · Regenerated: approved three-skill workflow design; #133 canonical publication from plan-this; #134 review round two: request-derived specification, malformed-reference refusal, dead-session replacement on the same worktree, mid-batch containment; #135 review wave through closure; review fixes: cloud-adapter path, failure wrapping with test, de-duplicated merge and verification sentences, ticket-aware routing with grouping tests, unreachable fallback removal · Sources: ARCHITECTURE.md, CONTEXT.md, REVIEW.md, docs/adr/0011-retire-supervise-this.md, docs/adr/0012-manager-worktree-pull-request-delivery.md, docs/adr/0013-review-this-decoupled-code-review.md, docs/adr/0014-three-skill-development-workflow.md, docs/leaves/implement-this.md, docs/leaves/plan-this.md, docs/leaves/review-this.md -->
+<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-22 · Regenerated: shipped three-skill workflow; #137 activation and reconciliation; stale orchestrator removed; ADR-0014 now shipped, ADR-0009/0012/0013 superseded; pull-request-only delivery; explicit wave example · Sources: ARCHITECTURE.md, CONTEXT.md, REVIEW.md, docs/adr/0011-retire-supervise-this.md, docs/adr/0014-three-skill-development-workflow.md, docs/adr/0015-requirements-data-trust-and-install-provenance.md, docs/leaves/implement-this.md, docs/leaves/plan-this.md, docs/leaves/review-this.md -->
 # RuralNative-SKILLS in plain words
 
 This repository publishes reusable skills for coding agents. The shelf includes documentation workflows, prose cleanup, planning, implementation, code review, and release work.
@@ -9,11 +9,21 @@ One written file governs every review. `REVIEW.md` at the repository root says w
 
 The three workflow skills agree on state because they share one decision module. It looks at the GitHub facts (blockers, labels, assignments, closures) and worker and pull-request facts, then returns the next safe actions: what is ready, how many workers may run, when to retry, whether a review is current, and when work may merge or a specification may close. Labels follow the blockers: a reopened blocker sends an `unblocked` ticket back to `blocked`, and a ticket stopped for missing information stays stopped. The parent specification carries no claimable label, `ready-for-agent` is the only claimable label on tickets, and `ready-for-dev` is retired. Every installed skill carries the same copy of this module.
 
-A ticket starts only when its native GitHub blockers are closed. Outside a manager worktree, implementation ends with evidence: verification passes, the work is rebased and pushed to `main`, and the ticket closes with proof. Inside a Kilo Agent Manager worktree, the same work opens a pull request whose body closes the ticket on merge.
+A ticket starts only when its native GitHub blockers are closed. Every ticket delivers by pull request against `main`: the worker pushes its feature branch, opens one pull request with `Closes #<ticket>`, posts acceptance evidence, and the squash-merge closes the ticket. No path pushes directly to `main`.
 
-An approved redesign will make these three skills the whole workflow. Planning will publish native child tickets, implementation will run up to three isolated pull-request workers, and review will reconcile Kilo cloud comments with the local Standards and Spec review before merge and closure. GitHub will keep enough state to resume each dependency wave. This design is not active until its implementation specification closes; the current skill files still control behavior.
+The three skills form the complete workflow. `plan-this` publishes the parent specification and native child tickets; `implement-this` runs up to three isolated pull-request workers per wave; `review-this #<spec>` reconciles Kilo cloud comments with the local Standards and Spec review before merge, promotion, and closure. GitHub keeps enough state to resume each dependency wave from the parent specification.
 
-The user will run implementation and review once for each dependency wave. A future persistent coordinator can reuse the same state and worker contracts, but it is not part of this redesign.
+You run implementation and review once per dependency wave from the control workspace; ticket worktrees never run review. A future persistent coordinator can reuse the same state and worker contracts, but no coordinator ships in this workflow.
+
+### Explicit wave example
+
+A specification has five tickets: #101 and #102 have no blockers, #103 is blocked by #101, #104 is blocked by #101 and #102, and #105 is blocked by #103.
+
+1. Plan publishes the parent #100 and five children. #101 and #102 get `ready-for-agent`; #103-#105 get `blocked`.
+2. From the control workspace you run `/implement-this #100`. It selects the frontier #101 and #102 (at most three) and dispatches each to its own worktree and pull request.
+3. From the control workspace you run `/review-this #100`. It discovers the two pull requests, reconciles cloud and local findings against each current head, routes confirmed fixes to the owning workers, squash-merges clean heads, and promotes #103 to `unblocked` + `ready-for-agent` when #101 closes (and #104 when both #101 and #102 close).
+4. You run `/implement-this #100` again. It now selects #103 and #104. After that wave you run `/review-this #100` again, which merges them and promotes #105.
+5. You run `/implement-this #100` and `/review-this #100` for the final wave. When #105 merges, `review-this` checks out updated `main`, runs `npm run verify`, and runs a whole-spec Standards and Spec review. If a cross-ticket defect appears it becomes the smallest follow-up child ticket; otherwise the parent #100 closes.
 
 People install skills from the public registry. The technical details live in the agent-facing documents linked below.
 

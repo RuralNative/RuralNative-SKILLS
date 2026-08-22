@@ -1,7 +1,8 @@
 # 0012 — Manager-worktree pull-request delivery trigger
 
-Status: accepted
+Status: superseded
 Date: 2026-08-21
+Superseded by: ADR-0014 — three-skill development workflow (pull-request-only delivery)
 Replaces: the Agent Orchestrator delivery mode added by ADR-0008, retired by the supervise-this retirement (issues #116/#117)
 Numbering: takes the slot after the retirement ADR reserved by issues #116/#117
 
@@ -43,3 +44,5 @@ Consequences:
 - The prior Agent Orchestrator delivery mode (ADR-0008) is retired by the
   supervise-this retirement; this trigger is the delivery mode that replaces
   it.
+
+Superseded 2026-08-22 by ADR-0014: every ticket now delivers by pull request against `main`; no path pushes directly to `main`. The worktree location no longer selects delivery mode. History preserved.

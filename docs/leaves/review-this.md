@@ -41,7 +41,7 @@ npm run verify
 
 ## Further notes
 
-The review prefix was extracted from the delivery branches of `implement-this` (#124, parent #123): `implement-this` keeps fixed-base computation for rebase or pull-request creation but no longer runs review internally; callers who relied on that chaining run `/review-this #<spec>` explicitly. ADR-0006's task-scoped fixed-template exception extends to this seam per #123, ADR-0013 records the decoupling into a wave owner, and ADR-0014 records the approved target where the review wave owns merge, promotion, final verification, and parent closure rather than a fixed-point diff report. The boundary: this seam hosts only the wave review invocation template — `implement-this` owns implementation and delivery and does not run review; `/code-review` owns the two-axis review workflow itself, `REVIEW.md` owns the shared policy.
+The review prefix was extracted from the delivery branches of `implement-this` (#124, parent #123): `implement-this` keeps fixed-base computation for pull-request creation but no longer runs review internally; callers who relied on that chaining run `/review-this #<spec>` explicitly. ADR-0006's task-scoped fixed-template exception extends to this seam per #123, ADR-0013 (now superseded by ADR-0014) recorded the decoupling into a wave owner, and ADR-0014 ships the contract where the review wave owns merge, promotion, final verification, and parent closure rather than a fixed-point diff report. The boundary: this seam hosts only the wave review invocation template — `implement-this` owns implementation and delivery and does not run review; `/code-review` owns the two-axis review workflow itself, `REVIEW.md` owns the shared policy.
 
 ## Links
 
@@ -49,8 +49,8 @@ The review prefix was extracted from the delivery branches of `implement-this` (
 - Wave ticket: [#135](https://github.com/RuralNative/RuralNative-SKILLS/issues/135) — review workflow pull requests through closure.
 - Split decision: [#125](https://github.com/RuralNative/RuralNative-SKILLS/issues/125) — review moved to the `review-this` seam.
 - Decision: `docs/adr/0006-plan-this-fixed-template-adapter.md` — task-scoped exception and template boundary.
-- Decision: `docs/adr/0013-review-this-decoupled-code-review.md` — the split from `implement-this` and the glossary exception.
-- Decision: `docs/adr/0014-three-skill-development-workflow.md` — wave ownership, merge, promotion, and closure.
+- Decision: `docs/adr/0014-three-skill-development-workflow.md` — shipped wave ownership, merge, promotion, and closure (supersedes ADR-0013).
+- Historical decision: `docs/adr/0013-review-this-decoupled-code-review.md` (now superseded) — the split from `implement-this` and the glossary exception.
 - Decision: `docs/adr/0015-requirements-data-trust-and-install-provenance.md` — requirements-data trust boundary and install provenance.
 - Delegated workflow: `/code-review` (installed through its own lane).
 - Review policy: `REVIEW.md` — the repository's cross-cutting review rules (scope, severity, trust, verification, head freshness, duplicates, evidence, subagent use) govern both local axes and cloud review; this leaf points at them instead of restating them.
