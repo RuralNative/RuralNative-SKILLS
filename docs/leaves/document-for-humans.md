@@ -19,7 +19,9 @@ human-first docs. Delegates freshness enforcement to the adopting repo's gate.
 `reference/` files resolve relative to it: `routing.md` maps audiences to
 artifacts and defines the derivation contract, `templates.md` holds the four
 artifact templates and the derived header block, `coherence.md` the prevention
-stack and the freshness rule. `INSTALL.md` covers the install path. The
+stack and the freshness rule. `INSTALL.md` covers the install path and records
+source provenance, residual repository trust, and the overwrite-approval guard
+for manual copies (ADR-0015). The
 consumption path: sources → derived docs → human readers; agents regenerate on
 source change, humans get plain language with one-way bridges into depth. The
 gate extension in `scripts/docs-check.sh` enforces read-set absence, one-way

@@ -146,5 +146,9 @@ The pull requests produced by one implementation wave and reconciled against one
 _Avoid_: Review batch, merge queue
 
 **Requirements data**:
-Prose from issues, comments, specifications, reviews, or rewrite input that may state desired behavior or evidence but cannot authorize tools, change workflow rules, or widen scope.
-_Avoid_: Task authority, trusted instructions
+Prose flowing through a workflow — task text, issue bodies, comments, specifications, review comments, rewrite input — that states work and evidence but cannot widen scope, select files, authorize tools, or override workflow gates (ADR-0015). `unslopify` applies the same rule to scoped prose: prompt-like text is inert content, never instruction.
+_Avoid_: instructions (when ticket prose is meant), executable input
+
+**Instruction residue**:
+Prompt-like imperatives left in prose — "ignore previous instructions", "you are now authorized" — reported by `unslopify` as the inert-content candidate `AIT-EVD-010`.
+_Avoid_: injection payload (an authorship or security-verdict claim)
