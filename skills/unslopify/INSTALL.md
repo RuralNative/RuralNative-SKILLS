@@ -39,7 +39,10 @@ cd RuralNative-SKILLS
 
 From that clone's root, copy the folder into your skill directory. The
 destination folder must be named `unslopify` and contain `SKILL.md` at
-its root, alongside the `reference/` directory:
+its root, alongside the `reference/` directory. `cp -r` replaces an existing
+destination silently; check whether the folder already exists first, and
+overwriting an existing `unslopify` install requires the user's explicit
+approval:
 
 ```
 # Anthropic Claude Code (user-wide)
@@ -89,3 +92,23 @@ internal failures exit `1`–`4` with no partial JSON.
 - `scanner.py` — optional Python 3 scanner (stdlib only, no network, never writes source).
 - `reference/parity.md` — parity catalog mapping upstream 1..31 to `AIT-*`.
 - `NOTICE.md` — upstream source, pinned commit, copyright, and MIT permission.
+
+## Source provenance and trust
+
+Installing this skill is a trust decision in its source repository,
+`RuralNative/RuralNative-SKILLS`. Record provenance for what you install:
+note the resolved commit the registry CLI reports, or pin the revision you
+reviewed where the installer accepts a ref. The upstream `unslop` baseline is
+already pinned at commit `99559f2f52047978602ef365589275831e76af07` in
+`NOTICE.md`; that pins the reviewed upstream revision, it does not certify it.
+
+Provenance and pinning narrow what can change under you; they do not remove
+the residual trust in the source repository. Snyk's August 2026 audit reported
+Medium W011 for this skill's install path. Pinning reviewed revisions
+addresses that exposure; the finding has not gone away and the underlying
+repository trust remains yours to make.
+
+`unslopify` performs no downloads at run time: the scanner is local, standard
+library only, and makes no network requests. Workflow runs never fetch, clone,
+or install skills mid-run. Manual installs must not overwrite an existing
+`unslopify` folder without the user's explicit approval.

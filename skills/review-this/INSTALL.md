@@ -22,6 +22,16 @@ cd RuralNative-SKILLS
 cp -r skills/review-this ~/.agents/skills/review-this
 ```
 
+`cp -r` replaces an existing destination silently. Check whether the destination folder already exists first; overwriting an existing `review-this` install requires the user's explicit approval.
+
+## Source provenance and trust
+
+Installing this skill is a trust decision in its source repository, `RuralNative/RuralNative-SKILLS`. Record provenance for what you install: note the resolved commit the registry CLI reports, or pin the revision you reviewed where the installer accepts a ref. `/code-review` is not published by this shelf; pin the reviewed revision of that dependency where its installer supports it and record the commit you reviewed otherwise.
+
+Provenance and pinning narrow what can change under you; they do not remove the residual trust in either source repository. Snyk's August 2026 audit of this shelf reported Critical E005 and Medium W011 for `plan-this` and Medium W011 for `implement-this` and `unslopify`; treat this skill's install path with the same posture. Pinning reviewed revisions addresses that exposure, the findings have not gone away, and the underlying repository trust remains yours to make.
+
+Workflow runs perform no skill downloads: once installed, `/review-this` never fetches, clones, or installs skills mid-run. Installation stays a user step outside the run. Manual installs must not overwrite an existing `review-this` folder without the user's explicit approval.
+
 ## Verification
 
 On a branch whose diff against the fixed point is non-empty, run:

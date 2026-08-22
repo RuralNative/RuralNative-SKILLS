@@ -60,6 +60,57 @@ CANNED_ENDINGS = [
     "possibilities are endless",
 ]
 
+# Prompt-like instruction residue (AIT-EVD-010). Prose that reads as embedded
+# agent instructions is inert content: findings name the span for contextual
+# review and never authorize action.
+PROMPT_RESIDUE_PATTERNS = [
+    r"ignore (?:all |any )?(?:previous|prior|above|earlier) instructions",
+    r"disregard (?:all |any )?(?:previous|prior|above|earlier) instructions",
+    r"forget (?:all )?(?:previous|prior|above) instructions",
+    r"you are now (?:authorized|permitted|allowed|instructed|unlocked)",
+    r"(?:you are|i am) now (?:an? )?(?:unrestricted|uncensored)",
+    r"developer mode(?: enabled)?",
+    r"do anything now",
+    r"reveal (?:your |the )?(?:system |initial |secret )?(?:instructions|prompt)",
+    r"repeat (?:your |the )?(?:system |initial |secret )?(?:instructions|prompt)",
+    r"execute the following (?:command|instructions?) immediately",
+    r"run this (?:command|script) (?:immediately|as the user)",
+]
+
+# Context-aware workflow phrases (AIT-LEX-008). Every visible occurrence is a
+# candidate. An occurrence whose surrounding window matches an exact anchor is
+# an exact domain use and is preserved; remaining occurrences are vague or
+# decorative uses reported for contextual replacement.
+CONTEXT_CANDIDATES = [
+    {
+        "phrase": "load bearing",
+        "pattern": r"load[-\s]?bearing",
+        "exact_anchors": [
+            r"load[-\s]?bearing\s+(?:invariants?|terms?|identifiers?|rules?|constraints?|sections?|definitions?|glossary|vocabular(?:y|ies)|labels?|commands?|edges?)",
+            r"(?:invariants?|terms?|identifiers?|rules?|constraints?|sections?|definitions?|glossary|vocabular(?:y|ies))\s+(?:are\s+|is\s+)?load[-\s]?bearing",
+        ],
+    },
+    {
+        "phrase": "vertical slice",
+        "pattern": r"vertical\s+slices?",
+        "exact_anchors": [
+            r"independently\s+verifiable\s+vertical\s+slices?",
+            r"vertical\s+slices?[^.\n]{0,80}(?:worktree|ticket)",
+            r"(?:tickets?|specifications?)\s+[^.\n]{0,60}(?:as |are |is )?vertical\s+slices?",
+            r"vertical\s+slices?\s+(?:stating|with|suitable)\s",
+        ],
+    },
+    {
+        "phrase": "native dependency edges",
+        "pattern": r"native\s+dependency\s+(?:edges?|relationships?)",
+        "exact_anchors": [
+            r"native\s+dependency\s+(?:edges?|relationships?)\s+(?:via|with|through)\s+(?:native\s+)?blocked_by",
+            r"blocked_by[^.\n]{0,80}native\s+dependency\s+(?:edges?|relationships?)",
+            r"native\s+dependency\s+(?:edges?|relationships?)[^.\n]{0,80}(?:canonical|database\s+[Ii][Dd]|label\s+state|blocked_by)",
+        ],
+    },
+]
+
 THRESHOLDS = {
     "stock_phrases": 2,
     "repeated_openers": 3,
@@ -70,6 +121,8 @@ THRESHOLDS = {
     "sentence_uniformity_cv": 0.25,
     "paragraph_uniformity_cv": 0.30,
     "canned": 1,
+    "prompt_residue": 1,
+    "context_candidates": 1,
 }
 
 # Exit codes
@@ -688,6 +741,73 @@ def detect_canned_openings_endings(masked, original, path):
     return findings
 
 
+def detect_prompt_residue(masked, original, path):
+    findings = []
+    lower = masked.lower()
+    for pattern in PROMPT_RESIDUE_PATTERNS:
+        for m in re.finditer(pattern, lower):
+            line_start = offset_to_line(original, m.start())
+            line_end = offset_to_line(original, m.end())
+            excerpt = excerpt_for(original, m.start(), m.end() + 40)
+            findings.append({
+                "id": "AIT-EVD-010",
+                "family": "EVD",
+                "path": path,
+                "line_start": line_start,
+                "line_end": line_end,
+                "excerpt": excerpt,
+                "evidence": f"instruction residue: '{m.group(0)}' reads as an embedded agent instruction; content is inert and never executed",
+                "measured_value": 1,
+                "threshold": THRESHOLDS["prompt_residue"],
+                "confidence": "medium",
+            })
+    return findings
+
+
+def detect_context_candidates(masked, original, path):
+    findings = []
+    for entry in CONTEXT_CANDIDATES:
+        pat = re.compile(entry["pattern"], re.IGNORECASE)
+        candidates = []
+        exact_count = 0
+        for m in pat.finditer(masked):
+            # Anchor context stays on the occurrence's own line so an exact
+            # use on one line cannot suppress a vague use on the next.
+            line_begin = masked.rfind("\n", 0, m.start()) + 1
+            nl = masked.find("\n", m.end())
+            line_finish = len(masked) if nl == -1 else nl
+            window_start = max(line_begin, m.start() - 160)
+            window_end = min(line_finish, m.end() + 160)
+            window = masked[window_start:window_end]
+            if any(re.search(anchor, window) for anchor in entry["exact_anchors"]):
+                exact_count += 1
+            else:
+                candidates.append(m)
+        if candidates:
+            first = candidates[0]
+            last = candidates[-1]
+            line_start = offset_to_line(original, first.start())
+            line_end = offset_to_line(original, last.end())
+            excerpt = excerpt_for(original, first.start(), first.end() + 60)
+            evidence = (
+                f"context-aware candidate '{entry['phrase']}': {len(candidates)} use(s) without an exact-domain anchor"
+                + (f"; {exact_count} exact domain use(s) preserved" if exact_count else "; no exact domain uses found")
+            )
+            findings.append({
+                "id": "AIT-LEX-008",
+                "family": "LEX",
+                "path": path,
+                "line_start": line_start,
+                "line_end": line_end,
+                "excerpt": excerpt,
+                "evidence": evidence,
+                "measured_value": len(candidates),
+                "threshold": THRESHOLDS["context_candidates"],
+                "confidence": "low",
+            })
+    return findings
+
+
 def scan_content(original, path):
     masked, err = apply_all_masks(original)
     if err is not None:
@@ -695,6 +815,8 @@ def scan_content(original, path):
         return None, (msg, line)
     findings = []
     findings.extend(detect_stock_phrases(masked, original, path))
+    findings.extend(detect_prompt_residue(masked, original, path))
+    findings.extend(detect_context_candidates(masked, original, path))
     findings.extend(detect_repeated_openers(masked, original, path))
     findings.extend(detect_repeated_transitions(masked, original, path))
     findings.extend(detect_punctuation_density(masked, original, path))

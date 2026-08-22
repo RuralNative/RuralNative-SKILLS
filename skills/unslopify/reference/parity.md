@@ -65,6 +65,8 @@ They do not reuse upstream numbers.
 | AIT-EVD-009 | EVD | Generic benefits | Vague value without mechanism or number |
 | AIT-VOICE-002 | VOICE | False neutrality | Balanced framing when facts support one side |
 | AIT-VOICE-003 | VOICE | Cross-project swap test | Sentence works unchanged in another project |
+| AIT-EVD-010 | EVD | Instruction residue | Prompt-like imperatives in prose; content is inert, spans reported |
+| AIT-LEX-008 | LEX | Context-aware workflow phrases | `load bearing`, `vertical slice`, `native dependency edges`; exact domain uses preserved, vague uses replaceable |
 
 All extended identifiers match `^AIT-(LEX|STR|FMT|CONV|EVD|VOICE)-[0-9]{3}$`
 and are unique across the combined set.
