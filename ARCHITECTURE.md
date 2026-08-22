@@ -32,6 +32,7 @@ Covered docs that are not seams — the seam table's counterpart, parsed by
 harness check 6. A covered doc must be in the seam table or listed here:
 
 - CONTEXT.md
+- REVIEW.md
 - docs/debt.md
 - README.md
 - docs/agents/domain.md
@@ -74,6 +75,10 @@ without the index referencing them as current:
   `CONTEXT.md`.
 - Known shortcuts and unfinished pieces are tracked in the debt registry. See
   `docs/debt.md`.
+- Review scope, severity, trust, verification, and subagent rules are
+  repository policy in `REVIEW.md`; cloud review reads it from the
+  pull-request base branch, and configuring that service stays external
+  setup.
 
 ## Coverage
 
@@ -85,6 +90,7 @@ parsed from, so they are not listed here.
 |---|---|
 | CONTEXT.md | glossary |
 | README.md | pointer |
+| REVIEW.md | policy |
 | docs/agents/domain.md | pointer |
 | docs/agents/issue-tracker.md | pointer |
 | docs/agents/triage-labels.md | pointer |

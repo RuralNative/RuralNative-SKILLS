@@ -159,10 +159,12 @@ Entry: a seam change or re-orientation.
    doc in the same change, and flag the discrepancy. If the rule itself must
    change, supersede the invariant via a decision. See `reference/classify.md`
    for the invariant lifecycle and `reference/harness.md` for check detail.
-2. **Same diff.** A change touching a seam updates its doc in the same commit.
-   A fact discovered mid-work lands on its tier in the same change. A rule
-   the skill is silent on is born in the repo's official structures, policy,
-   decision record, or glossary, never a side channel.
+2. **Same diff.** Code changes carry their doc updates in the same commit. A
+   change to rules a policy states updates that policy doc, including the
+   root review policy, in the same commit. Mid-work discoveries land on their
+   tier in the same change, and a rule the skill is silent on is born in the
+   repo's official structures, policy, decision record, or glossary, never a
+   side channel.
 3. **Code wins.** On a doc or code conflict, trust the code, fix the doc,
    flag the discrepancy in the change description.
 4. **Supersede, do not rewrite.** A changed decision gets a new ADR, the

@@ -42,6 +42,7 @@ The review stage was extracted from this seam (#124, parent #123): review now li
 - Specification: [#72](https://github.com/RuralNative/RuralNative-SKILLS/issues/72).
 - Split decision: [#125](https://github.com/RuralNative/RuralNative-SKILLS/issues/125) — review moved to the `review-this` seam (`docs/leaves/review-this.md`).
 - Decision: `docs/adr/0013-review-this-decoupled-code-review.md` — the review decoupling and glossary exception.
+- Review policy: `REVIEW.md` — the cross-cutting review and delivery-trust rules this seam's pull requests are reviewed under; pointed at, not restated.
 - Decision: `docs/adr/0012-manager-worktree-pull-request-delivery.md` — manager-worktree path-detection trigger.
 - Historical decision (retired): `docs/adr/0008-supervise-this-agent-orchestrator.md`.
 - Decision: `docs/adr/0009-delegation-invariants-human-invocation.md` — locked delegation chains and human-invocation requirement.

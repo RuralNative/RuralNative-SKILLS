@@ -1,4 +1,4 @@
-<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-21 · Regenerated: #126 ADR and glossary coherence for the review-this split · Sources: docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md, docs/leaves/unslopify.md, docs/leaves/plan-this.md, docs/leaves/implement-this.md, docs/leaves/release-skills.md, docs/adr/0011-retire-supervise-this.md, docs/adr/0012-manager-worktree-pull-request-delivery.md, docs/adr/0013-review-this-decoupled-code-review.md -->
+<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-22 · Regenerated: #136 REVIEW.md becomes doc-cache policy · Sources: REVIEW.md, docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md, docs/leaves/unslopify.md, docs/leaves/plan-this.md, docs/leaves/implement-this.md, docs/leaves/release-skills.md, docs/adr/0011-retire-supervise-this.md, docs/adr/0012-manager-worktree-pull-request-delivery.md, docs/adr/0013-review-this-decoupled-code-review.md -->
 # Guardrails in plain words
 
 These are the promises the skills make.
@@ -6,6 +6,7 @@ These are the promises the skills make.
 - A skill's frontmatter name matches its folder, so the registry installs the intended skill.
 - The public registry is the official install path. Local install leftovers stay out of the repository.
 - Documentation changes update their technical leaf in the same change.
+- Every review follows one written policy (`REVIEW.md`). Review subagents only read; the main reviewer verifies every finding before publishing it, and no review tool merges or closes work.
 - Prose cleanup keeps commands, code, links, quotations, and facts intact.
 - Planning runs `/grill-with-docs`, `/to-spec`, and `/to-tickets` in order, with repository-owned `unslopify` cleaning prose under scope, protected-content, preservation, and completion-report rules, using only the focused agent cache `AGENTS.md → ARCHITECTURE.md → seam leaf → CONTEXT.md → relevant ADRs` (human pages are derived and not preloaded).
 - Planning publishes ready tickets with native blockers and asks about unresolved decisions.
