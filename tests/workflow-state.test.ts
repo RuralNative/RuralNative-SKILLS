@@ -73,6 +73,13 @@ describe("frontier selection", () => {
       "missing ready-for-agent",
       ticket({ number: 145, labels: [LABEL_BLOCKED] }),
     ],
+    [
+      "needs-info stop",
+      ticket({
+        number: 146,
+        labels: [LABEL_READY_FOR_AGENT, LABEL_NEEDS_INFO],
+      }),
+    ],
   ];
   for (const [reason, t] of rejections) {
     test(`rejects ${reason}`, () => {
@@ -85,7 +92,7 @@ describe("frontier selection", () => {
 describe("blocker label state", () => {
   test("initially blocked: open blocker swaps ready-for-agent for blocked", () => {
     const tickets = [ticket({ number: 150, openBlockers: [151] })];
-    assert.deepEqual(labelTransitions(tickets), [
+    assert.deepEqual(labelTransitions(tickets, SPEC), [
       { number: 150, add: [LABEL_BLOCKED], remove: [LABEL_READY_FOR_AGENT] },
     ]);
   });
@@ -98,14 +105,14 @@ describe("blocker label state", () => {
         labels: [LABEL_BLOCKED],
       }),
     ];
-    assert.deepEqual(labelTransitions(tickets), []);
+    assert.deepEqual(labelTransitions(tickets, SPEC), []);
   });
 
   test("newly unblocked: closed last blocker removes blocked, adds unblocked plus ready-for-agent", () => {
     const tickets = [
       ticket({ number: 150, labels: [LABEL_BLOCKED] }),
     ];
-    assert.deepEqual(labelTransitions(tickets), [
+    assert.deepEqual(labelTransitions(tickets, SPEC), [
       {
         number: 150,
         add: [LABEL_UNBLOCKED, LABEL_READY_FOR_AGENT],
@@ -116,14 +123,39 @@ describe("blocker label state", () => {
 
   test("initially ready: unlabeled unblocked ticket gains ready-for-agent", () => {
     const tickets = [ticket({ number: 160, labels: [] })];
-    assert.deepEqual(labelTransitions(tickets), [
+    assert.deepEqual(labelTransitions(tickets, SPEC), [
       { number: 160, add: [LABEL_READY_FOR_AGENT], remove: [] },
     ]);
   });
 
+  test("initially ready grant is scoped to unassigned children of the specification", () => {
+    const tickets = [
+      ticket({ number: 164, labels: [], parent: null }),
+      ticket({ number: 165, labels: [], parent: 999 }),
+      ticket({ number: 166, labels: [], assignees: ["someone"] }),
+    ];
+    assert.deepEqual(labelTransitions(tickets, SPEC), []);
+  });
+
   test("ready ticket with no blocker history needs no transition", () => {
     const tickets = [ticket({ number: 161 })];
-    assert.deepEqual(labelTransitions(tickets), []);
+    assert.deepEqual(labelTransitions(tickets, SPEC), []);
+  });
+
+  test("needs-info is terminal: stopped tickets get no transitions", () => {
+    const tickets = [
+      ticket({ number: 163, labels: [LABEL_NEEDS_INFO] }),
+      ticket({
+        number: 167,
+        labels: [LABEL_BLOCKED, LABEL_NEEDS_INFO],
+        openBlockers: [168],
+      }),
+      ticket({
+        number: 169,
+        labels: [LABEL_BLOCKED, LABEL_NEEDS_INFO],
+      }),
+    ];
+    assert.deepEqual(labelTransitions(tickets, SPEC), []);
   });
 
   test("re-blocking removes a stale unblocked label", () => {
@@ -134,7 +166,7 @@ describe("blocker label state", () => {
         openBlockers: [176],
       }),
     ];
-    assert.deepEqual(labelTransitions(tickets), [
+    assert.deepEqual(labelTransitions(tickets, SPEC), [
       {
         number: 175,
         add: [LABEL_BLOCKED],
@@ -146,9 +178,9 @@ describe("blocker label state", () => {
   test("closed tickets get no transitions even with stale labels", () => {
     const tickets = [
       ticket({ number: 162, state: "closed", labels: [LABEL_BLOCKED] }),
-      ticket({ number: 163, state: "closed", labels: [] }),
+      ticket({ number: 177, state: "closed", labels: [] }),
     ];
-    assert.deepEqual(labelTransitions(tickets), []);
+    assert.deepEqual(labelTransitions(tickets, SPEC), []);
   });
 
   test("transitions cover mixed states exactly", () => {
@@ -159,7 +191,7 @@ describe("blocker label state", () => {
       ticket({ number: 173, labels: [] }),
       ticket({ number: 174, state: "closed" }),
     ];
-    assert.deepEqual(labelTransitions(tickets), [
+    assert.deepEqual(labelTransitions(tickets, SPEC), [
       { number: 170, add: [LABEL_BLOCKED], remove: [LABEL_READY_FOR_AGENT] },
       {
         number: 172,
@@ -301,6 +333,22 @@ describe("worker concurrency", () => {
     assert.match(plan.violations[4], /already has an assignee/);
     assert.match(plan.violations[5], /does not carry ready-for-agent/);
   });
+
+  test("rejects a needs-info stop before any claim", () => {
+    const tickets = [
+      ticket({
+        number: 193,
+        labels: [LABEL_READY_FOR_AGENT, LABEL_NEEDS_INFO],
+      }),
+      ticket({ number: 194, labels: [LABEL_NEEDS_INFO] }),
+    ];
+    const plan = validateDispatch([193, 194], tickets, [], SPEC);
+    assert.deepEqual(plan.dispatch, []);
+    assert.equal(plan.violations.length, 2);
+    for (const v of plan.violations) {
+      assert.match(v, /is stopped with needs-info/);
+    }
+  });
 });
 
 describe("worker retry", () => {
@@ -335,7 +383,6 @@ describe("current-head review freshness", () => {
 
 describe("merge eligibility", () => {
   const pr: PullRequestFact = {
-    ticket: 200,
     headSha: "abc123",
     mergeable: true,
     requiredChecksGreen: true,
@@ -424,7 +471,7 @@ describe("dependent promotion after closure", () => {
       }),
       ticket({ number: 212 }),
     ];
-    assert.deepEqual(promotionAfterClosure(tickets), [
+    assert.deepEqual(promotionAfterClosure(tickets, SPEC), [
       {
         number: 210,
         add: [LABEL_UNBLOCKED, LABEL_READY_FOR_AGENT],
@@ -435,7 +482,17 @@ describe("dependent promotion after closure", () => {
 
   test("leaves already-ready and unrelated tickets alone", () => {
     const tickets = [ticket({ number: 213 }), ticket({ number: 214 })];
-    assert.deepEqual(promotionAfterClosure(tickets), []);
+    assert.deepEqual(promotionAfterClosure(tickets, SPEC), []);
+  });
+
+  test("does not promote a stopped ticket", () => {
+    const tickets = [
+      ticket({
+        number: 215,
+        labels: [LABEL_BLOCKED, LABEL_NEEDS_INFO],
+      }),
+    ];
+    assert.deepEqual(promotionAfterClosure(tickets, SPEC), []);
   });
 });
 
@@ -492,17 +549,20 @@ describe("purity contract", () => {
   const source = fs.readFileSync(path.join(ROOT, "scripts/workflow-state.ts"), "utf8");
 
   const forbidden: Array<[string, RegExp]> = [
-    ["static import statement", /^import\s/m],
-    ["re-export from another module", /^export\s+[\s\S]*?\sfrom\s/m],
-    ["dynamic import", /\bimport\(/],
-    ["require call", /\brequire\(/],
-    ["network fetch", /\bfetch\(/],
+    ["static import statement", /^import\b/m],
+    ["module specifier clause", /\bfrom\s*["']/],
+    ["dynamic import", /\bimport\s*\(/],
+    ["require call", /\brequire\s*\(/],
+    ["network fetch", /\bfetch\s*\(/],
     ["XMLHttpRequest", /\bXMLHttpRequest\b/],
+    ["http client call", /\bhttps?\s*\.\s*(get|request)\s*\(/],
     ["node builtins", /\bnode:/],
-    ["child process execution", /\b(spawn|spawnSync|exec|execSync|execFile)\b\(/],
-    ["filesystem calls", /\b(readFileSync|writeFileSync|appendFileSync|unlinkSync|mkdirSync|rmdirSync|rmSync)\b\(/],
-    ["host environment access", /\bprocess\.(env|argv|cwd|exit)\b/],
+    ["child process execution", /\b(spawn|spawnSync|exec|execSync|execFile)\s*\(/],
+    ["filesystem calls", /\b(readFile|writeFile|appendFile|copyFile|unlink|mkdir|rmdir|rm|rename|truncate|chmod|link|symlink|open|read|write|stat|lstat|access|exists)(Sync)?\s*\(/],
+    ["host environment access", /\bprocess\.(env|argv|cwd|exit|hrtime)\b/],
     ["global this escape hatch", /\bglobalThis\b/],
+    ["dynamic code evaluation", /\beval\s*\(|\bnew\s+Function\b/],
+    ["nondeterministic time", /\b(Math\.random|Date\.now|performance\.now)\b/],
   ];
 
   for (const [name, pattern] of forbidden) {
@@ -516,9 +576,10 @@ describe("generated runtime copies", () => {
   test("one authored source exists with three packaged destinations", () => {
     assert.equal(COPY_PATHS.length, 3);
     assert.ok(fs.existsSync(path.join(ROOT, AUTHORED_PATH)));
-    assert.deepEqual(
-      COPY_PATHS.map((rel) => path.join(ROOT, rel).endsWith("workflow-state.ts")),
-      [true, true, true],
+    assert.equal(
+      new Set(COPY_PATHS).size,
+      COPY_PATHS.length,
+      "COPY_PATHS entries must be unique",
     );
     for (const rel of COPY_PATHS) {
       assert.match(rel, /^skills\/(plan-this|implement-this|review-this)\/workflow-state\.ts$/);

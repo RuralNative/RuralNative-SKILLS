@@ -31,7 +31,6 @@ export interface WorkerFact {
 }
 
 export interface PullRequestFact {
-  ticket: number;
   headSha: string;
   mergeable: boolean;
   requiredChecksGreen: boolean;
@@ -79,6 +78,10 @@ function hasLabel(ticket: TicketFact, label: string): boolean {
   return ticket.labels.includes(label);
 }
 
+function isStopped(ticket: TicketFact): boolean {
+  return hasLabel(ticket, LABEL_NEEDS_INFO);
+}
+
 export function selectFrontier(
   tickets: readonly TicketFact[],
   spec: number,
@@ -90,6 +93,7 @@ export function selectFrontier(
         t.parent === spec &&
         t.openBlockers.length === 0 &&
         t.assignees.length === 0 &&
+        !isStopped(t) &&
         hasLabel(t, LABEL_READY_FOR_AGENT),
     )
     .map((t) => t.number);
@@ -97,10 +101,11 @@ export function selectFrontier(
 
 export function labelTransitions(
   tickets: readonly TicketFact[],
+  spec: number,
 ): LabelTransition[] {
   const transitions: LabelTransition[] = [];
   for (const ticket of tickets) {
-    if (!isOpen(ticket)) continue;
+    if (!isOpen(ticket) || isStopped(ticket)) continue;
     if (ticket.openBlockers.length > 0) {
       const add = hasLabel(ticket, LABEL_BLOCKED) ? [] : [LABEL_BLOCKED];
       const remove = [LABEL_READY_FOR_AGENT, LABEL_UNBLOCKED].filter((label) =>
@@ -118,7 +123,11 @@ export function labelTransitions(
         add,
         remove: [LABEL_BLOCKED],
       });
-    } else if (!hasLabel(ticket, LABEL_READY_FOR_AGENT)) {
+    } else if (
+      ticket.parent === spec &&
+      ticket.assignees.length === 0 &&
+      !hasLabel(ticket, LABEL_READY_FOR_AGENT)
+    ) {
       transitions.push({
         number: ticket.number,
         add: [LABEL_READY_FOR_AGENT],
@@ -158,6 +167,10 @@ export function validateDispatch(
     seen.add(n);
     if (!isOpen(ticket)) {
       violations.push(`#${n} is closed`);
+      continue;
+    }
+    if (isStopped(ticket)) {
+      violations.push(`#${n} is stopped with ${LABEL_NEEDS_INFO}`);
       continue;
     }
     if (ticket.parent !== spec) {
@@ -238,8 +251,9 @@ export function isMergeEligible(
 
 export function promotionAfterClosure(
   tickets: readonly TicketFact[],
+  spec: number,
 ): LabelTransition[] {
-  return labelTransitions(tickets).filter((t) =>
+  return labelTransitions(tickets, spec).filter((t) =>
     t.remove.includes(LABEL_BLOCKED),
   );
 }
