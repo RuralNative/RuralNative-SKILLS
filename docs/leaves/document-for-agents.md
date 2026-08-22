@@ -120,10 +120,11 @@ change and flags the discrepancy; changing the rule requires a new decision.
     `diagnostics-entry.json` fixture.
 15. **INV-15** — Management marker provenance: generated `AGENTS.md` carries
     exactly one protected management marker directly after the five commands,
-    recording the `document-for-agents` skill identity and available revision
-    evidence; provenance is confirmed only when the marker plus supporting
-    evidence backs it, and older or ambiguous documents get `likely` or
-    `unknown`, never guessed certainty. Mechanism: marker-shape test on
+    recording the `document-for-agents` skill identity and available pinned
+    revision evidence, or `none` when unavailable; provenance is confirmed
+    only when the marker plus supporting evidence backs it, and older or
+    ambiguous documents get `likely` or `unknown`, never guessed certainty.
+    Mechanism: marker-shape test on
     `reference/templates.md` and a placement test on this repository's own
     `AGENTS.md`.
 

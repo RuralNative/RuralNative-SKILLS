@@ -77,6 +77,8 @@ describe("opt-in skill diagnostics (document-for-agents:INV-14)", () => {
     }
     const fixture = JSON.parse(read(FIXTURE));
     assert.deepEqual(Object.keys(fixture.sanitized).sort(), [...fixture.approvedFields].sort());
+    assert.equal(fixture.sanitized.skillRevision, "document-for-agents, none");
+    assert.equal(fixture.sanitized.attributionConfidence, "unknown");
   });
 
   test("hostile fixture: sanitized entries omit prompt-like text and sensitive placeholders rather than copying them", () => {
@@ -118,18 +120,22 @@ describe("opt-in skill diagnostics (document-for-agents:INV-14)", () => {
 });
 
 describe("management marker and provenance states (document-for-agents:INV-15)", () => {
+  const SKILL = "skills/document-for-agents/SKILL.md";
   const TEMPLATES = "skills/document-for-agents/reference/templates.md";
+  const PROTECTED_MARKER =
+    /^<!-- managed: document-for-agents · revision-evidence: (?:none|[0-9a-f]{40}|install record: .+) -->$/;
 
-  test("templates place one protected management marker directly after the five commands", () => {
+  test("templates define one protected management marker after the five commands", () => {
     const t = read(TEMPLATES);
     const fifth = t.indexOf("5. Put work docs in the tracker; decide invariant conflicts first.");
-    const marker = t.indexOf("<!-- managed: document-for-agents");
+    const markerLine = "<!-- managed: document-for-agents · revision-evidence: <available revision evidence> -->";
+    const marker = t.indexOf(markerLine);
     assert.ok(fifth !== -1 && marker !== -1, "templates.md lacks commands or marker");
     assert.ok(marker > fifth, "marker must come after the five commands");
     const nextHeading = t.indexOf("\n## ", fifth);
     assert.ok(marker < nextHeading, "marker belongs inside the index template section");
-    assert.equal(t.slice(marker).split("<!-- managed: document-for-agents").length - 1, 1,
-      "exactly one marker shape may appear in templates.md");
+    assert.equal(t.split("\n").filter((line) => line === markerLine).length, 1,
+      "exactly one complete marker shape may appear in templates.md");
   });
 
   test("this repository's generated AGENTS.md carries exactly one marker after the five commands", () => {
@@ -140,10 +146,12 @@ describe("management marker and provenance states (document-for-agents:INV-15)",
       .filter(({ line }) => /^<!-- managed: document-for-agents/.test(line));
     assert.equal(markers.length, 1, `expected one management marker, got ${markers.length}`);
     const m = markers[0];
-    assert.ok(m.line.includes("revision-evidence:"), "marker records revision evidence");
+    assert.match(m.line, PROTECTED_MARKER, "marker must use the complete protected format");
     const fifthIdx = lines.findIndex((l) => l.startsWith("5. Put work docs in the tracker"));
     const firstSection = lines.findIndex((l) => l.startsWith("## "));
-    assert.ok(m.i > fifthIdx, "marker must sit after the five commands");
+    assert.notEqual(fifthIdx, -1, "AGENTS.md lacks command 5");
+    assert.notEqual(firstSection, -1, "AGENTS.md lacks its first section");
+    assert.equal(m.i, fifthIdx + 1, "marker must be directly after command 5");
     assert.ok(m.i < firstSection, "marker must sit before any other AGENTS.md section");
   });
 
@@ -155,6 +163,9 @@ describe("management marker and provenance states (document-for-agents:INV-15)",
       "the diagnostics entry must enumerate exactly the three provenance states"
     );
     assert.ok(t.includes("never guessed certainty"));
+    assert.ok(t.includes("mutable branch or path alone is not revision evidence"));
+    const skill = norm(read(SKILL));
+    assert.ok(skill.includes("available pinned skill revision evidence or none"));
     const leaf = norm(read("docs/leaves/document-for-agents.md"));
     assert.ok(leaf.includes("confirmed") && leaf.includes("unknown"));
   });

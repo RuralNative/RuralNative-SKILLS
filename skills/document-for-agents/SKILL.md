@@ -103,8 +103,8 @@ where its guidance failed. The record exists only by choice:
    the user or proved from the prompt, code, checks, or docs. Use sanitized
    summaries with the approved fields from `reference/templates.md`: category,
    intended outcome in paraphrase, observed mistake, impact, correction,
-   relevant documentation role, available skill revision, attribution
-   confidence, and redactions applied.
+   relevant documentation role, available pinned skill revision evidence or
+   `none`, attribution confidence, and redactions applied.
 6. **Sanitization is unconditional.** Entries omit raw prompts, code, secrets,
    personal data, absolute paths, repository remotes, and proprietary names.
    Entries describe evidence and correction and never become a general

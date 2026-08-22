@@ -64,11 +64,12 @@ management marker on its own line, before any other content:
 ```
 
 The marker records the managing skill identity and whatever revision evidence
-is available, such as an install record or a pinned revision; when nothing is
-available it states `none`. The marker is an HTML comment and stays verbatim
-through later edits. Provenance of a document is confirmed only when the
-marker plus supporting evidence backs it; older or ambiguous documents get
-`likely` or `unknown`, never guessed certainty.
+is available, such as an install record or a pinned revision; a mutable branch
+or path alone is not revision evidence. When nothing is available it states
+`none`. The marker is an HTML comment and stays verbatim through later edits.
+Provenance of a document is confirmed only when the marker plus supporting
+evidence backs it; older or ambiguous documents get `likely` or `unknown`,
+never guessed certainty.
 
 The architecture index (`ARCHITECTURE.md`) does not duplicate the five
 commands; it carries the seam table, boundaries, coverage, and loading
@@ -186,7 +187,7 @@ Observed mistake: <what actually happened>
 Impact: <what it cost>
 Correction: <what fixed it>
 Documentation role: <which guidance was involved>
-Skill revision: <available skill revision evidence, or absent>
+Skill revision: <available pinned skill revision evidence, or none>
 Attribution confidence: confirmed | likely | unknown
 Redactions applied: <what was removed or generalized>
 ```
