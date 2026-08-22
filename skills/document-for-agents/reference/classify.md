@@ -49,6 +49,13 @@ code?"**
   a new rule lands in the adopting repo's policy, decision record, or glossary
   — never a side channel; gaps generic enough to recur feed back into this
   skill.
+- **Repository review guidance is policy.** A root `REVIEW.md` stating review
+  scope, severity, trust rules, verification expectations, current-head
+  freshness, duplicate handling, evidence requirements, and subagent rules
+  routes to the policy tier: linked from the index, never restated in leaves,
+  and updated in the same change as the rules it states. Cloud review tools
+  read this file from the pull-request base branch; configuring the tool
+  itself is platform setup, not part of the doc cache.
 
 - **Sizing controls artifact set.** Minimal fits a repo one session can hold:
   index, glossary, one conventions policy. No per-seam leaf doc, ADR directory,

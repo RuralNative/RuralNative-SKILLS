@@ -58,6 +58,15 @@ The canonical policy docs are `testing`, `security`, `migrations`,
 created when the project reaches the standard size class (Principle 6 in
 SKILL.md), and leaf docs link policy docs instead of restating them.
 
+A repository whose reviews run through a cloud service adds its review policy
+as a root file named `REVIEW.md`, because cloud review reads that path from
+the pull-request base branch. It states review scope, severity, trust rules,
+verification expectations, current-head freshness, duplicate handling,
+inline-comment evidence, and subagent use. It links from the index like any
+policy doc and follows the one-page budget. Configuring the cloud side (app
+installation, repository selection, model choice) stays external setup; the
+doc cache ships the policy file, not the platform wiring.
+
 ```
 # <area> policy
 

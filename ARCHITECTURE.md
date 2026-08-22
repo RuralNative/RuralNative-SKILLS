@@ -12,7 +12,7 @@ own docs.
 |---|---|---|---|---|
 | document-for-agents | publishable agent instructions for the doc-cache lifecycle | skills/document-for-agents/ | install smoke via `npx skills add`; identity == folder check; composition via `skills/document-for-agents/tests/` | docs/leaves/document-for-agents.md |
 | document-for-humans | plain-language derived documentation for human stakeholders | skills/document-for-humans/ | gate extension via scripts/docs-check.sh; composition via `skills/document-for-humans/tests/` | docs/leaves/document-for-humans.md |
-| unslopify | AI-tell detection and meaning-safe prose revision | skills/unslopify/ | scanner contract via `skills/unslopify/scanner.py` and parity catalog via `skills/unslopify/reference/parity.md`; identity == folder check | docs/leaves/unslopify.md |
+| unslopify | AI-tell detection and meaning-safe prose revision | skills/unslopify/ | scanner contract via `skills/unslopify/scanner.py`; parity catalog via `skills/unslopify/reference/parity.md`; fixtures and composition via `skills/unslopify/tests/`; identity == folder check | docs/leaves/unslopify.md |
 | plan-this | fixed-template planning adapter that applies the planning prefix and delegates to `/grill-with-docs`, `/to-spec`, `/to-tickets`, and `/unslop` | skills/plan-this/ | composition via `skills/plan-this/tests/`; identity == folder check | docs/leaves/plan-this.md |
 | implement-this | fixed-template implementation adapter that applies the implementation prefix and delegates to `/implement` and `/unslopify` | skills/implement-this/ | composition via `skills/implement-this/tests/`; identity == folder check | docs/leaves/implement-this.md |
 | review-this | fixed-template review adapter that applies the review prefix and delegates to `/code-review` and `/unslopify` | skills/review-this/ | composition via `skills/review-this/tests/`; identity == folder check | docs/leaves/review-this.md |
@@ -32,6 +32,7 @@ Covered docs that are not seams — the seam table's counterpart, parsed by
 harness check 6. A covered doc must be in the seam table or listed here:
 
 - CONTEXT.md
+- REVIEW.md
 - docs/debt.md
 - README.md
 - docs/agents/domain.md
@@ -47,6 +48,7 @@ harness check 6. A covered doc must be in the seam table or listed here:
 - docs/adr/0011-retire-supervise-this.md
 - docs/adr/0012-manager-worktree-pull-request-delivery.md
 - docs/adr/0013-review-this-decoupled-code-review.md
+- docs/adr/0015-requirements-data-trust-and-install-provenance.md
 - docs/leaves/document-for-humans.md
 - docs/human/overview.md
 - docs/human/decision-journal.md
@@ -74,6 +76,10 @@ without the index referencing them as current:
   `CONTEXT.md`.
 - Known shortcuts and unfinished pieces are tracked in the debt registry. See
   `docs/debt.md`.
+- Review scope, severity, trust, verification, and subagent rules are
+  repository policy in `REVIEW.md`; cloud review reads it from the
+  pull-request base branch, and configuring that service stays external
+  setup.
 
 ## Coverage
 
@@ -85,6 +91,7 @@ parsed from, so they are not listed here.
 |---|---|
 | CONTEXT.md | glossary |
 | README.md | pointer |
+| REVIEW.md | policy |
 | docs/agents/domain.md | pointer |
 | docs/agents/issue-tracker.md | pointer |
 | docs/agents/triage-labels.md | pointer |
@@ -101,6 +108,7 @@ parsed from, so they are not listed here.
 | docs/adr/0011-retire-supervise-this.md | decision |
 | docs/adr/0012-manager-worktree-pull-request-delivery.md | decision |
 | docs/adr/0013-review-this-decoupled-code-review.md | decision |
+| docs/adr/0015-requirements-data-trust-and-install-provenance.md | decision |
 | docs/leaves/document-for-agents.md | leaf |
 | docs/leaves/document-for-humans.md | leaf |
 | docs/leaves/unslopify.md | leaf |

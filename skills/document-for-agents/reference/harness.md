@@ -33,8 +33,17 @@ the conventions policy to avoid infinite regress.
    script changed without the doc being regenerated.
 8. **Policy coverage.** Every policy doc on disk is linked from the index;
    every policy doc linked from the index exists; leaf docs link policy docs
-   instead of restating them. The linkage half is mechanical; the restatement
-   half is a review convention — a script cannot judge duplication.
+   instead of restating them. Coverage is not tied to one subdirectory: a
+   root `REVIEW.md` review policy is discovered and checked like any other
+   policy doc, alongside `docs/policies/`. Discovery is conventional, not
+   exhaustive — an adopter who indexes a policy at another path extends
+   discovery; every policy row the index declares gets the existence check
+   and the governing-source freshness half wherever it lives. A policy doc
+   may declare its governing sources in a `<!-- Governs-from: path/a,
+   path/b -->` line; while any declared source is modified in the working
+   tree, the policy doc must change too, or the check fails (dormant when no
+   source is declared). The linkage half is mechanical; the restatement half
+   is a review convention — a script cannot judge duplication.
 9. **Debt register.** Every debt item is a numbered `DEBT-N` entry with a
    `Status:` line and a `Revisit-when:` trigger; every `DEBT-N` referenced in
    code or docs exists in the register; the scorecard reports open and
