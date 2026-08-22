@@ -20,8 +20,11 @@ sizing, tier routing, and the invariant lifecycle, `reference/harness.md`
 defines the gate, `reference/templates.md` holds the artifact shapes. Repository review
 guidance routes to policy: a root `REVIEW.md` is indexed from
 `ARCHITECTURE.md`, checked by harness check 8 wherever it lives, and updated
-in the same change as the rules it states; cloud review reads it from the
-pull-request base branch, and configuring that service stays external setup.
+in the same change as the rules it states. Check 8's discovery is
+conventional, not exhaustive: adopters who index a policy at another path
+extend discovery, and every policy row the index declares gets the existence
+and freshness halves. Cloud review reads the policy from the pull-request
+base branch, and configuring that service stays external setup.
 The consumption path: edit
 `skills/document-for-agents/SKILL.md` then push to
 main, registry discovery lists the repo, a consumer runs `npx skills add

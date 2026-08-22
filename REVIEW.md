@@ -1,6 +1,6 @@
 # Review policy
 
-How every review in this repository works, local or cloud. Cloud Code Review
+How every review in this repository works, local or cloud. Cloud review
 reads this file from the pull-request base branch and applies it as written.
 
 <!-- Governs-from: -->

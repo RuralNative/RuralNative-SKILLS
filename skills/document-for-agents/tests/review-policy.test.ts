@@ -172,7 +172,7 @@ describe("review policy maintenance behavior (document-for-agents #136)", () => 
     assert.ok(n.includes("governing sources"), "harness must describe declared governing sources");
     assert.ok(n.includes("dormant when no source is declared"), "freshness half stays dormant without declarations");
     assert.ok(
-      n.includes("including the repository root"),
+      n.includes("not tied to one subdirectory"),
       "policy coverage must not be tied to one subdirectory"
     );
   });
@@ -232,6 +232,17 @@ describe("doc-harness fixtures: review policy checks (#136)", () => {
       fs.writeFileSync(reviewPath, `${fs.readFileSync(reviewPath, "utf8")}\nRule one summarized.\n`);
       const fresh = f.run();
       assert.equal(fresh.status, 0, `expected green after same-change update, got:\n${fresh.out}`);
+    } finally {
+      f.destroy();
+    }
+  });
+
+  test("declared but missing governing source fails loudly instead of staying dormant", () => {
+    const f = makeFixture("# Review policy\n\n<!-- Governs-from: rules.md -->\n\nRules.\n");
+    try {
+      const r = f.run();
+      assert.equal(r.status, 1);
+      assert.ok(r.out.includes("governing source 'rules.md' declared by 'REVIEW.md' does not exist"), r.out);
     } finally {
       f.destroy();
     }

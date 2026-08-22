@@ -143,18 +143,26 @@ else
     [[ -f "$f" ]] || { bad "policy: '$f' linked from the index but missing on disk"; pol_fail=1; }
   done
   if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    for f in "${POLICIES[@]}"; do
+    # Freshness runs over discovered policies plus every policy path the index
+    # declares, so an adopter-declared location gets the same half.
+    declare -A POLICYSET=()
+    for f in "${POLICIES[@]}"; do [[ -f $f ]] && POLICYSET["$f"]=1; done
+    for f in "${POLICYROWS[@]}"; do [[ -f $f ]] && POLICYSET["$f"]=1; done
+    for f in "${!POLICYSET[@]}"; do
       gov="$(grep -m1 '^<!-- Governs-from:' "$f" | sed -E 's/^<!-- Governs-from:[[:space:]]*//; s/[[:space:]]*-->$//')"
       [[ -z "$gov" ]] && continue
       IFS=',' read -ra GOVSRC <<< "$gov"
       for src in "${GOVSRC[@]}"; do
         src="$(sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' <<<"$src")"
         [[ -n "$src" ]] || continue
-        if [[ -n "$(git status --porcelain -- "$src")" ]] && [[ -z "$(git status --porcelain -- "$f")" ]]; then
+        if [[ ! -e "$src" ]]; then
+          bad "policy: governing source '$src' declared by '$f' does not exist"; pol_fail=1
+        elif [[ -n "$(git status --porcelain -- "$src")" ]] && [[ -z "$(git status --porcelain -- "$f")" ]]; then
           bad "policy: '$f' not updated although governing source '$src' changed"; pol_fail=1
         fi
       done
     done
+    unset POLICYSET
   fi
   [[ $pol_fail -eq 0 ]] && note "policy coverage: policies indexed and fresh"
 fi
