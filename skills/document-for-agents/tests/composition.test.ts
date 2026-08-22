@@ -168,3 +168,111 @@ describe("document-for-agents hard dependency (document-for-agents:INV-6)", () =
     assert.ok(unslop.includes("name: unslopify"));
   });
 });
+
+// document-for-agents:INV-7 — attention boundary composition (#147): two equal outputs (cache accuracy, attention control); the five-command contract opens generated AGENTS.md and the architecture index does not duplicate it; loading budgets are hard caps on orientation documents while task-driven code reads inside the affected seam stay allowed; missing unrecoverable facts become named cache gaps requiring approval before the documentation read set widens; the standard leaf shape carries a Not here route by stable seam responsibility; a numbered invariant collision stops until an approved decision supersedes or narrows it; vendor-facts live in the adopting repository's singular reference directory; the ten-check harness remains ten.
+describe("attention boundary contract (document-for-agents:INV-7)", () => {
+  const SKILL = "skills/document-for-agents/SKILL.md";
+  const TEMPLATES = "skills/document-for-agents/reference/templates.md";
+  const HARNESS = "skills/document-for-agents/reference/harness.md";
+  const FIXTURES = "skills/document-for-agents/tests/fixtures";
+
+  test("introduction names cache accuracy and attention control as equal outputs", () => {
+    const n = norm(read(SKILL));
+    assert.ok(n.includes("cache accuracy"));
+    assert.ok(n.includes("attention control"));
+    assert.ok(n.includes("equal outputs"));
+  });
+
+  test("five commands open generated AGENTS.md in approved order and the architecture index does not duplicate them", () => {
+    const commands = JSON.parse(read(`${FIXTURES}/five-commands.json`)).commands as string[];
+    const templates = norm(read(TEMPLATES));
+    let pos = -1;
+    for (const c of commands) {
+      const i = templates.indexOf(norm(c));
+      assert.ok(i > pos, `command missing or out of order in templates.md: ${c}`);
+      pos = i;
+    }
+    assert.ok(templates.includes("does not duplicate the five commands"));
+    const agents = norm(read("AGENTS.md"));
+    pos = -1;
+    for (const c of commands) {
+      const i = agents.indexOf(norm(c));
+      assert.ok(i > pos, `command missing or out of order in AGENTS.md: ${c}`);
+      pos = i;
+    }
+    assert.ok(
+      agents.indexOf(norm(commands[0])) < agents.indexOf("## documentation"),
+      "the five commands must come before any other AGENTS.md section"
+    );
+    const arch = norm(read("ARCHITECTURE.md"));
+    for (const c of commands) {
+      assert.equal(arch.includes(norm(c)), false, `architecture index duplicates command: ${c}`);
+    }
+  });
+
+  test("loading budgets are hard caps on orientation documents and code reads inside the seam stay allowed", () => {
+    const templates = norm(read(TEMPLATES));
+    assert.ok(templates.includes("hard caps on orientation documents"));
+    assert.ok(templates.includes("never block code inspection inside the affected seam"));
+    const arch = norm(read("ARCHITECTURE.md"));
+    assert.ok(arch.includes("caps on orientation documents"));
+    assert.ok(arch.includes("never block code inspection inside the affected seam"));
+  });
+
+  test("missing unrecoverable facts become named cache gaps requiring approval before widening", () => {
+    const skill = norm(read(SKILL));
+    assert.ok(skill.includes("cache gap"));
+    assert.ok(skill.includes("ask before widening the documentation read set"));
+    const templates = norm(read(TEMPLATES));
+    assert.ok(templates.includes("cache gap"));
+    assert.ok(templates.includes("ask the owner before opening more documentation"));
+    assert.ok(norm(read("ARCHITECTURE.md")).includes("cache gap"));
+  });
+
+  test("standard leaf shape requires a Not here route by stable responsibility, not file path", () => {
+    const templates = norm(read(TEMPLATES));
+    assert.ok(templates.includes("`not here` route"));
+    assert.ok(templates.includes("owning seam"));
+    assert.ok(templates.includes("never by file path"));
+    const leavesDir = path.join(ROOT, "docs/leaves");
+    for (const f of fs.readdirSync(leavesDir).filter((f) => f.endsWith(".md"))) {
+      const content = fs.readFileSync(path.join(leavesDir, f), "utf8");
+      const line = content.split("\n").find((l) => l.includes("Not here"));
+      assert.ok(line, `leaf doc lacks a Not here route: docs/leaves/${f}`);
+      assert.equal(line.includes("skills/"), false, `Not here route uses a file path: docs/leaves/${f}`);
+      assert.equal(line.includes(".md"), false, `Not here route uses a file path: docs/leaves/${f}`);
+    }
+  });
+
+  test("a numbered invariant collision stops until an approved decision supersedes or narrows it", () => {
+    const skill = norm(read(SKILL));
+    assert.ok(skill.includes("stop before changing code or docs"));
+    assert.ok(skill.includes("supersedes or narrows the invariant"));
+    assert.ok(skill.includes("working around it silently is forbidden"));
+  });
+
+  test("vendor-facts live in the adopting repository under the singular reference directory", () => {
+    const t = read(TEMPLATES);
+    assert.ok(norm(t).includes("in the adopting repository"));
+    assert.ok(t.includes("reference/vendor-facts.md"));
+    assert.equal(t.includes("references/vendor-facts.md"), false);
+  });
+
+  test("the ten-check harness remains ten checks", () => {
+    const h = read(HARNESS);
+    const section = h.slice(h.indexOf("## The ten checks"), h.indexOf("## Scorecard"));
+    const count = (section.match(/^\d+\. /gm) || []).length;
+    assert.equal(count, 10);
+    assert.ok(norm(read("ARCHITECTURE.md")).includes("ten checks"));
+  });
+
+  test("dependency guidance sits below principles and boundaries", () => {
+    const s = read(SKILL);
+    const principles = s.indexOf("## Principles");
+    const boundaries = s.indexOf("## Boundaries");
+    const dependency = s.indexOf("## Dependency:");
+    assert.ok(principles !== -1 && boundaries !== -1 && dependency !== -1);
+    assert.ok(principles < dependency, "dependency block must sit below principles");
+    assert.ok(boundaries < dependency, "dependency block must sit below boundaries");
+  });
+});

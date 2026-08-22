@@ -29,7 +29,9 @@ Six sections, 1–2 minute read; longer content moves to a referenced file. Mini
 1. **Purpose** — why the seam exists, in glossary vocabulary; link the ADR
    if one constrains it.
 2. **Scope & boundaries** — what it owns, what it delegates; name dependents
-   and dependencies.
+   and dependencies. Close with a firm `Not here` route: one line naming the
+   responsibility that takes misrouted work and its owning seam, in stable
+   ownership language, never by file path.
 3. **Key types & files** — by role, not by path; paths go stale.
 4. **Data flow** — one directed walk-through from entry point to resting
    place.
@@ -44,6 +46,20 @@ Six sections, 1–2 minute read; longer content moves to a referenced file. Mini
    restatements).
 
 ## Index (AGENTS.md or ARCHITECTURE.md)
+
+Generated `AGENTS.md` starts with the five commands of the attention
+contract, in this order, before any other content:
+
+1. Say the task goal.
+2. Read only the matching row; its budget is a cap.
+3. Follow the owning seam and its `Not here` routes.
+4. Change code and docs together; code wins.
+5. Put work docs in the tracker; decide invariant conflicts first.
+
+The architecture index (`ARCHITECTURE.md`) does not duplicate the five
+commands; it carries the seam table, boundaries, coverage, and loading
+protocol that the commands point into. After the commands, `AGENTS.md`
+continues with:
 
 - One paragraph: what the system is, as built.
 - Seam table: doc | responsibility | code root | tests.
@@ -76,9 +92,9 @@ never restated in leaf docs>
 
 ## Vendor-facts
 
-`references/vendor-facts.md` holds one ~10-line entry per dependency: pinned
-version, known gotchas, and a note to fetch the full docs on demand. Create an
-entry when a new dependency is introduced.
+In the adopting repository, `reference/vendor-facts.md` holds one ~10-line
+entry per dependency: pinned version, known gotchas, and a note to fetch the
+full docs on demand. Create an entry when a new dependency is introduced.
 
 ```
 ### <dependency>
@@ -119,13 +135,21 @@ not a parse; the harness checks form and completeness, not conditions.
 
 ## Loading protocol
 
-| Task | Read set | Budget |
+| Task | Read set | Budget (cap) |
 |---|---|---|
 | Any change | index → one leaf doc → glossary terms in use | ~3–6k tokens |
 | API/route change | + route map, security + testing policy | ~6–9k |
 | Schema/data change | + data doc, migrations policy, generated schema slice | ~8–12k |
 | New dependency | + one vendor-facts entry | ~0.3k |
 | Re-orient after compaction | index → task leaf doc (including its Non-negotiables) → glossary | ~4–7k |
+
+The budget column states hard caps on orientation documents, not guidance to
+trim later. When a task would push the read past the cap, narrow the read set
+instead of continuing wide. The caps never block code inspection inside the
+affected seam: reading the code being changed is task work, not orientation.
+When the orientation documents lack an unrecoverable fact the task needs, name
+a cache gap, record it in the issue tracker, and ask the owner before opening
+more documentation; widening the read set silently is forbidden.
 
 Rule: an agent's re-orientation is the same small read every time — that
 fixed cost is what makes compaction survivable.

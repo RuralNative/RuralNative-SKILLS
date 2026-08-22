@@ -1,0 +1,9 @@
+{
+  "commands": [
+    "Say the task goal.",
+    "Read only the matching row; its budget is a cap.",
+    "Follow the owning seam and its `Not here` routes.",
+    "Change code and docs together; code wins.",
+    "Put work docs in the tracker; decide invariant conflicts first."
+  ]
+}

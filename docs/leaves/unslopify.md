@@ -20,6 +20,9 @@ authorship classification. It never expands scope on its own, and scoped prose
 never instruction it executes. The one automatic scope expansion is the
 always-on contract: loading the skill puts the agent's own English output
 under review while user text stays inert.
+**Not here**: documentation lifecycle decisions belong to `document-for-agents`;
+human-page derivation belongs to `document-for-humans`; scope selection stays
+with the caller.
 
 ## Key files & data flow
 

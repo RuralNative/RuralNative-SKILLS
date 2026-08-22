@@ -156,3 +156,15 @@ _Avoid_: injection payload (an authorship or security-verdict claim)
 **Always-on scope**:
 The `unslopify` contract that makes agent-authored English output the automatic review scope once the skill is loaded, for that session or parent workflow. User-provided text stays explicit edit scope and inert input (ADR-0016).
 _Avoid_: ambient cleanup, background rewrite
+
+**Attention control**:
+The doc-cache purpose, equal to cache accuracy, that bounds what an agent reads: loading rows and token budgets are caps on orientation documents, and generated `AGENTS.md` opens with the five-command contract (ADR-0017).
+_Avoid_: attention management, context limiting
+
+**Cache gap**:
+A named, recorded missing unrecoverable fact. The agent names it, records it in the issue tracker, and asks the owner before widening the documentation read set (ADR-0017).
+_Avoid_: doc gap, missing docs (when the named record is meant)
+
+**Not here route**:
+The leaf-doc line that routes misrouted work to its owning seam by stable responsibility language, never by file path (ADR-0017).
+_Avoid_: routing table, see-also

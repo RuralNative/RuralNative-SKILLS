@@ -7,6 +7,8 @@
 ## Scope & boundaries
 
 Owns `skills/implement-this/`: the bounded-set adapter, the worker capability contract, the installation guide, and their tests. One invocation authorizes only its bounded ticket set; workers claim only their own tickets and never touch sibling state. The seam does not merge pull requests, close tickets before merge, recompute post-closure dependents (`review-this` owns that), choose models, or schedule waves across specifications. Multi-ticket execution stops before any write when isolated workers are unavailable.
+**Not here**: planning and publishing tickets belongs to `plan-this`;
+reviewing and merging the pull-request wave belongs to `review-this`.
 
 ## Key files & data flow
 

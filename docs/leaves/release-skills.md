@@ -7,6 +7,8 @@ The skill that prepares releases for any project type. It detects version files 
 ## Scope & boundaries
 
 Owns: the content under `skills/release-skills/` — `SKILL.md`, `INSTALL.md`, `tests/`. Delegates: triggering to explicit user invocation via `/release-skills` variants; version file handling to language-specific tooling. The seam does not own distribution beyond `npx skills add`.
+**Not here**: documentation lifecycle decisions belong to
+`document-for-agents`; prose cleanup belongs to `unslopify`.
 
 ## Key files & data flow
 

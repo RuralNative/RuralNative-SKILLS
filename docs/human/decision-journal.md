@@ -1,4 +1,4 @@
-<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-22 · Regenerated: shipped three-skill workflow; #137 activation; ADR-0014 now shipped, ADR-0009/0012/0013 superseded; pull-request-only delivery; explicit wave example; #146 unslopify always-on output contract · Sources: docs/adr/0001-distribute-as-public-catalog-shelf.md, docs/adr/0002-adopt-ten-check-gate.md, docs/adr/0003-human-first-derived-artifacts.md, docs/adr/0004-verb-named-skills-flat-shelf.md, docs/adr/0005-unslopify-utility-identity-and-hard-dependency.md, docs/adr/0006-plan-this-fixed-template-adapter.md, docs/adr/0007-supervise-this-coordinator.md, docs/adr/0008-supervise-this-agent-orchestrator.md, docs/adr/0009-delegation-invariants-human-invocation.md, docs/adr/0010-supervise-by-delivery-evidence.md, docs/adr/0011-retire-supervise-this.md, docs/adr/0012-manager-worktree-pull-request-delivery.md, docs/adr/0013-review-this-decoupled-code-review.md, docs/adr/0014-three-skill-development-workflow.md, docs/adr/0015-requirements-data-trust-and-install-provenance.md, docs/adr/0016-unslopify-always-on-output-contract.md -->
+<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-23 · Regenerated: shipped three-skill workflow; #137 activation; ADR-0014 now shipped, ADR-0009/0012/0013 superseded; pull-request-only delivery; explicit wave example; #146 unslopify always-on output contract; #147 doc cache attention boundary · Sources: docs/adr/0001-distribute-as-public-catalog-shelf.md, docs/adr/0002-adopt-ten-check-gate.md, docs/adr/0003-human-first-derived-artifacts.md, docs/adr/0004-verb-named-skills-flat-shelf.md, docs/adr/0005-unslopify-utility-identity-and-hard-dependency.md, docs/adr/0006-plan-this-fixed-template-adapter.md, docs/adr/0007-supervise-this-coordinator.md, docs/adr/0008-supervise-this-agent-orchestrator.md, docs/adr/0009-delegation-invariants-human-invocation.md, docs/adr/0010-supervise-by-delivery-evidence.md, docs/adr/0011-retire-supervise-this.md, docs/adr/0012-manager-worktree-pull-request-delivery.md, docs/adr/0013-review-this-decoupled-code-review.md, docs/adr/0014-three-skill-development-workflow.md, docs/adr/0015-requirements-data-trust-and-install-provenance.md, docs/adr/0016-unslopify-always-on-output-contract.md, docs/adr/0017-doc-cache-attention-boundary.md -->
 
 # Decision journal in plain words
 
@@ -99,3 +99,11 @@ Once `unslopify` is loaded it reviews everything a coding agent writes in Englis
 What it costs: no runtime machinery backs this; the audit relies on the loaded instructions, and the scanner stays an optional file-checking tool.
 
 Depth: `docs/adr/0016-unslopify-always-on-output-contract.md`.
+
+### 2026-08-23 - Bound what agents read (shipped)
+
+Documentation now has two equal jobs: staying true to the code, and bounding attention. Every `AGENTS.md` opens with five commands (state your goal, read only your row as a cap, follow the owning seam's Not-here routes, change code and docs together, put work docs in the tracker and decide invariant conflicts first). Loading budgets are caps on orientation documents, never on reading the code being changed. A missing fact becomes a named cache gap that asks you before more documentation is opened. Work that collides with a numbered rule stops until a decision changes the rule.
+
+What it costs: these are review-level promises, not new automated checks; the harness stays at ten checks.
+
+Depth: `docs/adr/0017-doc-cache-attention-boundary.md`.

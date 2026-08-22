@@ -52,6 +52,11 @@ absent from skills/) show the protocol surfaces structure but not claim
 fidelity — false entries survived harness-green. Debt still stands.
 Trigger reset to the next drill (time-boxed fresh agent, compaction
 simulation) or any change to the loading protocol, whichever first.
+Verdict 2026-08-23: the loading protocol changed again in #147 — budgets
+became caps on orientation documents with a cache-gap approval gate and a
+five-command contract atop `AGENTS.md`. No formal drill has run; informal
+evidence still shows agents re-orienting via the protocol. Debt stands;
+trigger reset to the next drill only.
 
 ### DEBT-5 — Layout-agnostic gaps in seam discovery
 
