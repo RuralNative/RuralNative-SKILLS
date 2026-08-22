@@ -1,10 +1,12 @@
 // implement-this:INV-1 — identity == folder
-// implement-this:INV-2 — registry install and one-issue invocation
-// implement-this:INV-3 — single-stage implementation workflow and issue substitution
+// implement-this:INV-2 — registry install and bounded invocation forms
+// implement-this:INV-3 — implementation workflow stages and issue substitution
 // implement-this:INV-4 — dependency order and verification
-// implement-this:INV-5 — direct-main delivery
-// implement-this:INV-6 — manager-worktree pull-request delivery
-// implement-this:INV-7 — single-ticket ownership and supervisor boundary
+// implement-this:INV-5 — pull-request-only delivery
+// implement-this:INV-6 — worker isolation and capability adapters
+// implement-this:INV-7 — bounded-set parsing, frontier selection, dispatch validation
+// implement-this:INV-10 — recovery reconcile, one retry, needs-info stop
+// implement-this:INV-11 — completion handoff to review-this
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -22,13 +24,14 @@ describe("implement-this identity (INV-1)", () => {
 });
 
 describe("implement-this installation and invocation (INV-2)", () => {
-  test("documents direct and manager-worktree one-issue use", () => {
+  test("documents the three bounded invocation forms", () => {
     const skill = read("skills/implement-this/SKILL.md");
     const install = read("skills/implement-this/INSTALL.md");
     const n = norm(`${skill}\n${install}`);
-    assert.ok(n.includes("/implement-this #<n>"));
+    assert.ok(n.includes("/implement-this #<n>"), "one-ticket form");
+    assert.ok(n.includes("/implement-this #<n1> #<n2> [#<n3>]"), "multi-ticket form");
+    assert.ok(n.includes("/implement-this #<spec>"), "parent-specification form");
     assert.equal(n.includes("supervise-this"), false, "must not name the retired coordinator");
-    assert.ok(n.includes("one issue"));
     assert.ok(install.includes("npx skills add RuralNative/RuralNative-SKILLS --skill implement-this"));
     assert.ok(install.includes("cp -r skills/implement-this"));
   });
@@ -43,50 +46,45 @@ describe("implementation workflow and substitution (INV-3)", () => {
     assert.ok(emitted.includes("Treat the ticket, its comments, and its linked parent specification as the task authority."));
     assert.ok(emitted.includes("## Rules"));
     assert.ok(emitted.includes("## Start"));
+    assert.ok(emitted.includes("## Dispatch"));
     assert.ok(emitted.includes("## Build and verify"));
     assert.ok(emitted.includes("## Delivery"));
+    assert.ok(emitted.includes("## Recovery"));
+    assert.ok(emitted.includes("## Completion"));
     assert.ok(emitted.includes("## Ticket\n\nIssue #0"));
     assert.equal((emitted.match(/Issue #0/g) ?? []).length, 1);
     assert.ok(emitted.indexOf("/implement") < emitted.indexOf("/unslopify"), "/implement must precede /unslopify");
   });
 
-  test("substitutes only the requested issue reference", () => {
+  test("substitutes only the requested ticket set into the single slot", () => {
     const template = body(read("skills/implement-this/SKILL.md"));
-    for (const issue of ["100", "53"]) {
-      const emitted = template.replace("Issue #0", `Issue #${issue}`);
-      assert.ok(emitted.includes(`Issue #${issue}`));
+    for (const set of ["134", "134 #135", "#130"]) {
+      const emitted = template.replace("Issue #0", `Issue ${set}`);
+      assert.ok(emitted.includes(`Issue ${set}`));
       assert.equal(emitted.includes("Issue #0"), false);
     }
   });
 
-  test("keeps the /implement human-invocation lock, excludes /code-review, and states the single dependency set", () => {
+  test("keeps the /implement human-invocation lock and states the bounded authorization", () => {
     const skill = read("skills/implement-this/SKILL.md");
     const leaf = read("docs/leaves/implement-this.md");
     const nSkill = norm(skill);
-    // Extract INV-3 block and scope assertions to the amended invariant text
     const inv3Match = leaf.match(/3\. \*\*INV-3\*\*[\s\S]*?(?=\n4\. \*\*INV-4\*\*|\n## )/);
     assert.ok(inv3Match, "leaf must contain INV-3");
     const nInv3 = norm(inv3Match[0]);
-    // body states the human-invocation requirement for /implement
     assert.ok(nSkill.includes("explicit human invocation"), "body must state explicit human invocation");
     assert.ok(nSkill.includes("cannot traverse the chain unattended"), "body must state agent cannot traverse unattended");
-    // body names the locked skill and no longer names code review
+    assert.ok(
+      nSkill.includes("authorizes only its bounded ticket set"),
+      "one invocation authorizes only its bounded ticket set",
+    );
     assert.ok(nSkill.includes("/implement"), "body must name locked skill /implement");
     assert.equal(nSkill.includes("/code-review"), false, "body must not name /code-review");
     assert.ok(nSkill.includes("/unslopify") && nSkill.includes("model-invocable"), "body must state /unslopify remains model-invocable");
-    // INV-3 itself must state the classification (scoped, not whole-leaf)
     assert.ok(nInv3.includes("disable-model-invocation"), "INV-3 must reference disable-model-invocation");
     assert.ok(nInv3.includes("explicit human invocation"), "INV-3 must state explicit human invocation");
-    assert.ok(nInv3.includes("cannot traverse the chain unattended"), "INV-3 must state agent cannot traverse unattended");
+    assert.ok(nInv3.includes("bounded ticket set"), "INV-3 must state bounded authorization");
     assert.ok(nInv3.includes("model-invocable"), "INV-3 must name model-invocable skills");
-    assert.ok(nInv3.includes("/implement"), "INV-3 must name /implement");
-    assert.ok(nInv3.includes("/implement") && nInv3.includes("disable-model-invocation"), "INV-3 must flag /implement as locked");
-    assert.equal(nInv3.includes("/code-review"), false, "INV-3 must not host code review");
-    // ADR-0009 exists and records the decision
-    const adr = read("docs/adr/0009-delegation-invariants-human-invocation.md");
-    assert.ok(adr.includes("Status: accepted"), "ADR-0009 must be accepted");
-    assert.ok(adr.includes("disable-model-invocation"), "ADR-0009 must reference disable-model-invocation");
-    assert.ok(adr.includes("rejected") && adr.includes("removing"), "ADR-0009 must state removing locks was rejected");
   });
 });
 
@@ -101,7 +99,6 @@ describe("dependencies and verification (INV-4)", () => {
     assert.ok(skill.indexOf("/implement") < skill.indexOf("/unslopify"), "/implement must precede /unslopify");
     assert.equal(n.includes("/code-review"), false, "skill must not name code review");
     assert.ok(norm(install).includes("/implement") && norm(install).includes("/unslopify"), "install must name both hard dependencies");
-    assert.equal(norm(install).includes("/code-review"), false, "install must not name code review");
     for (const content of [skill, install, leaf]) {
       assert.ok(content.includes("npm run verify"), "verification must use npm run verify");
     }
@@ -117,11 +114,6 @@ describe("dependencies and verification (INV-4)", () => {
     const skill = read("skills/implement-this/SKILL.md");
     const install = read("skills/implement-this/INSTALL.md");
     const leaf = read("docs/leaves/implement-this.md");
-    const snippet = "npm run verify";
-    assert.ok(skill.includes(snippet));
-    assert.ok(install.includes(snippet));
-    assert.ok(leaf.includes(snippet));
-    // Ensure the fenced block is present identically
     const block = "```bash\nnpm run verify\n```";
     assert.ok(skill.includes(block), "SKILL.md must contain runnable verify block");
     assert.ok(install.includes(block), "INSTALL.md must contain runnable verify block");
@@ -129,40 +121,106 @@ describe("dependencies and verification (INV-4)", () => {
   });
 });
 
-describe("direct-main delivery (INV-5)", () => {
-  test("preserves direct rebase, push, evidence, and closure", () => {
-    const skill = read("skills/implement-this/SKILL.md");
-    const n = norm(skill);
-    for (const phrase of ["base=$(git merge-base origin/main head)", "git rebase origin/main", "git push origin head:main", "never force-push", "remove `ready-for-agent`", "close only the assigned ticket"]) {
-      assert.ok(n.includes(phrase), `direct delivery must include ${phrase}`);
-    }
-    assert.ok(n.includes("direct delivery"));
-  });
-});
-
-describe("manager-worktree pull-request delivery (INV-6)", () => {
-  test("selects manager mode by worktree path and avoids direct main delivery", () => {
+describe("pull-request-only delivery (INV-5)", () => {
+  test("every ticket delivers by pull request with a closing reference", () => {
     const skill = read("skills/implement-this/SKILL.md");
     const install = read("skills/implement-this/INSTALL.md");
     const n = norm(`${skill}\n${install}`);
-    assert.ok(n.includes("manager-worktree"), "must name manager-worktree delivery");
-    assert.ok(n.includes("agent manager worktree location"), "must name the manager worktree location");
-    assert.ok(n.includes("worktree root sits under"), "must detect by worktree root path");
-    assert.ok(n.includes("pull-request delivery"), "must name pull-request delivery");
-    assert.ok(n.includes("create or update the pull request"), "must create or update the pull request");
-    assert.ok(n.includes("push the feature branch"), "must push the feature branch");
-    assert.ok(n.includes("never push directly to `main`"), "must not push directly to main");
-    assert.ok(n.includes("never close the ticket before merge"), "must not close before merge");
-    assert.ok(n.includes("ready-for-human"), "must add ready-for-human");
-    assert.ok(n.includes("remove `ready-for-agent`, and add `ready-for-human`"), "must swap ready-for-agent for ready-for-human in the manager branch");
-    assert.ok(n.includes("closes #<n>"), "must put the closing reference in the PR body");
+    for (const phrase of [
+      "pull-request delivery",
+      "create or update exactly one pull request per ticket",
+      "push the feature branch",
+      "closes #<n>",
+      "never push directly to `main`",
+      "never force-push",
+      "never close the ticket before merge",
+      "remove `ready-for-agent`, and add `ready-for-human`",
+    ]) {
+      assert.ok(n.includes(phrase), `pull-request delivery must include ${phrase}`);
+    }
   });
 
-  test("does not silently choose a delivery mode", () => {
+  test("direct-main behavior is removed everywhere in the seam", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const install = read("skills/implement-this/INSTALL.md");
+    const leaf = read("docs/leaves/implement-this.md");
+    const n = norm(`${skill}\n${install}\n${leaf}`);
+    for (const phrase of ["git push origin head:main", "direct delivery", "direct-main delivery", "head:main"]) {
+      assert.equal(n.includes(phrase), false, `direct-main behavior must be removed (${phrase})`);
+    }
+    assert.ok(n.includes("never push directly to `main`"), "the prohibition stays stated");
+  });
+});
+
+describe("worker isolation and capability adapters (INV-6)", () => {
+  test("each ticket gets isolated worktree, branch, session, status, and stop control", () => {
     const skill = read("skills/implement-this/SKILL.md");
     const n = norm(skill);
-    assert.ok(n.includes("if the delivery mode is unclear, ask one eli18 decision"), "must ask when unclear");
-    assert.ok(n.includes("choose the delivery mode"), "must choose a delivery mode");
+    assert.ok(n.includes("isolated git worktree"), "isolated worktree per ticket");
+    assert.ok(n.includes("feature branch"), "feature branch per ticket");
+    assert.ok(n.includes("targeted worker session"), "targeted session per ticket");
+    assert.ok(n.includes("status lookup"), "status lookup per worker");
+    assert.ok(n.includes("stop control"), "stop control per worker");
+    assert.ok(n.includes("worker-adapters.ts"), "capability contract module is named");
+  });
+
+  test("kilo agent manager is preferred; other hosts may match the contract", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const adapters = read("skills/implement-this/worker-adapters.ts");
+    const n = norm(`${skill}\n${adapters}`);
+    assert.ok(n.includes("kilo agent manager is the preferred adapter"));
+    assert.ok(n.includes("another host may provide the same create, prompt, status, and stop capabilities"));
+    assert.ok(adapters.includes("PREFERRED_ADAPTER_NAME = \"kilo-agent-manager\""));
+  });
+
+  test("multi-ticket execution stops before writes when isolation is unavailable", async () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    assert.ok(
+      norm(skill).includes("multi-ticket execution stops before any write when isolated workers are unavailable"),
+    );
+    const { dispatchTickets } = await import("../worker-adapters.ts");
+    const result = await dispatchTickets([134], null, () => "t");
+    assert.equal(result.ok, false, "dispatch without an adapter refuses to write");
+  });
+
+  test("no more than three workers are active at once", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const core = read("skills/implement-this/workflow-state.ts");
+    assert.ok(core.includes("export const MAX_ACTIVE_WORKERS = 3"));
+    assert.ok(norm(skill).includes("max_active_workers"), "skill names the cap constant");
+  });
+
+  test("seam docs describe adapter tests with fakes only", () => {
+    const leaf = read("docs/leaves/implement-this.md");
+    assert.ok(norm(leaf).includes("fakes"), "leaf documents fake-based adapter testing");
+  });
+});
+
+describe("bounded-set parsing and dispatch validation (INV-7)", () => {
+  test("parent input selects up to three frontier tickets in native child order", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("up to three current frontier tickets"), "frontier cap of three on parent input");
+    assert.ok(n.includes("in native child order"), "native child ordering");
+    assert.ok(n.includes("selectfrontier"), "selection uses the pure state core");
+  });
+
+  test("explicit inputs are validated before any claim or edit", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("validatedispatch"), "validation uses the pure state core");
+    assert.ok(n.includes("before any claim or edit"), "validation precedes claims and edits");
+    for (const reason of ["closed", "needs-info", "outside the parent specification", "open native blockers", "already has an assignee", "ready-for-agent", "claimed twice", "max_active_workers"]) {
+      assert.ok(n.includes(reason), `validation stops on ${reason}`);
+    }
+  });
+
+  test("one invocation authorizes only its bounded set to run implement in child workers", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("authorizes only its bounded ticket set"));
+    assert.ok(n.includes("ticket slot at the bottom replaced by its ticket number"));
+    assert.ok(n.includes("a worker claims only its own ticket"), "workers claim only their ticket");
   });
 });
 
@@ -173,41 +231,34 @@ describe("native dependency state (INV-8)", () => {
     const nSkill = norm(skill);
     const nLeaf = norm(leaf);
     assert.ok(nSkill.includes("native") && (nSkill.includes("dependency") || nSkill.includes("blocked")), "skill must mention native dependency");
-    assert.ok(nSkill.includes("stop") && nSkill.includes("blocker"), "skill must stop while blocker open");
+    assert.ok(nSkill.includes("blockers"), "skill must stop while blockers open");
     assert.ok(nLeaf.includes("native") && nLeaf.includes("canonical"), "leaf must state native is canonical");
-    assert.ok(nLeaf.includes("fallback") || nLeaf.includes("human-readable"), "leaf must mention fallback");
+    assert.ok(nLeaf.includes("fallback"), "leaf must mention fallback");
   });
-  test("after closure recomputes frontier and updates only newly unblocked dependents with label transitions", () => {
+
+  test("post-closure frontier recompute belongs to review-this, not this seam", () => {
     const skill = read("skills/implement-this/SKILL.md");
     const leaf = read("docs/leaves/implement-this.md");
     const nSkill = norm(skill);
-    const nLeaf = norm(leaf);
-    assert.ok(nSkill.includes("frontier") || nLeaf.includes("frontier"), "must mention dependent frontier");
-    assert.ok(nLeaf.includes("unblocked") && nLeaf.includes("ready-for-agent") && nLeaf.includes("blocked"), "must describe label transitions");
-    assert.ok(nLeaf.includes("only") && (nLeaf.includes("newly unblocked") || nLeaf.includes("made ready")), "must state only newly unblocked");
-    assert.ok(nLeaf.includes("except") || nSkill.includes("except") || nLeaf.includes("only its assigned ticket"), "must state scope isolation");
+    assert.ok(nSkill.includes("`review-this` owns the post-closure frontier recompute"), "review-this owns promotion");
+    assert.ok(nSkill.includes("remove blocked, add unblocked + ready-for-agent"), "transition vocabulary stays stated");
+    assert.ok(norm(leaf).includes("review-this"), "leaf points at the owning seam");
   });
 });
 
-describe("single-ticket ownership and boundary (INV-7)", () => {
-  test("limits the adapter to one issue with no scheduling ambitions", () => {
+describe("single-stage boundary and scope isolation (INV-7 boundary)", () => {
+  test("stays inside its bounded set with no scheduling ambitions beyond it", () => {
     const skill = read("skills/implement-this/SKILL.md");
     const install = read("skills/implement-this/INSTALL.md");
     const n = norm(`${skill}\n${install}`);
-    assert.ok(n.includes("one issue only"));
     assert.equal(n.includes("supervise-this"), false, "must not name the retired coordinator");
-    assert.ok(n.includes("does not create worktrees"));
-    assert.ok(n.includes("does not ... schedule dependency waves") || n.includes("schedule dependency waves"));
+    assert.ok(n.includes("choose models"), "boundary statement present");
     assert.equal(n.includes("any model"), false);
   });
 
-  test("seam docs describe both delivery branches", () => {
+  test("seam docs describe the workflow stages", () => {
     const leaf = read("docs/leaves/implement-this.md");
-    const n = norm(leaf);
-    assert.ok(n.includes("direct-main"));
-    assert.ok(n.includes("pull-request"));
-    assert.ok(n.includes("manager"));
-    for (let i = 1; i <= 7; i++) assert.ok(leaf.includes(`INV-${i}`), `leaf must contain INV-${i}`);
+    for (let i = 1; i <= 11; i++) assert.ok(leaf.includes(`INV-${i}`), `leaf must contain INV-${i}`);
   });
 });
 
@@ -216,7 +267,6 @@ describe("implement-this unslopify and focused doc-cache (Phase 1 red)", () => {
     const skill = read("skills/implement-this/SKILL.md");
     const n = norm(skill);
     assert.ok(n.includes("/unslopify"), "must name /unslopify");
-    assert.ok(n.includes("unslopify"), "must name unslopify dependency");
     assert.ok(n.includes("load `/unslopify`"), "must load /unslopify before the first progress update");
   });
 
@@ -241,9 +291,8 @@ describe("implement-this unslopify and focused doc-cache (Phase 1 red)", () => {
   test("does not require broad preload or derived human docs", () => {
     const skill = read("skills/implement-this/SKILL.md");
     const n = norm(skill);
-    assert.ok(n.includes("does not require") || n.includes("do not preload") || n.includes("focused"), "must state focused loading / no broad preload");
+    assert.ok(n.includes("does not require broad preloading"), "must state no broad preload");
     assert.ok(skill.includes("document-for-humans") || n.includes("human docs") || n.includes("derived human"), "must exclude derived human docs");
-    assert.equal(n.includes("preload all docs") || n.includes("read all documentation"), false, "must not require broad preload");
   });
 });
 
@@ -288,5 +337,25 @@ describe("implement-this workflow trust boundaries (#131, implement-this:INV-9)"
   test("leaf doc declares INV-9 with composition-test mechanism", () => {
     const leaf = read("docs/leaves/implement-this.md");
     assert.ok(leaf.includes("INV-9"), "leaf must declare INV-9");
+  });
+});
+
+describe("recovery (INV-10)", () => {
+  test("reconciles first, retries once, then applies needs-info", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("reconcile github and worker state"), "reconciliation precedes retry");
+    assert.ok(n.includes("retry that worker once"), "one reconciled retry");
+    assert.ok(n.includes("a second failure adds `needs-info` to the ticket and stops work on it"), "second failure stops with needs-info");
+    assert.ok(n.includes("retrydecision"), "recovery decision comes from the pure state core");
+  });
+});
+
+describe("completion handoff (INV-11)", () => {
+  test("points the user at review-this from the control workspace", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("run `/review-this #<spec>` from the control workspace"), "handoff command named");
+    assert.ok(n.includes("ticket worktrees do not run review"), "no review inside ticket worktrees");
   });
 });

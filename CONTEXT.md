@@ -118,11 +118,11 @@ _Avoid_: cross-reference (when one-way is meant)
 
 
 **Delivery mode**:
-The rule that selects how `implement-this` hands finished work to the repository, chosen from the session's worktree location: manager-worktree pull-request delivery or direct-main delivery.
-_Avoid_: delivery branch (when the mode is meant)
+Retired by #134: the former rule that chose between direct-main delivery and manager-worktree pull-request delivery from the session's worktree location. Every ticket now delivers by pull request against `main`; no path pushes directly to `main`.
+_Avoid_: direct-main delivery, mode selection
 
 **Manager worktree**:
-A git worktree whose root sits under the Kilo Agent Manager worktree location; `implement-this` detects it by path and switches to pull-request delivery.
+A git worktree whose root sits under the Kilo Agent Manager worktree location. Worker sessions dispatched by `implement-this` run in such worktrees; the location carries no delivery-mode choice.
 _Avoid_: agent worktree, AO worktree
 
 **Workflow command**:
