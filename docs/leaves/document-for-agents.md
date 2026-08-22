@@ -85,7 +85,8 @@ change and flags the discrepancy; changing the rule requires a new decision.
    approved decision supersedes or narrows it, with silent workarounds
    forbidden; vendor-facts live in the adopting repository's singular
    `reference/` directory; the harness remains ten checks. Mechanism:
-   composition tests and the five-command fixture in
+   composition tests, an ordered-command helper over the shared reader and
+   normalizer, and the five-command fixture in
    `skills/document-for-agents/tests/`.
 
 ## Links

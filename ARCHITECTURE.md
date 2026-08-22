@@ -73,19 +73,14 @@ without the index referencing them as current:
 ## Cross-cutting boundaries
 
 - Distribution is the registry lane only — no npm packaging. See ADR-0001.
-- Work docs (plans, audits) live in the issue tracker, never the repo. See
-  `docs/agents/issue-tracker.md`.
-- Glossary vocabulary is binding; forbidden synonyms are listed. See
-  `CONTEXT.md`.
+- Work docs (plans, audits) live in the issue tracker, never the repo. See `docs/agents/issue-tracker.md`.
+- Glossary vocabulary is binding; forbidden synonyms are listed. See `CONTEXT.md`.
 - Attention is bounded: loading budgets are caps on orientation documents,
-  generated `AGENTS.md` opens with the five-command contract, and a task that
-  collides with a numbered invariant stops for a decision. See ADR-0017.
-- Known shortcuts and unfinished pieces are tracked in the debt registry. See
-  `docs/debt.md`.
-- Review scope, severity, trust, verification, and subagent rules are
-  repository policy in `REVIEW.md`; cloud review reads it from the
-  pull-request base branch, and configuring that service stays external
-  setup.
+  `AGENTS.md` opens with the five-command contract, and invariant collisions
+  stop for a decision. See ADR-0017.
+- Known shortcuts and unfinished pieces are tracked in the debt registry. See `docs/debt.md`.
+- Review scope, severity, trust, verification, and subagent rules live in
+  `REVIEW.md`; cloud review reads it from the pull-request base branch.
 
 ## Coverage
 
@@ -145,15 +140,10 @@ gap and ask before opening more documentation (ADR-0017).
 
 ## Checks
 
-- `./scripts/docs-check.sh` — the coherence gate: the ten checks of
-  `skills/document-for-agents/reference/harness.md` (coverage ↔ disk, same-diff
-  freshness, new-seam-requires-doc, ADR status parse, work-doc expiry,
-  seam-table completeness, generated freshness, policy coverage, debt
-  register, invariant identifier integrity), plus a scorecard reporting
-  per-seam invariants and debt counts. Checks 7 and 8 are dormant until
-  generated docs and policy docs exist; check 10 is live because the seam
-  leaves declare invariants. Run it before finishing; a red harness is a work
-  item, not a warning.
+- `./scripts/docs-check.sh` — the coherence gate enforcing the ten checks of
+  `skills/document-for-agents/reference/harness.md`, plus a scorecard
+  reporting per-seam invariants and debt counts. Run it before finishing; a
+  red harness is a work item, not a warning.
 - Freshness threshold: 30 days — generated docs older than this fail check 7.
 - Human-docs extension: read-set absence, link direction, derived freshness for docs/human/ (spec #28; dormant until the tree exists).
 - The harness is tooling and is exempt from demanding its own doc.

@@ -183,25 +183,24 @@ describe("attention boundary contract (document-for-agents:INV-7)", () => {
     assert.ok(n.includes("equal outputs"));
   });
 
+  function assertOrdered(text: string, items: string[], label: string) {
+    let pos = -1;
+    for (const item of items) {
+      const i = text.indexOf(norm(item));
+      assert.ok(i > pos, `${label}: missing or out of order: ${item}`);
+      pos = i;
+    }
+  }
+
   test("five commands open generated AGENTS.md in approved order and the architecture index does not duplicate them", () => {
     const commands = JSON.parse(read(`${FIXTURES}/five-commands.json`)).commands as string[];
     const templates = norm(read(TEMPLATES));
-    let pos = -1;
-    for (const c of commands) {
-      const i = templates.indexOf(norm(c));
-      assert.ok(i > pos, `command missing or out of order in templates.md: ${c}`);
-      pos = i;
-    }
+    assertOrdered(templates, commands, "templates.md");
     assert.ok(templates.includes("does not duplicate the five commands"));
-    const agents = norm(read("AGENTS.md"));
-    pos = -1;
-    for (const c of commands) {
-      const i = agents.indexOf(norm(c));
-      assert.ok(i > pos, `command missing or out of order in AGENTS.md: ${c}`);
-      pos = i;
-    }
+    const agents = read("AGENTS.md");
+    assertOrdered(norm(agents), commands, "AGENTS.md");
     assert.ok(
-      agents.indexOf(norm(commands[0])) < agents.indexOf("## documentation"),
+      agents.indexOf(commands[0]) < agents.indexOf("\n## "),
       "the five commands must come before any other AGENTS.md section"
     );
     const arch = norm(read("ARCHITECTURE.md"));
@@ -236,7 +235,7 @@ describe("attention boundary contract (document-for-agents:INV-7)", () => {
     assert.ok(templates.includes("never by file path"));
     const leavesDir = path.join(ROOT, "docs/leaves");
     for (const f of fs.readdirSync(leavesDir).filter((f) => f.endsWith(".md"))) {
-      const content = fs.readFileSync(path.join(leavesDir, f), "utf8");
+      const content = read(`docs/leaves/${f}`);
       const line = content.split("\n").find((l) => l.includes("Not here"));
       assert.ok(line, `leaf doc lacks a Not here route: docs/leaves/${f}`);
       assert.equal(line.includes("skills/"), false, `Not here route uses a file path: docs/leaves/${f}`);
