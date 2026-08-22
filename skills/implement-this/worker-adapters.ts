@@ -81,21 +81,35 @@ export async function dispatchTickets(
     };
   }
   const slots: WorkerSlot[] = [];
-  for (const ticket of tickets) {
-    const branch = branchFor(ticket);
-    const worktree = await adapter.createWorktree(ticket, branch);
-    const session = await adapter.startSession(worktree);
-    // Exactly one prompt path: the rendered worker template.
-    await adapter.prompt(session, renderTemplate(ticket));
-    slots.push({ ticket, worktree, branch, session });
+  try {
+    for (const ticket of tickets) {
+      const branch = branchFor(ticket);
+      const worktree = await adapter.createWorktree(ticket, branch);
+      const session = await adapter.startSession(worktree);
+      // Exactly one prompt path: the rendered worker template.
+      await adapter.prompt(session, renderTemplate(ticket));
+      slots.push({ ticket, worktree, branch, session });
+    }
+  } catch (error) {
+    // Never half-start: stop the workers already running and report a typed
+    // refusal instead of letting a mid-batch rejection escape.
+    for (const slot of slots) {
+      await adapter.stop(slot.session).catch(() => undefined);
+    }
+    return {
+      ok: false,
+      reason: `dispatch failed after ${slots.length} started worker(s): ${String(error)}`,
+    };
   }
   return { ok: true, slots };
 }
 
 /**
  * Reconciled recovery for one failed worker. Checks worker state first so a
- * retry never duplicates artifacts, reuses the same slot, retries once via
- * `retryDecision`, and stops the ticket with `needs-info` on a second failure.
+ * retry never duplicates artifacts: live or failed sessions are reused on
+ * their existing worktree, a stopped or offline handle is replaced with a
+ * fresh session on the same isolated worktree, and `retryDecision` retries
+ * once before stopping the ticket with `needs-info` on a second failure.
  */
 export async function recoverWorker(
   slot: WorkerSlot,
@@ -110,6 +124,13 @@ export async function recoverWorker(
   if (decision.action === "stop-ticket") {
     await adapter.stop(slot.session);
     return { action: "stop-ticket", addLabels: decision.addLabels, observed };
+  }
+  if (observed === "stopped" || observed === "offline") {
+    // Dead handle: reconcile to a fresh session on the same worktree and
+    // branch instead of retrying into a dead session or duplicating artifacts.
+    await adapter.stop(slot.session).catch(() => undefined);
+    const session = await adapter.startSession(slot.worktree);
+    return { action: "retry", slot: { ...slot, session }, observed };
   }
   // Retry reuses the reconciled slot: same ticket, worktree, branch, session.
   return { action: "retry", slot, observed };

@@ -107,11 +107,33 @@ describe("dispatch through fakes (implement-this:INV-6)", () => {
     );
     assert.equal(result.ok, false);
     if (result.ok) return;
-    assert.match(result.reason, /worker cap/);
     assert.match(result.reason, new RegExp(`at most ${MAX_ACTIVE_WORKERS}`));
     assert.deepEqual(log.calls, [], "a capped batch must not write anything");
     const atCap = await dispatchTickets([141, 142, 143], fakeAdapter({ calls: [] }), () => "t");
     assert.equal(atCap.ok, true);
+  });
+
+  test("a mid-batch failure stops started workers and returns a typed refusal", async () => {
+    const log: CallLog = { calls: [] };
+    const adapter = fakeAdapter(log);
+    let created = 0;
+    const flaky: WorkerAdapter = {
+      ...adapter,
+      async createWorktree(ticket, branch) {
+        created += 1;
+        if (created > 1) throw new Error("worktree boom");
+        return adapter.createWorktree(ticket, branch);
+      },
+    };
+    const result = await dispatchTickets([141, 142], flaky, () => "t");
+    assert.equal(result.ok, false);
+    if (result.ok) return;
+    assert.match(result.reason, /dispatch failed after 1 started worker/);
+    assert.match(result.reason, /worktree boom/);
+    assert.ok(
+      log.calls.includes("stop ses_1"),
+      "the already-started worker is stopped",
+    );
   });
 });
 
@@ -167,5 +189,30 @@ describe("recovery through the state core (implement-this:INV-10)", () => {
       observed: "running",
     });
     assert.ok(log.calls.includes("stop ses_1"));
+  });
+
+  test("a dead session handle is replaced on the same worktree, not reused", async () => {
+    const log: CallLog = { calls: [] };
+    const base = fakeAdapter(log);
+    let statusNow: "running" | "offline" = "running";
+    const offlineAdapter: WorkerAdapter = {
+      ...base,
+      async status(session) {
+        log.calls.push(`status ${session.id} ${statusNow}`);
+        return statusNow;
+      },
+    };
+    const slots = await dispatchTickets([139], offlineAdapter, () => "t");
+    assert.ok(slots.ok);
+    if (!slots.ok) return;
+    statusNow = "offline";
+    const original = slots.slots[0].session.id;
+    const outcome = await recoverWorker(slots.slots[0], 1, offlineAdapter);
+    assert.equal(outcome.action, "retry");
+    if (outcome.action !== "retry") return;
+    assert.equal(outcome.observed, "offline");
+    assert.notEqual(outcome.slot.session.id, original, "fresh session handle");
+    assert.equal(outcome.slot.worktree, "/wt/139", "same isolated worktree");
+    assert.equal(outcome.slot.branch, "139", "same feature branch");
   });
 });

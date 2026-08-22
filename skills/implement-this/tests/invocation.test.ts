@@ -59,6 +59,16 @@ describe("planBoundedSet through the pure state core", () => {
     assert.deepEqual(plan, { ok: true, dispatch: [131, 135] });
   });
 
+  test("the specification comes from the request, not from fact order", () => {
+    // Same children, but a foreign ticket sorts first in the observed facts.
+    const reordered = [
+      ticket({ number: 199, parent: 999 }),
+      ...FIXTURE,
+    ];
+    const plan = planBoundedSet(["#130"], reordered, WORKERS);
+    assert.deepEqual(plan, { ok: true, dispatch: [131, 135] });
+  });
+
   test("frontier selection caps at three tickets", () => {
     const wide = [
       ticket({ number: 141 }),
@@ -71,6 +81,21 @@ describe("planBoundedSet through the pure state core", () => {
     if (!plan.ok) return;
     assert.equal(plan.dispatch.length, 3);
     assert.deepEqual(plan.dispatch, [141, 142, 143]);
+  });
+
+  test("malformed references stop before any claim with a clear violation", () => {
+    const plan = planBoundedSet(["#13a"], [ticket({ number: 131 })], WORKERS);
+    assert.equal(plan.ok, false);
+    if (plan.ok) return;
+    assert.deepEqual(plan.violations, ["`#13a` is not a ticket reference"]);
+  });
+
+  test("an explicit set spanning two specifications stops before claims", () => {
+    const mixed = [FIXTURE[0], ticket({ number: 199, parent: 999 })];
+    const plan = planBoundedSet(["#131", "#199"], mixed, WORKERS);
+    assert.equal(plan.ok, false);
+    if (plan.ok) return;
+    assert.ok(plan.violations.length > 0);
   });
 
   const rejections: Array<[string, string[], TicketFact[]]> = [
@@ -86,9 +111,9 @@ describe("planBoundedSet through the pure state core", () => {
       [ticket({ number: 153, assignees: ["someone"] })],
     ],
     [
-      "ticket outside the parent",
-      ["#140"],
-      FIXTURE,
+      "ticket without a parent specification",
+      ["#155"],
+      [ticket({ number: 155, parent: null })],
     ],
     [
       "ticket missing ready-for-agent",
