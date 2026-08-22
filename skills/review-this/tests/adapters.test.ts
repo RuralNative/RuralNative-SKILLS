@@ -77,6 +77,23 @@ describe("current-head cloud comments (review-this:INV-6)", () => {
     assert.equal(isMergeEligible(pr, review).eligible, true);
     assert.equal(isMergeEligible(pr, review).cloudReview, "unavailable");
   });
+
+  test("adapter rejection (failure or timeout) is recorded as unavailable without throwing", async () => {
+    const failing: import("../adapters.ts").CloudAdapter = {
+      name: "fake-cloud-failing",
+      async collect() {
+        throw new Error("timeout");
+      },
+    };
+    const result = await collectCloudReview(failing, HEAD);
+    assert.equal(result.status, "unavailable");
+    assert.match(result.reason ?? "", /cloud collect failed/);
+    assert.match(result.reason ?? "", /timeout/);
+    // still does not block local review
+    const pr = { headSha: HEAD, mergeable: true, requiredChecksGreen: true };
+    const review = { reviewedHeadSha: HEAD, unresolvedConfirmedFindings: 0, localReviewClean: true, cloudReviewAvailable: (result.status as string) === "available" };
+    assert.equal(isMergeEligible(pr, review).eligible, true);
+  });
 });
 
 describe("local fallback keeps axes separate (review-this:INV-6/INV-7)", () => {

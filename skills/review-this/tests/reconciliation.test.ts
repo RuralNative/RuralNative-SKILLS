@@ -5,7 +5,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { reconcileFindings, routeFixesToWorker } from "../reconciliation.ts";
+import { reconcileFindings, routeFixesToWorker, routeFixesByTicket } from "../reconciliation.ts";
 import { reviewIsFresh, isMergeEligible } from "../workflow-state.ts";
 import type { Finding } from "../reconciliation.ts";
 
@@ -108,5 +108,43 @@ describe("reconcileFindings keeps Standards and Spec axes separate", () => {
     assert.doesNotMatch(src, /\bfetch\s*\(/);
     assert.doesNotMatch(src, /\bXMLHttpRequest\b/);
     assert.doesNotMatch(src, /\bprocess\.env\b/);
+  });
+});
+
+describe("ticket-aware wave routing (review-this:INV-7)", () => {
+  test("routeFixesByTicket groups retained findings by owning ticket", () => {
+    const findings: Finding[] = [
+      finding({ source: "cloud", file: "a.ts", line: 10, message: "a", ticket: 131 }),
+      finding({ source: "spec", file: "b.ts", line: 20, message: "b", ticket: 132 }),
+      finding({ source: "standards", file: "c.ts", line: 30, message: "c", ticket: 131 }),
+    ];
+    const result = reconcileFindings(findings, HEAD);
+    const grouped = routeFixesByTicket(result);
+    assert.equal(grouped.size, 2);
+    assert.equal(grouped.get(131)?.length, 2);
+    assert.equal(grouped.get(132)?.length, 1);
+  });
+
+  test("routeFixesByTicket skips findings without a ticket and returns empty when none retained", () => {
+    const findings: Finding[] = [
+      finding({ source: "spec", file: "a.ts", line: 1, message: "no ticket" }),
+    ];
+    const result = reconcileFindings(findings, HEAD);
+    const grouped = routeFixesByTicket(result);
+    assert.equal(grouped.size, 0);
+    const empty = reconcileFindings([], HEAD);
+    assert.equal(routeFixesByTicket(empty).size, 0);
+  });
+
+  test("routeFixesToWorker respects ticket field and returns null when no finding matches the target", () => {
+    const findings: Finding[] = [
+      finding({ source: "spec", file: "a.ts", line: 1, message: "for 131", ticket: 131 }),
+      finding({ source: "spec", file: "b.ts", line: 2, message: "for 132", ticket: 132 }),
+    ];
+    const result = reconcileFindings(findings, HEAD);
+    const for131 = routeFixesToWorker(result, 131);
+    assert.equal(for131?.findings.length, 1);
+    assert.equal(for131?.findings[0].file, "a.ts");
+    assert.equal(routeFixesToWorker(result, 999), null);
   });
 });

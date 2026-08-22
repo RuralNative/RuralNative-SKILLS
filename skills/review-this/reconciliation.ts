@@ -126,7 +126,7 @@ export function routeFixesToWorker(
   // If findings already carry a ticket, only route those matching the target ticket.
   const byTicket = reconciled.retained.filter((f) => f.ticket === undefined || f.ticket === ticket);
   if (byTicket.length === 0 && reconciled.retained.some((f) => f.ticket !== undefined)) return null;
-  return { ticket, findings: byTicket.length > 0 ? byTicket : reconciled.retained };
+  return { ticket, findings: byTicket };
 }
 
 /**
