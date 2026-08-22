@@ -64,4 +64,9 @@ code?"**
   scorecard. A dormant category creates no file and its harness checks stay
   dormant. Cross the threshold only on verified need: more seams, durable
   decisions, or a coordination cost that the check would have caught.
+- **Skill diagnostics are outside every tier.** The private mistake record is
+  not a doc-cache tier artifact: no routing row classifies it, it never enters
+  a read set, and it never becomes policy, debt, an invariant, or guidance.
+  Its shape lives in `reference/templates.md` under the skill diagnostics
+  entry; its consent contract lives in `SKILL.md`.
 

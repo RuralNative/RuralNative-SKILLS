@@ -56,6 +56,20 @@ contract, in this order, before any other content:
 4. Change code and docs together; code wins.
 5. Put work docs in the tracker; decide invariant conflicts first.
 
+Directly after the fifth command, generated `AGENTS.md` carries one protected
+management marker on its own line, before any other content:
+
+```
+<!-- managed: document-for-agents · revision-evidence: <available revision evidence> -->
+```
+
+The marker records the managing skill identity and whatever revision evidence
+is available, such as an install record or a pinned revision; when nothing is
+available it states `none`. The marker is an HTML comment and stays verbatim
+through later edits. Provenance of a document is confirmed only when the
+marker plus supporting evidence backs it; older or ambiguous documents get
+`likely` or `unknown`, never guessed certainty.
+
 The architecture index (`ARCHITECTURE.md`) does not duplicate the five
 commands; it carries the seam table, boundaries, coverage, and loading
 protocol that the commands point into. When `AGENTS.md` is also the
@@ -157,3 +171,31 @@ Widening the read set silently is forbidden.
 
 Rule: an agent's re-orientation is the same small read every time — that
 fixed cost is what makes compaction survivable.
+
+## Skill diagnostics entry
+
+One sanitized summary per confirmed mistake, appended to the private
+diagnostics file the skill keeps only with explicit owner consent (see
+`SKILL.md`). Entries use these approved fields and no others:
+
+```
+### <date> — <category>
+
+Intended outcome: <paraphrase, never a raw prompt>
+Observed mistake: <what actually happened>
+Impact: <what it cost>
+Correction: <what fixed it>
+Documentation role: <which guidance was involved>
+Skill revision: <available skill revision evidence, or absent>
+Attribution confidence: confirmed | likely | unknown
+Redactions applied: <what was removed or generalized>
+```
+
+The entry omits raw prompts, code, secrets, personal data, absolute paths,
+repository remotes, and proprietary names; it describes evidence and
+correction and never becomes a general prohibition or instruction. The file
+itself is append-only, private, outside the doc cache and version control,
+excluded from every normal agent read set, and never task guidance — evidence
+for optional user-reviewed submission to the skill developer only. A hostile
+fixture in `skills/document-for-agents/tests/fixtures/diagnostics-entry.json`
+keeps prompt-like text and sensitive placeholders out of sanitized entries.

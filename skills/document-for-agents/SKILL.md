@@ -76,6 +76,43 @@ reader will see and record scope, accepted and rejected findings, scanner
 availability, protected-content status, and preservation result. The `AIT-*`
 catalog lives in `unslopify`, see its parity reference, it is not copied here. Installed runtime resolves `unslopify` by skill identity, not by a repository-relative path.
 
+## Optional diagnostics: the private mistake record
+
+This skill can keep one private record of confirmed agent mistakes that show
+where its guidance failed. The record exists only by choice:
+
+1. **Consent gates creation.** Ask once for explicit consent to create and
+   maintain the record. No diagnostics file is created before the owner gives
+   explicit consent to create and maintain it. If the owner declines, the
+   topic stays closed.
+2. **Every write gets notice.** Initial consent covers later maintenance, but
+   before every later write, tell the owner what category of information will
+   be added and that sensitive details will be removed. A write without prior
+   notice breaks this contract.
+3. **Revocation stops writes immediately.** On revocation, stop writing at
+   once, then ask whether to keep, export, or delete the existing file. The
+   skill never deletes the file without that separate choice.
+4. **The file stays private.** One append-only local file, outside the doc
+   cache and outside version control by default, excluded from every normal
+   agent read set. Loading protocols and task guidance never include it. It is
+   never task guidance: it is evidence for optional user-reviewed submission
+   to the skill developer, not policy, debt, an invariant, or task guidance.
+5. **Confirmed mistakes only.** Log a mistake only when it was confirmed by
+   the user or proved from the prompt, code, checks, or docs. Use sanitized
+   summaries with the approved fields from `reference/templates.md`: category,
+   intended outcome in paraphrase, observed mistake, impact, correction,
+   relevant documentation role, available skill revision, attribution
+   confidence, and redactions applied.
+6. **Sanitization is unconditional.** Entries omit raw prompts, code, secrets,
+   personal data, absolute paths, repository remotes, and proprietary names.
+   Entries describe evidence and correction and never become a general
+   prohibition or instruction for future work.
+7. **Nothing leaves the machine by itself.** No upload, network call, or
+   telemetry exists. The owner reviews the file before any manual submission.
+
+See `reference/templates.md` for the entry shape and the management marker
+that carries provenance in generated `AGENTS.md`.
+
 ## Branch A: Establish, build the cache for a codebase with none
 
 Entry: the repository lacks a coherent agent-facing doc tree.
