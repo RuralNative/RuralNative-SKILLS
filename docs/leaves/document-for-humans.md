@@ -12,6 +12,8 @@ Owns: the content under `skills/document-for-humans/` — `SKILL.md`,
 `reference/`. Derives from authored docs only — decisions, glossary, seam
 table, leaf docs, debt registry; never parses code, issues, commit messages, or
 human-first docs. Delegates freshness enforcement to the adopting repo's gate.
+**Not here**: authoring and maintaining the agent-first tree belongs to
+`document-for-agents`; prose cleanup belongs to `unslopify`.
 
 ## Key files & data flow
 

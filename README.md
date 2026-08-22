@@ -50,7 +50,7 @@ Agents start every conversation from zero. Without help they re-read the whole c
 2. **Code wins.** On conflict, fix the doc in the same change.
 3. **Place claims by decay rate.** Vocabulary and invariants decay slowly; pointers are checkable; restatements decay fastest and are avoided.
 4. **Two hops.** Every needed fact is at most two links from the index.
-5. **Keep it short.** Index under 150 lines; leaf docs a 1–2 minute read.
+5. **Keep it short.** Index under 150 lines; leaf docs a 1–2 minute read. Loading budgets are caps on orientation documents, not suggestions.
 6. **Size to the codebase.** Start smaller than you think; grow the tree only as history and sessions multiply.
 
 Shortcuts are tracked openly in one debt registry, and history is append-only via short decision records.
@@ -78,7 +78,7 @@ Shortcuts are tracked openly in one debt registry, and history is append-only vi
 - **Docs change with code.** Same-diff updates keep the cache honest.
 - **Gate enforces it.** `scripts/docs-check.sh` checks coverage, same-diff freshness, leaf and ADR validity, and derived-doc freshness. Wire it into CI or a pre-commit hook.
 - **Review policy ships as a file.** `REVIEW.md` at the repository root states review scope, severity, trust, verification, and subagent rules; Kilo cloud Code Review reads it from the pull-request base branch. Configuring the cloud side (app installation, repository selection, model) stays an external setup prerequisite; the shelf ships the policy file, not the platform wiring.
-- **Built for context loss.** The two-hop index lets an agent re-orient after compaction with one small read.
+- **Built for context loss.** The two-hop index lets an agent re-orient after compaction with one small read that the loading protocol caps; a missing fact becomes a named cache gap that requires owner approval before the read set widens.
 
 ## Comparative Analysis
 

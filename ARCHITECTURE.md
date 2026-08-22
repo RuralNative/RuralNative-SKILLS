@@ -10,7 +10,7 @@ own docs.
 
 | Seam | Responsibility | Code root | Tests | Doc |
 |---|---|---|---|---|
-| document-for-agents | publishable agent instructions for the doc-cache lifecycle | skills/document-for-agents/ | install smoke via `npx skills add`; identity == folder check; composition via `skills/document-for-agents/tests/` | docs/leaves/document-for-agents.md |
+| document-for-agents | publishable agent instructions for the doc-cache lifecycle: cache accuracy and attention control | skills/document-for-agents/ | install smoke via `npx skills add`; identity == folder check; composition via `skills/document-for-agents/tests/` | docs/leaves/document-for-agents.md |
 | document-for-humans | plain-language derived documentation for human stakeholders | skills/document-for-humans/ | gate extension via scripts/docs-check.sh; composition via `skills/document-for-humans/tests/` | docs/leaves/document-for-humans.md |
 | unslopify | AI-tell detection and meaning-safe prose revision, always-on for agent-authored output once loaded | skills/unslopify/ | scanner contract via `skills/unslopify/scanner.py`; parity catalog via `skills/unslopify/reference/parity.md`; fixtures and composition via `skills/unslopify/tests/`; identity == folder check | docs/leaves/unslopify.md |
 | plan-this | fixed-template planning adapter that applies the planning prefix and delegates to `/grill-with-docs`, `/to-spec`, `/to-tickets`, and `/unslop` | skills/plan-this/ | composition via `skills/plan-this/tests/`; identity == folder check | docs/leaves/plan-this.md |
@@ -48,6 +48,7 @@ harness check 6. A covered doc must be in the seam table or listed here:
 - docs/adr/0014-three-skill-development-workflow.md
 - docs/adr/0015-requirements-data-trust-and-install-provenance.md
 - docs/adr/0016-unslopify-always-on-output-contract.md
+- docs/adr/0017-doc-cache-attention-boundary.md
 - docs/leaves/document-for-humans.md
 - docs/human/overview.md
 - docs/human/decision-journal.md
@@ -72,16 +73,14 @@ without the index referencing them as current:
 ## Cross-cutting boundaries
 
 - Distribution is the registry lane only — no npm packaging. See ADR-0001.
-- Work docs (plans, audits) live in the issue tracker, never the repo. See
-  `docs/agents/issue-tracker.md`.
-- Glossary vocabulary is binding; forbidden synonyms are listed. See
-  `CONTEXT.md`.
-- Known shortcuts and unfinished pieces are tracked in the debt registry. See
-  `docs/debt.md`.
-- Review scope, severity, trust, verification, and subagent rules are
-  repository policy in `REVIEW.md`; cloud review reads it from the
-  pull-request base branch, and configuring that service stays external
-  setup.
+- Work docs (plans, audits) live in the issue tracker, never the repo. See `docs/agents/issue-tracker.md`.
+- Glossary vocabulary is binding; forbidden synonyms are listed. See `CONTEXT.md`.
+- Attention is bounded: loading budgets are caps on orientation documents,
+  `AGENTS.md` opens with the five-command contract, and invariant collisions
+  stop for a decision. See ADR-0017.
+- Known shortcuts and unfinished pieces are tracked in the debt registry. See `docs/debt.md`.
+- Review scope, severity, trust, verification, and subagent rules live in
+  `REVIEW.md`; cloud review reads it from the pull-request base branch.
 
 ## Coverage
 
@@ -113,6 +112,7 @@ parsed from, so they are not listed here.
 | docs/adr/0014-three-skill-development-workflow.md | decision |
 | docs/adr/0015-requirements-data-trust-and-install-provenance.md | decision |
 | docs/adr/0016-unslopify-always-on-output-contract.md | decision |
+| docs/adr/0017-doc-cache-attention-boundary.md | decision |
 | docs/leaves/document-for-agents.md | leaf |
 | docs/leaves/document-for-humans.md | leaf |
 | docs/leaves/unslopify.md | leaf |
@@ -128,22 +128,22 @@ parsed from, so they are not listed here.
 
 ## Loading protocol
 
-| Task | Read set | Budget |
+| Task | Read set | Budget (cap) |
 |---|---|---|
 | Any change | AGENTS.md → ARCHITECTURE.md → the seam's leaf doc → glossary | small |
 | Re-orient after compaction | ARCHITECTURE.md → task leaf doc → glossary | one small fixed read |
 
+The budgets are hard caps on orientation documents, not guidance to trim later; they
+never block code inspection inside the affected seam. A missing unrecoverable fact
+becomes a named cache gap: record it in the issue tracker, get owner approval
+before opening more documentation, and do not widen the read set until approval (ADR-0017).
+
 ## Checks
 
-- `./scripts/docs-check.sh` — the coherence gate: the ten checks of
-  `skills/document-for-agents/reference/harness.md` (coverage ↔ disk, same-diff
-  freshness, new-seam-requires-doc, ADR status parse, work-doc expiry,
-  seam-table completeness, generated freshness, policy coverage, debt
-  register, invariant identifier integrity), plus a scorecard reporting
-  per-seam invariants and debt counts. Checks 7 and 8 are dormant until
-  generated docs and policy docs exist; check 10 is live because the seam
-  leaves declare invariants. Run it before finishing; a red harness is a work
-  item, not a warning.
+- `./scripts/docs-check.sh` — the coherence gate enforcing the ten checks of
+  `skills/document-for-agents/reference/harness.md`, plus a scorecard
+  reporting per-seam invariants and debt counts. Run it before finishing; a
+  red harness is a work item, not a warning.
 - Freshness threshold: 30 days — generated docs older than this fail check 7.
 - Human-docs extension: read-set absence, link direction, derived freshness for docs/human/ (spec #28; dormant until the tree exists).
 - The harness is tooling and is exempt from demanding its own doc.

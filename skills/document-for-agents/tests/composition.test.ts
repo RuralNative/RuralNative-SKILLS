@@ -168,3 +168,129 @@ describe("document-for-agents hard dependency (document-for-agents:INV-6)", () =
     assert.ok(unslop.includes("name: unslopify"));
   });
 });
+
+// document-for-agents:INV-7 — generated AGENTS.md command order and architecture-index separation.
+// document-for-agents:INV-8 — orientation caps and cache-gap approval.
+// document-for-agents:INV-9 — stable Not here ownership routing.
+// document-for-agents:INV-10 — decision-first invariant changes.
+// document-for-agents:INV-11 — adopting-repository vendor-facts location.
+// document-for-agents:INV-12 — unslopify dependency ordering.
+// document-for-agents:INV-13 — ten-check harness preservation.
+describe("attention boundary contract (document-for-agents:INV-7..INV-13)", () => {
+  const SKILL = "skills/document-for-agents/SKILL.md";
+  const TEMPLATES = "skills/document-for-agents/reference/templates.md";
+  const HARNESS = "skills/document-for-agents/reference/harness.md";
+  const FIXTURES = "skills/document-for-agents/tests/fixtures";
+
+  test("introduction names cache accuracy and attention control as equal outputs", () => {
+    const n = norm(read(SKILL));
+    assert.ok(n.includes("cache accuracy"));
+    assert.ok(n.includes("attention control"));
+    assert.ok(n.includes("equal outputs"));
+  });
+
+  function assertOrdered(text: string, items: string[], label: string) {
+    let pos = -1;
+    for (const item of items) {
+      const i = text.indexOf(norm(item));
+      assert.ok(i > pos, `${label}: missing or out of order: ${item}`);
+      pos = i;
+    }
+  }
+
+  // document-for-agents:INV-7
+  test("five commands open generated AGENTS.md in approved order and the architecture index does not duplicate them", () => {
+    const commands = JSON.parse(read(`${FIXTURES}/five-commands.json`)).commands as string[];
+    const templates = norm(read(TEMPLATES));
+    assertOrdered(templates, commands, "templates.md");
+    assert.ok(templates.includes("does not duplicate the five commands"));
+    const agents = read("AGENTS.md");
+    assert.ok(agents.startsWith(`1. ${commands[0]}\n`), "AGENTS.md must start with command 1");
+    assertOrdered(norm(agents), commands, "AGENTS.md");
+    assert.ok(
+      agents.indexOf(commands[0]) < agents.indexOf("\n## "),
+      "the five commands must come before any other AGENTS.md section"
+    );
+    const arch = norm(read("ARCHITECTURE.md"));
+    for (const c of commands) {
+      assert.equal(arch.includes(norm(c)), false, `architecture index duplicates command: ${c}`);
+    }
+  });
+
+  // document-for-agents:INV-8
+  test("loading budgets are hard caps on orientation documents and code reads inside the seam stay allowed", () => {
+    const templates = norm(read(TEMPLATES));
+    assert.ok(templates.includes("hard caps on orientation documents"));
+    assert.ok(templates.includes("never block code inspection inside the affected seam"));
+    const arch = norm(read("ARCHITECTURE.md"));
+    assert.ok(arch.includes("caps on orientation documents"));
+    assert.ok(arch.includes("never block code inspection inside the affected seam"));
+  });
+
+  // document-for-agents:INV-8
+  test("missing unrecoverable facts become named cache gaps requiring approval before widening", () => {
+    const skill = norm(read(SKILL));
+    assert.ok(skill.includes("cache gap"));
+    assert.ok(skill.includes("ask the owner for approval before widening the documentation read set"));
+    assert.ok(skill.includes("do not widen it until approval"));
+    const templates = norm(read(TEMPLATES));
+    assert.ok(templates.includes("cache gap"));
+    assert.ok(templates.includes("ask the owner for approval before opening more documentation"));
+    assert.ok(templates.includes("do not widen the read set until approval"));
+    const architecture = norm(read("ARCHITECTURE.md"));
+    assert.ok(architecture.includes("cache gap"));
+    assert.ok(architecture.includes("owner for approval"));
+  });
+
+  // document-for-agents:INV-9
+  test("standard leaf shape requires a Not here route by stable responsibility, not file path", () => {
+    const templates = norm(read(TEMPLATES));
+    assert.ok(templates.includes("`not here` route"));
+    assert.ok(templates.includes("owning seam"));
+    assert.ok(templates.includes("never by file path"));
+    const leavesDir = path.join(ROOT, "docs/leaves");
+    for (const f of fs.readdirSync(leavesDir).filter((f) => f.endsWith(".md"))) {
+      const content = read(`docs/leaves/${f}`);
+      const line = content.split("\n").find((l) => l.includes("Not here"));
+      assert.ok(line, `leaf doc lacks a Not here route: docs/leaves/${f}`);
+      assert.equal(line.includes("skills/"), false, `Not here route uses a file path: docs/leaves/${f}`);
+      assert.equal(line.includes(".md"), false, `Not here route uses a file path: docs/leaves/${f}`);
+    }
+  });
+
+  // document-for-agents:INV-10
+  test("a numbered invariant collision stops until an approved decision supersedes or narrows it", () => {
+    const skill = norm(read(SKILL));
+    assert.ok(skill.includes("stop before changing code or docs"));
+    assert.ok(skill.includes("supersedes or narrows the invariant"));
+    assert.ok(skill.includes("working around it silently is forbidden"));
+  });
+
+  // document-for-agents:INV-11
+  test("vendor-facts live in the adopting repository under the singular reference directory", () => {
+    const t = read(TEMPLATES);
+    assert.ok(norm(t).includes("in the adopting repository"));
+    assert.ok(t.includes("reference/vendor-facts.md"));
+    assert.equal(t.includes("references/vendor-facts.md"), false);
+  });
+
+  // document-for-agents:INV-13
+  test("the ten-check harness remains ten checks", () => {
+    const h = read(HARNESS);
+    const section = h.slice(h.indexOf("## The ten checks"), h.indexOf("## Scorecard"));
+    const count = (section.match(/^\d+\. /gm) || []).length;
+    assert.equal(count, 10);
+    assert.ok(norm(read("ARCHITECTURE.md")).includes("ten checks"));
+  });
+
+  // document-for-agents:INV-12
+  test("dependency guidance sits below principles and boundaries", () => {
+    const s = read(SKILL);
+    const principles = s.indexOf("## Principles");
+    const boundaries = s.indexOf("## Boundaries");
+    const dependency = s.indexOf("## Dependency:");
+    assert.ok(principles !== -1 && boundaries !== -1 && dependency !== -1);
+    assert.ok(principles < dependency, "dependency block must sit below principles");
+    assert.ok(boundaries < dependency, "dependency block must sit below boundaries");
+  });
+});

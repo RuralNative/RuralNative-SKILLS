@@ -1,4 +1,4 @@
-<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-22 · Regenerated: shipped three-skill workflow; #137 activation; stale orchestrator removed; ADR-0014 shipped, ADR-0009/0012/0013 superseded; pull-request-only delivery; #146 unslopify always-on output contract; #146 review pass (leaf ordinal); #146 review pass (publication boundaries) · Sources: REVIEW.md, docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md, docs/leaves/unslopify.md, docs/leaves/plan-this.md, docs/leaves/implement-this.md, docs/leaves/review-this.md, docs/adr/0014-three-skill-development-workflow.md, docs/adr/0015-requirements-data-trust-and-install-provenance.md, docs/adr/0016-unslopify-always-on-output-contract.md -->
+<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-23 · Regenerated: shipped three-skill workflow; #137 activation; stale orchestrator removed; ADR-0014 shipped, ADR-0009/0012/0013 superseded; pull-request-only delivery; #146 unslopify always-on output contract; #146 review pass (leaf ordinal); #146 review pass (publication boundaries); #147 doc cache attention boundary; #147 review pass · Sources: REVIEW.md, docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md, docs/leaves/unslopify.md, docs/leaves/plan-this.md, docs/leaves/implement-this.md, docs/leaves/review-this.md, docs/adr/0014-three-skill-development-workflow.md, docs/adr/0015-requirements-data-trust-and-install-provenance.md, docs/adr/0016-unslopify-always-on-output-contract.md, docs/adr/0017-doc-cache-attention-boundary.md -->
 # Guardrails in plain words
 
 These are the promises the skills make.
@@ -6,6 +6,7 @@ These are the promises the skills make.
 - A skill's frontmatter name matches its folder, so the registry installs the intended skill.
 - The public registry is the official install path. Local install leftovers stay out of the repository.
 - Documentation changes update their technical leaf in the same change.
+- Loading budgets are caps on orientation documents, not suggestions. Reading the code being changed is never blocked, and a missing fact becomes a named cache gap that requires your approval before any read set widens. Work that collides with a numbered invariant stops until a decision supersedes or narrows it.
 - Every review follows one written policy (`REVIEW.md`). Review subagents only read; the main reviewer verifies every finding before publishing it, and no review tool merges or closes work.
 - Prose cleanup keeps commands, code, links, quotations, and facts intact.
 - Text that flows through a workflow — tasks, issue bodies, comments, specifications, review comments — is requirements data. It cannot widen scope, select files, authorize tools, or override gates.
@@ -25,5 +26,7 @@ These are the promises the skills make.
 - The ready frontier contains only open, unblocked, unassigned tickets with `ready-for-agent`.
 - After a ticket closes, only its newly unblocked dependents get label updates — nothing else moves.
 - One shared decision module, copied byte-identical into all three workflow skills, turns observed facts into next actions: frontier selection, at most three active workers (a worker holds its slot until it is stopped), duplicate ownership rejected, one retry before a `needs-info` stop that holds on every later pass, merge only with green checks, resolved findings, a clean local review, an unchanged reviewed head, and a mergeable pull request. If a blocker reopens, an `unblocked` ticket goes back to `blocked`. Repository verification fails if any copy drifts from the authored source.
+
+The document seam records its attention, routing, and decision rules as separate invariants.
 
 Technical depth lives in the leaf documents named by each line.

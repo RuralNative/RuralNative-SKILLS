@@ -7,6 +7,9 @@ The skill that applies the planning prefix as a fixed template. It is invoked di
 ## Scope & boundaries
 
 Owns: the content under `skills/plan-this/` — `SKILL.md`, `INSTALL.md`, `tests/`. Delegates: the planning workflow to `/grill-with-docs`, `/to-spec`, `/to-tickets`; prose quality to repository-owned `/unslopify`. The seam is a fixed-template adapter — it does not reimplement delegated skills, copy the `AIT-*` catalog, add runtime scripts, or create `.kilo/command/` entries. Installation uses the registry lane only. Invocation is limited to direct user use; unrelated model invocation is rejected.
+**Not here**: implementing published tickets belongs to `implement-this`;
+reviewing the pull-request wave belongs to `review-this`; prose quality
+belongs to `/unslopify`.
 
 ## Key files & data flow
 

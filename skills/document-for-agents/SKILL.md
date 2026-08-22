@@ -19,28 +19,14 @@ description: >-
 Documentation is a **cache** of the codebase: it stores what re-deriving from
 code would cost. Caches have a coherence problem: entries go **stale**, and a
 stale entry misleads with confidence where an empty cache would force a read of
-the source. This skill runs the coherence protocol.
+the source. The lifecycle has two equal outputs: **cache accuracy**, keeping
+the tree true to the code, and **attention control**, bounding what an agent
+reads through loading rows and token budgets that act as caps. This skill runs
+both.
 
 A **seam** is a module with one distinct responsibility that an agent edits as
 a unit: its own directory, entry files, tests, and, once the tree is
 established, its own leaf doc.
-
-## Dependency: `unslopify`
-
-Load `unslopify` by skill identity before the first user-visible prose. Keep
-its scope, protected-content, and rewrite contracts active while drafting.
-Parent scope governs: routine work passes changed prose, an audit may sweep
-the repository. Parent decisions outrank style findings: factual correctness,
-tier routing, glossary terms and forbidden synonyms, seam invariants,
-derivation rules, and approval gates stand and the finding is rejected with
-reason. If `unslopify` is absent, stop before any draft and emit
-`npx skills add RuralNative/RuralNative-SKILLS --skill unslopify`. Missing
-Python for the optional scanner does not stop the workflow, continue
-model-only without weakening scope or preservation. Before publishing or
-marking complete, run the final `unslopify` audit on the exact prose the
-reader will see and record scope, accepted and rejected findings, scanner
-availability, protected-content status, and preservation result. The `AIT-*`
-catalog lives in `unslopify`, see its parity reference, it is not copied here. Installed runtime resolves `unslopify` by skill identity, not by a repository-relative path.
 
 ## Principles: every branch obeys these
 
@@ -72,6 +58,23 @@ catalog lives in `unslopify`, see its parity reference, it is not copied here. I
 This skill governs the documentation system, tree, decisions, vocabulary,
 harness. The internal design of the code (deep modules, abstractions, code
 seams) is code-architecture work, not this skill's job.
+
+## Dependency: `unslopify`
+
+Load `unslopify` by skill identity before the first user-visible prose. Keep
+its scope, protected-content, and rewrite contracts active while drafting.
+Parent scope governs: routine work passes changed prose, an audit may sweep
+the repository. Parent decisions outrank style findings: factual correctness,
+tier routing, glossary terms and forbidden synonyms, seam invariants,
+derivation rules, and approval gates stand and the finding is rejected with
+reason. If `unslopify` is absent, stop before any draft and emit
+`npx skills add RuralNative/RuralNative-SKILLS --skill unslopify`. Missing
+Python for the optional scanner does not stop the workflow, continue
+model-only without weakening scope or preservation. Before publishing or
+marking complete, run the final `unslopify` audit on the exact prose the
+reader will see and record scope, accepted and rejected findings, scanner
+availability, protected-content status, and preservation result. The `AIT-*`
+catalog lives in `unslopify`, see its parity reference, it is not copied here. Installed runtime resolves `unslopify` by skill identity, not by a repository-relative path.
 
 ## Branch A: Establish, build the cache for a codebase with none
 
@@ -157,7 +160,16 @@ Entry: a seam change or re-orientation.
    `reference/templates.md` and that seam's Non-negotiables and confirm each
    still holds. If code and the invariant conflict, trust the code, fix the
    doc in the same change, and flag the discrepancy. If the rule itself must
-   change, supersede the invariant via a decision. See `reference/classify.md`
+   change, supersede the invariant via a decision. A task whose work would
+   violate a numbered invariant is different: stop before changing code or
+   docs, name the collision, and resume only when an approved decision
+   supersedes or narrows the invariant; working around it silently is
+   forbidden. When the orientation documents lack an unrecoverable fact the
+   task needs, name a cache gap, record it in the issue tracker, and ask the
+   owner for approval before widening the documentation read set; do not widen
+   it until approval. The caps never block code inspection inside the affected
+   seam.
+   See `reference/classify.md`
    for the invariant lifecycle and `reference/harness.md` for check detail.
 2. **Same diff.** Code changes carry their doc updates in the same commit. A
    change to rules a policy states updates that policy doc, including the

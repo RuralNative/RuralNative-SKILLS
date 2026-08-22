@@ -7,6 +7,9 @@ The skill that owns one pull-request review wave for a parent specification thro
 ## Scope & boundaries
 
 Owns: the content under `skills/review-this/` — `SKILL.md`, `INSTALL.md`, `discovery.ts`, `reconciliation.ts`, `adapters.ts`, `workflow-state.ts`, and their tests. Delegates: the two-axis review workflow to repository-independent `/code-review`; prose quality to repository-owned `/unslopify`. The seam is a fixed-template adapter for the review wave — it does not reimplement `/code-review`, copy the smell baseline into its own body, add runtime scripts, or create `.kilo/command/` entries. Installation uses the registry lane only. Invocation is explicit as `/review-this #<spec>` and runs once from the control workspace; the review workspace never fixes a finding, never edits a ticket worktree, never merges without the four gates, and never closes a ticket before merge. The pure helper stays host-neutral for a future persistent coordinator.
+**Not here**: implementing tickets belongs to `implement-this`; planning and
+publishing tickets belongs to `plan-this`; the review method itself belongs
+to `/code-review`.
 
 ## Key files & data flow
 

@@ -3,21 +3,29 @@
 ## Purpose
 
 The skill that runs the doc-cache lifecycle: establish, audit, and maintain a
-codebase's agent-facing documentation so agents re-orient in one fixed read.
-It is published for consumers, not merely hosted here.
+codebase's agent-facing documentation. Two equal outputs: cache accuracy, the
+tree staying true to the code, and attention control, orientation staying a
+small fixed read under loading budgets that act as caps (ADR-0017). It is
+published for consumers, not merely hosted here.
 
 ## Scope & boundaries
 
 Owns: the content under `skills/document-for-agents/` — `SKILL.md`, `INSTALL.md`,
 `reference/`. Delegates: the shelf layout and registry behavior to the skills
 registry; the repo's own docs coherence to this repo's harness.
+**Not here**: code architecture and module design belong to the owning code
+seam; review rules belong to the `review-this` seam; prose cleanup belongs to
+the `unslopify` seam.
 
 ## Key files & data flow
 
 `SKILL.md` is the entry point; its frontmatter `name` is the skill identity.
 `reference/` files resolve relative to it; `reference/classify.md` governs
 sizing, tier routing, and the invariant lifecycle, `reference/harness.md`
-defines the gate, `reference/templates.md` holds the artifact shapes. Repository review
+defines the gate, `reference/templates.md` holds the artifact shapes, including the
+five-command index contract, the cap-semantics loading protocol with cache
+gaps, the `Not here` leaf route, and the adopting-repository vendor-facts
+home. Repository review
 guidance routes to policy: a root `REVIEW.md` is indexed from
 `ARCHITECTURE.md`, checked by harness check 8 wherever it lives, and updated
 in the same change as the rules it states. Check 8's discovery is
@@ -65,13 +73,42 @@ change and flags the discrepancy; changing the rule requires a new decision.
     conventions policy and that installed runtime uses skill identity; the
     tests import the shared file reader and normalizer from
     `scripts/test-helpers.ts`.
+7. **INV-7** — Command order: generated `AGENTS.md` starts with the five
+   approved commands in order, and the architecture index does not duplicate
+   them. Mechanism: composition tests use an ordered-command helper and the
+   five-command fixture in `skills/document-for-agents/tests/`.
+8. **INV-8** — Orientation boundary: loading rows and token budgets are hard
+   caps on orientation documents while task-driven code inspection inside the
+   affected seam stays allowed; a missing unrecoverable fact becomes a named
+   cache gap recorded in the issue tracker, and the agent does not widen the
+   documentation read set until owner approval. Mechanism: composition tests
+   assert the cap and approval wording across the skill, template, and index.
+9. **INV-9** — Ownership routing: the standard leaf shape closes Scope &
+   boundaries with a `Not here` route by stable seam responsibility, never a
+   file path. Mechanism: composition tests inspect every leaf doc.
+10. **INV-10** — Decision-first invariant changes: a task that conflicts with a
+    numbered invariant stops before any change until an approved decision
+    supersedes or narrows it; silent workarounds are forbidden. Mechanism:
+    composition tests assert the stop language in `SKILL.md`.
+11. **INV-11** — Vendor-facts location: adopting repositories use the singular
+    `reference/vendor-facts.md` path. Mechanism: composition tests assert the
+    singular path and reject the plural form.
+12. **INV-12** — Dependency ordering: the `unslopify` dependency block sits
+    below Principles and Boundaries without losing its tested guarantees.
+    Mechanism: composition tests assert section order.
+13. **INV-13** — Harness size: the documentation harness remains at ten checks.
+    Mechanism: composition tests count the checks in `reference/harness.md`.
 
 ## Links
 
-- Glossary: `CONTEXT.md` — Skill, skill identity, registry lane.
+- Glossary: `CONTEXT.md` — Skill, skill identity, registry lane, attention
+  control, cache gap, Not here route.
 - Decision: `docs/adr/0001-distribute-as-public-catalog-shelf.md`.
 - Decision: `docs/adr/0002-adopt-ten-check-gate.md` — the ten-check gate and
   the invariant lifecycle.
+- Decision: `docs/adr/0017-doc-cache-attention-boundary.md` — the
+  five-command contract, cap semantics, cache gaps, `Not here` routes, and
+  decision-first invariant collisions.
 - Review policy: `REVIEW.md` — the root policy artifact this seam classifies,
   indexes, and keeps fresh.
 - Debt registry: `docs/debt.md`.
