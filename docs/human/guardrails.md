@@ -16,6 +16,6 @@ These are the promises the skills make.
 - Implementation inside a Kilo Agent Manager worktree opens a pull request whose body closes its ticket on merge, posts acceptance evidence, and never closes the ticket early.
 - The ready frontier contains only open, unblocked, unassigned tickets with `ready-for-agent`.
 - After a ticket closes, only its newly unblocked dependents get label updates — nothing else moves.
-- One shared decision module, copied byte-identical into all three workflow skills, turns observed facts into next actions: frontier selection, at most three active workers, duplicate ownership rejected, one retry before a `needs-info` stop, merge only with green checks, resolved findings, a clean local review, and an unchanged reviewed head. Repository verification fails if any copy drifts from the authored source.
+- One shared decision module, copied byte-identical into all three workflow skills, turns observed facts into next actions: frontier selection, at most three active workers (a worker holds its slot until it is stopped), duplicate ownership rejected, one retry before a `needs-info` stop, merge only with green checks, resolved findings, a clean local review, and an unchanged reviewed head. If a blocker reopens, an `unblocked` ticket goes back to `blocked`. Repository verification fails if any copy drifts from the authored source.
 
 Technical depth lives in the leaf documents named by each line.

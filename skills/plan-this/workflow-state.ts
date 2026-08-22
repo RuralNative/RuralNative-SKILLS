@@ -1,5 +1,5 @@
 // Authored source of the pure workflow state core (#132, parent #130).
-// scripts/generate-workflow-state.mjs copies this file byte-identical into
+// scripts/generate-workflow-state.ts copies this file byte-identical into
 // skills/plan-this/, skills/implement-this/, and skills/review-this/ so each
 // registry install is self-contained. Edit this file, run the generator, and
 // commit both; repository verification fails when a copy drifts.
@@ -75,6 +75,10 @@ function isOpen(ticket: TicketFact): boolean {
   return ticket.state === "open";
 }
 
+function hasLabel(ticket: TicketFact, label: string): boolean {
+  return ticket.labels.includes(label);
+}
+
 export function selectFrontier(
   tickets: readonly TicketFact[],
   spec: number,
@@ -86,7 +90,7 @@ export function selectFrontier(
         t.parent === spec &&
         t.openBlockers.length === 0 &&
         t.assignees.length === 0 &&
-        t.labels.includes(LABEL_READY_FOR_AGENT),
+        hasLabel(t, LABEL_READY_FOR_AGENT),
     )
     .map((t) => t.number);
 }
@@ -98,25 +102,23 @@ export function labelTransitions(
   for (const ticket of tickets) {
     if (!isOpen(ticket)) continue;
     if (ticket.openBlockers.length > 0) {
-      const add = ticket.labels.includes(LABEL_BLOCKED)
-        ? []
-        : [LABEL_BLOCKED];
-      const remove = ticket.labels.includes(LABEL_READY_FOR_AGENT)
-        ? [LABEL_READY_FOR_AGENT]
-        : [];
+      const add = hasLabel(ticket, LABEL_BLOCKED) ? [] : [LABEL_BLOCKED];
+      const remove = [LABEL_READY_FOR_AGENT, LABEL_UNBLOCKED].filter((label) =>
+        hasLabel(ticket, label),
+      );
       if (add.length > 0 || remove.length > 0) {
         transitions.push({ number: ticket.number, add, remove });
       }
-    } else if (ticket.labels.includes(LABEL_BLOCKED)) {
+    } else if (hasLabel(ticket, LABEL_BLOCKED)) {
       const add = [LABEL_UNBLOCKED, LABEL_READY_FOR_AGENT].filter(
-        (label) => !ticket.labels.includes(label),
+        (label) => !hasLabel(ticket, label),
       );
       transitions.push({
         number: ticket.number,
         add,
         remove: [LABEL_BLOCKED],
       });
-    } else if (!ticket.labels.includes(LABEL_READY_FOR_AGENT)) {
+    } else if (!hasLabel(ticket, LABEL_READY_FOR_AGENT)) {
       transitions.push({
         number: ticket.number,
         add: [LABEL_READY_FOR_AGENT],
@@ -134,14 +136,11 @@ export function validateDispatch(
   spec: number,
 ): DispatchPlan {
   const byNumber = new Map(tickets.map((t) => [t.number, t]));
-  const runningWorkers = workers.filter((w) => w.status === "running");
+  const activeWorkers = workers.filter((w) => w.status !== "stopped");
   const ownedTickets = new Map(
-    workers
-      .filter((w) => w.status !== "stopped")
-      .map((w) => [w.ticket, w.id]),
+    activeWorkers.map((w) => [w.ticket, w.id]),
   );
-  const activeCount = runningWorkers.length;
-  const capacity = MAX_ACTIVE_WORKERS - activeCount;
+  const capacity = MAX_ACTIVE_WORKERS - activeWorkers.length;
   const seen = new Set<number>();
   const dispatch: number[] = [];
   const violations: string[] = [];
@@ -173,7 +172,7 @@ export function validateDispatch(
       violations.push(`#${n} already has an assignee`);
       continue;
     }
-    if (!ticket.labels.includes(LABEL_READY_FOR_AGENT)) {
+    if (!hasLabel(ticket, LABEL_READY_FOR_AGENT)) {
       violations.push(`#${n} does not carry ${LABEL_READY_FOR_AGENT}`);
       continue;
     }
@@ -224,7 +223,7 @@ export function isMergeEligible(
   if (!review.localReviewClean) {
     blockers.push("local review is not clean");
   }
-  if (pullRequest.headSha !== review.reviewedHeadSha) {
+  if (!reviewIsFresh(pullRequest.headSha, review.reviewedHeadSha)) {
     blockers.push("reviewed head SHA does not match the current head SHA");
   }
   if (!pullRequest.mergeable) {

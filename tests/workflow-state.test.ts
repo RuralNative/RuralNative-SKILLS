@@ -126,6 +126,23 @@ describe("blocker label state", () => {
     assert.deepEqual(labelTransitions(tickets), []);
   });
 
+  test("re-blocking removes a stale unblocked label", () => {
+    const tickets = [
+      ticket({
+        number: 175,
+        labels: [LABEL_UNBLOCKED, LABEL_READY_FOR_AGENT],
+        openBlockers: [176],
+      }),
+    ];
+    assert.deepEqual(labelTransitions(tickets), [
+      {
+        number: 175,
+        add: [LABEL_BLOCKED],
+        remove: [LABEL_READY_FOR_AGENT, LABEL_UNBLOCKED],
+      },
+    ]);
+  });
+
   test("closed tickets get no transitions even with stale labels", () => {
     const tickets = [
       ticket({ number: 162, state: "closed", labels: [LABEL_BLOCKED] }),
@@ -216,6 +233,19 @@ describe("worker concurrency", () => {
     const plan = validateDispatch([183], tickets, workers, SPEC);
     assert.deepEqual(plan.dispatch, [183]);
     assert.deepEqual(plan.violations, []);
+  });
+
+  test("offline and failed workers hold capacity until stopped", () => {
+    const tickets = [ticket({ number: 195 })];
+    const workers = [
+      worker("w-1", 190),
+      worker("w-2", 191, "offline"),
+      worker("w-3", 192, "failed"),
+    ];
+    const plan = validateDispatch([195], tickets, workers, SPEC);
+    assert.deepEqual(plan.dispatch, []);
+    assert.equal(plan.violations.length, 1);
+    assert.match(plan.violations[0], /at most 3 active implementation workers/);
   });
 
   test("rejects duplicate ownership by an active worker", () => {
