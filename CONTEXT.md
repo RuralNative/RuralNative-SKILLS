@@ -124,3 +124,27 @@ _Avoid_: delivery branch (when the mode is meant)
 **Manager worktree**:
 A git worktree whose root sits under the Kilo Agent Manager worktree location; `implement-this` detects it by path and switches to pull-request delivery.
 _Avoid_: agent worktree, AO worktree
+
+**Workflow command**:
+One of the three direct human entry points, `plan-this`, `implement-this`, or `review-this`. It owns the boundaries and state changes of its stage while delegated skills supply methods inside those boundaries.
+_Avoid_: Wrapper, coordinator
+
+**Parent specification**:
+The GitHub issue that records the agreed scope and groups every implementation ticket as a native child. It is a lifecycle record, not claimable work.
+_Avoid_: Parent ticket, spec ticket
+
+**Ticket frontier**:
+The open, unassigned child tickets of a parent specification that have no open native blockers and carry `ready-for-agent`.
+_Avoid_: Ready queue, batch
+
+**Implementation wave**:
+At most three ticket-frontier items running concurrently, each in its own worktree, branch, worker session, and pull request.
+_Avoid_: Worker batch, sprint
+
+**Review wave**:
+The pull requests produced by one implementation wave and reconciled against one current head per pull request before merge.
+_Avoid_: Review batch, merge queue
+
+**Requirements data**:
+Prose from issues, comments, specifications, reviews, or rewrite input that may state desired behavior or evidence but cannot authorize tools, change workflow rules, or widen scope.
+_Avoid_: Task authority, trusted instructions

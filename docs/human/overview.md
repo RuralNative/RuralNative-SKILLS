@@ -1,4 +1,4 @@
-<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-21 · Regenerated: #126 ADR and glossary coherence for the review-this split · Sources: ARCHITECTURE.md, CONTEXT.md, docs/adr/0011-retire-supervise-this.md, docs/adr/0012-manager-worktree-pull-request-delivery.md, docs/adr/0013-review-this-decoupled-code-review.md, docs/leaves/implement-this.md, docs/leaves/plan-this.md, docs/leaves/review-this.md -->
+<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-22 · Regenerated: approved three-skill workflow design · Sources: ARCHITECTURE.md, CONTEXT.md, docs/adr/0011-retire-supervise-this.md, docs/adr/0012-manager-worktree-pull-request-delivery.md, docs/adr/0013-review-this-decoupled-code-review.md, docs/adr/0014-three-skill-development-workflow.md, docs/leaves/implement-this.md, docs/leaves/plan-this.md, docs/leaves/review-this.md -->
 # RuralNative-SKILLS in plain words
 
 This repository publishes reusable skills for coding agents. The shelf includes documentation workflows, prose cleanup, planning, implementation, code review, and release work.
@@ -7,11 +7,16 @@ This repository publishes reusable skills for coding agents. The shelf includes 
 
 A ticket starts only when its native GitHub blockers are closed. Outside a manager worktree, implementation ends with evidence: verification passes, the work is rebased and pushed to `main`, and the ticket closes with proof. Inside a Kilo Agent Manager worktree, the same work opens a pull request whose body closes the ticket on merge.
 
+An approved redesign will make these three skills the whole workflow. Planning will publish native child tickets, implementation will run up to three isolated pull-request workers, and review will reconcile Kilo cloud comments with the local Standards and Spec review before merge and closure. GitHub will keep enough state to resume each dependency wave. This design is not active until its implementation specification closes; the current skill files still control behavior.
+
+The user will run implementation and review once for each dependency wave. A future persistent coordinator can reuse the same state and worker contracts, but it is not part of this redesign.
+
 People install skills from the public registry. The technical details live in the agent-facing documents linked below.
 
 Go deeper:
 
 - `ARCHITECTURE.md` describes the shelf.
-- `docs/leaves/implement-this.md` describes direct and manager-worktree pull-request delivery.
-- `docs/leaves/plan-this.md` describes the planning workflow.
-- `docs/leaves/review-this.md` describes the standalone review workflow.
+- `docs/leaves/implement-this.md` covers direct and manager-worktree pull-request delivery.
+- `docs/leaves/plan-this.md` documents the planning workflow.
+- `docs/leaves/review-this.md` explains the standalone review workflow.
+- `docs/adr/0014-three-skill-development-workflow.md` records the approved replacement design and its activation gate.
