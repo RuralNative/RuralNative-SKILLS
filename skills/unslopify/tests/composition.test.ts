@@ -15,11 +15,11 @@ function pythonAvailable(): boolean {
   return probe.status === 0;
 }
 
-function scan(fixture: string): { status: number; findings: Array<{ id: string; evidence: string; excerpt: string }> } {
+function scan(fixture: string): { status: number; findings: Array<{ id: string; evidence: string; excerpt: string; line_start: number; line_end: number }> } {
   const file = path.join(FIXTURES, fixture);
   const res = spawnSync("python3", [SCANNER, "--json", file], { encoding: "utf8" });
   assert.equal(res.status, 0, `scanner must exit 0 on ${fixture}: ${res.stderr}`);
-  const parsed = JSON.parse(res.stdout) as { findings: Array<{ id: string; evidence: string; excerpt: string }> };
+  const parsed = JSON.parse(res.stdout) as { findings: Array<{ id: string; evidence: string; excerpt: string; line_start: number; line_end: number }> };
   return { status: res.status ?? 0, findings: parsed.findings };
 }
 
@@ -158,10 +158,11 @@ describe("unslopify always-on output contract (unslopify:INV-7)", () => {
   test("explicit rewrites and published artifacts retain the completion report and preservation audit", () => {
     const skill = read("skills/unslopify/SKILL.md");
     const n = norm(skill);
-    assert.ok(n.includes("publication boundar"), "publication boundaries must be named");
+    assert.ok(n.includes("at publication boundaries"), "publication boundaries must be named");
     assert.ok(n.includes("completion report") && n.includes("preservation audit"), "published prose must keep the report and preservation audit");
-    const report = read("skills/unslopify/SKILL.md").indexOf("## Finding format and completion report");
-    const live = read("skills/unslopify/SKILL.md").indexOf("## Live output");
+    const body = skill;
+    const report = body.indexOf("## Finding format and completion report");
+    const live = body.indexOf("## Live output");
     assert.ok(live !== -1 && report !== -1 && live < report, "Live output must precede the report section it bounds");
   });
 
@@ -181,11 +182,17 @@ describe("unslopify always-on output contract (unslopify:INV-7)", () => {
       ["ticket-fixture.md", ["docs-check.sh", "ready-for-agent", "gh issue edit"]],
     ] as const) {
       const body = fs.readFileSync(path.join(FIXTURES, fixture), "utf8");
+      const lines = body.split("\n");
       for (const token of critical) {
         assert.ok(body.includes(token), `${fixture} must carry implementation-critical token ${token}`);
       }
       const { findings } = scan(fixture);
       assert.ok(findings.length >= 1, `${fixture} must produce at least one advisory style candidate`);
+      const flagged = (line: number) => findings.some((f) => f.line_start <= line && line <= f.line_end);
+      const paired = critical.some((token) =>
+        lines.some((text, i) => text.includes(token) && flagged(i + 1)),
+      );
+      assert.ok(paired, `${fixture} must flag at least one style candidate on a line carrying implementation-critical wording`);
     }
   });
 

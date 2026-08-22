@@ -127,7 +127,7 @@ candidates (fixtures `spec-fixture.md` and `ticket-fixture.md`).
    vague or decorative uses are replaceable. Mechanism: scanner signals in
    `skills/unslopify/scanner.py` plus fixtures and composition tests in
    `skills/unslopify/tests/`.
-6. **INV-7** — Always-on output contract: loading `unslopify` makes
+7. **INV-7** — Always-on output contract: loading `unslopify` makes
    agent-authored English output the automatic scope for that session or
    parent workflow. Ordinary conversation performs the full model-only
    self-audit silently, without showing a completion report. Documents,
