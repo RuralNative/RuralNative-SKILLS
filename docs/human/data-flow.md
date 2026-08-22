@@ -1,10 +1,10 @@
-<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-22 · Regenerated: #136 REVIEW.md becomes doc-cache policy; #138 workflow state core review fixes · Sources: REVIEW.md, docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md, docs/leaves/unslopify.md, docs/leaves/plan-this.md, docs/leaves/implement-this.md, docs/leaves/release-skills.md, docs/adr/0011-retire-supervise-this.md, docs/adr/0012-manager-worktree-pull-request-delivery.md, docs/adr/0013-review-this-decoupled-code-review.md -->
+<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-22 · Regenerated: #136 REVIEW.md becomes doc-cache policy; #138 workflow state core review fixes; #133 canonical publication from plan-this; leaf data-flow refresh · Sources: REVIEW.md, docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md, docs/leaves/unslopify.md, docs/leaves/plan-this.md, docs/leaves/implement-this.md, docs/leaves/release-skills.md, docs/adr/0011-retire-supervise-this.md, docs/adr/0012-manager-worktree-pull-request-delivery.md, docs/adr/0013-review-this-decoupled-code-review.md -->
 # How information moves in plain words
 
 The technical flow starts with a task you give to `/plan-this`.
 
 1. Planning loads repository-owned `unslopify` before progress and reads only the focused agent cache `AGENTS.md → ARCHITECTURE.md → seam leaf → CONTEXT.md → relevant ADRs`; human pages remain derived and are not preloaded.
-2. Planning publishes a parent specification, child tickets, and native GitHub dependency edges, with prose checked under unslopify scope, protected-content, preservation, and completion-report rules.
+2. Planning publishes a parent specification with no claimable label, links each child ticket to it as a native GitHub sub-issue, and creates native blocked-by edges from each blocker's numeric database ID read through the issue REST response, with prose checked under unslopify scope, protected-content, preservation, and completion-report rules.
 3. You pick a ready ticket — open, unblocked, unassigned — and run `/implement-this #<n>`.
 4. Implementation loads `unslopify` under the same prose contract and focused cache, claims the ticket, and stops while any native blocker is open.
 5. The worker runs `/implement`, updates the affected seam's leaf doc and tests, and verifies the repository: dependency install, tests, TypeScript, and the docs harness.

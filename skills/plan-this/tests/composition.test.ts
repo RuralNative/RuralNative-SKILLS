@@ -9,6 +9,13 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { read, norm, body as getBody } from "../../../scripts/test-helpers.ts";
+import {
+  LABEL_READY_FOR_AGENT,
+  LABEL_BLOCKED,
+  LABEL_UNBLOCKED,
+  labelTransitions,
+  type TicketFact,
+} from "../workflow-state.ts";
 
 const ROOT = path.resolve(import.meta.dirname ?? ".", "../../..");
 
@@ -79,7 +86,7 @@ describe("plan-this fixed template and task substitution (plan-this:INV-3)", () 
     assert.ok(body.includes("Design tickets as independently verifiable vertical slices suitable for one future worktree."));
     assert.ok(body.includes("Optimize for precision per token: keep shared context in the parent specification;"));
     assert.ok(body.includes("Ground decisions in the codebase and relevant documentation, following the repository's documented loading order."));
-    assert.ok(body.includes("Publish GitHub issues using repository-defined labels (`ready-for-agent` where applicable) and native dependency edges"));
+    assert.ok(body.includes("Publish the parent specification as a GitHub issue with no claimable label, and link every implementation ticket to it as a native sub-issue"));
     assert.ok(body.includes("Ask one decision at a time in ELI18 language, include a recommendation, and honor each skill's approval gates."));
     assert.ok(body.includes("Follow the installed skills as the procedural source of truth."));
     assert.ok(body.includes("Finish with an ELI18 **Why / What / Where / How** summary and links to the specification and all tickets, then stop."));
@@ -108,7 +115,7 @@ Run this planning-only workflow: \`/grill-with-docs\` → \`/to-spec\` → \`/to
 - Require test design before implementation direction: state the smallest set of tests that proves observable behavior, stated standards, and structural requirements. Reject redundant, implementation-detail, prose-mirroring, and coverage-only tests unless they name a distinct risk.
 - Optimize for precision per token: keep shared context in the parent specification; make tickets self-contained only for their slice; avoid repetition, speculative file paths, and routine pseudocode.
 - Ground decisions in the codebase and relevant documentation, following the repository's documented loading order. Use focused doc-cache loading: read AGENTS.md, ARCHITECTURE.md, the affected seam leaf doc in docs/leaves/, CONTEXT.md, and relevant ADRs. This focused route does not require broad preloading and does not require the derived human docs from document-for-humans (docs/human/).
-- Publish GitHub issues using repository-defined labels (\`ready-for-agent\` where applicable) and native dependency edges via blocked_by with database IDs (read each issue's database ID before creating the edge); keep human-readable Blocked by text as fallback, native edge is canonical; blocked label state follows native blockers (open → blocked without ready-for-agent, all closed → unblocked + ready-for-agent, blocked removed).
+- Publish the parent specification as a GitHub issue with no claimable label, and link every implementation ticket to it as a native sub-issue where GitHub supports it; where sub-issues are unavailable, record \`Part of #<spec>\` at the top of the ticket body. Create native blocked_by edges from each blocker's numeric database ID read through the issue REST response (\`gh api repos/<owner>/<repo>/issues/<n> --jq .id\`; never \`gh issue view --json databaseId\`, the issue number, or node_id); human-readable Blocked by text stays fallback and native edges are canonical. Compute initial labels with the pure workflow state core over captured GitHub facts: an open blocker means \`blocked\` without \`ready-for-agent\`, no open blocker means \`ready-for-agent\`. State in every published ticket body its independently verifiable behavior, affected seams, acceptance criteria, verification, blockers, and parallel-safety status. Where a generic \`/to-spec\` or \`/to-tickets\` default conflicts (their blanket \`ready-for-agent\` labels), this workflow command's rules win without forking those skills; \`ready-for-dev\` is retired from workflow use.
 - Ask one decision at a time in ELI18 language, include a recommendation, and honor each skill's approval gates.
 - Follow the installed skills as the procedural source of truth.
 
@@ -252,7 +259,7 @@ describe("plan-this preserved rules and user invocation (plan-this:INV-5)", () =
     assert.ok(n.includes("verification requirements"));
     assert.ok(n.includes("parallel execution") || n.includes("parallel"));
     assert.ok(n.includes("ready-for-agent"));
-    assert.ok(n.includes("native dependency edges") || n.includes("native dependency"));
+    assert.ok(n.includes("native sub-issue") || n.includes("native blocked_by edges"), "must require native publication structure");
     assert.ok(n.includes("why / what / where / how") || n.includes("why / what"));
     assert.ok(skill.includes("**Why / What / Where / How**"));
   });
@@ -289,7 +296,7 @@ Run this planning-only workflow: \`/grill-with-docs\` → \`/to-spec\` → \`/to
 - Require test design before implementation direction: state the smallest set of tests that proves observable behavior, stated standards, and structural requirements. Reject redundant, implementation-detail, prose-mirroring, and coverage-only tests unless they name a distinct risk.
 - Optimize for precision per token: keep shared context in the parent specification; make tickets self-contained only for their slice; avoid repetition, speculative file paths, and routine pseudocode.
 - Ground decisions in the codebase and relevant documentation, following the repository's documented loading order. Use focused doc-cache loading: read AGENTS.md, ARCHITECTURE.md, the affected seam leaf doc in docs/leaves/, CONTEXT.md, and relevant ADRs. This focused route does not require broad preloading and does not require the derived human docs from document-for-humans (docs/human/).
-- Publish GitHub issues using repository-defined labels (\`ready-for-agent\` where applicable) and native dependency edges via blocked_by with database IDs (read each issue's database ID before creating the edge); keep human-readable Blocked by text as fallback, native edge is canonical; blocked label state follows native blockers (open → blocked without ready-for-agent, all closed → unblocked + ready-for-agent, blocked removed).
+- Publish the parent specification as a GitHub issue with no claimable label, and link every implementation ticket to it as a native sub-issue where GitHub supports it; where sub-issues are unavailable, record \`Part of #<spec>\` at the top of the ticket body. Create native blocked_by edges from each blocker's numeric database ID read through the issue REST response (\`gh api repos/<owner>/<repo>/issues/<n> --jq .id\`; never \`gh issue view --json databaseId\`, the issue number, or node_id); human-readable Blocked by text stays fallback and native edges are canonical. Compute initial labels with the pure workflow state core over captured GitHub facts: an open blocker means \`blocked\` without \`ready-for-agent\`, no open blocker means \`ready-for-agent\`. State in every published ticket body its independently verifiable behavior, affected seams, acceptance criteria, verification, blockers, and parallel-safety status. Where a generic \`/to-spec\` or \`/to-tickets\` default conflicts (their blanket \`ready-for-agent\` labels), this workflow command's rules win without forking those skills; \`ready-for-dev\` is retired from workflow use.
 - Ask one decision at a time in ELI18 language, include a recommendation, and honor each skill's approval gates.
 - Follow the installed skills as the procedural source of truth.
 
@@ -496,5 +503,133 @@ describe("plan-this workflow trust boundaries (#131, plan-this:INV-9)", () => {
   test("leaf doc declares INV-9 with composition-test mechanism", () => {
     const leaf = read("docs/leaves/plan-this.md");
     assert.ok(leaf.includes("INV-9"), "leaf must declare INV-9");
+  });
+});
+
+describe("plan-this canonical publication (#133, plan-this:INV-8)", () => {
+  const SPEC = 130;
+
+  function ticketFact(
+    overrides: Partial<TicketFact> & { number: number },
+  ): TicketFact {
+    return {
+      state: "open",
+      labels: [],
+      assignees: [],
+      parent: SPEC,
+      openBlockers: [],
+      ...overrides,
+    };
+  }
+
+  test("parent specification is published without a claimable label", () => {
+    const skill = read("skills/plan-this/SKILL.md");
+    const body = getBody(skill);
+    const n = norm(body);
+    assert.ok(
+      n.includes("no claimable label"),
+      "publication rule must publish the parent specification without a claimable label",
+    );
+    assert.ok(
+      n.includes("parent specification"),
+      "publication rule must name the parent specification",
+    );
+  });
+
+  test("implementation tickets link to the parent as native sub-issues with documented fallback", () => {
+    const skill = read("skills/plan-this/SKILL.md");
+    const body = getBody(skill);
+    const n = norm(body);
+    assert.ok(n.includes("native sub-issue"), "must require native sub-issue links");
+    assert.ok(n.includes("part of #<spec>"), "fallback must record Part of #<spec> in the ticket body");
+    assert.ok(n.includes("unavailable"), "fallback must be scoped to where GitHub does not support sub-issues");
+  });
+
+  test("blocked_by edges use the working REST database-ID lookup, not gh issue view --json databaseId", () => {
+    const skill = read("skills/plan-this/SKILL.md");
+    const body = getBody(skill);
+    assert.ok(
+      body.includes("`gh api repos/<owner>/<repo>/issues/<n> --jq .id`"),
+      "must use the issue REST response lookup for numeric database IDs",
+    );
+    assert.ok(
+      /never `gh issue view --json databaseId`, the issue number, or node_id/.test(body),
+      "must forbid the invalid lookup, the issue number, and node_id",
+    );
+  });
+
+  test("native blocked_by edges are canonical; Blocked by text stays fallback", () => {
+    const skill = read("skills/plan-this/SKILL.md");
+    const leaf = read("docs/leaves/plan-this.md");
+    const body = getBody(skill);
+    const nSkill = norm(body);
+    const nLeaf = norm(leaf);
+    assert.ok(nSkill.includes("blocked_by"), "body must name blocked_by edges");
+    assert.ok(nSkill.includes("native edges are canonical"), "body must make native edges canonical");
+    assert.ok(nSkill.includes("stays fallback"), "body must keep Blocked by text as fallback");
+    assert.ok(nLeaf.includes("canonical"), "leaf must state native edges are canonical");
+  });
+
+  test("initial labels follow native blockers over captured GitHub facts through the pure workflow state core", () => {
+    const captured = [
+      ticketFact({ number: 133, openBlockers: [132] }),
+      ticketFact({ number: 132 }),
+      ticketFact({ number: 131, openBlockers: [132], labels: [LABEL_BLOCKED] }),
+      ticketFact({ number: 134, openBlockers: [133], labels: [LABEL_READY_FOR_AGENT] }),
+    ];
+    assert.deepEqual(labelTransitions(captured, SPEC), [
+      { number: 133, add: [LABEL_BLOCKED], remove: [] },
+      { number: 132, add: [LABEL_READY_FOR_AGENT], remove: [] },
+      { number: 134, add: [LABEL_BLOCKED], remove: [LABEL_READY_FOR_AGENT] },
+    ]);
+
+    // after the final blocker closes: blocked is removed, unblocked + ready-for-agent added
+    const released = [ticketFact({ number: 133, labels: [LABEL_BLOCKED] })];
+    assert.deepEqual(labelTransitions(released, SPEC), [
+      {
+        number: 133,
+        add: [LABEL_UNBLOCKED, LABEL_READY_FOR_AGENT],
+        remove: [LABEL_BLOCKED],
+      },
+    ]);
+  });
+
+  test("published ticket bodies state behavior, seams, acceptance criteria, verification, blockers, and parallel safety", () => {
+    const skill = read("skills/plan-this/SKILL.md");
+    const body = getBody(skill);
+    const n = norm(body);
+    assert.ok(n.includes("independently verifiable behavior"), "ticket body must state independently verifiable behavior");
+    assert.ok(n.includes("affected seams"), "ticket body must state affected seams");
+    assert.ok(n.includes("acceptance criteria"), "ticket body must state acceptance criteria");
+    assert.ok(n.includes("verification"), "ticket body must state verification");
+    assert.ok(n.includes("blockers"), "ticket body must state blockers");
+    assert.ok(n.includes("parallel-safety status"), "ticket body must state parallel-safety status");
+  });
+
+  test("workflow command overrides conflicting to-spec and to-tickets label defaults without forking them", () => {
+    const skill = read("skills/plan-this/SKILL.md");
+    const body = getBody(skill);
+    const n = norm(body);
+    assert.ok(n.includes("/to-spec") && n.includes("/to-tickets"), "must name both delegated skills in the precedence rule");
+    assert.ok(n.includes("rules win without forking those skills"), "this command's rules must win without forking the delegated skills");
+    assert.ok(
+      n.includes("blanket `ready-for-agent` labels"),
+      "must name the conflicting blanket ready-for-agent default",
+    );
+    // no forked copies of the delegated skills exist on disk
+    const root = path.resolve(import.meta.dirname ?? ".", "../../..");
+    assert.equal(fs.existsSync(path.join(root, "skills/to-spec")), false, "to-spec must not be forked into this shelf");
+    assert.equal(fs.existsSync(path.join(root, "skills/to-tickets")), false, "to-tickets must not be forked into this shelf");
+  });
+
+  test("ready-for-dev is retired from workflow use across plan-this and tracker policy docs", () => {
+    const skill = read("skills/plan-this/SKILL.md");
+    const leaf = read("docs/leaves/plan-this.md");
+    const triage = read("docs/agents/triage-labels.md");
+    const combined = norm(`${skill}\n${leaf}\n${triage}`);
+    assert.match(combined, /ready-for-dev`? is retired/, "retirement must be stated");
+    // no workflow doc assigns ready-for-dev as a live label
+    assert.doesNotMatch(triage, /\|\s*`ready-for-dev`\s*\|/, "triage-labels must not list ready-for-dev as a workflow label");
+    assert.equal(norm(skill).includes("apply `ready-for-dev`"), false);
   });
 });
