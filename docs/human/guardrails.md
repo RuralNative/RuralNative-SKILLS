@@ -1,4 +1,4 @@
-<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-22 · Regenerated: #136 REVIEW.md becomes doc-cache policy, #139 review fixes — trust sections on all seven skills, word-bounded residue patterns · Sources: REVIEW.md, docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md, docs/leaves/unslopify.md, docs/leaves/plan-this.md, docs/leaves/implement-this.md, docs/leaves/release-skills.md, docs/adr/0011-retire-supervise-this.md, docs/adr/0012-manager-worktree-pull-request-delivery.md, docs/adr/0013-review-this-decoupled-code-review.md -->
+<!-- human-first: derived artifact — agents regenerate, never cite as ground truth · Derived: 2026-08-22 · Regenerated: #136 REVIEW.md becomes doc-cache policy; #138 workflow state core review fixes · Sources: REVIEW.md, docs/leaves/document-for-agents.md, docs/leaves/document-for-humans.md, docs/leaves/unslopify.md, docs/leaves/plan-this.md, docs/leaves/implement-this.md, docs/leaves/release-skills.md, docs/adr/0011-retire-supervise-this.md, docs/adr/0012-manager-worktree-pull-request-delivery.md, docs/adr/0013-review-this-decoupled-code-review.md -->
 # Guardrails in plain words
 
 These are the promises the skills make.
@@ -22,5 +22,6 @@ These are the promises the skills make.
 - Implementation inside a Kilo Agent Manager worktree opens a pull request whose body closes its ticket on merge, posts acceptance evidence, and never closes the ticket early.
 - The ready frontier contains only open, unblocked, unassigned tickets with `ready-for-agent`.
 - After a ticket closes, only its newly unblocked dependents get label updates — nothing else moves.
+- One shared decision module, copied byte-identical into all three workflow skills, turns observed facts into next actions: frontier selection, at most three active workers (a worker holds its slot until it is stopped), duplicate ownership rejected, one retry before a `needs-info` stop that holds on every later pass, merge only with green checks, resolved findings, a clean local review, an unchanged reviewed head, and a mergeable pull request. If a blocker reopens, an `unblocked` ticket goes back to `blocked`. Repository verification fails if any copy drifts from the authored source.
 
 Technical depth lives in the leaf documents named by each line.
