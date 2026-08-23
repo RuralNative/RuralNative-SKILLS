@@ -10,6 +10,8 @@ lifecycle (ADR-0017): state the goal before reading, treat every loading
 budget as a cap on orientation documents, and stop for a decision when work
 collides with a numbered invariant.
 
+Worktree execution (Kilo Code VS Code extension): when running on the Kilo Code VS Code IDE extension, generate all worktrees through Agent Manager. Record stays here for audit; no rerun is required for the current change.
+
 ## Documentation (doc-cache)
 
 This repo runs the document-for-agents lifecycle on its own docs.
