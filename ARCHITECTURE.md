@@ -136,7 +136,7 @@ Every authored doc is machine-checked against disk by `scripts/docs-check.sh`
 
 Budgets are hard caps on orientation documents, and they never block code
 inspection inside the affected seam. A missing fact becomes a named cache gap
-recorded in the issue tracker; owner approval is required before widening the
+recorded in the issue tracker; ask the owner for approval before widening the
 documentation read set (ADR-0017).
 
 ## Checks
