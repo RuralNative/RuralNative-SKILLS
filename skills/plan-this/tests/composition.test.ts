@@ -672,11 +672,6 @@ describe("plan-this grill gate and parallel-first graph (#154)", () => {
     const body = getBody(read("skills/plan-this/SKILL.md"));
     const rules = fixedTemplateRules(body);
     assert.equal(
-      rules.filter((rule) => rule.startsWith("Grill before anything publishes:")).length,
-      1,
-      "the grill-round requirement must appear once as the authoritative rule",
-    );
-    assert.equal(
       rules.filter((rule) => rule.startsWith("Design the ticket graph parallel-first:")).length,
       1,
       "the parallel-design rule must appear once",

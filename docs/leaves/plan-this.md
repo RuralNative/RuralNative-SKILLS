@@ -39,6 +39,8 @@ Former parity debt with `implement-this` (DEBT-7) was resolved 2026-08-20. Verif
 
 ADR-0019 (2026-08-23, parent spec #152) tightened the planning gate, and #154 shipped the planning grill gate and parallel-first ticket graphs: every fresh `/plan-this` run completes at least one grill frontier round before anything publishes, publication waits for explicit approval after the shared understanding and the proposed ticket graph are shown (one invocation authorizes the interactive chain, approval stays separate), an interrupted grill resumes its recorded decision tree instead of restarting, and ticket graphs are designed parallel-first with scheduling collisions kept apart from native blocker edges.
 
+The composition suite keeps the ordered grill-rule assertion separate from the parallel-design uniqueness assertion.
+
 ## Links
 
 - Glossary: `CONTEXT.md` — Skill, skill identity, skill naming convention, distribution shelf, registry lane.
