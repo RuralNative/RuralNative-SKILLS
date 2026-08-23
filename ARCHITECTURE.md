@@ -10,7 +10,7 @@ own docs.
 
 | Seam | Responsibility | Code root | Tests | Doc |
 |---|---|---|---|---|
-| document-for-agents | publishable agent instructions for the doc-cache lifecycle: cache accuracy and attention control | skills/document-for-agents/ | install smoke via `npx skills add`; identity == folder check; composition via `skills/document-for-agents/tests/` | docs/leaves/document-for-agents.md |
+| document-for-agents | publishable agent instructions for the doc-cache lifecycle: cache accuracy, attention control, and the opt-in private skill diagnostics record | skills/document-for-agents/ | install smoke via `npx skills add`; identity == folder check; composition via `skills/document-for-agents/tests/` | docs/leaves/document-for-agents.md |
 | document-for-humans | plain-language derived documentation for human stakeholders | skills/document-for-humans/ | gate extension via scripts/docs-check.sh; composition via `skills/document-for-humans/tests/` | docs/leaves/document-for-humans.md |
 | unslopify | AI-tell detection and meaning-safe prose revision, always-on for agent-authored output once loaded | skills/unslopify/ | scanner contract via `skills/unslopify/scanner.py`; parity catalog via `skills/unslopify/reference/parity.md`; fixtures and composition via `skills/unslopify/tests/`; identity == folder check | docs/leaves/unslopify.md |
 | plan-this | fixed-template planning adapter that applies the planning prefix and delegates to `/grill-with-docs`, `/to-spec`, `/to-tickets`, and `/unslop` | skills/plan-this/ | composition via `skills/plan-this/tests/`; identity == folder check | docs/leaves/plan-this.md |
@@ -49,6 +49,7 @@ harness check 6. A covered doc must be in the seam table or listed here:
 - docs/adr/0015-requirements-data-trust-and-install-provenance.md
 - docs/adr/0016-unslopify-always-on-output-contract.md
 - docs/adr/0017-doc-cache-attention-boundary.md
+- docs/adr/0018-opt-in-skill-diagnostics.md
 - docs/leaves/document-for-humans.md
 - docs/human/overview.md
 - docs/human/decision-journal.md
@@ -78,6 +79,9 @@ without the index referencing them as current:
 - Attention is bounded: loading budgets are caps on orientation documents,
   `AGENTS.md` opens with the five-command contract, and invariant collisions
   stop for a decision. See ADR-0017.
+- Skill diagnostics stay opt-in: consent-gated, private, sanitized, outside
+  every read set, and never guidance; the management marker carries provenance.
+  See ADR-0018.
 - Known shortcuts and unfinished pieces are tracked in the debt registry. See `docs/debt.md`.
 - Review scope, severity, trust, verification, and subagent rules live in
   `REVIEW.md`; cloud review reads it from the pull-request base branch.
@@ -113,6 +117,7 @@ parsed from, so they are not listed here.
 | docs/adr/0015-requirements-data-trust-and-install-provenance.md | decision |
 | docs/adr/0016-unslopify-always-on-output-contract.md | decision |
 | docs/adr/0017-doc-cache-attention-boundary.md | decision |
+| docs/adr/0018-opt-in-skill-diagnostics.md | decision |
 | docs/leaves/document-for-agents.md | leaf |
 | docs/leaves/document-for-humans.md | leaf |
 | docs/leaves/unslopify.md | leaf |
@@ -135,8 +140,8 @@ parsed from, so they are not listed here.
 
 The budgets are hard caps on orientation documents, not guidance to trim later; they
 never block code inspection inside the affected seam. A missing unrecoverable fact
-becomes a named cache gap: record it in the issue tracker, get owner approval
-before opening more documentation, and do not widen the read set until approval (ADR-0017).
+becomes a named cache gap: record it in the issue tracker, ask the
+owner for approval before opening more documentation, and do not widen the read set until approval (ADR-0017).
 
 ## Checks
 

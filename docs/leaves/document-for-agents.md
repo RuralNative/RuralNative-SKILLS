@@ -23,9 +23,12 @@ the `unslopify` seam.
 `reference/` files resolve relative to it; `reference/classify.md` governs
 sizing, tier routing, and the invariant lifecycle, `reference/harness.md`
 defines the gate, `reference/templates.md` holds the artifact shapes, including the
-five-command index contract, the cap-semantics loading protocol with cache
+five-command index contract with its protected management marker and provenance
+states, the sanitized skill diagnostics entry, the cap-semantics loading protocol with cache
 gaps, the `Not here` leaf route, and the adopting-repository vendor-facts
-home. Repository review
+home. The optional private diagnostics record is governed by the consent,
+notice, revocation, privacy, and sanitization contract in `SKILL.md` and lives
+outside every doc-cache tier. Repository review
 guidance routes to policy: a root `REVIEW.md` is indexed from
 `ARCHITECTURE.md`, checked by harness check 8 wherever it lives, and updated
 in the same change as the rules it states. Check 8's discovery is
@@ -98,6 +101,33 @@ change and flags the discrepancy; changing the rule requires a new decision.
     Mechanism: composition tests assert section order.
 13. **INV-13** — Harness size: the documentation harness remains at ten checks.
     Mechanism: composition tests count the checks in `reference/harness.md`.
+14. **INV-14** — Opt-in private skill diagnostics: no diagnostics file is
+    created before the owner gives explicit consent to create and maintain it;
+    initial consent covers later maintenance but every write gets a clear
+    prior notice; revocation stops writes immediately and asks for a separate
+    keep, export, or delete decision, never deleting without that choice; one
+    append-only private file outside the doc cache and outside version control
+    by default, excluded from every normal agent read set and never task
+    guidance; entries accept confirmed mistakes only (confirmed by the user or
+    proved from the prompt, code, checks, or docs), use the approved sanitized
+    fields, omit raw prompts, code, secrets, personal data, absolute paths,
+    repository remotes, and proprietary names, record their version-control
+    exclusion at creation, describe evidence and
+    correction without becoming a general prohibition or instruction, and are
+    evidence for optional user-reviewed submission to the skill developer with
+    no upload, network call, or telemetry. Mechanism: composition tests in
+    `skills/document-for-agents/tests/` pin the approved sanitized fields
+    against `reference/templates.md`, plus the hostile
+    `diagnostics-entry.json` fixture.
+15. **INV-15** — Management marker provenance: generated `AGENTS.md` carries
+    exactly one protected management marker directly after the five commands,
+    recording the `document-for-agents` skill identity and available pinned
+    revision evidence, or `none` when unavailable; provenance is confirmed
+    only when the marker plus supporting evidence backs it, and older or
+    ambiguous documents get `likely` or `unknown`, never guessed certainty.
+    Mechanism: marker-shape test on
+    `reference/templates.md` and a placement test on this repository's own
+    `AGENTS.md`.
 
 ## Links
 
@@ -109,6 +139,8 @@ change and flags the discrepancy; changing the rule requires a new decision.
 - Decision: `docs/adr/0017-doc-cache-attention-boundary.md` — the
   five-command contract, cap semantics, cache gaps, `Not here` routes, and
   decision-first invariant collisions.
+- Decision: `docs/adr/0018-opt-in-skill-diagnostics.md` — the consented
+  private diagnostics record and the management marker provenance states.
 - Review policy: `REVIEW.md` — the root policy artifact this seam classifies,
   indexes, and keeps fresh.
 - Debt registry: `docs/debt.md`.

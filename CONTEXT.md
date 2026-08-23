@@ -168,3 +168,11 @@ _Avoid_: doc gap, missing docs (when the named record is meant)
 **Not here route**:
 The leaf-doc line that routes misrouted work to its owning seam by stable responsibility language, never by file path (ADR-0017).
 _Avoid_: routing table, see-also
+
+**Skill diagnostics**:
+The opt-in private record of confirmed agent mistakes that `document-for-agents` keeps only with explicit owner consent to create and maintain it: one append-only local file outside the doc cache and version control, excluded from every normal agent read set, sanitized, and evidence for optional user-reviewed submission to the skill developer — never policy, debt, an invariant, or task guidance (ADR-0018).
+_Avoid_: telemetry, error log, mistake tracker
+
+**Management marker**:
+The protected HTML comment placed directly after the five commands in generated `AGENTS.md`, recording the `document-for-agents` skill identity and available revision evidence; provenance is confirmed only when the marker plus supporting evidence backs it, otherwise `likely` or `unknown` (ADR-0018).
+_Avoid_: watermark, badge, signature
