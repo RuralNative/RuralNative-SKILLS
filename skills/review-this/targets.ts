@@ -131,6 +131,21 @@ function openPrsClosing(
   );
 }
 
+function ambiguousParentPullRequests(
+  tickets: readonly TicketFact[],
+  pullRequests: readonly PullRequestLink[],
+  spec: number,
+): PullRequestLink[] | null {
+  for (const ticket of tickets) {
+    if (ticket.parent !== spec) continue;
+    const candidates = openPrsClosing(pullRequests, ticket.number).filter(
+      (pr) => pr.ticket === ticket.number,
+    );
+    if (candidates.length > 1) return candidates;
+  }
+  return null;
+}
+
 function singleSelection(pr: PullRequestLink): SelectedPullRequest {
   return {
     ticket: pr.closesTicket,
@@ -153,6 +168,8 @@ export function reviewReadiness(
   const blockers: string[] = [];
   if (pr.state !== "open") blockers.push("the pull request is not open");
   if (pr.closesTicket === null) blockers.push("the pull request has no valid closing reference");
+  if (pr.headSha.trim() === "") blockers.push("the pull request has no current head revision");
+  if (pr.baseSha.trim() === "") blockers.push("the pull request has no current base revision");
   if (!pr.hasAcceptanceEvidence) {
     blockers.push("the pull request has no posted implementation acceptance evidence");
   }
@@ -193,34 +210,6 @@ export function resolveReviewTarget(
   }
   const number = reference.number;
 
-  // A parent specification is identified by its native children, not by a
-  // fact row of its own.
-  if (context.tickets.some((t) => t.parent === number)) {
-    const wave = selectReviewWave(
-      context.tickets,
-      context.pullRequests,
-      number,
-      context.previouslyReviewed ?? [],
-    );
-    return {
-      ok: true,
-      reference,
-      objectType: "parent-specification",
-      plan: {
-        mode: "parent-wave",
-        spec: number,
-        specReview: "available",
-        autoMergeAllowed: true,
-        selections: wave.map((item) => ({
-          ticket: item.ticket,
-          prNumber: item.prNumber,
-          headSha: item.headSha,
-          baseSha: item.baseSha,
-        })),
-      },
-    };
-  }
-
   const pr = context.pullRequests.find((p) => p.prNumber === number);
   if (pr) {
     if (pr.state !== "open") {
@@ -244,6 +233,47 @@ export function resolveReviewTarget(
         specReview: spec === null ? "unavailable" : "available",
         autoMergeAllowed: spec !== null && readiness.ready,
         selections: [singleSelection(pr)],
+      },
+    };
+  }
+
+  // A parent specification is identified by its native children, not by a
+  // fact row of its own.
+  if (context.tickets.some((t) => t.parent === number)) {
+    const ambiguous = ambiguousParentPullRequests(
+      context.tickets,
+      context.pullRequests,
+      number,
+    );
+    if (ambiguous) {
+      return {
+        ok: false,
+        reference,
+        diagnostic: "ambiguous-pull-requests",
+        detail: `parent specification #${number} has several candidate pull requests for issue #${ambiguous[0].ticket}: ${ambiguous.map((candidate) => `#${candidate.prNumber}`).join(", ")}`,
+      };
+    }
+    const wave = selectReviewWave(
+      context.tickets,
+      context.pullRequests,
+      number,
+      context.previouslyReviewed ?? [],
+    );
+    return {
+      ok: true,
+      reference,
+      objectType: "parent-specification",
+      plan: {
+        mode: "parent-wave",
+        spec: number,
+        specReview: "available",
+        autoMergeAllowed: true,
+        selections: wave.map((item) => ({
+          ticket: item.ticket,
+          prNumber: item.prNumber,
+          headSha: item.headSha,
+          baseSha: item.baseSha,
+        })),
       },
     };
   }

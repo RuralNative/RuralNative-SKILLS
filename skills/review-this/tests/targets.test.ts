@@ -124,6 +124,34 @@ describe("resolveReviewTarget", () => {
     assert.equal(result.plan.autoMergeAllowed, true);
   });
 
+  test("resolves a shared number as a pull request before parent inference", () => {
+    const ctx = context({
+      tickets: [ticket({ number: 201 }), ticket({ number: 202, parent: 201 })],
+      pullRequests: [prLink({ ticket: 202, prNumber: 201 })],
+    });
+    const result = resolveReviewTarget("#201", ctx);
+    assert.ok(result.ok);
+    assert.equal(result.objectType, "pull-request");
+    assert.equal(result.plan.spec, 201);
+    assert.deepEqual(result.plan.selections.map((s) => s.prNumber), [201]);
+  });
+
+  test("parent mode reports ambiguous child pull requests before selection", () => {
+    const ctx = context({
+      pullRequests: [
+        prLink({ ticket: 154, prNumber: 301 }),
+        prLink({ ticket: 154, prNumber: 306 }),
+      ],
+    });
+    const result = resolveReviewTarget(`#${SPEC}`, ctx);
+    assert.equal(result.ok, false);
+    if (!result.ok) {
+      assert.equal(result.diagnostic, "ambiguous-pull-requests");
+      assert.match(result.detail, /#301/);
+      assert.match(result.detail, /#306/);
+    }
+  });
+
   test("parent mode rediscovers pull requests created after invocation without reselecting an unchanged reviewed pair", () => {
     const ctx = context({
       pullRequests: [prLink({ ticket: 154, prNumber: 301 })],
@@ -276,6 +304,10 @@ describe("reviewReadiness", () => {
     assert.equal(noRef.ready, false);
     const noEvidence = reviewReadiness(prLink({ ticket: 154, prNumber: 301, hasAcceptanceEvidence: false }));
     assert.equal(noEvidence.ready, false);
+    const noHead = reviewReadiness(prLink({ ticket: 154, prNumber: 301, headSha: "" }));
+    assert.equal(noHead.ready, false);
+    const noBase = reviewReadiness(prLink({ ticket: 154, prNumber: 301, baseSha: "" }));
+    assert.equal(noBase.ready, false);
   });
 
   test("ready-for-human is not part of readiness", () => {

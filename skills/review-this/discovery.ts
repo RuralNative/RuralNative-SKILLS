@@ -61,6 +61,15 @@ export function selectReviewWave(
   const reviewed = new Set(
     previouslyReviewed.map((r) => `${r.prNumber}:${r.headSha}:${r.baseSha}`),
   );
+  const openClosingPullRequests = new Map<number, number>();
+  for (const pr of prLinks) {
+    if (pr.state === "open" && pr.closesTicket === pr.ticket) {
+      openClosingPullRequests.set(
+        pr.ticket,
+        (openClosingPullRequests.get(pr.ticket) ?? 0) + 1,
+      );
+    }
+  }
   const wave: ReviewWaveItem[] = [];
   for (const pr of prLinks) {
     if (pr.state !== "open") continue;
@@ -70,6 +79,7 @@ export function selectReviewWave(
     if (ticket.state !== "open") continue;
     if (ticket.labels.includes(LABEL_NEEDS_INFO)) continue;
     if (pr.closesTicket !== pr.ticket) continue;
+    if (openClosingPullRequests.get(pr.ticket) !== 1) continue;
     if (!pr.hasAcceptanceEvidence) continue;
     if (reviewed.has(`${pr.prNumber}:${pr.headSha}:${pr.baseSha}`)) continue;
     wave.push({

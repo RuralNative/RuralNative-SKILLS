@@ -78,6 +78,15 @@ describe("selectReviewWave", () => {
     assert.deepEqual(withoutLabel.map((w) => w.ticket), [150]);
   });
 
+  test("does not select several valid pull requests for one child", () => {
+    const tickets = [ticket({ number: 150 })];
+    const prs = [
+      pr({ ticket: 150, prNumber: 1 }),
+      pr({ ticket: 150, prNumber: 2 }),
+    ];
+    assert.deepEqual(selectReviewWave(tickets, prs, SPEC), []);
+  });
+
   test("preserves native child order even when PRs arrive out of order", () => {
     const tickets = [ticket({ number: 10 }), ticket({ number: 20 }), ticket({ number: 30 })];
     const prs = [pr({ ticket: 30, prNumber: 3 }), pr({ ticket: 10, prNumber: 1 }), pr({ ticket: 20, prNumber: 2 })];
