@@ -49,6 +49,22 @@ export function activeManagedWorkers(
   return workers.filter((w) => !w.finished);
 }
 
+export interface AgentManagerTaskPlan {
+  ticket: number;
+  task: { prompt: string };
+}
+
+/** Builds one host-neutral Agent Manager task and prompt for each ticket. */
+export function planAgentManagerTasks(
+  tickets: readonly number[],
+  renderedTemplate: string,
+): AgentManagerTaskPlan[] {
+  return tickets.map((ticket) => ({
+    ticket,
+    task: { prompt: renderedTemplate.replace("Issue #0", `Issue #${ticket}`) },
+  }));
+}
+
 /**
  * Free worker slots under both caps: `MAX_ACTIVE_WORKERS` implementation
  * workers for this stage and `MAX_MANAGED_WORKERS` total managed workers in
@@ -128,11 +144,11 @@ export type ResumeAction =
  * reuses what exists, and durable delivery is left alone.
  */
 export function resumeAction(fact: ReservationFact): ResumeAction {
-  if (fact.assignees.length === 0) {
-    return { action: "reserve", claimTicket: true };
-  }
   if (isDelivered(fact)) {
     return { action: "delivery-durable" };
+  }
+  if (fact.assignees.length === 0) {
+    return { action: "reserve", claimTicket: true };
   }
   return {
     action: "resume-worker",
@@ -164,15 +180,15 @@ export function cleanupDecision(fact: CleanupFact): {
   removeWorktree: boolean;
   report: WorktreeOutcome;
 } {
-  if (fact.deliveredEvidenceDurable && fact.hostClosesWorktrees) {
-    return { stopSession: true, removeWorktree: true, report: "removed" };
-  }
   if (fact.stoppedWithNeedsInfo || !fact.deliveredEvidenceDurable) {
     return {
       stopSession: true,
       removeWorktree: false,
       report: "preserved-for-diagnosis",
     };
+  }
+  if (fact.deliveredEvidenceDurable && fact.hostClosesWorktrees) {
+    return { stopSession: true, removeWorktree: true, report: "removed" };
   }
   return {
     stopSession: true,

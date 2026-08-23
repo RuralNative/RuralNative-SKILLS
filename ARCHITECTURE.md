@@ -78,8 +78,8 @@ Retired ADRs stay listed for complete coverage; their numbers are never reused.
   `REVIEW.md`; cloud review reads it from the pull-request base branch.
 - Accepted target in ADR-0019: user-created command sessions run workflow stages
   independently, and unsupported Kilo worktree closure reports
-  `cleanup-pending`. Behavior tickets #154-#158 remain pending, so seam leaves
-  retain current shipped behavior until those tickets merge.
+  `cleanup-pending`. Behavior ticket #155 is shipped; #154 and #156-#158 remain
+  pending, so seam leaves retain current shipped behavior until those tickets merge.
 
 ## Coverage
 

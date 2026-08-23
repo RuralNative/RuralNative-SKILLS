@@ -13,6 +13,8 @@ import {
   type WorkerFact,
 } from "./workflow-state.ts";
 
+const PARENTLESS_VALIDATION_SPEC = -1;
+
 /** The requested references, parsed from `#<n>` forms. */
 export function parseInvocation(
   refs: readonly string[],
@@ -26,9 +28,9 @@ export function parseInvocation(
  * `MAX_ACTIVE_WORKERS` frontier tickets in native child order. Anything else
  * is an explicit set validated against the same gates as the frontier.
  *
- * The specification number always comes from the request, never from fact
+ * The specification selector always comes from the request, never from fact
  * order: `numbers[0]` on the specification branch, the common observed
- * parent of the requested tickets otherwise.
+ * parent of the requested tickets, or no parent for one standalone ticket.
  */
 export function planBoundedSet(
   refs: readonly string[],
@@ -46,7 +48,7 @@ export function planBoundedSet(
   const numbers = parseInvocation(refs);
 
   let requested: number[];
-  let spec: number;
+  let spec: number | null;
   if (numbers.length === 1 && tickets.some((t) => t.parent === numbers[0])) {
     // Parent-specification input: native child order comes from fact order.
     spec = numbers[0];
@@ -61,13 +63,29 @@ export function planBoundedSet(
     );
     if (parents.size === 1 && !parents.has(null)) {
       spec = [...parents][0] as number;
+    } else if (requested.length === 1 && parents.size === 1 && parents.has(null)) {
+      spec = null;
     } else {
-      // No common observed parent: validation reports the out-of-parent set.
+      // No common observed parent, or multiple parentless tickets: reject the set.
       spec = 0;
     }
   }
 
-  const plan = validateDispatch(requested, tickets, workers, spec);
+  // Keep every gate in validateDispatch while adapting the one parentless
+  // fact to its numeric specification selector without changing the shared core.
+  const validationTickets = spec === null
+    ? tickets.map((ticket) =>
+        ticket.number === requested[0]
+          ? { ...ticket, parent: PARENTLESS_VALIDATION_SPEC }
+          : ticket,
+      )
+    : tickets;
+  const plan = validateDispatch(
+    requested,
+    validationTickets,
+    workers,
+    spec ?? PARENTLESS_VALIDATION_SPEC,
+  );
   if (plan.violations.length > 0) {
     return { ok: false, violations: plan.violations };
   }

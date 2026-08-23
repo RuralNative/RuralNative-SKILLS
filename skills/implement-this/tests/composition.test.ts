@@ -153,14 +153,15 @@ describe("pull-request-only delivery (INV-5)", () => {
 });
 
 describe("worker isolation and Agent Manager dispatch (implement-this:INV-6)", () => {
-  test("each ticket gets isolated worktree, branch, session, status, and stop control", () => {
+  test("each ticket gets isolated worktree, branch, session, overview-derived status, and supported stop control", () => {
     const skill = read("skills/implement-this/SKILL.md");
     const n = norm(skill);
     assert.ok(n.includes("isolated git worktree"), "isolated worktree per ticket");
     assert.ok(n.includes("feature branch"), "feature branch per ticket");
     assert.ok(n.includes("targeted worker session"), "targeted session per worker");
-    assert.ok(n.includes("status lookup"), "status lookup per worker");
-    assert.ok(n.includes("stop control"), "stop control per worker");
+    assert.ok(n.includes("status comes from the agent manager overview"), "status comes from the overview");
+    assert.equal(n.includes('action: "status"'), false, "unsupported status action is rejected");
+    assert.ok(n.includes('supported stop control is `action: "stop"`'), "stop uses a supported action");
   });
 
   test("kilo execution uses agent_manager worktree mode with one task and one prompt per ticket", () => {

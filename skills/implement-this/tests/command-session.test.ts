@@ -12,6 +12,7 @@ import {
   cleanupDecision,
   isDelivered,
   nextPollDelay,
+  planAgentManagerTasks,
   resumeAction,
   schedulingCollision,
   spawnCapacity,
@@ -61,6 +62,32 @@ describe("worker caps", () => {
       activeManagedWorkers(workers).map((w) => w.id),
       ["ses_a", "ses_c"],
     );
+  });
+});
+
+describe("Agent Manager task planning", () => {
+  test("plans exactly one task and one initial prompt per ticket", () => {
+    const table: Array<[string, readonly number[], string, readonly string[]]> = [
+      ["one ticket", [131], "Issue #0", ["Issue #131"]],
+      [
+        "several tickets",
+        [131, 135],
+        "Implement Issue #0 in its worktree",
+        [
+          "Implement Issue #131 in its worktree",
+          "Implement Issue #135 in its worktree",
+        ],
+      ],
+    ];
+    for (const [name, tickets, template, prompts] of table) {
+      const plans = planAgentManagerTasks(tickets, template);
+      assert.equal(plans.length, tickets.length, `${name}: one task per ticket`);
+      assert.deepEqual(plans.map((plan) => plan.ticket), tickets, name);
+      assert.deepEqual(plans.map((plan) => plan.task.prompt), prompts, `${name}: one prompt per task`);
+      for (const plan of plans) {
+        assert.deepEqual(Object.keys(plan.task), ["prompt"], `${name}: task has one prompt`);
+      }
+    }
   });
 });
 
@@ -149,6 +176,18 @@ describe("durable delivery", () => {
         "delivery-durable",
         {},
       ],
+      [
+        "unassigned ticket with durable delivery stays delivered",
+        {
+          ...reserved,
+          assignees: [],
+          pullRequestOpen: true,
+          closingReferenceValid: true,
+          acceptanceEvidencePosted: true,
+        },
+        "delivery-durable",
+        {},
+      ],
     ];
     for (const [name, fact, action, rest] of table) {
       const decision = resumeAction(fact);
@@ -179,6 +218,12 @@ describe("cleanup negotiation", () => {
         { deliveredEvidenceDurable: true, stoppedWithNeedsInfo: false, hostClosesWorktrees: true },
         "removed",
         true,
+      ],
+      [
+        "needs-info preserves durable work on a closing host",
+        { deliveredEvidenceDurable: true, stoppedWithNeedsInfo: true, hostClosesWorktrees: true },
+        "preserved-for-diagnosis",
+        false,
       ],
       [
         "delivered work on current Kilo reports cleanup-pending",
