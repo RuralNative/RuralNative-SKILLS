@@ -1,20 +1,18 @@
 # RuralNative-SKILLS
 
-A focused shelf of three installable skills that make agent output more reliable without carrying extra prose. `document-for-agents` keeps the agent-facing doc tree honest. `document-for-humans` derives plain-language pages from that tree for stakeholders. `unslopify` cleans model-generated phrasing on explicit scope before anything ships, and once loaded it stays active over the agent's own English output. The docs work as a cache for decisions, vocabulary, and invariants that code alone cannot recover. Agents use it as a codebase cache for the unrecoverable where-and-why context, with focused loading instead of reading all docs before acting.
+A focused shelf of six installable skills in two groups. Three cover documentation and prose: `document-for-agents` keeps the agent-facing doc tree honest, `document-for-humans` derives plain-language pages from that tree for stakeholders, and `unslopify` cleans model-generated phrasing on explicit scope before anything ships, staying active over the agent's own English output once loaded. The other three — `plan-this`, `implement-this`, and `review-this` — are an opinionated development workflow that adapts Matt Pocock's planning, implementation, and review skills; see [Development Workflow](#development-workflow). The docs work as a cache for decisions, vocabulary, and invariants that code alone cannot recover. Agents use it as a codebase cache for the unrecoverable where-and-why context, with focused loading instead of reading all docs before acting.
 
 ## Installation
 
-Install `unslopify` first — both documentation skills depend on it. If it is absent the documentation workflows stop and emit `npx skills add RuralNative/RuralNative-SKILLS --skill unslopify`; missing Python for the optional scanner does not stop the workflow.
+### Documentation and prose skills
 
-### Via npx (recommended)
+Install `unslopify` first — both documentation skills depend on it. If it is absent the documentation workflows stop and emit `npx skills add RuralNative/RuralNative-SKILLS --skill unslopify`; missing Python for the optional scanner does not stop the workflow.
 
 ```bash
 npx skills add RuralNative/RuralNative-SKILLS --skill unslopify
 npx skills add RuralNative/RuralNative-SKILLS --skill document-for-agents
 npx skills add RuralNative/RuralNative-SKILLS --skill document-for-humans
 ```
-
-### Manual (clone and copy)
 
 ```bash
 git clone https://github.com/RuralNative/RuralNative-SKILLS.git
@@ -26,13 +24,46 @@ cp -r skills/document-for-humans ~/.claude/skills/document-for-humans
 
 For Kilo project scope use `.kilo/skills/<skill>`; for Kilo user scope use `~/.agents/skills/<skill>`. Each destination folder must be named for its skill and contain `SKILL.md` at its root alongside `reference/` where present.
 
+### Workflow skills
+
+The development workflow is an opinionated adapter over [Matt Pocock's engineering skills](https://github.com/mattpocock/skills). Install those dependencies first, in this order:
+
+```bash
+npx skills add mattpocock/skills --skill grill-with-docs
+npx skills add mattpocock/skills --skill to-spec
+npx skills add mattpocock/skills --skill to-tickets
+npx skills add mattpocock/skills --skill implement
+npx skills add mattpocock/skills --skill code-review
+```
+
+Each dependency ships at a verified source under `skills/engineering/` in the upstream repository:
+
+- [`grill-with-docs`](https://github.com/mattpocock/skills/tree/main/skills/engineering/grill-with-docs) — grills a plan into decisions while recording ADRs and glossary entries.
+- [`to-spec`](https://github.com/mattpocock/skills/tree/main/skills/engineering/to-spec) — turns the agreed conversation into a published parent specification.
+- [`to-tickets`](https://github.com/mattpocock/skills/tree/main/skills/engineering/to-tickets) — breaks the spec into tracer-bullet tickets with blocking edges.
+- [`implement`](https://github.com/mattpocock/skills/tree/main/skills/engineering/implement) — implements one ticket or spec inside a worker.
+- [`code-review`](https://github.com/mattpocock/skills/tree/main/skills/engineering/code-review) — reviews changes against repo standards and the originating spec.
+
+Then install the three local workflow adapters:
+
+```bash
+npx skills add RuralNative/RuralNative-SKILLS --skill plan-this
+npx skills add RuralNative/RuralNative-SKILLS --skill implement-this
+npx skills add RuralNative/RuralNative-SKILLS --skill review-this
+```
+
+Their sources live in this repository under [`skills/plan-this`](https://github.com/RuralNative/RuralNative-SKILLS/tree/main/skills/plan-this), [`skills/implement-this`](https://github.com/RuralNative/RuralNative-SKILLS/tree/main/skills/implement-this), and [`skills/review-this`](https://github.com/RuralNative/RuralNative-SKILLS/tree/main/skills/review-this).
+
 ## Technical Requirements
 
 - Any codebase an agent can read — no runtime, framework, or language requirement.
 - `unslopify` required before `document-for-agents` or `document-for-humans`; install it first. The `document-for-humans` workflow also requires an established agent-first doc tree from `document-for-agents`.
+- The workflow skills require Matt Pocock's `grill-with-docs`, `to-spec`, `to-tickets`, `implement`, and `code-review` installed before them.
 - Optional: Python 3 for the advisory scanner at `skills/unslopify/scanner.py` (stdlib only, no network). When absent, the workflow continues model-only with the same scope and preservation rules.
 
 ## Our Shelf
+
+The documentation and prose group:
 
 | Skill | What it does |
 |---|---|
@@ -71,6 +102,32 @@ Shortcuts are tracked openly in one debt registry, and history is append-only vi
 
 `unslopify` also runs as a hard dependency inside both documentation skills. Standalone scope is caller-provided; parent scope governs inside a documentation workflow. Once loaded, the agent's own English output is the automatic scope: ordinary conversation is audited silently, published documents, specifications, tickets, progress updates, decisions, and GitHub comments get the same cleanup with the full report at publication boundaries, and user-provided text stays inert unless explicitly requested. Technical fidelity outranks style, so exact domain terms, identifiers, commands, labels, dependencies, quotations, and implementation-critical specification and ticket wording survive even when they match a style candidate. Parent decisions, tier routing, glossary terms, invariants, and approval gates outrank style findings. Missing `unslopify` stops the parent workflow with `npx skills add RuralNative/RuralNative-SKILLS --skill unslopify`; missing Python does not.
 
+## Development Workflow
+
+`plan-this`, `implement-this`, and `review-this` form one opinionated pipeline over Matt Pocock's planning, implementation, and review skills:
+
+```
+/grill-with-docs -> /to-spec -> /to-tickets -> /implement -> /code-review
+```
+
+| Workflow command | Role | Invocation example |
+|---|---|---|
+| **plan-this** | Grills a task into decisions, then publishes a parent specification with child tickets | `/plan-this <task>` |
+| **implement-this** | Dispatches frontier tickets to isolated workers that deliver pull requests | `/implement-this #<ticket>` |
+| **review-this** | Owns one pull-request review wave through merge, label promotion, and parent closure | `/review-this #<spec>` |
+
+Every fresh `/plan-this` run grills at least one decision frontier before anything publishes. Publication waits for explicit approval after the shared understanding and the proposed ticket graph are shown; one invocation authorizes the interactive chain, but approval stays separate.
+
+**Command session.** You create one session per stage and run the workflow command there yourself — implementation and review command sessions are user-created. That command session validates input, reserves work, dispatches workers, monitors progress, and reports; it never edits ticket code. Nothing sits above the stages and no daemon runs between turns: implementation never merges, and review never builds a missing implementation from scratch.
+
+**Workers and isolation.** Every ticket or pull-request fix runs in its own managed git worktree on its own branch; worktree isolation is mandatory, not optional. One worker owns exactly one ticket or one pull request. Each stage runs at most three workers, and at most four managed workers may be active across the workspace at any moment. The parent command session polls with increasing delays, reports only state changes, and checkpoints after 30 minutes without progress; a resumed session rebuilds its picture from GitHub's durable records instead of duplicating any assignee, branch, session, or pull request.
+
+**Review.** Local review always runs on every pull-request head and checks security, performance, correctness, style, tests and test bloat, documentation, and specification compliance against `REVIEW.md`. Cloud review adds evidence when it is available, but the local verdict gates merge. A pull request receives at most two pushed fix heads, each followed by review, then one final review.
+
+**Cleanup.** A successful worktree closes through supported host operations only after its pull request and acceptance evidence are durable. On today's Kilo chat side, stopping a session does not remove its checkout, so a finished session reports `cleanup-pending` and leaves everything in place rather than touching directories behind Agent Manager. Failed worktrees stay on disk for diagnosis after a `needs-info` stop. Cleaning up worktrees that existed before this workflow is a separate audited task outside the workflow itself.
+
+**Hosts.** Kilo Code's VS Code extension is the best-tested host, not the only compatible host — anything that provides isolated worktrees plus prompt, status, and stop controls can run the same workflow. See the official [Kilo Code VS Code extension](https://marketplace.visualstudio.com/items?itemName=kilocode.kilo-code), the [Agent Manager reference](https://kilo.ai/docs/automate/agent-manager), and the [Agent Manager Workflows guide](https://kilo.ai/docs/automate/agent-manager-workflows).
+
 ## AI-First Workflow Integration
 
 - **Agent-loaded.** Descriptions route work automatically; no manual setup per task.
@@ -103,4 +160,4 @@ Shortcuts are tracked openly in one debt registry, and history is append-only vi
 - Measure two-hop re-orientation with a fresh-agent test.
 - Reduce index merge conflicts for parallel seam additions.
 - Add reviewer checklists for the prose-only rules the gate cannot judge.
-- Keep the scope to these three skills — additional distribution or workflow skills ship under their own seams, not this README.
+- Keep this README current as the workflow skills gain their remaining documented behavior.
