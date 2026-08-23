@@ -16,10 +16,8 @@ standard.
 
 ## Severity
 
-- Blocking: broken behavior, failing verification, security or trust-boundary
-  violations, spec deviations, missing same-change doc updates.
-- Advisory: style and preference calls with no documented rule behind them.
-  They do not block merge.
+- Blocking: broken behavior, failing verification, security or trust-boundary violations, spec deviations, missing same-change doc updates.
+- Advisory: style and preference calls with no documented rule behind them; they do not block merge.
 - A finding blocks only when it cites what it enforces: an invariant, a policy
   line, an acceptance criterion, or a named failure with output.
 

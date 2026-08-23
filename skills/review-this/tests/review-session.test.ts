@@ -308,7 +308,6 @@ describe("operation counts across lifecycle paths", () => {
     assert.equal(fix.allowed, true);
     assert.equal(fix.createsFixRound, true);
     c.fixBatches += 1;
-    assert.equal(operationBudget(c, "delta-review").allowed, true);
     c.deltaReviews += 1;
     assert.equal(operationBudget(c, "final-verification").allowed, true);
     c.finalVerificationRuns += 1;
@@ -325,7 +324,6 @@ describe("operation counts across lifecycle paths", () => {
       assert.equal(fix.allowed, true, `round ${roundsUsed}`);
       assert.equal(fix.createsFixRound, true, `round ${roundsUsed}`);
       c.fixBatches += 1;
-      assert.equal(operationBudget(c, "delta-review").allowed, true);
       c.deltaReviews += 1;
     }
     assert.deepEqual(
@@ -349,10 +347,8 @@ describe("operation counts across lifecycle paths", () => {
     c.initialFullReviews = 1;
     const review = planRevisionReview({ initialRevision: false, baseMoved: true });
     assert.equal(review.depth, "delta");
-    c.deltaReviews += 1;
-    assert.equal(operationBudget(c, "delta-review").allowed, true);
-    c.deltaReviews += 2;
-    assert.equal(operationBudget(c, "delta-review").allowed, true);
+    c.deltaReviews += 3;
+    assert.equal(operationBudget({ ...c, deltaReviews: Number.MAX_SAFE_INTEGER }, "delta-review").allowed, true);
     assert.equal(operationBudget(c, "fix-batch").allowed, true);
     assert.equal(c.fixBatches, 0);
   });
