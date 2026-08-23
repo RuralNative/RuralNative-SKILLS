@@ -7,6 +7,7 @@ const readme = fs.readFileSync(path.join(ROOT,"README.md"),"utf8");
 function headings(m:string){ return [...m.matchAll(/^#{1,3}\s+(.+)$/gm)].map(x=>x[1].trim()); }
 function section(startIdx:number){ const next=readme.indexOf("\n## ",startIdx+10); return readme.slice(startIdx, next===-1? undefined: next); }
 function bashCmds(sec:string, re:RegExp){ return [...sec.matchAll(/```bash([\s\S]*?)```/g)].map(m=>m[1]).join("\n").matchAll(re); }
+function wfSection(){ return section(readme.indexOf("\n## Development Workflow")); }
 
 describe("README contract #107 #159",()=>{
   test("required heading order after title",()=>{
@@ -33,8 +34,7 @@ describe("README contract #107 #159",()=>{
   });
 
   test("workflow section lists exactly three workflow commands",()=>{
-    const wfIdx=readme.indexOf("\n## Development Workflow");
-    const wfSec=section(wfIdx);
+    const wfSec=wfSection();
     const rows=[...wfSec.matchAll(/^\|\s*\*\*(plan-this|implement-this|review-this)\*\*/gm)];
     assert.equal(rows.length,3,`expected 3 workflow command rows, got ${rows.length}`);
     for(const name of ["plan-this","implement-this","review-this"]){
@@ -98,22 +98,18 @@ describe("README contract #107 #159",()=>{
     assert.ok(/waits? for explicit approval/i.test(readme),"missing explicit approval gate language");
   });
 
-  test("workflow explanation covers isolation, sessions, monitoring, limits, and fix cap",()=>{
-    const wfIdx=readme.indexOf("\n## Development Workflow");
-    const wfSec=section(wfIdx);
+  test("workflow explanation covers isolation, sessions, monitoring, and limits",()=>{
+    const wfSec=wfSection();
     assert.ok(/isolation is mandatory/i.test(wfSec),"missing mandatory worktree isolation");
     assert.ok(/one worker owns exactly one (ticket|pull request)/i.test(wfSec),"missing one worker per ticket or PR");
-    assert.ok(wfSec.toLowerCase().includes("command session"),"missing command session term");
     assert.ok(/30 minutes without progress/i.test(wfSec),"missing 30-minute inactivity checkpoint");
-    assert.ok(/at most two pushed fix heads/i.test(wfSec),"missing two-fix-per-PR cap");
     assert.ok(/at most three workers/i.test(wfSec),"missing three-workers-per-stage limit");
     assert.ok(/at most four managed workers/i.test(wfSec),"missing four-active-managed-workers limit");
     assert.ok(/user-created/i.test(wfSec),"missing user-created command session statement");
   });
 
   test("local review scope and cleanup semantics are stated accurately",()=>{
-    const wfIdx=readme.indexOf("\n## Development Workflow");
-    const wfSec=section(wfIdx);
+    const wfSec=wfSection();
     for(const area of ["security","performance","correctness","style","test bloat","documentation","specification compliance"]){
       assert.ok(wfSec.includes(area),`review scope missing ${area}`);
     }
@@ -131,6 +127,13 @@ describe("README contract #107 #159",()=>{
     assert.ok(!/\bfork\b/i.test(readme),"README must not involve repository forks in execution");
   });
 
+  test("does not promise an unsafe host fallback that weakens worktree isolation",()=>{
+    assert.ok(
+      !/without isolated worktrees|worktree isolation (?:is )?optional|(?:fallback|fall back)[^.\n]{0,120}(?:isolat|worktre)|(?:isolat|worktre)[^.\n]{0,120}fallback/i.test(readme),
+      "README must not offer fallback-style hosting that bypasses mandatory worktree isolation",
+    );
+  });
+
   test("focused doc-cache purpose language",()=>{
     const n=readme.toLowerCase();
     assert.ok(n.includes("codebase cache") || n.includes("cache for the unrecoverable"));
@@ -140,8 +143,7 @@ describe("README contract #107 #159",()=>{
   });
 
   test("ordinary and high-risk classes with 60 and 90 minute SLOs as measured targets",()=>{
-    const wfIdx=readme.indexOf("\n## Development Workflow");
-    const wfSec=section(wfIdx);
+    const wfSec=wfSection();
     assert.ok(/ordinary/i.test(wfSec) && /high-risk/i.test(wfSec),"missing ordinary/high-risk classification");
     assert.ok(wfSec.includes("60 minutes"),"missing 60 minutes SLO");
     assert.ok(wfSec.includes("90 minutes"),"missing 90 minutes SLO");
@@ -150,8 +152,7 @@ describe("README contract #107 #159",()=>{
   });
 
   test("command session, worker session, scheduling collision, and GitHub-durable lifecycle terms",()=>{
-    const wfIdx=readme.indexOf("\n## Development Workflow");
-    const wfSec=section(wfIdx);
+    const wfSec=wfSection();
     assert.ok(/command session/i.test(wfSec),"missing command session term");
     assert.ok(/worker session/i.test(wfSec),"missing worker session term");
     assert.ok(/scheduling collision/i.test(wfSec),"missing scheduling collision term");
@@ -159,15 +160,13 @@ describe("README contract #107 #159",()=>{
   });
 
   test("implementation uses one isolated worktree per ticket and never edits ticket code in command session",()=>{
-    const wfIdx=readme.indexOf("\n## Development Workflow");
-    const wfSec=section(wfIdx);
+    const wfSec=wfSection();
     assert.ok(/Implementation.*one isolated worktree per ticket/i.test(wfSec),"missing implementation one worktree per ticket");
     assert.ok(/never edits ticket code in the command session/i.test(wfSec),"missing never edits ticket code in command session");
   });
 
   test("review uses one persistent PR worktree with fresh subagents",()=>{
-    const wfIdx=readme.indexOf("\n## Development Workflow");
-    const wfSec=section(wfIdx);
+    const wfSec=wfSection();
     assert.ok(/one persistent PR worktree/i.test(wfSec),"missing one persistent PR worktree");
     assert.ok(/from initial review through fixes.*final verification.*merge/i.test(wfSec),"missing PR worktree lifecycle");
     assert.ok(/fresh.*Standards.*Spec.*subagents/i.test(wfSec),"missing fresh Standards and Spec subagents");
@@ -175,8 +174,7 @@ describe("README contract #107 #159",()=>{
   });
 
   test("review cadence: initial full review, delta rereviews, escalation triggers, advisory batching, two-fix cap",()=>{
-    const wfIdx=readme.indexOf("\n## Development Workflow");
-    const wfSec=section(wfIdx);
+    const wfSec=wfSection();
     assert.ok(/initial PR revision.*full Standards and Spec review/i.test(wfSec),"missing initial full review");
     assert.ok(/delta review/i.test(wfSec),"missing delta review");
     assert.ok(/Escalation to full review/i.test(wfSec),"missing escalation to full review");
@@ -188,16 +186,14 @@ describe("README contract #107 #159",()=>{
   });
 
   test("affected-seam tests during iteration and one final full gate with uncertainty escalation",()=>{
-    const wfIdx=readme.indexOf("\n## Development Workflow");
-    const wfSec=section(wfIdx);
+    const wfSec=wfSection();
     assert.ok(/affected-seam tests/i.test(wfSec),"missing affected-seam tests");
     assert.ok(/One planned full repository verification/i.test(wfSec),"missing one planned final full verification");
     assert.ok(/uncertainty escalates to the full repository gate/i.test(wfSec),"missing uncertainty escalation");
   });
 
   test("immediate review at PR open, dispatch packet, setup measurement, dependency reconciliation, PR timing evidence",()=>{
-    const wfIdx=readme.indexOf("\n## Development Workflow");
-    const wfSec=section(wfIdx);
+    const wfSec=wfSection();
     assert.ok(/Review starts immediately when the PR head/i.test(wfSec),"missing immediate review at PR open");
     assert.ok(/dispatch packet/i.test(wfSec),"missing dispatch packet");
     assert.ok(/reruns measured setup only when dependency manifests differ/i.test(wfSec),"missing setup measurement and reconciliation");
@@ -205,8 +201,7 @@ describe("README contract #107 #159",()=>{
   });
 
   test("three-ticket smoke acceptance: median at most 60, no ordinary above 90, all gates green",()=>{
-    const wfIdx=readme.indexOf("\n## Development Workflow");
-    const wfSec=section(wfIdx);
+    const wfSec=wfSection();
     assert.ok(/three-ticket Kilo smoke run/i.test(wfSec),"missing three-ticket smoke run");
     assert.ok(/median at most 60 minutes/i.test(wfSec),"missing median at most 60 minutes");
     assert.ok(/no ordinary ticket above 90 minutes/i.test(wfSec),"missing no ordinary ticket above 90 minutes");
