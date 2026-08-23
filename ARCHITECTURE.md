@@ -79,9 +79,9 @@ Retired ADRs stay listed for complete coverage; their numbers are never reused.
   `REVIEW.md`; cloud review reads it from the pull-request base branch.
 - Accepted target in ADR-0019: user-created command sessions run workflow stages
   independently, and unsupported Kilo worktree closure reports
-  `cleanup-pending`. Target resolution from #156 is shipped; behavior tickets
-  #154, #155, #157, and #158 remain pending, so seam leaves retain current
-  shipped behavior for those tickets until they merge.
+  `cleanup-pending`. Behavior tickets #154 and #156 shipped the planning and
+  target-resolution changes; tickets #155, #157, and #158 remain pending, so
+  their seam leaves retain current shipped behavior until those tickets merge.
 
 ## Coverage
 
@@ -136,9 +136,10 @@ Every authored doc is machine-checked against disk by `scripts/docs-check.sh`
 | Any change | AGENTS.md → ARCHITECTURE.md → the seam's leaf doc → glossary | small |
 | Re-orient after compaction | ARCHITECTURE.md → task leaf doc → glossary | one small fixed read |
 
-Budgets are hard caps on orientation docs, never code inspection inside the
-affected seam. A missing fact is a named cache gap recorded in the issue
-tracker; owner approval is required before the read set widens (ADR-0017).
+Budgets are hard caps on orientation documents, and they never block code
+inspection inside the affected seam. A missing fact becomes a named cache gap
+recorded in the issue tracker; owner approval is required before widening the
+documentation read set (ADR-0017).
 
 ## Checks
 
