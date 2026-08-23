@@ -110,4 +110,31 @@ describe("affected-test evidence", () => {
       false,
     );
   });
+
+  test("a defensible mapping runs exactly its selected targeted tests", () => {
+    assert.deepEqual(
+      verificationPlan({
+        affectedSeams: ["review-this"],
+        selectedTests: ["skills/review-this/tests/review-session.test.ts"],
+        mappingDefensible: true,
+      }),
+      {
+        runTargetedTests: true,
+        runFullRepositoryGate: false,
+        reason: "affected-seam mapping is defensible; reserve the full gate for the final revision",
+      },
+    );
+  });
+
+  test("an uncertain mapping records why it escalated to the full repository gate", () => {
+    const plan = verificationPlan({
+      affectedSeams: [],
+      selectedTests: [],
+      mappingDefensible: false,
+      reason: "no tests map to this seam",
+    });
+    assert.equal(plan.runTargetedTests, false);
+    assert.equal(plan.runFullRepositoryGate, true);
+    assert.equal(plan.reason, "no tests map to this seam");
+  });
 });

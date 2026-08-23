@@ -443,6 +443,54 @@ export function planFinalVerification(input: FinalVerificationInput): FinalVerif
   };
 }
 
+export interface ConflictResolutionInput {
+  hasConflict: boolean;
+  roundsUsed: number;
+}
+
+export interface ConflictResolutionPlan {
+  action: "base-refresh" | "resolve" | "stop";
+  allowed: boolean;
+  consumesFixRound: boolean;
+  review?: RevisionReviewPlan;
+  reason: string;
+}
+
+/**
+ * A conflict-free base refresh reuses the existing verdict without consuming
+ * a fix round. Resolving a real merge conflict consumes one bounded fix
+ * round and the resolved revision receives fresh semantic review.
+ */
+export function planConflictResolution(
+  input: ConflictResolutionInput,
+): ConflictResolutionPlan {
+  if (!input.hasConflict) {
+    const refresh = fixRoundDecision(input.roundsUsed, "conflict-free-base-refresh");
+    return {
+      action: "base-refresh",
+      allowed: true,
+      consumesFixRound: false,
+      reason: refresh.reason,
+    };
+  }
+  const round = fixRoundDecision(input.roundsUsed, "conflict-resolution");
+  if (!round.allowed) {
+    return {
+      action: "stop",
+      allowed: false,
+      consumesFixRound: false,
+      reason: round.reason,
+    };
+  }
+  return {
+    action: "resolve",
+    allowed: true,
+    consumesFixRound: true,
+    review: planRevisionReview({ initialRevision: false, baseMoved: true }),
+    reason: "conflict resolution consumes one bounded fix round before rereview",
+  };
+}
+
 export type RepositoryTrust = "same-repository" | "untrusted-fork";
 
 export interface PushPlan {
