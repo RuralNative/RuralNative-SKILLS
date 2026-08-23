@@ -15,7 +15,7 @@ A ticket starts only when its native GitHub blockers are closed. Every ticket de
 
 The three skills form the complete workflow. `plan-this` publishes the parent specification and native child tickets; `implement-this` runs up to three isolated pull-request workers per stage; `review-this #<spec>` reconciles Kilo cloud comments with the local Standards and Spec review before merge, promotion, and closure. GitHub keeps enough state to resume from the parent specification after any pause.
 
-The accepted command-session design starts implementation and review independently whenever each stage has work. Each session manages its own workers, finishes its own frontier, and reports cleanup honestly: worktrees close only through supported Kilo actions, and when chat cannot close one the run says `cleanup-pending` instead of deleting anything. There is no supervisor or coordinator. ADR-0019 records these rules. Tickets #154-#158 implement them, so this is a target design rather than shipped command behavior.
+The accepted command-session design starts implementation and review independently whenever each stage has work. Each session manages its own workers, finishes its own frontier, and reports cleanup honestly: worktrees close only through supported Kilo actions, and when chat cannot close one the run says `cleanup-pending` instead of deleting anything. There is no supervisor or coordinator. ADR-0019 records these rules. Ticket #154 shipped the planning side; tickets #155-#158 implement the remaining behavior, so this is still a target design for those remaining changes rather than current command behavior.
 
 ### Accepted command-session example
 

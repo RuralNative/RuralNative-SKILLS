@@ -37,7 +37,7 @@ ADR-0009 (now superseded by ADR-0014) recorded the decision to keep `disable-mod
 
 Former parity debt with `implement-this` (DEBT-7) was resolved 2026-08-20. Verified against `skills/implement-this/SKILL.md` at 48 lines including frontmatter with no wrapper sections; the trimmed contract now matches across both adapters with wrapper reference material in leaf/INSTALL/ADR.
 
-ADR-0019 (2026-08-23, parent spec #152) tightened the planning gate, and #154 shipped it: every fresh `/plan-this` run completes at least one grill frontier round before anything publishes, publication waits for explicit approval after the shared understanding and the proposed ticket graph are shown (one invocation authorizes the interactive chain, approval stays separate), an interrupted grill resumes its recorded decision tree instead of restarting, and ticket graphs are designed parallel-first with scheduling collisions kept apart from native blocker edges.
+ADR-0019 (2026-08-23, parent spec #152) tightened the planning gate, and #154 shipped the planning grill gate and parallel-first ticket graphs: every fresh `/plan-this` run completes at least one grill frontier round before anything publishes, publication waits for explicit approval after the shared understanding and the proposed ticket graph are shown (one invocation authorizes the interactive chain, approval stays separate), an interrupted grill resumes its recorded decision tree instead of restarting, and ticket graphs are designed parallel-first with scheduling collisions kept apart from native blocker edges.
 
 ## Links
 
@@ -45,7 +45,7 @@ ADR-0019 (2026-08-23, parent spec #152) tightened the planning gate, and #154 sh
 - Decision: `docs/adr/0004-verb-named-skills-flat-shelf.md` — default naming.
 - Decision: `docs/adr/0006-plan-this-fixed-template-adapter.md` — task-scoped exception and template boundary.
 - Decision: `docs/adr/0014-three-skill-development-workflow.md` — shipped three-skill workflow (supersedes ADR-0009, ADR-0012, ADR-0013).
-- Decision: `docs/adr/0019-command-session-lifecycle-and-platform-limits.md` — planning publication gate and command-session lifecycle (amends ADR-0014; behavior lands with #154).
+- Decision: `docs/adr/0019-command-session-lifecycle-and-platform-limits.md` — planning publication gate and command-session lifecycle (amends ADR-0014; #154 shipped the planning gate and parallel-first ticket graphs; #155-#158 remain pending).
 - Historical decision: `docs/adr/0009-delegation-invariants-human-invocation.md` (now superseded) — locked delegation chains and human-invocation requirement.
 - Decision: `docs/adr/0015-requirements-data-trust-and-install-provenance.md` — requirements-data trust boundary and install provenance.
 - Harness: `scripts/docs-check.sh`.

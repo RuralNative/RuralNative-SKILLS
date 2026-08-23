@@ -19,6 +19,26 @@ import {
 } from "../workflow-state.ts";
 
 const ROOT = path.resolve(import.meta.dirname ?? ".", "../../..");
+const SPEC = 130;
+
+function ticketFact(
+  overrides: Partial<TicketFact> & { number: number },
+): TicketFact {
+  return {
+    state: "open",
+    labels: [],
+    assignees: [],
+    parent: SPEC,
+    openBlockers: [],
+    ...overrides,
+  };
+}
+
+function fixedTemplateRules(body: string): string[] {
+  const rulesSection = body.match(/## Rules:\n([\s\S]*?)\n\nFinish with/);
+  assert.ok(rulesSection, "fixed template must contain a Rules section");
+  return (rulesSection[1].match(/^- .+$/gm) ?? []).map((rule) => rule.slice(2));
+}
 
 describe("plan-this identity (plan-this:INV-1)", () => {
   test("folder and frontmatter identity are exactly plan-this", () => {
@@ -481,21 +501,6 @@ describe("plan-this workflow trust boundaries (#131, plan-this:INV-9)", () => {
 });
 
 describe("plan-this canonical publication (#133, plan-this:INV-8)", () => {
-  const SPEC = 130;
-
-  function ticketFact(
-    overrides: Partial<TicketFact> & { number: number },
-  ): TicketFact {
-    return {
-      state: "open",
-      labels: [],
-      assignees: [],
-      parent: SPEC,
-      openBlockers: [],
-      ...overrides,
-    };
-  }
-
   test("parent specification is published without a claimable label", () => {
     const skill = read("skills/plan-this/SKILL.md");
     const body = getBody(skill);
@@ -609,21 +614,6 @@ describe("plan-this canonical publication (#133, plan-this:INV-8)", () => {
 });
 
 describe("plan-this grill gate and parallel-first graph (#154)", () => {
-  const SPEC = 130;
-
-  function ticketFact(
-    overrides: Partial<TicketFact> & { number: number },
-  ): TicketFact {
-    return {
-      state: "open",
-      labels: [LABEL_READY_FOR_AGENT],
-      assignees: [],
-      parent: SPEC,
-      openBlockers: [],
-      ...overrides,
-    };
-  }
-
   test("one direct invocation authorizes the chain and approval stays separate", () => {
     const body = getBody(read("skills/plan-this/SKILL.md"));
     assert.ok(
@@ -637,28 +627,25 @@ describe("plan-this grill gate and parallel-first graph (#154)", () => {
     assert.ok(body.includes("`/unslopify` remains model-invocable"), "unslopify stays model-invocable");
   });
 
-  test("a fresh run cannot publish without an answered frontier round plus later explicit approval", () => {
+  test("the fixed-template grill rule orders the fresh frontier, recorded-tree resume, and approval gate", () => {
     const body = getBody(read("skills/plan-this/SKILL.md"));
-    assert.ok(
-      body.includes("completes at least one full grill frontier round, even when the task looks fully specified"),
-      "fresh runs must complete a full frontier round even for fully specified tasks",
-    );
-    assert.ok(
-      body.includes("show the shared understanding and the proposed ticket graph and stop for the user's explicit approval"),
-      "shared understanding and graph must be shown before approval",
-    );
-    const approvalIdx = body.indexOf("user's explicit approval");
-    const authorizeIdx = body.indexOf("only that approval authorizes calling `/to-spec` and `/to-tickets`");
-    assert.ok(approvalIdx !== -1 && authorizeIdx !== -1, "approval gate identifiers must exist");
-    assert.ok(approvalIdx < authorizeIdx, "approval must precede any to-spec or to-tickets authorization");
-  });
-
-  test("interrupted runs resume the recorded tree without repeating settled questions", () => {
-    const body = getBody(read("skills/plan-this/SKILL.md"));
-    assert.ok(
-      body.includes("an interrupted run resumes its recorded decision tree without repeating settled questions"),
-      "resume must keep settled decisions",
-    );
+    const rules = fixedTemplateRules(body);
+    assert.equal(rules.length, 13, "fixed template must have thirteen rule bullets");
+    const grillRules = rules.filter((rule) => rule.startsWith("Grill before anything publishes:"));
+    assert.equal(grillRules.length, 1, "the grill gate must have one authoritative rule bullet");
+    const grillRule = grillRules[0];
+    const clauses = [
+      "completes at least one full grill frontier round, even when the task looks fully specified",
+      "an interrupted run resumes its recorded decision tree without repeating settled questions",
+      "when the frontier is empty, show the shared understanding and the proposed ticket graph and stop for the user's explicit approval",
+      "only that approval authorizes calling `/to-spec` and `/to-tickets`",
+    ];
+    let previous = -1;
+    for (const clause of clauses) {
+      const index = grillRule.indexOf(clause);
+      assert.ok(index > previous, `grill rule must contain ordered clause: ${clause}`);
+      previous = index;
+    }
   });
 
   test("environment facts are researched rather than asked of the user", () => {
@@ -681,15 +668,16 @@ describe("plan-this grill gate and parallel-first graph (#154)", () => {
     );
   });
 
-  test("one authoritative grill rule and one parallel-design rule, not repetition", () => {
+  test("the fixed template has one authoritative grill rule and one parallel-design rule", () => {
     const body = getBody(read("skills/plan-this/SKILL.md"));
+    const rules = fixedTemplateRules(body);
     assert.equal(
-      (body.match(/at least one full grill frontier round/g) || []).length,
+      rules.filter((rule) => rule.startsWith("Grill before anything publishes:")).length,
       1,
       "the grill-round requirement must appear once as the authoritative rule",
     );
     assert.equal(
-      (body.match(/Design the ticket graph parallel-first/g) || []).length,
+      rules.filter((rule) => rule.startsWith("Design the ticket graph parallel-first:")).length,
       1,
       "the parallel-design rule must appear once",
     );
@@ -697,16 +685,16 @@ describe("plan-this grill gate and parallel-first graph (#154)", () => {
 
   test("three independent tickets all enter the initial frontier", () => {
     const tickets = [
-      ticketFact({ number: 201 }),
-      ticketFact({ number: 202 }),
-      ticketFact({ number: 203 }),
+      ticketFact({ number: 201, labels: [LABEL_READY_FOR_AGENT] }),
+      ticketFact({ number: 202, labels: [LABEL_READY_FOR_AGENT] }),
+      ticketFact({ number: 203, labels: [LABEL_READY_FOR_AGENT] }),
     ];
     assert.deepEqual(selectFrontier(tickets, SPEC), [201, 202, 203]);
   });
 
   test("one true prerequisite gates its dependents: only the prerequisite is initially ready", () => {
     const tickets = [
-      ticketFact({ number: 210 }),
+      ticketFact({ number: 210, labels: [LABEL_READY_FOR_AGENT] }),
       ticketFact({ number: 211, openBlockers: [210], labels: [] }),
       ticketFact({ number: 212, openBlockers: [210], labels: [] }),
     ];
@@ -729,17 +717,33 @@ describe("plan-this grill gate and parallel-first graph (#154)", () => {
 
   test("overlapping edits without semantic dependency stay collision-only with no blocker edge", () => {
     const tickets = [
-      ticketFact({ number: 220 }),
-      ticketFact({ number: 221 }),
+      {
+        ...ticketFact({ number: 220, labels: [LABEL_READY_FOR_AGENT], openBlockers: [] }),
+        schedulingCollisions: [221],
+      },
+      {
+        ...ticketFact({ number: 221, labels: [LABEL_READY_FOR_AGENT], openBlockers: [] }),
+        schedulingCollisions: [220],
+      },
     ];
+    assert.deepEqual(
+      tickets.map(({ number, schedulingCollisions }) => ({ number, schedulingCollisions })),
+      [
+        { number: 220, schedulingCollisions: [221] },
+        { number: 221, schedulingCollisions: [220] },
+      ],
+      "scheduling collision metadata must be symmetric",
+    );
+    assert.deepEqual(
+      tickets.map(({ number, labels, openBlockers }) => ({ number, labels, openBlockers })),
+      [
+        { number: 220, labels: [LABEL_READY_FOR_AGENT], openBlockers: [] },
+        { number: 221, labels: [LABEL_READY_FOR_AGENT], openBlockers: [] },
+      ],
+      "collision fixtures must remain unblocked and claimable",
+    );
     assert.deepEqual(selectFrontier(tickets, SPEC), [220, 221]);
-    for (const transition of labelTransitions(tickets, SPEC)) {
-      assert.equal(
-        transition.add.includes(LABEL_BLOCKED),
-        false,
-        `#${transition.number} must not gain a blocked label from file overlap alone`,
-      );
-    }
+    assert.deepEqual(labelTransitions(tickets, SPEC), []);
     const body = getBody(read("skills/plan-this/SKILL.md"));
     assert.ok(body.includes("record file overlap without semantic dependency as a scheduling collision"), "overlap must be recorded as a scheduling collision");
     assert.ok(body.includes("never as a false native dependency"), "overlap must not become a native dependency");
