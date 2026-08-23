@@ -1,6 +1,6 @@
 ---
 name: review-this
-description: Apply the review workflow to one parent specification #<spec>, child issue, pull request, or URL. Use /review-this #<spec> — bare numbers, hash numbers, issue URLs, and pull-request URLs normalize identically — to resolve the exact pull-request set before any write, then discover the current pull-request wave, reconcile Kilo cloud review with local Standards and Spec review against each current head, and own merge, dependent promotion, final verification, and parent closure. Requires /code-review and /unslopify. Cloud review is optional; a complete local review is never blocked by its absence, failure, or timeout.
+description: Apply the review workflow to one parent specification, child issue, pull request, or URL. Use /review-this <target> — bare numbers, hash numbers, issue URLs, and pull-request URLs normalize identically — to resolve the exact pull-request set before any write, then discover the current pull-request wave, reconcile Kilo cloud review with local Standards and Spec review against each current head, and own merge, dependent promotion, final verification, and parent closure. Requires /code-review and /unslopify. Cloud review is optional; a complete local review is never blocked by its absence, failure, or timeout.
 ---
 
 Review the parent specification's pull-request wave: `/code-review`

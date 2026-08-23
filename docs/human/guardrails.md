@@ -26,6 +26,7 @@ These are the promises the skills make.
 - Implementation runs one delegated `/implement` stage and does not host code review; review lives in `/review-this <target>`, where the target, parent specification, child issue, pull request, or URL, is resolved to its exact pull-request set before any worktree is created or any write happens, and an invalid or ambiguous target stops with a named reason. Target resolution shipped with #156; tickets #155, #157, and #158 remain pending. Ticket worktrees never run review. Worktrees close only through supported Kilo actions; when chat cannot close one the run reports `cleanup-pending` and leaves it in place.
 - Review readiness also requires a pull request's linked ticket to match its closing reference and its current head and base revisions to be present.
 - Direct pull-request review keeps the closing issue for context but withholds auto-merge authority when those ticket facts disagree.
+- The skill metadata, installation guide, and review body use the same target syntax.
 - The three user-facing workflow commands are `plan-this`, `implement-this`, and `review-this` only.
 - The ready frontier contains only open, unblocked, unassigned tickets with `ready-for-agent`.
 - After a ticket closes, only its newly unblocked dependents get label updates.
