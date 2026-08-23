@@ -10,6 +10,7 @@
 // review-this:INV-10 — final verification and parent closure
 // review-this:INV-11 — state and adapter boundaries for future coordinator
 // review-this:INV-12 — trust precedence and install boundary
+// review-this:INV-13 — persistent PR fixes, delta rereview, and bounded verification
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -231,10 +232,12 @@ describe("review-this reconciliation (review-this:INV-7)", () => {
     assert.ok(n.includes("unverified"));
   });
 
-  test("confirmed findings return to the ticket's owning worker rather than being fixed in the review workspace", () => {
+  test("confirmed findings use a fresh fix context inside the persistent PR worktree", () => {
     const skill = read("skills/review-this/SKILL.md");
     const n = norm(skill);
-    assert.ok(n.includes("confirmed findings return to the ticket's owning worker rather than being fixed in the review workspace"));
+    assert.ok(n.includes("one fresh fix subagent inside the same pr worktree per round"));
+    assert.ok(n.includes("advisory-only findings receive a reasoned deferral"));
+    assert.ok(n.includes("never create a fix round"));
   });
 });
 
@@ -359,5 +362,17 @@ describe("review-this workflow trust boundaries (review-this:INV-12)", () => {
   test("leaf doc declares INV-12 with composition-test mechanism", () => {
     const leaf = read("docs/leaves/review-this.md");
     assert.ok(leaf.includes("INV-12"), "leaf must declare INV-12");
+  });
+});
+
+describe("review-this performance lifecycle (review-this:INV-13)", () => {
+  test("documents the smoke budget and bounded fix rereview contract", () => {
+    const install = read("skills/review-this/INSTALL.md");
+    const skill = norm(read("skills/review-this/SKILL.md"));
+    assert.ok(install.includes("Three-ticket Kilo smoke"));
+    assert.ok(install.includes("reservationToTerminalMs"));
+    assert.ok(install.includes("ordinary-ticket median is at most 60 minutes"));
+    assert.ok(skill.includes("one fresh fix subagent inside the same pr worktree per round"));
+    assert.ok(skill.includes("final verification repair consumes an available fix round") || skill.includes("if final verification fails"));
   });
 });

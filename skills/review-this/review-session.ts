@@ -1,9 +1,9 @@
-// Persistent PR review lifecycle decisions (#157, parent spec #152).
+// Persistent PR review lifecycle decisions (#157-#158, parent spec #152).
 //
 // Pure: observed revisions, capabilities, and operation counts in, bounded
 // review plans out. The command session applies the plan through its host.
 
-import { MAX_FIX_ROUNDS } from "./workflow-state.ts";
+import { fixRoundDecision, MAX_FIX_ROUNDS } from "./workflow-state.ts";
 
 export { MAX_FIX_ROUNDS };
 
@@ -149,7 +149,7 @@ export function persistentWorktreePlan(
   fact: PersistentWorktreeFact,
 ): PersistentWorktreePlan {
   return {
-    action: fact.worktreeExists && fact.workerSessionExists ? "reuse" : "create",
+    action: fact.worktreeExists ? "reuse" : "create",
     prNumber: fact.prNumber,
     headSha: fact.pinnedHeadSha,
     baseSha: fact.pinnedBaseSha,
@@ -220,4 +220,306 @@ export function canContinueAfterPublication(
 
 export function initialReviewAgents(): readonly ["standards", "spec"] {
   return ["standards", "spec"];
+}
+
+export interface FixFinding {
+  id: string;
+  severity: "advisory" | "blocking";
+}
+
+export interface RootCauseExpansion {
+  paths: readonly string[];
+  affectedSeams: readonly string[];
+}
+
+export interface FixBatchInput {
+  findings: readonly FixFinding[];
+  roundsUsed: number;
+  capabilities: ReviewCapabilities;
+  publication: ReviewPublicationFact;
+  approvedAffectedSeams?: readonly string[];
+  rootCauseExpansion?: RootCauseExpansion;
+}
+
+export interface FixBatchPlan {
+  action: "fix" | "defer-advisories" | "stop";
+  allowed: boolean;
+  createsFixRound: boolean;
+  findings: FixFinding[];
+  deferredAdvisories: FixFinding[];
+  expandedPaths: string[];
+  expandedAffectedSeams: string[];
+  reason: string;
+}
+
+function validatedExpansion(input: FixBatchInput):
+  | { paths: string[] }
+  | { error: string } {
+  const expansion = input.rootCauseExpansion;
+  if (!expansion) return { paths: [] };
+
+  const paths = [...new Set(expansion.paths.filter((path) => path.trim() !== ""))];
+  const approvedSeams = new Set(input.approvedAffectedSeams ?? []);
+  if (
+    paths.length > 0 &&
+    (expansion.affectedSeams.length === 0 ||
+      expansion.affectedSeams.some((seam) => !approvedSeams.has(seam)))
+  ) {
+    return { error: "root-cause expansion is outside the approved affected seams" };
+  }
+  return { paths };
+}
+
+/**
+ * Plan one fresh fix context for a PR and round.
+ *
+ * Blocking findings carry safe advisories in the same batch. Advisory-only
+ * results are recorded as a deferral and never consume a code-fix round.
+ */
+export function planFixBatch(input: FixBatchInput): FixBatchPlan {
+  const findings = [...input.findings];
+  if (findings.length === 0) {
+    return {
+      action: "stop",
+      allowed: false,
+      createsFixRound: false,
+      findings: [],
+      deferredAdvisories: [],
+      expandedPaths: [],
+      expandedAffectedSeams: [],
+      reason: "no confirmed findings require a fix batch",
+    };
+  }
+
+  if (!canContinueAfterPublication(input.publication)) {
+    return {
+      action: "stop",
+      allowed: false,
+      createsFixRound: false,
+      findings: [],
+      deferredAdvisories: [],
+      expandedPaths: [],
+      expandedAffectedSeams: [],
+      reason: "review publication is incomplete; fixes and merge must stop",
+    };
+  }
+
+  const blocking = findings.filter((finding) => finding.severity === "blocking");
+  const advisories = findings.filter((finding) => finding.severity === "advisory");
+  if (blocking.length === 0) {
+    return {
+      action: "defer-advisories",
+      allowed: true,
+      createsFixRound: false,
+      findings: [],
+      deferredAdvisories: advisories,
+      expandedPaths: [],
+      expandedAffectedSeams: [],
+      reason: "advisory-only findings are deferred and do not create a fix round",
+    };
+  }
+
+  const capability = reviewCapabilityGate(input.capabilities, "fix");
+  if (!capability.allowed) {
+    return {
+      action: "stop",
+      allowed: false,
+      createsFixRound: false,
+      findings: [],
+      deferredAdvisories: [],
+      expandedPaths: [],
+      expandedAffectedSeams: [],
+      reason: capability.reason ?? "fresh fix context is unavailable",
+    };
+  }
+
+  const round = fixRoundDecision(input.roundsUsed, "code-fix");
+  if (!round.allowed) {
+    return {
+      action: "stop",
+      allowed: false,
+      createsFixRound: false,
+      findings: [],
+      deferredAdvisories: [],
+      expandedPaths: [],
+      expandedAffectedSeams: [],
+      reason: round.reason,
+    };
+  }
+
+  const expansion = validatedExpansion(input);
+  if ("error" in expansion) {
+    return {
+      action: "stop",
+      allowed: false,
+      createsFixRound: false,
+      findings: [],
+      deferredAdvisories: [],
+      expandedPaths: [],
+      expandedAffectedSeams: [],
+      reason: expansion.error,
+    };
+  }
+
+  return {
+    action: "fix",
+    allowed: true,
+    createsFixRound: true,
+    findings,
+    deferredAdvisories: [],
+    expandedPaths: expansion.paths,
+    expandedAffectedSeams: [...new Set(input.rootCauseExpansion?.affectedSeams ?? [])],
+    reason: "one fresh fix context receives all confirmed findings for this PR and round",
+  };
+}
+
+export interface FinalVerificationInput {
+  passed: boolean;
+  roundsUsed: number;
+  capabilities: ReviewCapabilities;
+  publication: ReviewPublicationFact;
+  baseMoved?: boolean;
+  triggers?: Partial<Record<ReviewEscalationTrigger, boolean>>;
+}
+
+export interface FinalVerificationPlan {
+  action: "complete" | "repair" | "stop";
+  allowed: boolean;
+  consumesFixRound: boolean;
+  review?: RevisionReviewPlan;
+  reason: string;
+}
+
+/**
+ * A failed final gate may use one remaining code-fix round, then receives the
+ * same delta or risk-triggered full review as any other pushed revision.
+ */
+export function planFinalVerification(input: FinalVerificationInput): FinalVerificationPlan {
+  if (!canContinueAfterPublication(input.publication)) {
+    return {
+      action: "stop",
+      allowed: false,
+      consumesFixRound: false,
+      reason: "review publication is incomplete; final verification cannot continue",
+    };
+  }
+  if (input.passed) {
+    return {
+      action: "complete",
+      allowed: true,
+      consumesFixRound: false,
+      reason: "final verification passed on the semantically reviewed head",
+    };
+  }
+
+  const capability = reviewCapabilityGate(input.capabilities, "fix");
+  if (!capability.allowed) {
+    return {
+      action: "stop",
+      allowed: false,
+      consumesFixRound: false,
+      reason: capability.reason ?? "fresh fix context is unavailable",
+    };
+  }
+  const round = fixRoundDecision(input.roundsUsed, "code-fix");
+  if (!round.allowed) {
+    return {
+      action: "stop",
+      allowed: false,
+      consumesFixRound: false,
+      reason: `final verification failed and ${round.reason}`,
+    };
+  }
+  return {
+    action: "repair",
+    allowed: true,
+    consumesFixRound: true,
+    review: planRevisionReview({
+      initialRevision: false,
+      baseMoved: input.baseMoved ?? false,
+      triggers: input.triggers,
+    }),
+    reason: "final verification repair consumes one available fix round before rereview",
+  };
+}
+
+export interface ConflictResolutionInput {
+  hasConflict: boolean;
+  roundsUsed: number;
+}
+
+export interface ConflictResolutionPlan {
+  action: "base-refresh" | "resolve" | "stop";
+  allowed: boolean;
+  consumesFixRound: boolean;
+  review?: RevisionReviewPlan;
+  reason: string;
+}
+
+/**
+ * A conflict-free base refresh reuses the existing verdict without consuming
+ * a fix round. Resolving a real merge conflict consumes one bounded fix
+ * round and the resolved revision receives fresh semantic review.
+ */
+export function planConflictResolution(
+  input: ConflictResolutionInput,
+): ConflictResolutionPlan {
+  if (!input.hasConflict) {
+    const refresh = fixRoundDecision(input.roundsUsed, "conflict-free-base-refresh");
+    return {
+      action: "base-refresh",
+      allowed: true,
+      consumesFixRound: false,
+      reason: refresh.reason,
+    };
+  }
+  const round = fixRoundDecision(input.roundsUsed, "conflict-resolution");
+  if (!round.allowed) {
+    return {
+      action: "stop",
+      allowed: false,
+      consumesFixRound: false,
+      reason: round.reason,
+    };
+  }
+  return {
+    action: "resolve",
+    allowed: true,
+    consumesFixRound: true,
+    review: planRevisionReview({ initialRevision: false, baseMoved: true }),
+    reason: "conflict resolution consumes one bounded fix round before rereview",
+  };
+}
+
+export type RepositoryTrust = "same-repository" | "untrusted-fork";
+
+export interface PushPlan {
+  action: "fast-forward-push" | "static-review" | "stop";
+  allowed: boolean;
+  reason: string;
+}
+
+export function planPush(
+  repositoryTrust: RepositoryTrust,
+  fastForward: boolean,
+): PushPlan {
+  if (repositoryTrust === "untrusted-fork") {
+    return {
+      action: "static-review",
+      allowed: true,
+      reason: "untrusted forks remain static-review-only",
+    };
+  }
+  if (!fastForward) {
+    return {
+      action: "stop",
+      allowed: false,
+      reason: "same-repository review updates must be fast-forward pushes",
+    };
+  }
+  return {
+    action: "fast-forward-push",
+    allowed: true,
+    reason: "same-repository review update is fast-forward",
+  };
 }

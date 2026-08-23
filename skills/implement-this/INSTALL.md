@@ -10,7 +10,7 @@ Bare (`155`) and hash (`#155`) forms are equivalent and normalize identically be
 
 The command session manages workers instead of writing ticket code: every run, including a single-ticket run, dispatches one isolated worktree and one worker session per ticket. In Kilo Code this is the `agent_manager` tool in worktree mode, one independent task and one initial prompt per ticket. Every worker pushes its feature branch and opens one pull request against `main`; no path pushes directly to `main`.
 
-Each published ticket carries an `ordinary` or `high-risk` class from planning. Ordinary work targets 60 minutes from durable reservation to merge or terminal stop; high-risk work targets 90 minutes. A compact dispatch packet carries the class, revisions, affected seams, acceptance criteria, and settled decisions. The worker measures setup and orientation phases, compares dependency manifests after checkout, keeps a separate `node_modules`, and records affected-test evidence. SLO misses record their cause and never bypass a safety gate.
+Each published ticket carries an `ordinary` or `high-risk` class from planning. Ordinary work targets 60 minutes from durable reservation to merge or terminal stop; high-risk work targets 90 minutes. A compact dispatch packet carries the class, revisions, affected seams, acceptance criteria, and settled decisions. The worker measures setup and orientation phases, compares dependency manifests after checkout, keeps a separate `node_modules`, records affected-test evidence for implementation and review-fix iteration, and hands the final timing summary to review. SLO misses record their cause and never bypass a safety gate.
 
 ## Requirements
 

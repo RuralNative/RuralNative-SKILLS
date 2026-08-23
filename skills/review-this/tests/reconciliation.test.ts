@@ -5,7 +5,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { reconcileFindings, routeFixesToWorker, routeFixesByTicket } from "../reconciliation.ts";
+import { reconcileFindings } from "../reconciliation.ts";
 import { reviewIsFresh, isMergeEligible } from "../workflow-state.ts";
 import type { Finding } from "../reconciliation.ts";
 
@@ -110,25 +110,18 @@ describe("reconcileFindings keeps Standards and Spec axes separate", () => {
     assert.equal(result.rejected.unverified.length, 2);
   });
 
-  test("confirmed findings route to the owning worker rather than being fixed in the review workspace", () => {
-    const findings: Finding[] = [
-      finding({ source: "spec", file: "a.ts", line: 1, message: "fix me" }),
-    ];
-    const result = reconcileFindings(findings, HEAD);
-    const routed = routeFixesToWorker(result, 135);
-    assert.ok(routed);
-    assert.equal(routed?.ticket, 135);
-    assert.equal(routed?.findings.length, 1);
-  });
-
-  test("no confirmed findings yields no routing", () => {
-    const result = reconcileFindings([], HEAD);
-    assert.equal(routeFixesToWorker(result, 135), null);
+  test("retained findings stay together as the PR's fix batch", () => {
+    const result = reconcileFindings(
+      [finding({ source: "spec", file: "a.ts", line: 1, message: "fix me" })],
+      HEAD,
+    );
+    assert.equal(result.retained.length, 1);
+    assert.equal(result.retained[0].file, "a.ts");
   });
 
   test("merge gates require green checks, resolved findings, clean local, unchanged head", () => {
     const pr = { headSha: HEAD, mergeable: true, requiredChecksGreen: true };
-    const clean = { reviewedHeadSha: HEAD, unresolvedConfirmedFindings: 0, localReviewClean: true, cloudReviewAvailable: true };
+    const clean = { reviewedHeadSha: HEAD, unresolvedConfirmedFindings: 0, localReviewClean: true, cloudReviewAvailable: true, trustedSummaryUpdated: true, inlineFindingsVerified: true };
     assert.equal(isMergeEligible(pr, clean).eligible, true);
     assert.equal(isMergeEligible(pr, { ...clean, cloudReviewAvailable: false }).eligible, true);
     assert.equal(isMergeEligible(pr, { ...clean, unresolvedConfirmedFindings: 1 }).eligible, false);
@@ -141,43 +134,5 @@ describe("reconcileFindings keeps Standards and Spec axes separate", () => {
     assert.doesNotMatch(src, /\bfetch\s*\(/);
     assert.doesNotMatch(src, /\bXMLHttpRequest\b/);
     assert.doesNotMatch(src, /\bprocess\.env\b/);
-  });
-});
-
-describe("ticket-aware wave routing (review-this:INV-7)", () => {
-  test("routeFixesByTicket groups retained findings by owning ticket", () => {
-    const findings: Finding[] = [
-      finding({ source: "cloud", file: "a.ts", line: 10, message: "a", ticket: 131 }),
-      finding({ source: "spec", file: "b.ts", line: 20, message: "b", ticket: 132 }),
-      finding({ source: "standards", file: "c.ts", line: 30, message: "c", ticket: 131 }),
-    ];
-    const result = reconcileFindings(findings, HEAD);
-    const grouped = routeFixesByTicket(result);
-    assert.equal(grouped.size, 2);
-    assert.equal(grouped.get(131)?.length, 2);
-    assert.equal(grouped.get(132)?.length, 1);
-  });
-
-  test("routeFixesByTicket skips findings without a ticket and returns empty when none retained", () => {
-    const findings: Finding[] = [
-      finding({ source: "spec", file: "a.ts", line: 1, message: "no ticket" }),
-    ];
-    const result = reconcileFindings(findings, HEAD);
-    const grouped = routeFixesByTicket(result);
-    assert.equal(grouped.size, 0);
-    const empty = reconcileFindings([], HEAD);
-    assert.equal(routeFixesByTicket(empty).size, 0);
-  });
-
-  test("routeFixesToWorker respects ticket field and returns null when no finding matches the target", () => {
-    const findings: Finding[] = [
-      finding({ source: "spec", file: "a.ts", line: 1, message: "for 131", ticket: 131 }),
-      finding({ source: "spec", file: "b.ts", line: 2, message: "for 132", ticket: 132 }),
-    ];
-    const result = reconcileFindings(findings, HEAD);
-    const for131 = routeFixesToWorker(result, 131);
-    assert.equal(for131?.findings.length, 1);
-    assert.equal(for131?.findings[0].file, "a.ts");
-    assert.equal(routeFixesToWorker(result, 999), null);
   });
 });

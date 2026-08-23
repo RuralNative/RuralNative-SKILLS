@@ -46,6 +46,8 @@ export interface ReviewFact {
   unresolvedConfirmedFindings: number;
   localReviewClean: boolean;
   cloudReviewAvailable: boolean;
+  trustedSummaryUpdated: boolean;
+  inlineFindingsVerified: boolean;
 }
 
 export interface FinalVerificationFact {
@@ -287,6 +289,12 @@ export function isMergeEligible(
   }
   if (!review.localReviewClean) {
     blockers.push("local review is not clean");
+  }
+  if (review.trustedSummaryUpdated === false) {
+    blockers.push("trusted review summary was not published");
+  }
+  if (review.inlineFindingsVerified === false) {
+    blockers.push("inline findings were not verified");
   }
   if (pullRequest.headSha !== review.reviewedHeadSha) {
     blockers.push("reviewed head SHA does not match the current head SHA");
