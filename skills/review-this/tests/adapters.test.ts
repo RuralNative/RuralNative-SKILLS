@@ -9,7 +9,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { selectReviewWave } from "../discovery.ts";
 import { reconcileFindings } from "../reconciliation.ts";
-import { collectCloudReview, fakeCloudAdapter, fakeLocalReviewAdapter, fakeMergeAdapter, fakeVerificationAdapter } from "../adapters.ts";
+import { collectCloudReview } from "../adapters.ts";
+import { fakeCloudAdapter, fakeLocalReviewAdapter, fakeMergeAdapter, fakeVerificationAdapter } from "./fakes.ts";
 import { isMergeEligible, promotionAfterClosure, parentClosureReady, followUpRequired } from "../workflow-state.ts";
 import type { TicketFact } from "../workflow-state.ts";
 
@@ -213,8 +214,9 @@ describe("state and adapter boundaries remain coordinator-callable (review-this:
     const reconcSrc = fs.readFileSync(path.resolve(path.dirname(new URL(import.meta.url).pathname), "../reconciliation.ts"), "utf8");
     assert.doesNotMatch(reconcSrc, /\bfetch\s*\(/);
     const adapterSrc = fs.readFileSync(path.resolve(path.dirname(new URL(import.meta.url).pathname), "../adapters.ts"), "utf8");
-    // adapters may call collect but tests use fakes; pure helpers still have no fetch
-    assert.ok(adapterSrc.includes("fakeCloudAdapter"));
-    assert.ok(adapterSrc.includes("fakeMergeAdapter"));
+    const fakesSrc = fs.readFileSync(path.resolve(path.dirname(new URL(import.meta.url).pathname), "./fakes.ts"), "utf8");
+    assert.equal(adapterSrc.includes("fakeCloudAdapter"), false);
+    assert.ok(fakesSrc.includes("fakeCloudAdapter"));
+    assert.ok(fakesSrc.includes("fakeMergeAdapter"));
   });
 });

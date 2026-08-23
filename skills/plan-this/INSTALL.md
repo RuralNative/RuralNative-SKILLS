@@ -2,6 +2,8 @@
 
 `plan-this` is invoked directly by the user as `/plan-this <task>`. It applies the exact planning prefix and inserts the invocation task under `## Task:`, then delegates to `/grill-with-docs` → `/to-spec` → `/to-tickets` with `/unslopify` active. One direct invocation authorizes that full interactive chain, but nothing publishes until the run completes at least one full grill frontier round, shows the shared understanding and the proposed ticket graph after the frontier is empty, and receives your explicit approval; an interrupted run resumes its recorded decision tree. Unrelated invocation is rejected and no second planning contract is created.
 
+Before publication, planning records an `ordinary` or `high-risk` class for every ticket. Evidenced security boundaries, migrations, shared contracts, broad public interfaces, dependency changes, and comparable blast radius are high-risk. The class sets a 60- or 90-minute reservation-to-terminal target; later implementation or review may raise it with evidence but may not lower it.
+
 ## Requirements
 
 - A codebase you want to plan work for.

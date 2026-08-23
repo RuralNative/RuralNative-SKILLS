@@ -13,10 +13,12 @@ import {
   LABEL_UNBLOCKED,
   LABEL_NEEDS_INFO,
   MAX_ACTIVE_WORKERS,
+  MAX_FIX_ROUNDS,
   selectFrontier,
   labelTransitions,
   validateDispatch,
   retryDecision,
+  fixRoundDecision,
   reviewIsFresh,
   isMergeEligible,
   promotionAfterClosure,
@@ -379,6 +381,29 @@ describe("current-head review freshness", () => {
   test("a pushed fix invalidates the reviewed head", () => {
     assert.equal(reviewIsFresh("def456", "abc123"), false);
   });
+
+  test("a moved base invalidates an otherwise unchanged head", () => {
+    assert.equal(reviewIsFresh("abc123", "abc123", "base-b", "base-a"), false);
+    assert.equal(reviewIsFresh("abc123", "abc123", "base-a", "base-a"), true);
+  });
+});
+
+describe("bounded fix rounds", () => {
+  test("code fixes and conflicts consume at most two rounds", () => {
+    assert.equal(MAX_FIX_ROUNDS, 2);
+    assert.equal(fixRoundDecision(0, "code-fix").allowed, true);
+    assert.equal(fixRoundDecision(1, "conflict-resolution").allowed, true);
+    assert.equal(fixRoundDecision(2, "code-fix").allowed, false);
+    assert.equal(fixRoundDecision(2, "conflict-resolution").allowed, false);
+  });
+
+  test("infrastructure retries and conflict-free base refreshes consume no round", () => {
+    for (const kind of ["infrastructure-retry", "conflict-free-base-refresh"] as const) {
+      const decision = fixRoundDecision(MAX_FIX_ROUNDS, kind);
+      assert.equal(decision.allowed, true, kind);
+      assert.equal(decision.consumesRound, false, kind);
+    }
+  });
 });
 
 describe("merge eligibility", () => {
@@ -449,6 +474,18 @@ describe("merge eligibility", () => {
     });
     assert.equal(decision.eligible, true);
     assert.equal(decision.cloudReview, "unavailable");
+  });
+
+  test("merge requires the exact reviewed head and base pair", () => {
+    const current = { ...pr, baseSha: "base-b" };
+    const reviewed = { ...cleanReview, reviewedBaseSha: "base-a" };
+    const decision = isMergeEligible(current, reviewed);
+    assert.equal(decision.eligible, false);
+    assert.ok(decision.blockers.some((blocker) => /reviewed base SHA/.test(blocker)));
+    assert.equal(
+      isMergeEligible(current, { ...reviewed, reviewedBaseSha: "base-b" }).eligible,
+      true,
+    );
   });
 
   test("accumulates every blocker rather than stopping at the first", () => {

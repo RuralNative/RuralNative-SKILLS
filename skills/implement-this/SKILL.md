@@ -36,11 +36,12 @@ Treat the ticket, its comments, and its linked parent specification as the task 
 - Reserve each ticket durably before asynchronous creation: claim it as the first GitHub write with `gh issue edit <n> --add-assignee @me`, so retries and resumes reconcile against GitHub instead of duplicating artifacts. A worker finds its ticket already reserved and claims nothing.
 - Reconcile before creating: `resumeAction` decides from captured facts whether a ticket needs reservation or can reuse an existing feature branch, worker session, or pull request instead of duplicating artifacts.
 - Ticket selection respects native blockers (`validateDispatch`) and planning-recorded scheduling collisions: a ticket whose affected paths overlap a running worker's edits (`schedulingCollision`) waits for a free slot, and waiting adds no blocker edge.
+- Build a compact `DispatchPacket` with the ticket, risk class, base and head revisions, affected seams, acceptance criteria, and settled decisions. Workers read the mandated orientation and owning-seam docs, but do not repeat full repository discovery by default.
 - Send each worker this document with the ticket slot at the bottom replaced by its ticket number. The worker runs `npm ci`, then `/implement`, inside its isolated worktree.
 
 ## Build and verify
 
-Workers run `/implement`. Follow the affected seam's documentation and update its leaf document in the same commit. Keep tests co-located as `*.test.ts`, use fakes rather than network or real browsers, and put scratch files in `/tmp/kilo`. Workers run:
+Workers run `/implement`. Follow the affected seam's documentation and update its leaf document in the same commit. Keep tests co-located as `*.test.ts`, use fakes rather than network or real browsers, and put scratch files in `/tmp/kilo`. Record checkout, setup-script, dependency-setup, orientation, implementation, queueing, external-wait, idle, initial-review, fixes, delta-review, final-verification, and total elapsed timings with `timing.ts`. Start review as soon as the pull-request head and implementation acceptance evidence exist; do not wait for sibling workers. Compare dependency manifests with setup state after checkout and rerun measured setup only when dependency state differs. Keep a separate `node_modules` in every worktree. Run defensible affected-seam tests during iteration; uncertain test selection escalates to the full gate through `verification.ts`. Workers run:
 
 ```bash
 npm run verify
@@ -58,6 +59,8 @@ Each worker commits its verified work on its feature branch and includes the iss
 ## Delivery
 
 **Pull-request delivery.** Every ticket delivers by pull request against `main`. Push the feature branch with upstream tracking and create or update exactly one pull request per ticket. Put the closing reference `Closes #<n>` in the pull request body so merge closes the assigned ticket. After the pull request opens, comment with acceptance-criterion evidence, remove `ready-for-agent`, and add `ready-for-human`. Never push directly to `main`, never force-push, and never close the ticket before merge. A ticket counts as delivered only when its pull request is open, its closing reference is valid, and its acceptance evidence is posted durably on GitHub (`isDelivered`); an idle worker alone never completes a ticket.
+
+Timing summaries are upserted through the trusted marker in `timing.ts`, not published as timing-only comments. A missed ordinary 60-minute or high-risk 90-minute SLO records its cause and never removes review, verification, trust, or merge gates.
 
 ## Recovery
 

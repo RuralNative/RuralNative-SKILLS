@@ -313,8 +313,10 @@ describe("review-this state and adapter boundaries (review-this:INV-11)", () => 
     const n = norm(leaf);
     assert.ok(n.includes("future persistent coordinator"));
     const adapters = read("skills/review-this/adapters.ts");
-    assert.ok(adapters.includes("fakeCloudAdapter"));
-    assert.ok(adapters.includes("fakeGitHubAdapter"));
+    const fakes = read("skills/review-this/tests/fakes.ts");
+    assert.equal(adapters.includes("fakeCloudAdapter"), false, "production adapters must not carry fake-only helpers");
+    assert.ok(fakes.includes("fakeCloudAdapter"));
+    assert.ok(fakes.includes("fakeGitHubAdapter"));
   });
 });
 
