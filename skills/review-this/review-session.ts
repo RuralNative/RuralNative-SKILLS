@@ -3,7 +3,9 @@
 // Pure: observed revisions, capabilities, and operation counts in, bounded
 // review plans out. The command session applies the plan through its host.
 
-export const MAX_FIX_ROUNDS = 2;
+import { MAX_FIX_ROUNDS } from "./workflow-state.ts";
+
+export { MAX_FIX_ROUNDS };
 
 export const STRICT_REVIEW_CATEGORIES = [
   "security",
@@ -129,6 +131,8 @@ export interface ReviewStartFact {
   headSha: string;
   baseSha: string;
   implementationEvidencePosted: boolean;
+  /** Recorded so evidence shows siblings never delay an eligible PR. */
+  siblingImplementationWorkersActive?: boolean;
 }
 
 export function reviewCanStart(fact: ReviewStartFact): boolean {

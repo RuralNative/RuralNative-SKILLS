@@ -67,7 +67,7 @@ describe("review-this discovery and installation (review-this:INV-2)", () => {
     assert.ok(arch.includes("docs/leaves/review-this.md"));
     assert.ok(fs.existsSync(path.join(ROOT, "docs/leaves/review-this.md")));
     const leaf = read("docs/leaves/review-this.md");
-    for (let i = 1; i <= 12; i++) assert.ok(leaf.includes(`INV-${i}`), `leaf must contain INV-${i}`);
+    for (let i = 1; i <= 13; i++) assert.ok(leaf.includes(`INV-${i}`), `leaf must contain INV-${i}`);
   });
 });
 

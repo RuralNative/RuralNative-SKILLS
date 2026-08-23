@@ -88,12 +88,19 @@ export async function collectCloudReview(
     (result.headSha !== currentHeadSha ||
       (currentBaseSha !== undefined && result.baseSha !== currentBaseSha))
   ) {
+    const baseMismatch =
+      currentBaseSha !== undefined && result.baseSha !== currentBaseSha
+        ? `; cloud base ${result.baseSha ?? "unspecified"} does not match current base ${currentBaseSha}`
+        : "";
     return {
       status: "unavailable",
       headSha: currentHeadSha,
       baseSha: currentBaseSha,
       inlineComments: [],
-      reason: `cloud head ${result.headSha} does not match current head ${currentHeadSha}; base ${result.baseSha ?? ""} does not match current base ${currentBaseSha ?? ""}`,
+      reason:
+        result.headSha !== currentHeadSha
+          ? `cloud head ${result.headSha} does not match current head ${currentHeadSha}${baseMismatch}`
+          : `cloud base ${result.baseSha ?? "unspecified"} does not match current base ${currentBaseSha}`,
     };
   }
   return result;

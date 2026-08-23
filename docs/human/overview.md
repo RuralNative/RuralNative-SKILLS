@@ -27,7 +27,7 @@ The accepted command-session design starts implementation and review independent
 
 Planning now records `ordinary` or `high-risk` before publication. Ordinary tickets target 60 minutes from reservation to terminal outcome; high-risk tickets target 90 minutes. Implementation measures setup and lifecycle phases, reconciles dependency manifests after checkout, and carries a compact dispatch packet.
 
-Review starts when a pull request has current head and base revisions plus implementation evidence. One persistent PR worktree remains through initial review and later lifecycle stages. Fresh Standards and Spec contexts stay separate, and SLO misses remain visible without relaxing safety gates. #158 still covers fix and delta-review execution.
+Review starts when a pull request has current head and base revisions plus implementation evidence. One persistent PR worktree remains through initial review and later lifecycle stages, with at most two code-fix rounds and one planned full verification per pull request. Fresh Standards and Spec contexts stay separate, and SLO misses remain visible without relaxing safety gates. #158 still covers fix and delta-review execution.
 
 ### Accepted command-session example
 

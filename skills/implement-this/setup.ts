@@ -50,7 +50,7 @@ export function chooseMeasuredPackageOptions(
   }
   return {
     useMeasuredOptimization: true,
-    options: ["offline-preferred", "no-audit", "no-fund"],
+    options: ["--prefer-offline", "--no-audit", "--no-fund"],
     reason: "measured deterministic setup is faster",
   };
 }

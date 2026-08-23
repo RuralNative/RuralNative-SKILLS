@@ -35,11 +35,21 @@ describe("ticket risk assignment", () => {
 
   test("execution may raise risk but cannot lower it", () => {
     const ordinary = classifyRisk({ evidence: [] });
-    const raised = escalateRisk(ordinary, ["new trust boundary is in the diff"]);
-    const stillHigh = escalateRisk(raised, []);
+    const raised = escalateRisk(ordinary, {
+      securityBoundary: true,
+      evidence: ["a trust boundary is in the diff"],
+    });
+    const stillHigh = escalateRisk(raised, {});
     assert.equal(raised.riskClass, "high-risk");
     assert.equal(stillHigh.riskClass, "high-risk");
     assert.equal(stillHigh.sloMinutes, HIGH_RISK_SLO_MINUTES);
+  });
+
+  test("evidence without a named trigger does not raise the class", () => {
+    const ordinary = classifyRisk({ evidence: [] });
+    const unchanged = escalateRisk(ordinary, { evidence: ["touched README"] });
+    assert.equal(unchanged.riskClass, "ordinary");
+    assert.equal(unchanged.sloMinutes, ORDINARY_SLO_MINUTES);
   });
 
   test("risk records carry the ticket number before publication", () => {

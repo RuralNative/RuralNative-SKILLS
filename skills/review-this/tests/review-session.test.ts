@@ -16,6 +16,7 @@ import {
   reviewCategoriesComplete,
   type CategoryResult,
   type ReviewOperationCounts,
+  type ReviewStatus,
 } from "../review-session.ts";
 
 const counts: ReviewOperationCounts = {
@@ -42,6 +43,17 @@ describe("persistent PR worktree", () => {
       baseSha: "",
       implementationEvidencePosted: true,
     }), false);
+  });
+
+  test("active sibling implementation workers do not delay an eligible PR", () => {
+    assert.equal(reviewCanStart({
+      pullRequestOpen: true,
+      closingReferenceValid: true,
+      headSha: "head-a",
+      baseSha: "base-a",
+      implementationEvidencePosted: true,
+      siblingImplementationWorkersActive: true,
+    }), true);
   });
 
   test("creates once and reuses the same pinned worktree through review", () => {
@@ -121,12 +133,17 @@ describe("full versus delta review", () => {
 });
 
 describe("strict review category coverage", () => {
-  test("records every category with an explicit status", () => {
+  test("records every category through pass, not-applicable, advisory, and blocking fixtures", () => {
+    const statuses: ReviewStatus[] = ["blocking", "not-applicable", "advisory", "passed"];
     const results: CategoryResult[] = STRICT_REVIEW_CATEGORIES.map((category, index) => ({
       category,
-      status: index === 0 ? "blocking" : index === 1 ? "not-applicable" : "passed",
+      status: statuses[index % statuses.length],
       evidence: `evidence-${category}`,
     }));
+    assert.deepEqual(
+      [...new Set(results.map((result) => result.status))].sort(),
+      [...statuses].sort(),
+    );
     assert.equal(missingReviewCategories(results).length, 0);
     assert.equal(reviewCategoriesComplete(results), true);
     assert.equal(reviewCategoriesComplete(results.slice(0, -1)), false);

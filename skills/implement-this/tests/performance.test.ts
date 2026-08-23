@@ -52,6 +52,21 @@ describe("phase timing and trusted summary", () => {
     assert.equal((second.match(/ruralnative:workflow-timing:start/g) ?? []).length, 1);
     assert.equal(parseTrustedTimingSummary(second)?.reservationToTerminalMs, 5);
   });
+
+  test("a cause containing --> cannot corrupt the trusted summary block", () => {
+    const summary = buildTimingSummary({
+      riskClass: "high-risk",
+      reservedAtMs: 0,
+      terminalAtMs: 91 * 60 * 1000,
+      phases: {},
+      sloMissCause: "blocked by --> an external outage",
+    });
+    const body = upsertTrustedTimingSummary("PR body", summary);
+    const parsed = parseTrustedTimingSummary(body);
+    assert.ok(parsed, "trusted summary must survive a --> in the cause");
+    assert.equal(parsed.sloMissCause, "blocked by --> an external outage");
+    assert.equal((body.match(/ruralnative:workflow-timing:end/g) ?? []).length, 1);
+  });
 });
 
 describe("measured setup reconciliation", () => {

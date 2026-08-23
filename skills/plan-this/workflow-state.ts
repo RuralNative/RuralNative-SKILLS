@@ -292,16 +292,16 @@ export function isMergeEligible(
     blockers.push("reviewed head SHA does not match the current head SHA");
   }
   if (
-    pullRequest.baseSha !== undefined ||
-    review.reviewedBaseSha !== undefined
+    (pullRequest.baseSha !== undefined ||
+      review.reviewedBaseSha !== undefined) &&
+    !reviewIsFresh(
+      pullRequest.headSha,
+      review.reviewedHeadSha,
+      pullRequest.baseSha,
+      review.reviewedBaseSha,
+    )
   ) {
-    if (
-      pullRequest.baseSha === undefined ||
-      review.reviewedBaseSha === undefined ||
-      pullRequest.baseSha !== review.reviewedBaseSha
-    ) {
-      blockers.push("reviewed base SHA does not match the current base SHA");
-    }
+    blockers.push("reviewed base SHA does not match the current base SHA");
   }
   if (!pullRequest.mergeable) {
     blockers.push("pull request is not mergeable");

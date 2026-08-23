@@ -75,7 +75,7 @@ export function upsertTrustedTimingSummary(
 ): string {
   const block = [
     TIMING_MARKER_START,
-    JSON.stringify(summary),
+    serializeTrustedTimingJson(summary),
     TIMING_MARKER_END,
   ].join("\n");
   const markerPattern = new RegExp(
@@ -90,6 +90,14 @@ export function upsertTrustedTimingSummary(
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// Caller-supplied text such as an SLO miss cause is requirements data and may
+// contain "-->", which would terminate the HTML comment early and hide the
+// trusted summary. JSON structure itself never contains that sequence, so
+// escaping it inside string values round-trips through JSON.parse unchanged.
+function serializeTrustedTimingJson(summary: TimingSummary): string {
+  return JSON.stringify(summary).replace(/-->/g, '--\\u003E');
 }
 
 export function parseTrustedTimingSummary(body: string): TimingSummary | null {

@@ -34,6 +34,6 @@ These are the promises the skills make.
 
 The document seam records its attention, routing, and decision rules as separate invariants.
 
-The #157 performance contract adds risk classes, measured setup and lifecycle phases, one persistent PR review worktree, fresh initial Standards and Spec contexts, exact head-and-base freshness, and trusted summary timing. These records never remove a review, verification, trust, or merge gate. #158 remains the fix and delta-review slice.
+The #157 performance contract adds risk classes, measured setup and lifecycle phases, one persistent PR review worktree, fresh initial Standards and Spec contexts, exact head-and-base freshness, and trusted summary timing. The review lifecycle is bounded: at most two code-fix rounds and one planned full verification per pull request, where conflict-free base refreshes and infrastructure retries consume no round and conflict resolution consumes one. These records never remove a review, verification, trust, or merge gate. #158 remains the fix and delta-review slice.
 
 Technical depth lives in the leaf documents named by each line.

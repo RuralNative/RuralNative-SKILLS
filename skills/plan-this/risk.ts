@@ -58,16 +58,18 @@ export function classifyRisk(signals: RiskSignals): RiskAssessment {
 
 export function escalateRisk(
   current: RiskAssessment,
-  evidence: readonly string[],
+  signals: RiskSignals,
 ): RiskAssessment {
-  const addedEvidence = evidence.filter((item) => item.trim() !== "");
+  const triggers = SIGNAL_LABELS
+    .filter(([key]) => signals[key] === true)
+    .map(([, label]) => label);
+  const evidence = [...(signals.evidence ?? [])].filter((item) => item.trim() !== "");
+  const raises = triggers.length > 0 && hasEvidence(signals);
   const nextClass: RiskClass =
-    current.riskClass === "high-risk" || addedEvidence.length > 0
-      ? "high-risk"
-      : "ordinary";
+    current.riskClass === "high-risk" || raises ? "high-risk" : "ordinary";
   return {
     riskClass: nextClass,
-    evidence: [...current.evidence, ...addedEvidence],
+    evidence: [...current.evidence, ...triggers, ...evidence],
     sloMinutes: sloMinutesForRisk(nextClass),
   };
 }

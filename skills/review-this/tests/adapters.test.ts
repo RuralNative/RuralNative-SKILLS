@@ -55,6 +55,28 @@ describe("current-head cloud comments (review-this:INV-6)", () => {
     assert.match(result.reason ?? "", /does not match current head/);
   });
 
+  test("a base-only mismatch downgrades cloud evidence without claiming a head mismatch", async () => {
+    const cloud = fakeCloudAdapter({
+      status: "available",
+      headSha: HEAD,
+      baseSha: "stale-base",
+      summary: "base-stale summary",
+      inlineComments: [],
+    });
+    const result = await collectCloudReview(cloud, HEAD, "current-base");
+    assert.equal(result.status, "unavailable");
+    assert.match(result.reason ?? "", /cloud base stale-base does not match current base current-base/);
+    assert.doesNotMatch(result.reason ?? "", /cloud head .* does not match current head/);
+
+    // A matching head with a matching base stays available.
+    const fresh = await collectCloudReview(
+      fakeCloudAdapter({ status: "available", headSha: HEAD, baseSha: "current-base", summary: "fresh", inlineComments: [] }),
+      HEAD,
+      "current-base",
+    );
+    assert.equal(fresh.status, "available");
+  });
+
   test("cloud disabled, absent, failed, or timed out is recorded as unavailable without blocking a complete local review", async () => {
     const unavailable = fakeCloudAdapter({
       status: "unavailable",

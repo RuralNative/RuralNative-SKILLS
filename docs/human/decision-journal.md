@@ -132,6 +132,6 @@ Depth: `docs/adr/0019-command-session-lifecycle-and-platform-limits.md`.
 
 ### 2026-08-23 - Measure the optimized initial review lifecycle (#157 shipped)
 
-Planning records `ordinary` or `high-risk` with 60- or 90-minute targets. Implementation and review carry bounded dispatch, setup, revision, and timing contracts. Review begins when a pull request is eligible, uses one persistent PR worktree with fresh parallel Standards and Spec contexts, pins both head and base revisions, and updates one trusted summary. #158 remains for fix and delta-review execution.
+Planning records `ordinary` or `high-risk` with 60- or 90-minute targets; escalation needs a named trigger plus evidence. Implementation and review carry bounded dispatch, setup, revision, and timing contracts whose trusted summaries survive hostile cause text. Review begins when a pull request is eligible, uses one persistent PR worktree with fresh parallel Standards and Spec contexts, pins both head and base revisions, and updates one trusted summary. #158 remains for fix and delta-review execution.
 
 Depth: `docs/leaves/implement-this.md`, `docs/leaves/review-this.md`, and `REVIEW.md`.
