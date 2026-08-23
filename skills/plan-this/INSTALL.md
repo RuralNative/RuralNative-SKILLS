@@ -1,6 +1,6 @@
 # Installing plan-this
 
-`plan-this` is invoked directly by the user as `/plan-this <task>`. It applies the exact planning prefix and inserts the invocation task under `## Task:`, then delegates to `/grill-with-docs` → `/to-spec` → `/to-tickets` with `/unslopify` active. Unrelated invocation is rejected and no second planning contract is created.
+`plan-this` is invoked directly by the user as `/plan-this <task>`. It applies the exact planning prefix and inserts the invocation task under `## Task:`, then delegates to `/grill-with-docs` → `/to-spec` → `/to-tickets` with `/unslopify` active. One direct invocation authorizes that full interactive chain, but nothing publishes until the run completes at least one full grill frontier round, shows the shared understanding and the proposed ticket graph after the frontier is empty, and receives your explicit approval; an interrupted run resumes its recorded decision tree. Unrelated invocation is rejected and no second planning contract is created.
 
 ## Requirements
 
@@ -58,7 +58,7 @@ Invoke explicitly:
 
 > /plan-this Create a Next.js App
 
-A healthy run loads `/unslopify` before the first progress update and keeps it active throughout `/grill-with-docs` → `/to-spec` → `/to-tickets`, runs those three delegated skills in order, and places the full task `Create a Next.js App` verbatim under `## Task:` without truncation or other substitution — matching the trimmed `SKILL.md` body exactly (workflow line, `## Rules:` with eleven bullets, final `**Why / What / Where / How**` line, and single `## Task:` slot). Completion stops after its ELI18 summary.
+A healthy run loads `/unslopify` before the first progress update and keeps it active throughout `/grill-with-docs` → `/to-spec` → `/to-tickets`, asks at least one full grill frontier round, shows the shared understanding and the proposed ticket graph, waits for your explicit approval before calling `/to-spec` and `/to-tickets`, runs those three delegated skills in order, and places the full task `Create a Next.js App` verbatim under `## Task:` without truncation or other substitution — matching the trimmed `SKILL.md` body exactly (workflow line, authorization-and-approval-gate paragraph, `## Rules:` with thirteen bullets, final `**Why / What / Where / How**` line, and single `## Task:` slot). Completion stops after its ELI18 summary.
 
 ## Drift guard
 
