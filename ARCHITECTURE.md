@@ -12,7 +12,7 @@ invariants, and conventions that code cannot express.
 | document-for-humans | plain-language derived documentation for human stakeholders | skills/document-for-humans/ | gate extension via scripts/docs-check.sh; composition via `skills/document-for-humans/tests/` | docs/leaves/document-for-humans.md |
 | unslopify | AI-tell detection and meaning-safe prose revision, always-on for agent-authored output once loaded | skills/unslopify/ | scanner contract via `skills/unslopify/scanner.py`; parity catalog via `skills/unslopify/reference/parity.md`; fixtures and composition via `skills/unslopify/tests/`; identity == folder check | docs/leaves/unslopify.md |
 | plan-this | fixed-template planning adapter that applies the planning prefix and delegates to `/grill-with-docs`, `/to-spec`, `/to-tickets`, and `/unslop` | skills/plan-this/ | composition via `skills/plan-this/tests/`; identity == folder check | docs/leaves/plan-this.md |
-| implement-this | fixed-template implementation adapter that applies the implementation prefix and delegates to `/implement` and `/unslopify`, dispatching bounded ticket sets to isolated workers with pull-request-only delivery | skills/implement-this/ | composition and worker-adapter tests via `skills/implement-this/tests/`; identity == folder check | docs/leaves/implement-this.md |
+| implement-this | fixed-template implementation adapter that applies the implementation prefix and delegates to `/implement` and `/unslopify`, dispatching bounded ticket sets through real Agent Manager workers with pull-request-only delivery | skills/implement-this/ | composition and command-session tests via `skills/implement-this/tests/`; identity == folder check | docs/leaves/implement-this.md |
 | review-this | owns one pull-request review wave through merge, promotion, and parent closure; reconciles Kilo cloud review with the local Standards and Spec review against each current head and delegates to `/code-review` and `/unslopify` | skills/review-this/ | composition, discovery, reconciliation, and adapter tests via `skills/review-this/tests/`; identity == folder check | docs/leaves/review-this.md |
 | release-skills | universal release workflow that auto-detects version files and changelogs | skills/release-skills/ | composition via `skills/release-skills/tests/`; identity == folder check | docs/leaves/release-skills.md |
 
@@ -69,9 +69,8 @@ Retired ADRs stay listed for complete coverage; their numbers are never reused.
 - Distribution is the registry lane only — no npm packaging. See ADR-0001.
 - Work docs (plans, audits) live in the issue tracker, never the repo. See `docs/agents/issue-tracker.md`.
 - Glossary vocabulary is binding; forbidden synonyms are listed. See `CONTEXT.md`.
-- Attention is bounded: loading budgets cap orientation documents, `AGENTS.md`
-  opens with the five-command contract, and invariant collisions stop for a
-  decision. See ADR-0017.
+- Attention is bounded: loading budgets are hard caps on orientation documents,
+  and code inspection inside the affected seam is never blocked. See ADR-0017.
 - Skill diagnostics stay opt-in, private, sanitized, outside every read set,
   and never guidance; the management marker carries provenance. See ADR-0018.
 - Known shortcuts and unfinished pieces are tracked in the debt registry. See `docs/debt.md`.
@@ -135,9 +134,10 @@ Every authored doc is machine-checked against disk by `scripts/docs-check.sh`
 | Any change | AGENTS.md → ARCHITECTURE.md → the seam's leaf doc → glossary | small |
 | Re-orient after compaction | ARCHITECTURE.md → task leaf doc → glossary | one small fixed read |
 
-Budgets are hard caps on orientation docs, never code inspection inside the
-affected seam. A missing fact is a named cache gap recorded in the issue
-tracker; owner approval is required before the read set widens (ADR-0017).
+Budgets are hard caps on orientation documents; budgets never block code
+inspection inside the affected seam. A missing fact is a named cache gap
+recorded in the issue tracker; ask the owner for approval before the read set
+widens (ADR-0017).
 
 ## Checks
 

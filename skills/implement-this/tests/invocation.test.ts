@@ -40,6 +40,25 @@ describe("parseInvocation", () => {
     assert.deepEqual(parseInvocation(["#134", "#135", "#131"]), [134, 135, 131]);
     assert.deepEqual(parseInvocation(["130"]), [130]);
   });
+
+  test("bare and hash forms normalize identically before any GitHub read or write", () => {
+    const table: Array<[string, string]> = [
+      ["one ticket", "#131"],
+      ["one ticket bare", "131"],
+      ["parent specification", "#130"],
+      ["parent specification bare", "130"],
+      ["explicit set mixed", "#135"],
+      ["explicit set mixed bare", "135"],
+    ];
+    for (const [name, ref] of table) {
+      const bare = parseInvocation([ref.replace(/^#/, "")]);
+      assert.deepEqual(parseInvocation([ref]), bare, name);
+      assert.equal(bare[0], Number(ref.replace(/^#/, "")), name);
+    }
+    const hashed = planBoundedSet(["#131"], FIXTURE, WORKERS);
+    const barePlan = planBoundedSet(["131"], FIXTURE, WORKERS);
+    assert.deepEqual(barePlan, hashed);
+  });
 });
 
 describe("planBoundedSet through the pure state core", () => {

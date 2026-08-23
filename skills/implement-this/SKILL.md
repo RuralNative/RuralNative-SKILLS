@@ -31,35 +31,43 @@ Treat the ticket, its comments, and its linked parent specification as the task 
 
 ## Dispatch
 
-- Each ticket gets an isolated git worktree, its own feature branch, a targeted worker session, a status lookup, and a stop control, through the capability contract in `worker-adapters.ts`. Kilo Agent Manager is the preferred adapter; another host may provide the same create, prompt, status, and stop capabilities.
-- Multi-ticket execution stops before any write when isolated workers are unavailable.
-- No more than `MAX_ACTIVE_WORKERS` ticket workers are active at once.
-- Reconcile before creating: reuse an existing feature branch, worker session, or pull request for a ticket instead of duplicating artifacts.
-- Send each worker this document with the ticket slot at the bottom replaced by its ticket number. A worker claims only its own ticket, as the first GitHub write, with `gh issue edit <n> --add-assignee @me`, then runs `npm ci`.
+- Kilo execution dispatches every ticket through the `agent_manager` tool in worktree mode: one independent task per ticket with one initial prompt carrying this document and the ticket substituted into the single slot at the bottom, plus a status lookup and a stop control for every worker session (`action: "status"`, `action: "stop"`). A one-ticket run behaves exactly like a parent run; there is no single-ticket inline path, and this command session never edits ticket code itself.
+- Before spawning anything, read Agent Manager's current overview (`action: "list"`) and count every unfinished active managed worker in the workspace with `activeManagedWorkers` from `command-session.ts`. `spawnCapacity` enforces two caps before any spawn: at most `MAX_ACTIVE_WORKERS` implementation workers from this stage and at most `MAX_MANAGED_WORKERS` total managed workers across the workspace. Unrelated active workers consume global capacity. If the host cannot provide both an isolated git worktree and a targeted worker session per ticket, stop before any claim or edit.
+- Reserve each ticket durably before asynchronous creation: claim it as the first GitHub write with `gh issue edit <n> --add-assignee @me`, so retries and resumes reconcile against GitHub instead of duplicating artifacts. A worker finds its ticket already reserved and claims nothing.
+- Reconcile before creating: `resumeAction` decides from captured facts whether a ticket needs reservation or can reuse an existing feature branch, worker session, or pull request instead of duplicating artifacts.
+- Ticket selection respects native blockers (`validateDispatch`) and planning-recorded scheduling collisions: a ticket whose affected paths overlap a running worker's edits (`schedulingCollision`) waits for a free slot, and waiting adds no blocker edge.
+- Send each worker this document with the ticket slot at the bottom replaced by its ticket number. The worker runs `npm ci`, then `/implement`, inside its isolated worktree.
 
 ## Build and verify
 
-Run `/implement`. Follow the affected seam's documentation and update its leaf document in the same commit. Keep tests co-located as `*.test.ts`, use fakes rather than network or real browsers, and put scratch files in `/tmp/kilo`.
-
-Run:
+Workers run `/implement`. Follow the affected seam's documentation and update its leaf document in the same commit. Keep tests co-located as `*.test.ts`, use fakes rather than network or real browsers, and put scratch files in `/tmp/kilo`. Workers run:
 
 ```bash
 npm run verify
 ```
 
-Commit the verified work on the feature branch and include the issue number in the commit message.
+Each worker commits its verified work on its feature branch and includes the issue number in the commit message. The command session performs none of this work; it monitors and reports.
+
+## Monitor
+
+- Poll workers and GitHub with increasing delays (`nextPollDelay`) and report only lifecycle changes. Progress is a lifecycle change in a ticket, worker, branch, pull request, check, review, or merge.
+- After 30 minutes without progress (`checkpointDue`), post a checkpoint summary and end the turn. A resumed session reads GitHub first, rebuilds its picture from durable records (`resumeAction`), and never creates a second assignee, branch, session, commit, pull request, or comment for existing work.
+- Parent mode recomputes the compatible frontier whenever a ticket, blocker, pull request, or follow-up child changes and fills free slots up to both caps. Follow-up children created after the invocation join the frontier like original children.
+- Delivery waits for GitHub facts, not session idleness: a ticket is delivered only when `isDelivered` holds.
 
 ## Delivery
 
-**Pull-request delivery.** Every ticket delivers by pull request against `main`. Push the feature branch with upstream tracking and create or update exactly one pull request per ticket. Put the closing reference `Closes #<n>` in the pull request body so merge closes the assigned ticket. After the pull request opens, comment with acceptance-criterion evidence, remove `ready-for-agent`, and add `ready-for-human`. Never push directly to `main`, never force-push, and never close the ticket before merge.
+**Pull-request delivery.** Every ticket delivers by pull request against `main`. Push the feature branch with upstream tracking and create or update exactly one pull request per ticket. Put the closing reference `Closes #<n>` in the pull request body so merge closes the assigned ticket. After the pull request opens, comment with acceptance-criterion evidence, remove `ready-for-agent`, and add `ready-for-human`. Never push directly to `main`, never force-push, and never close the ticket before merge. A ticket counts as delivered only when its pull request is open, its closing reference is valid, and its acceptance evidence is posted durably on GitHub (`isDelivered`); an idle worker alone never completes a ticket.
 
 ## Recovery
 
-If a worker fails or goes offline, first reconcile GitHub and worker state so no assignee, branch, session, or pull request is duplicated, then retry that worker once (`retryDecision`). A second failure adds `needs-info` to the ticket and stops work on it.
+If a worker fails or goes offline, first reconcile GitHub and worker state so no assignee, branch, session, pull request, or prior evidence is duplicated (`resumeAction`), then retry that worker once (`retryDecision`). A second failure adds `needs-info` to the ticket and stops work on it, preserving the failed worktree on disk for diagnosis.
 
 ## Completion
 
 When every bounded ticket has an open pull request with evidence posted, finish with an ELI18 Why / What / Where / How summary that names the bounded ticket set, each pull request link, and the verification results, then tell the user to run `/review-this #<spec>` from the control workspace. Ticket worktrees do not run review.
+
+Cleanup follows the platform limits: a successful worker whose pull request and acceptance evidence are durable becomes eligible for closure, so stop the completed session with `agent_manager` (`action: "stop"`). A host with managed-close support then removes the eligible worktree; current Kilo chat exposes start, overview, prompt, stop-session, and move but no managed closure, so leftovers are reported as `cleanup-pending` through `cleanupDecision`. Never delete directories behind Agent Manager and never edit `.kilo/agent-manager.json`. Failed worktrees stay available for diagnosis after a `needs-info` stop.
 
 ## Ticket
 
