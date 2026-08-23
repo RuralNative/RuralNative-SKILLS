@@ -1,6 +1,6 @@
 // review-this:INV-7 — finding reconciliation keeps axes separate and rejects
 // duplicate, stale, out-of-scope, and unverified findings with evidence.
-// review-this:INV-8 — stale-head invalidation and merge gates via pure core.
+// review-this:INV-8 — exact head-and-base invalidation and merge gates via pure core.
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -57,6 +57,39 @@ describe("reconcileFindings keeps Standards and Spec axes separate", () => {
     assert.equal(result.rejected.stale.length, 1);
     assert.equal(reviewIsFresh(HEAD, OTHER_HEAD), false);
     assert.equal(reviewIsFresh(HEAD, HEAD), true);
+  });
+
+  test("stale base after a base refresh is rejected with evidence", () => {
+    const result = reconcileFindings(
+      [finding({ source: "spec", file: "src/base.ts", line: 8, message: "stale base", baseSha: "base-a" })],
+      HEAD,
+      "base-b",
+    );
+    assert.equal(result.retained.length, 0);
+    assert.equal(result.rejected.stale.length, 1);
+    assert.equal(reviewIsFresh(HEAD, HEAD, "base-b", "base-a"), false);
+  });
+
+  test("retained findings carry stable identity, category, severity, base, and rule evidence", () => {
+    const result = reconcileFindings(
+      [finding({ id: "F-157-1", file: "a.ts", line: 1, message: "", category: "performance", severity: "advisory", baseSha: "base-a", governingRule: "SLO criterion" })],
+      HEAD,
+      "base-a",
+    );
+    assert.deepEqual(result.retained[0], {
+      id: "F-157-1",
+      source: "standards",
+      category: "performance",
+      severity: "advisory",
+      file: "a.ts",
+      line: 1,
+      message: "",
+      evidence: "invariant INV-1: cited",
+      headSha: HEAD,
+      baseSha: "base-a",
+      governingRule: "SLO criterion",
+      ticket: undefined,
+    });
   });
 
   test("out-of-scope finding outside the diff is rejected", () => {

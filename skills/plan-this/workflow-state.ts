@@ -9,6 +9,7 @@
 // persistent coordinator can reuse the same decisions on any host.
 
 export const MAX_ACTIVE_WORKERS = 3;
+export const MAX_FIX_ROUNDS = 2;
 
 export const LABEL_READY_FOR_AGENT = "ready-for-agent";
 export const LABEL_BLOCKED = "blocked";
@@ -32,12 +33,16 @@ export interface WorkerFact {
 
 export interface PullRequestFact {
   headSha: string;
+  /** The base revision pinned by the current pull-request facts. */
+  baseSha?: string;
   mergeable: boolean;
   requiredChecksGreen: boolean;
 }
 
 export interface ReviewFact {
   reviewedHeadSha: string;
+  /** The base revision examined by the current verdict. */
+  reviewedBaseSha?: string;
   unresolvedConfirmedFindings: number;
   localReviewClean: boolean;
   cloudReviewAvailable: boolean;
@@ -218,8 +223,55 @@ export function retryDecision(failuresSoFar: number): RetryDecision {
 export function reviewIsFresh(
   currentHeadSha: string,
   reviewedHeadSha: string,
+  currentBaseSha?: string,
+  reviewedBaseSha?: string,
 ): boolean {
-  return currentHeadSha === reviewedHeadSha;
+  if (currentHeadSha !== reviewedHeadSha) return false;
+  if (currentBaseSha === undefined && reviewedBaseSha === undefined) return true;
+  return currentBaseSha !== undefined && currentBaseSha === reviewedBaseSha;
+}
+
+export type FixRoundKind =
+  | "code-fix"
+  | "conflict-resolution"
+  | "infrastructure-retry"
+  | "conflict-free-base-refresh";
+
+export interface FixRoundDecision {
+  allowed: boolean;
+  consumesRound: boolean;
+  reason: string;
+}
+
+/**
+ * Infrastructure retries and conflict-free base refreshes do not consume a
+ * code-fix round. A code fix or conflict resolution does, with two rounds
+ * remaining the hard maximum.
+ */
+export function fixRoundDecision(
+  roundsUsed: number,
+  kind: FixRoundKind,
+): FixRoundDecision {
+  const consumesRound = kind === "code-fix" || kind === "conflict-resolution";
+  if (!consumesRound) {
+    return {
+      allowed: true,
+      consumesRound: false,
+      reason: "infrastructure retry or conflict-free base refresh does not consume a fix round",
+    };
+  }
+  if (roundsUsed >= MAX_FIX_ROUNDS) {
+    return {
+      allowed: false,
+      consumesRound: true,
+      reason: `at most ${MAX_FIX_ROUNDS} code-fix rounds are allowed per pull request`,
+    };
+  }
+  return {
+    allowed: true,
+    consumesRound: true,
+    reason: "code changes consume one bounded fix round",
+  };
 }
 
 export function isMergeEligible(
@@ -236,8 +288,20 @@ export function isMergeEligible(
   if (!review.localReviewClean) {
     blockers.push("local review is not clean");
   }
-  if (!reviewIsFresh(pullRequest.headSha, review.reviewedHeadSha)) {
+  if (pullRequest.headSha !== review.reviewedHeadSha) {
     blockers.push("reviewed head SHA does not match the current head SHA");
+  }
+  if (
+    (pullRequest.baseSha !== undefined ||
+      review.reviewedBaseSha !== undefined) &&
+    !reviewIsFresh(
+      pullRequest.headSha,
+      review.reviewedHeadSha,
+      pullRequest.baseSha,
+      review.reviewedBaseSha,
+    )
+  ) {
+    blockers.push("reviewed base SHA does not match the current base SHA");
   }
   if (!pullRequest.mergeable) {
     blockers.push("pull request is not mergeable");

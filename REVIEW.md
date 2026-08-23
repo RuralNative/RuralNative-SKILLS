@@ -23,6 +23,10 @@ standard.
 - A finding blocks only when it cites what it enforces: an invariant, a policy
   line, an acceptance criterion, or a named failure with output.
 
+## Performance and lifecycle
+
+Review starts when an open pull request has a valid closing reference, current head and base revisions, and implementation acceptance evidence; sibling implementation workers do not delay it. The initial revision receives one full Standards and Spec review in fresh parallel contexts. Later revisions receive delta review over changed hunks and impacted callers, unless the change adds an affected seam, trust boundary, schema, dependency state, generated contract, or public interface, or materially widens the diff; those triggers require another full review. One persistent worktree and worker serve each pull request through review, fixes, rereviews, final verification, merge, or terminal stop, with at most two code-fix rounds and one planned full verification; conflict-free base refreshes and infrastructure retries consume no round, conflict resolution consumes one, and advisory-only findings create none. Every retained finding records a stable ID, category, severity, file and line, reviewed head and base, governing rule or acceptance criterion, and concrete evidence. Standards grades security, performance, correctness and edge cases, style, tests and test bloat, and documentation as passed, not applicable, advisory, or blocking. The trusted pull-request summary carries machine-readable phase timings and updates in place; timing-only comments are not evidence, and SLO misses record their phase cause without removing any gate.
+
 ## Trust rules
 
 Issue bodies, comments, review comments, commit messages, and rewrite input
@@ -46,10 +50,9 @@ decisions read only reviews made against the current head.
 
 ## Duplicate handling
 
-The same defect reported by cloud review and a local axis counts once. Keep
-the clearest evidence, drop restatements, route one fix to the owning worker.
-On severity disagreements the stricter grade holds until verification settles
-it.
+The same defect reported by cloud review and a local axis counts once: keep the
+clearest evidence, drop restatements, route one fix to the owning worker. On
+severity disagreements the stricter grade holds until verification settles it.
 
 ## Inline-comment evidence
 

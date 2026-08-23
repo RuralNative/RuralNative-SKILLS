@@ -121,7 +121,7 @@ describe("selectReviewWave", () => {
       [1, 2],
       "a moved revision re-enters the wave",
     );
-    const later = [...prs, pr({ ticket: 171, prNumber: 9, headSha: "head-9" })];
+    const later = [prs[0], pr({ ticket: 171, prNumber: 9, headSha: "head-9" })];
     assert.ok(
       selectReviewWave(tickets, later, SPEC, reviewed).some((w) => w.prNumber === 9),
       "a PR created after invocation enters the wave",

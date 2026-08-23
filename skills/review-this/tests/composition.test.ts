@@ -67,7 +67,7 @@ describe("review-this discovery and installation (review-this:INV-2)", () => {
     assert.ok(arch.includes("docs/leaves/review-this.md"));
     assert.ok(fs.existsSync(path.join(ROOT, "docs/leaves/review-this.md")));
     const leaf = read("docs/leaves/review-this.md");
-    for (let i = 1; i <= 12; i++) assert.ok(leaf.includes(`INV-${i}`), `leaf must contain INV-${i}`);
+    for (let i = 1; i <= 13; i++) assert.ok(leaf.includes(`INV-${i}`), `leaf must contain INV-${i}`);
   });
 });
 
@@ -313,8 +313,10 @@ describe("review-this state and adapter boundaries (review-this:INV-11)", () => 
     const n = norm(leaf);
     assert.ok(n.includes("future persistent coordinator"));
     const adapters = read("skills/review-this/adapters.ts");
-    assert.ok(adapters.includes("fakeCloudAdapter"));
-    assert.ok(adapters.includes("fakeGitHubAdapter"));
+    const fakes = read("skills/review-this/tests/fakes.ts");
+    assert.equal(adapters.includes("fakeCloudAdapter"), false, "production adapters must not carry fake-only helpers");
+    assert.ok(fakes.includes("fakeCloudAdapter"));
+    assert.ok(fakes.includes("fakeGitHubAdapter"));
   });
 });
 

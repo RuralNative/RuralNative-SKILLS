@@ -10,6 +10,8 @@ Bare (`155`) and hash (`#155`) forms are equivalent and normalize identically be
 
 The command session manages workers instead of writing ticket code: every run, including a single-ticket run, dispatches one isolated worktree and one worker session per ticket. In Kilo Code this is the `agent_manager` tool in worktree mode, one independent task and one initial prompt per ticket. Every worker pushes its feature branch and opens one pull request against `main`; no path pushes directly to `main`.
 
+Each published ticket carries an `ordinary` or `high-risk` class from planning. Ordinary work targets 60 minutes from durable reservation to merge or terminal stop; high-risk work targets 90 minutes. A compact dispatch packet carries the class, revisions, affected seams, acceptance criteria, and settled decisions. The worker measures setup and orientation phases, compares dependency manifests after checkout, keeps a separate `node_modules`, and records affected-test evidence. SLO misses record their cause and never bypass a safety gate.
+
 ## Requirements
 
 - A GitHub repository with an issue tracker and native sub-issue plus `blocked_by` relationships for parent and dependency state.
@@ -78,6 +80,8 @@ One documented smoke run proves visible isolation on Kilo Code's VS Code extensi
 5. After delivery, confirm one open pull request per ticket with a valid closing reference and posted evidence, stopped worker sessions, and any unclosable worktree reported as `cleanup-pending` rather than deleted.
 
 Record the observed overview counts and outcomes in the run notes for the specification.
+
+For the performance contract, record machine-readable phase timings in the trusted pull-request summary. Do not create timing-only comments. The review session starts when each pull request has a current head and implementation acceptance evidence, even while sibling workers remain active.
 
 ## Boundary
 
