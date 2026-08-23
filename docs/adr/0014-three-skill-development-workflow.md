@@ -3,8 +3,6 @@
 Status: accepted
 Date: 2026-08-22
 
-Amended 2026-08-23 by ADR-0019: requiring one human invocation per dependency wave, returning confirmed review fixes to the ticket's owning worker, and keeping the pure helpers reusable by a future persistent coordinator are superseded there. Command sessions now manage their own frontiers, fixes go to a fresh fix worktree per pull-request round, and no coordinator is planned. The remaining clauses stand.
-
 Decision: `plan-this`, `implement-this`, and `review-this` own the complete development workflow without a separate coordinator. GitHub is the durable record. A direct human invocation authorizes the bounded stage named by that workflow command; delegated skills supply methods inside that boundary, while the workflow command owns trust checks, labels, dependencies, concurrency, delivery, merge, and closure.
 
 Planning publishes one unlabelled parent specification and independently verifiable child tickets. Native sub-issue links define membership. Native `blocked_by` relationships define execution order. Open blockers mean `blocked` with no claimable label. Tickets with no open blocker carry `ready-for-agent`; closing the last blocker changes a ticket to `unblocked` plus `ready-for-agent`.

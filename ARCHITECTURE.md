@@ -33,6 +33,7 @@ harness check 6. A covered doc must be in the seam table or listed here:
 
 - CONTEXT.md
 - REVIEW.md
+- reference/vendor-facts.md
 - docs/debt.md
 - README.md
 - docs/agents/domain.md
@@ -101,6 +102,7 @@ parsed from, so they are not listed here.
 | CONTEXT.md | glossary |
 | README.md | pointer |
 | REVIEW.md | policy |
+| reference/vendor-facts.md | vendor-facts |
 | docs/agents/domain.md | pointer |
 | docs/agents/issue-tracker.md | pointer |
 | docs/agents/triage-labels.md | pointer |
