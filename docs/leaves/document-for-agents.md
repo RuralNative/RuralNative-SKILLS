@@ -116,7 +116,8 @@ change and flags the discrepancy; changing the rule requires a new decision.
     correction without becoming a general prohibition or instruction, and are
     evidence for optional user-reviewed submission to the skill developer with
     no upload, network call, or telemetry. Mechanism: composition tests in
-    `skills/document-for-agents/tests/` plus the hostile
+    `skills/document-for-agents/tests/` pin the approved sanitized fields
+    against `reference/templates.md`, plus the hostile
     `diagnostics-entry.json` fixture.
 15. **INV-15** — Management marker provenance: generated `AGENTS.md` carries
     exactly one protected management marker directly after the five commands,

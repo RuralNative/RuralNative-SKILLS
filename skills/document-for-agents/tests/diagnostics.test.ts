@@ -69,7 +69,7 @@ describe("opt-in skill diagnostics (document-for-agents:INV-14)", () => {
       "impact",
       "correction",
       "documentation role",
-      "available skill revision",
+      "available pinned skill revision evidence",
       "attribution confidence",
       "redactions applied",
     ]) {
@@ -165,7 +165,7 @@ describe("management marker and provenance states (document-for-agents:INV-15)",
     assert.ok(t.includes("never guessed certainty"));
     assert.ok(t.includes("mutable branch or path alone is not revision evidence"));
     const skill = norm(read(SKILL));
-    assert.ok(skill.includes("available pinned skill revision evidence or none"));
+    assert.ok(skill.includes("available pinned skill revision evidence"));
     const leaf = norm(read("docs/leaves/document-for-agents.md"));
     assert.ok(leaf.includes("confirmed") && leaf.includes("unknown"));
   });
