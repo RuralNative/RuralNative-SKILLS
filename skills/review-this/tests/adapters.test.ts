@@ -149,8 +149,8 @@ describe("merge gates and squash merge decisions (review-this:INV-8/INV-9)", () 
   test("eligible pull requests squash-merge with closing reference and close the ticket", async () => {
     const tickets = [ticket(131), ticket(132)];
     const prs = [
-      { ticket: 131, prNumber: 10, headSha: HEAD, state: "open" as const, mergeable: true, requiredChecksGreen: true },
-      { ticket: 132, prNumber: 11, headSha: HEAD, state: "open" as const, mergeable: true, requiredChecksGreen: true },
+      { ticket: 131, prNumber: 10, headSha: HEAD, baseSha: "base-10", state: "open" as const, mergeable: true, requiredChecksGreen: true, closesTicket: 131, hasAcceptanceEvidence: true },
+      { ticket: 132, prNumber: 11, headSha: HEAD, baseSha: "base-11", state: "open" as const, mergeable: true, requiredChecksGreen: true, closesTicket: 132, hasAcceptanceEvidence: true },
     ];
     const wave = selectReviewWave(tickets, prs, SPEC);
     assert.equal(wave.length, 2);

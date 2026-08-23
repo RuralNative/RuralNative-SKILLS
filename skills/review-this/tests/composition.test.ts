@@ -151,14 +151,34 @@ describe("review-this hard dependencies and workflow order (review-this:INV-4)",
 });
 
 describe("review-this discovery contract (review-this:INV-5)", () => {
+  test("resolves the invocation target before any write with normalizeReference and resolveReviewTarget", () => {
+    const skill = read("skills/review-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("normalizereference"), "must name normalizeReference from targets.ts");
+    assert.ok(n.includes("resolvereviewtarget"), "must name resolveReviewTarget from targets.ts");
+    assert.ok(n.includes("/review-this 100` and `/review-this #100` normalize to the same repository number"), "bare and hash references must normalize identically");
+    assert.ok(n.includes("cross-repository target stops before any write unless the user explicitly chose that repository"), "cross-repository targets stop before writes");
+    assert.ok(n.includes("malformed-reference") && n.includes("target-not-found") && n.includes("closed-pull-request") && n.includes("standalone-issue-without-pull-request") && n.includes("ambiguous-pull-requests"), "named diagnostic states must be listed");
+    assert.ok(n.includes("no review or fix worktree intent exists for an invalid or ambiguous target"));
+    assert.ok(n.includes("performs no network, git, filesystem, agent manager, or github writes"), "the resolver returns facts and decisions only");
+    assert.ok(n.includes("a pull request without an originating specification produces a standards-only plan, reports spec unavailable, and cannot auto-merge"));
+  });
+
   test("selectReviewWave discovers only the current wave pinned to current head SHA", () => {
     const skill = read("skills/review-this/SKILL.md");
     const n = norm(skill);
     assert.ok(n.includes("selectreviewwave"), "must name selectReviewWave from discovery.ts");
-    assert.ok(n.includes("open pull requests"), "must describe open pull requests");
-    assert.ok(n.includes("ready-for-human"), "must select pull requests whose tickets carry ready-for-human");
+    assert.ok(n.includes("open pull request"), "must describe open pull requests");
     assert.ok(n.includes("native child order"), "must preserve native child order");
     assert.ok(n.includes("current head sha"), "must pin to current head SHA");
+  });
+
+  test("readiness comes from PR facts, not ready-for-human, which keeps its triage meaning", () => {
+    const skill = read("skills/review-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("review readiness comes from an open pull request, a valid closing reference, current head and base revisions, and posted implementation acceptance evidence"));
+    assert.ok(n.includes("`ready-for-human` keeps its triage meaning and is never pull-request readiness"));
+    assert.ok(n.includes("never selects an already-reviewed unchanged head-and-base pair twice"));
   });
 });
 
