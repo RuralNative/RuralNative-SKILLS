@@ -13,7 +13,7 @@ bad()  { printf '  FAIL %s\n' "$*"; fail=1; }
 
 # Coverage <-> disk (check 1).
 mapfile -t COVERED < <(grep -oE '^\| [^|]+\.md' "$ARCH" | sed -E 's/^\| //; s/[[:space:]]*$//' | sort -u)
-mapfile -t ONDISK < <({ find docs -name '*.md' -type f; for f in CONTEXT.md README.md REVIEW.md; do [[ -f $f ]] && printf '%s\n' "$f"; done; } | sort)
+mapfile -t ONDISK < <({ find docs -name '*.md' -type f; for f in CONTEXT.md README.md REVIEW.md reference/vendor-facts.md; do [[ -f $f ]] && printf '%s\n' "$f"; done; } | sort)
 missing=0
 for f in "${COVERED[@]}"; do [[ -f "$f" ]] || { bad "coverage: listed but not on disk — $f"; missing=1; }; done
 unlisted=0

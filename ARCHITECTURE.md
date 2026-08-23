@@ -1,10 +1,8 @@
 # Architecture — RuralNative-SKILLS
 
-A public distribution shelf: a repository that publishes installable agent
-skills. Each skill is a seam under `skills/<skill-identity>/`; the docs tree
-under `docs/` caches what the code cannot express — decisions, vocabulary,
-invariants, conventions. The repo runs the document-for-agents lifecycle on its
-own docs.
+A public distribution shelf for installable agent skills. Each skill is a seam
+under `skills/<skill-identity>/`; the docs tree caches decisions, vocabulary,
+invariants, and conventions that code cannot express.
 
 ## Seams
 
@@ -18,21 +16,17 @@ own docs.
 | review-this | owns one pull-request review wave through merge, promotion, and parent closure; reconciles Kilo cloud review with the local Standards and Spec review against each current head and delegates to `/code-review` and `/unslopify` | skills/review-this/ | composition, discovery, reconciliation, and adapter tests via `skills/review-this/tests/`; identity == folder check | docs/leaves/review-this.md |
 | release-skills | universal release workflow that auto-detects version files and changelogs | skills/release-skills/ | composition via `skills/release-skills/tests/`; identity == folder check | docs/leaves/release-skills.md |
 
-A new directory under `skills/` is a new seam: it needs a row here, a leaf
-doc, and a `SKILL.md` whose frontmatter `name` matches its folder (harness
-check 3).
-
-Repo-level contract tests that check published artifacts rather than a
-skill's own seam live in `tests/` at the repository root, outside the seam
-scan; `tests/readme-contract.test.ts` pins the README contract for #107.
+A new `skills/<skill-identity>/` directory needs a row, leaf doc, and matching
+`SKILL.md` name (harness check 3). Root `tests/` holds published-artifact tests
+outside the seam scan; `tests/readme-contract.test.ts` pins README for #107.
 
 ## Non-seam docs
 
-Covered docs that are not seams — the seam table's counterpart, parsed by
-harness check 6. A covered doc must be in the seam table or listed here:
+Covered non-seam docs are listed here; harness check 6 uses this list.
 
 - CONTEXT.md
 - REVIEW.md
+- reference/vendor-facts.md
 - docs/debt.md
 - README.md
 - docs/agents/domain.md
@@ -50,6 +44,7 @@ harness check 6. A covered doc must be in the seam table or listed here:
 - docs/adr/0016-unslopify-always-on-output-contract.md
 - docs/adr/0017-doc-cache-attention-boundary.md
 - docs/adr/0018-opt-in-skill-diagnostics.md
+- docs/adr/0019-command-session-lifecycle-and-platform-limits.md
 - docs/leaves/document-for-humans.md
 - docs/human/overview.md
 - docs/human/decision-journal.md
@@ -58,9 +53,7 @@ harness check 6. A covered doc must be in the seam table or listed here:
 
 ## Superseded decisions
 
-Retired ADRs. Their numbers are never reused; each carries a superseded status
-banner pointing at its successor. Listed here so coverage stays complete
-without the index referencing them as current:
+Retired ADRs stay listed for complete coverage; their numbers are never reused.
 
 | ADR | Superseded by |
 |---|---|
@@ -76,27 +69,30 @@ without the index referencing them as current:
 - Distribution is the registry lane only — no npm packaging. See ADR-0001.
 - Work docs (plans, audits) live in the issue tracker, never the repo. See `docs/agents/issue-tracker.md`.
 - Glossary vocabulary is binding; forbidden synonyms are listed. See `CONTEXT.md`.
-- Attention is bounded: loading budgets are caps on orientation documents,
-  `AGENTS.md` opens with the five-command contract, and invariant collisions
-  stop for a decision. See ADR-0017.
-- Skill diagnostics stay opt-in: consent-gated, private, sanitized, outside
-  every read set, and never guidance; the management marker carries provenance.
-  See ADR-0018.
+- Attention is bounded: loading budgets cap orientation documents, `AGENTS.md`
+  opens with the five-command contract, and invariant collisions stop for a
+  decision. See ADR-0017.
+- Skill diagnostics stay opt-in, private, sanitized, outside every read set,
+  and never guidance; the management marker carries provenance. See ADR-0018.
 - Known shortcuts and unfinished pieces are tracked in the debt registry. See `docs/debt.md`.
 - Review scope, severity, trust, verification, and subagent rules live in
   `REVIEW.md`; cloud review reads it from the pull-request base branch.
+- Accepted target in ADR-0019: user-created command sessions run workflow stages
+  independently, and unsupported Kilo worktree closure reports
+  `cleanup-pending`. Behavior tickets #154-#158 remain pending, so seam leaves
+  retain current shipped behavior until those tickets merge.
 
 ## Coverage
 
-Every authored doc, machine-checked against disk by `scripts/docs-check.sh`
-(harness check 1). The indexes `AGENTS.md` and this file are what the check is
-parsed from, so they are not listed here.
+Every authored doc is machine-checked against disk by `scripts/docs-check.sh`
+(check 1); `AGENTS.md` and this parsed index are excluded.
 
 | File | Tier |
 |---|---|
 | CONTEXT.md | glossary |
 | README.md | pointer |
 | REVIEW.md | policy |
+| reference/vendor-facts.md | vendor-facts |
 | docs/agents/domain.md | pointer |
 | docs/agents/issue-tracker.md | pointer |
 | docs/agents/triage-labels.md | pointer |
@@ -118,6 +114,7 @@ parsed from, so they are not listed here.
 | docs/adr/0016-unslopify-always-on-output-contract.md | decision |
 | docs/adr/0017-doc-cache-attention-boundary.md | decision |
 | docs/adr/0018-opt-in-skill-diagnostics.md | decision |
+| docs/adr/0019-command-session-lifecycle-and-platform-limits.md | decision |
 | docs/leaves/document-for-agents.md | leaf |
 | docs/leaves/document-for-humans.md | leaf |
 | docs/leaves/unslopify.md | leaf |
@@ -138,17 +135,15 @@ parsed from, so they are not listed here.
 | Any change | AGENTS.md → ARCHITECTURE.md → the seam's leaf doc → glossary | small |
 | Re-orient after compaction | ARCHITECTURE.md → task leaf doc → glossary | one small fixed read |
 
-The budgets are hard caps on orientation documents, not guidance to trim later; they
-never block code inspection inside the affected seam. A missing unrecoverable fact
-becomes a named cache gap: record it in the issue tracker, ask the
-owner for approval before opening more documentation, and do not widen the read set until approval (ADR-0017).
+Budgets are hard caps on orientation docs, never code inspection inside the
+affected seam. A missing fact is a named cache gap recorded in the issue
+tracker; owner approval is required before the read set widens (ADR-0017).
 
 ## Checks
 
-- `./scripts/docs-check.sh` — the coherence gate enforcing the ten checks of
-  `skills/document-for-agents/reference/harness.md`, plus a scorecard
-  reporting per-seam invariants and debt counts. Run it before finishing; a
-  red harness is a work item, not a warning.
+- `./scripts/docs-check.sh` — the coherence gate enforcing ten checks from
+  `skills/document-for-agents/reference/harness.md`, plus a seam-invariant and
+  debt scorecard. Run it before finishing; a red harness is a work item.
 - Freshness threshold: 30 days — generated docs older than this fail check 7.
 - Human-docs extension: read-set absence, link direction, derived freshness for docs/human/ (spec #28; dormant until the tree exists).
 - The harness is tooling and is exempt from demanding its own doc.
