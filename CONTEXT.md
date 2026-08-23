@@ -125,6 +125,18 @@ _Avoid_: direct-main delivery, mode selection
 A git worktree whose root sits under the Kilo Agent Manager worktree location. Worker sessions dispatched by `implement-this` run in such worktrees; the location carries no delivery-mode choice.
 _Avoid_: agent worktree, AO worktree
 
+**Command session**:
+The user-created session running one workflow command such as `/implement-this` or `/review-this`. It validates, reserves, dispatches, monitors, and reports; it never edits ticket code. Per ADR-0019 the user starts these sessions independently and nothing supervises them.
+_Avoid_: supervisor, coordinator, orchestrator
+
+**Worker session**:
+A targeted session inside an isolated git worktree that claims exactly its own ticket and never touches sibling state. A command session creates it through the worker capability contract (ADR-0019).
+_Avoid_: agent (when the session is meant), subagent
+
+**Cleanup-pending**:
+The visible state recorded when completed managed-worktree closure is unavailable on the host: the session stops, the worktree stays, and deletion behind Agent Manager is forbidden (ADR-0019).
+_Avoid_: orphaned worktree, manual cleanup
+
 **Workflow command**:
 One of the three direct human entry points, `plan-this`, `implement-this`, or `review-this`. It owns the boundaries and state changes of its stage while delegated skills supply methods inside those boundaries.
 _Avoid_: Wrapper, coordinator

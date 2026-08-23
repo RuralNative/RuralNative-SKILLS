@@ -37,12 +37,15 @@ ADR-0009 (now superseded by ADR-0014) recorded the decision to keep `disable-mod
 
 Former parity debt with `implement-this` (DEBT-7) was resolved 2026-08-20. Verified against `skills/implement-this/SKILL.md` at 48 lines including frontmatter with no wrapper sections; the trimmed contract now matches across both adapters with wrapper reference material in leaf/INSTALL/ADR.
 
+ADR-0019 (2026-08-23, parent spec #152) tightens the planning gate for #154: every fresh `/plan-this` run must complete at least one grill frontier round before anything publishes, publication waits for explicit approval after the shared understanding and the proposed ticket graph are shown (one invocation authorizes the interactive chain, approval stays separate), and an interrupted grill resumes its recorded decision tree instead of restarting. This leaf keeps the shipped wording above until #154 merges.
+
 ## Links
 
 - Glossary: `CONTEXT.md` — Skill, skill identity, skill naming convention, distribution shelf, registry lane.
 - Decision: `docs/adr/0004-verb-named-skills-flat-shelf.md` — default naming.
 - Decision: `docs/adr/0006-plan-this-fixed-template-adapter.md` — task-scoped exception and template boundary.
 - Decision: `docs/adr/0014-three-skill-development-workflow.md` — shipped three-skill workflow (supersedes ADR-0009, ADR-0012, ADR-0013).
+- Decision: `docs/adr/0019-command-session-lifecycle-and-platform-limits.md` — planning publication gate and command-session lifecycle (amends ADR-0014; behavior lands with #154).
 - Historical decision: `docs/adr/0009-delegation-invariants-human-invocation.md` (now superseded) — locked delegation chains and human-invocation requirement.
 - Decision: `docs/adr/0015-requirements-data-trust-and-install-provenance.md` — requirements-data trust boundary and install provenance.
 - Harness: `scripts/docs-check.sh`.

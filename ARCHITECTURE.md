@@ -50,6 +50,7 @@ harness check 6. A covered doc must be in the seam table or listed here:
 - docs/adr/0016-unslopify-always-on-output-contract.md
 - docs/adr/0017-doc-cache-attention-boundary.md
 - docs/adr/0018-opt-in-skill-diagnostics.md
+- docs/adr/0019-command-session-lifecycle-and-platform-limits.md
 - docs/leaves/document-for-humans.md
 - docs/human/overview.md
 - docs/human/decision-journal.md
@@ -85,6 +86,9 @@ without the index referencing them as current:
 - Known shortcuts and unfinished pieces are tracked in the debt registry. See `docs/debt.md`.
 - Review scope, severity, trust, verification, and subagent rules live in
   `REVIEW.md`; cloud review reads it from the pull-request base branch.
+- Workflow stages run in user-created command sessions; there is no supervisor
+  or coordinator, and unsupported Kilo worktree closure is reported as
+  `cleanup-pending` instead of improvised. See ADR-0019.
 
 ## Coverage
 
@@ -118,6 +122,7 @@ parsed from, so they are not listed here.
 | docs/adr/0016-unslopify-always-on-output-contract.md | decision |
 | docs/adr/0017-doc-cache-attention-boundary.md | decision |
 | docs/adr/0018-opt-in-skill-diagnostics.md | decision |
+| docs/adr/0019-command-session-lifecycle-and-platform-limits.md | decision |
 | docs/leaves/document-for-agents.md | leaf |
 | docs/leaves/document-for-humans.md | leaf |
 | docs/leaves/unslopify.md | leaf |
