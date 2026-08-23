@@ -209,6 +209,15 @@ describe("resolveReviewTarget", () => {
     if (!result.ok) assert.equal(result.diagnostic, "ambiguous-pull-requests");
   });
 
+  test("a child issue ignores a pull request linked to another ticket", () => {
+    const ctx = context({
+      pullRequests: [prLink({ ticket: 999, prNumber: 301, closesTicket: 154 })],
+    });
+    const result = resolveReviewTarget("#154", ctx);
+    assert.equal(result.ok, false);
+    if (!result.ok) assert.equal(result.diagnostic, "missing-pull-request");
+  });
+
   test("an issue whose only PR lacks a valid closing reference stops before writes", () => {
     const ctx = context({
       pullRequests: [prLink({ ticket: 999, prNumber: 301 })],

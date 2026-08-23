@@ -87,6 +87,12 @@ describe("selectReviewWave", () => {
     assert.deepEqual(selectReviewWave(tickets, prs, SPEC), []);
   });
 
+  test("does not select a pull request with a missing revision", () => {
+    const tickets = [ticket({ number: 150 })];
+    const prs = [pr({ ticket: 150, prNumber: 1, headSha: "" })];
+    assert.deepEqual(selectReviewWave(tickets, prs, SPEC), []);
+  });
+
   test("preserves native child order even when PRs arrive out of order", () => {
     const tickets = [ticket({ number: 10 }), ticket({ number: 20 }), ticket({ number: 30 })];
     const prs = [pr({ ticket: 30, prNumber: 3 }), pr({ ticket: 10, prNumber: 1 }), pr({ ticket: 20, prNumber: 2 })];

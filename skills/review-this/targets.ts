@@ -127,7 +127,10 @@ function openPrsClosing(
   ticket: number,
 ): PullRequestLink[] {
   return pullRequests.filter(
-    (pr) => pr.state === "open" && pr.closesTicket === ticket,
+    (pr) =>
+      pr.state === "open" &&
+      pr.ticket === ticket &&
+      pr.closesTicket === ticket,
   );
 }
 

@@ -80,6 +80,7 @@ export function selectReviewWave(
     if (ticket.labels.includes(LABEL_NEEDS_INFO)) continue;
     if (pr.closesTicket !== pr.ticket) continue;
     if (openClosingPullRequests.get(pr.ticket) !== 1) continue;
+    if (pr.headSha.trim() === "" || pr.baseSha.trim() === "") continue;
     if (!pr.hasAcceptanceEvidence) continue;
     if (reviewed.has(`${pr.prNumber}:${pr.headSha}:${pr.baseSha}`)) continue;
     wave.push({
