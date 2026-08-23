@@ -152,47 +152,106 @@ describe("pull-request-only delivery (INV-5)", () => {
   });
 });
 
-describe("worker isolation and capability adapters (INV-6)", () => {
-  test("each ticket gets isolated worktree, branch, session, status, and stop control", () => {
+describe("worker isolation and Agent Manager dispatch (implement-this:INV-6)", () => {
+  test("each ticket gets isolated worktree, branch, session, overview-derived status, and supported stop control", () => {
     const skill = read("skills/implement-this/SKILL.md");
     const n = norm(skill);
     assert.ok(n.includes("isolated git worktree"), "isolated worktree per ticket");
     assert.ok(n.includes("feature branch"), "feature branch per ticket");
-    assert.ok(n.includes("targeted worker session"), "targeted session per ticket");
-    assert.ok(n.includes("status lookup"), "status lookup per worker");
-    assert.ok(n.includes("stop control"), "stop control per worker");
-    assert.ok(n.includes("worker-adapters.ts"), "capability contract module is named");
+    assert.ok(n.includes("targeted worker session"), "targeted session per worker");
+    assert.ok(n.includes("status comes from the agent manager overview"), "status comes from the overview");
+    assert.equal(n.includes('action: "status"'), false, "unsupported status action is rejected");
+    assert.ok(n.includes('supported stop control is `action: "stop"`'), "stop uses a supported action");
   });
 
-  test("kilo agent manager is preferred; other hosts may match the contract", () => {
+  test("kilo execution uses agent_manager worktree mode with one task and one prompt per ticket", () => {
     const skill = read("skills/implement-this/SKILL.md");
-    const adapters = read("skills/implement-this/worker-adapters.ts");
-    const n = norm(`${skill}\n${adapters}`);
-    assert.ok(n.includes("kilo agent manager is the preferred adapter"));
-    assert.ok(n.includes("another host may provide the same create, prompt, status, and stop capabilities"));
-    assert.ok(adapters.includes("PREFERRED_ADAPTER_NAME = \"kilo-agent-manager\""));
+    const n = norm(skill);
+    assert.ok(n.includes("agent_manager"), "the agent_manager tool is named");
+    assert.ok(n.includes("worktree mode"), "dispatch runs in worktree mode");
+    assert.ok(n.includes("one independent task per ticket"), "one task per ticket");
+    assert.ok(n.includes("one initial prompt"), "one initial prompt per task");
   });
 
-  test("multi-ticket execution stops before writes when isolation is unavailable", async () => {
+  test("no single-ticket inline path exists; the host must provide worktree and session", async () => {
     const skill = read("skills/implement-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("a one-ticket run behaves exactly like a parent run"));
+    assert.ok(n.includes("no single-ticket inline path"), "inline fallback is forbidden");
+    assert.ok(n.includes("never edits ticket code"), "command session never edits ticket code");
     assert.ok(
-      norm(skill).includes("multi-ticket execution stops before any write when isolated workers are unavailable"),
+      n.includes("stop before any claim or edit"),
+      "missing isolation stops before claims or edits",
     );
-    const { dispatchTickets } = await import("../worker-adapters.ts");
-    const result = await dispatchTickets([134], null, () => "t");
-    assert.equal(result.ok, false, "dispatch without an adapter refuses to write");
+    assert.equal(fs.existsSync(path.join(ROOT, "skills/implement-this/worker-adapters.ts")), false,
+      "the fake-only adapter module is deleted");
   });
 
-  test("no more than three workers are active at once", () => {
+  test("spawning counts the workspace overview against both caps", () => {
     const skill = read("skills/implement-this/SKILL.md");
+    const lifecycle = read("skills/implement-this/command-session.ts");
     const core = read("skills/implement-this/workflow-state.ts");
+    const n = norm(skill);
+    assert.ok(n.includes("action: \"list\""), "overview read is named");
+    assert.ok(n.includes("activemanagedworkers"), "workspace counting uses the pure decision");
     assert.ok(core.includes("export const MAX_ACTIVE_WORKERS = 3"));
-    assert.ok(norm(skill).includes("max_active_workers"), "skill names the cap constant");
+    assert.ok(lifecycle.includes("export const MAX_MANAGED_WORKERS = 4"));
+    assert.ok(n.includes("unrelated active workers consume global capacity"));
   });
 
-  test("seam docs describe adapter tests with fakes only", () => {
+  test("seam docs describe lifecycle tests from captured facts", () => {
     const leaf = read("docs/leaves/implement-this.md");
-    assert.ok(norm(leaf).includes("fakes"), "leaf documents fake-based adapter testing");
+    assert.ok(norm(leaf).includes("captured facts"), "leaf documents fact-driven testing");
+  });
+});
+
+describe("command-session lifecycle decisions (#155)", () => {
+  test("reservation happens durably before asynchronous creation", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("gh issue edit <n> --add-assignee @me"), "the claim command is named");
+    assert.ok(n.includes("a worker finds its ticket already reserved and claims nothing"));
+  });
+
+  test("scheduling collisions wait for a slot without gaining a blocker edge", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("schedulingcollision"), "collision decision named");
+    assert.ok(n.includes("waits for a free slot"), "collisions wait");
+    assert.ok(n.includes("waiting adds no blocker edge"), "no false dependency");
+  });
+
+  test("monitoring polls with increasing delays, reports lifecycle changes, checkpoints at 30 minutes", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("increasing delays (`nextpolldelay`)"));
+    assert.ok(n.includes("report only lifecycle changes"));
+    assert.ok(n.includes("after 30 minutes without progress (`checkpointdue`)"));
+  });
+
+  test("parent mode recomputes the frontier including follow-up children", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("whenever a ticket, blocker, pull request, or follow-up child changes"));
+    assert.ok(n.includes("follow-up children created after the invocation join the frontier"));
+  });
+
+  test("delivery waits for GitHub evidence, not session idleness", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("delivery waits for github facts, not session idleness"));
+    assert.ok(n.includes("isdelivered"));
+    assert.ok(n.includes("an idle worker alone never completes a ticket"));
+  });
+
+  test("cleanup stops sessions, reports cleanup-pending, preserves failed worktrees", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("cleanupdecision"), "cleanup decision named");
+    assert.ok(n.includes("cleanup-pending"), "unsupported closure is visible");
+    assert.ok(n.includes("never delete directories behind agent manager"));
+    assert.ok(n.includes(".kilo/agent-manager.json"), "Agent Manager state file stays untouched");
+    assert.ok(n.includes("failed worktrees stay available for diagnosis"));
   });
 });
 
@@ -220,7 +279,7 @@ describe("bounded-set parsing and dispatch validation (INV-7)", () => {
     const n = norm(skill);
     assert.ok(n.includes("authorizes only its bounded ticket set"));
     assert.ok(n.includes("ticket slot at the bottom replaced by its ticket number"));
-    assert.ok(n.includes("a worker claims only its own ticket"), "workers claim only their ticket");
+    assert.ok(n.includes("durably before asynchronous creation"), "reservation precedes worker creation");
   });
 });
 

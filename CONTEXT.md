@@ -130,7 +130,7 @@ The user-created session running one workflow command such as `/implement-this` 
 _Avoid_: supervisor, coordinator, orchestrator
 
 **Worker session**:
-A targeted session inside an isolated git worktree that claims exactly its own ticket and never touches sibling state. A command session creates it through the worker capability contract (ADR-0019).
+A targeted session inside an isolated git worktree that claims exactly its own ticket and never touches sibling state. A command session creates it through the `agent_manager` tool in worktree mode, one independent task and one initial prompt per ticket (ADR-0019).
 _Avoid_: agent (when the session is meant), subagent
 
 **Cleanup-pending**:

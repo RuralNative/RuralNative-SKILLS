@@ -40,12 +40,40 @@ describe("parseInvocation", () => {
     assert.deepEqual(parseInvocation(["#134", "#135", "#131"]), [134, 135, 131]);
     assert.deepEqual(parseInvocation(["130"]), [130]);
   });
+
+  test("bare and hash forms normalize identically before any GitHub read or write", () => {
+    const table: Array<[string, string]> = [
+      ["one ticket", "#131"],
+      ["one ticket bare", "131"],
+      ["parent specification", "#130"],
+      ["parent specification bare", "130"],
+      ["explicit set mixed", "#135"],
+      ["explicit set mixed bare", "135"],
+    ];
+    for (const [name, ref] of table) {
+      const bare = parseInvocation([ref.replace(/^#/, "")]);
+      assert.deepEqual(parseInvocation([ref]), bare, name);
+      assert.equal(bare[0], Number(ref.replace(/^#/, "")), name);
+    }
+    const hashed = planBoundedSet(["#131"], FIXTURE, WORKERS);
+    const barePlan = planBoundedSet(["131"], FIXTURE, WORKERS);
+    assert.deepEqual(barePlan, hashed);
+  });
 });
 
 describe("planBoundedSet through the pure state core", () => {
   test("one-ticket input selects exactly that ticket", () => {
     const plan = planBoundedSet(["#131"], FIXTURE, WORKERS);
     assert.deepEqual(plan, { ok: true, dispatch: [131] });
+  });
+
+  test("one parentless standalone ticket uses the same validation path", () => {
+    const plan = planBoundedSet(
+      ["#155"],
+      [ticket({ number: 155, parent: null })],
+      WORKERS,
+    );
+    assert.deepEqual(plan, { ok: true, dispatch: [155] });
   });
 
   test("explicit multi-ticket input keeps the requested set", () => {
@@ -98,6 +126,17 @@ describe("planBoundedSet through the pure state core", () => {
     assert.ok(plan.violations.length > 0);
   });
 
+  test("multiple parentless tickets stop before claims", () => {
+    const parentless = [
+      ticket({ number: 155, parent: null }),
+      ticket({ number: 156, parent: null }),
+    ];
+    const plan = planBoundedSet(["#155", "#156"], parentless, WORKERS);
+    assert.equal(plan.ok, false);
+    if (plan.ok) return;
+    assert.ok(plan.violations.length > 0);
+  });
+
   const rejections: Array<[string, string[], TicketFact[]]> = [
     ["closed ticket", ["#150"], [ticket({ number: 150, state: "closed" })]],
     [
@@ -109,11 +148,6 @@ describe("planBoundedSet through the pure state core", () => {
       "assigned ticket",
       ["#153"],
       [ticket({ number: 153, assignees: ["someone"] })],
-    ],
-    [
-      "ticket without a parent specification",
-      ["#155"],
-      [ticket({ number: 155, parent: null })],
     ],
     [
       "ticket missing ready-for-agent",
