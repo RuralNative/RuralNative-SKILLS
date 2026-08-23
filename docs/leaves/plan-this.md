@@ -48,7 +48,7 @@ The composition suite keeps the ordered grill-rule assertion separate from the p
 - Decision: `docs/adr/0004-verb-named-skills-flat-shelf.md` — default naming.
 - Decision: `docs/adr/0006-plan-this-fixed-template-adapter.md` — task-scoped exception and template boundary.
 - Decision: `docs/adr/0014-three-skill-development-workflow.md` — shipped three-skill workflow (supersedes ADR-0009, ADR-0012, ADR-0013).
-- Decision: `docs/adr/0019-command-session-lifecycle-and-platform-limits.md` — planning publication gate and command-session lifecycle (amends ADR-0014; #154 and #157's planning risk contract are shipped; #155, #156, and #158 carry the remaining lifecycle work).
+- Decision: `docs/adr/0019-command-session-lifecycle-and-platform-limits.md` — planning publication gate and command-session lifecycle (amends ADR-0014; #154 and #157's planning risk contract are shipped; #155, #156, and #158 carry the shipped lifecycle work).
 - Historical decision: `docs/adr/0009-delegation-invariants-human-invocation.md` (now superseded) — locked delegation chains and human-invocation requirement.
 - Decision: `docs/adr/0015-requirements-data-trust-and-install-provenance.md` — requirements-data trust boundary and install provenance.
 - Harness: `scripts/docs-check.sh`.

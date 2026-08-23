@@ -417,6 +417,8 @@ describe("merge eligibility", () => {
     unresolvedConfirmedFindings: 0,
     localReviewClean: true,
     cloudReviewAvailable: true,
+    trustedSummaryUpdated: true,
+    inlineFindingsVerified: true,
   };
 
   test("eligible when checks are green, findings resolved, local review clean, head unchanged", () => {
@@ -425,6 +427,16 @@ describe("merge eligibility", () => {
       blockers: [],
       cloudReview: "available",
     });
+  });
+
+  test("publication failure blocks merge even when the code review is otherwise clean", () => {
+    const decision = isMergeEligible(pr, {
+      ...cleanReview,
+      trustedSummaryUpdated: false,
+      inlineFindingsVerified: true,
+    });
+    assert.equal(decision.eligible, false);
+    assert.deepEqual(decision.blockers, ["trusted review summary was not published"]);
   });
 
   const cases: Array<[string, PullRequestFact, ReviewFact, string]> = [
