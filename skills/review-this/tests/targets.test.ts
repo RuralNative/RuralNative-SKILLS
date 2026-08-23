@@ -254,6 +254,16 @@ describe("resolveReviewTarget", () => {
     assert.deepEqual(result.plan.selections.map((s) => s.prNumber), [401]);
   });
 
+  test("a direct pull request with a mismatched linked ticket cannot auto-merge", () => {
+    const ctx = context({
+      pullRequests: [prLink({ ticket: 999, prNumber: 401, closesTicket: 154 })],
+    });
+    const result = resolveReviewTarget("#401", ctx);
+    assert.ok(result.ok);
+    assert.equal(result.plan.spec, SPEC);
+    assert.equal(result.plan.autoMergeAllowed, false);
+  });
+
   test("a closed pull request stops before writes", () => {
     const ctx = context({
       pullRequests: [prLink({ ticket: 154, prNumber: 301, state: "merged" })],
@@ -313,6 +323,10 @@ describe("reviewReadiness", () => {
     assert.equal(noRef.ready, false);
     const noEvidence = reviewReadiness(prLink({ ticket: 154, prNumber: 301, hasAcceptanceEvidence: false }));
     assert.equal(noEvidence.ready, false);
+    const mismatchedTicket = reviewReadiness(
+      prLink({ ticket: 999, prNumber: 301, closesTicket: 154 }),
+    );
+    assert.equal(mismatchedTicket.ready, false);
     const noHead = reviewReadiness(prLink({ ticket: 154, prNumber: 301, headSha: "" }));
     assert.equal(noHead.ready, false);
     const noBase = reviewReadiness(prLink({ ticket: 154, prNumber: 301, baseSha: "" }));

@@ -7,6 +7,8 @@ This repository publishes reusable skills for coding agents. The shelf includes 
 
 Child-issue and parent-wave selection requires each pull request to be linked to the same ticket it closes and to carry non-empty current head and base revisions.
 
+Direct pull-request review also withholds auto-merge authority when the linked ticket and closing reference disagree.
+
 The document seam records the attention boundary as separate invariants. It also keeps an optional, private log of confirmed agent mistakes: nothing is written unless you consent, every update announces itself first, the file never enters agent read sets or version control, and nothing uploads without your review (ADR-0018).
 
 One written file governs every review. `REVIEW.md` at the repository root says what reviewers check, how findings are graded, and that review subagents only read while the main reviewer verifies each finding. Cloud review reads the same file from the pull-request base branch; setting up that cloud service is separate configuration work outside this repository.

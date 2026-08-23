@@ -171,6 +171,9 @@ export function reviewReadiness(
   const blockers: string[] = [];
   if (pr.state !== "open") blockers.push("the pull request is not open");
   if (pr.closesTicket === null) blockers.push("the pull request has no valid closing reference");
+  if (pr.closesTicket !== null && pr.ticket !== pr.closesTicket) {
+    blockers.push("the pull request's linked ticket does not match its closing reference");
+  }
   if (pr.headSha.trim() === "") blockers.push("the pull request has no current head revision");
   if (pr.baseSha.trim() === "") blockers.push("the pull request has no current base revision");
   if (!pr.hasAcceptanceEvidence) {
