@@ -18,6 +18,7 @@ Each published ticket carries an `ordinary` or `high-risk` class from planning. 
 - `/implement` and `/unslopify` installed through their own registry lanes.
 - For every run, a host that provides both an isolated git worktree and a targeted worker session per ticket. Execution stops before any claim or edit when isolation is unavailable.
 - For Kilo dispatch, the `agent_manager` tool with worktree mode, so managed worktrees sit under the Agent Manager worktree location.
+- Tracked project permissions in `.kilo/kilo.jsonc` allow `agent_manager` (`agent_manager: allow`) and require explicit user approval for `task` (`task: ask`), so dispatch is automatic and outer or nested `Task` subagents run only after approval; `.kilo/agent-manager.json` is never edited.
 
 ## Install
 

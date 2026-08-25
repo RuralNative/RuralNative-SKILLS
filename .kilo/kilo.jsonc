@@ -1,4 +1,8 @@
 {
   "$schema": "https://app.kilo.ai/config.json",
-  "snapshot": false
+  "snapshot": false,
+  "permission": {
+    "agent_manager": "allow",
+    "task": "ask"
+  }
 }

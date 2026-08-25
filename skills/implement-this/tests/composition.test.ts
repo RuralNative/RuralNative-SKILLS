@@ -418,3 +418,59 @@ describe("completion handoff (INV-11)", () => {
     assert.ok(n.includes("ticket worktrees do not run review"), "no review inside ticket worktrees");
   });
 });
+
+describe("Agent Manager worktree dispatch enforcement (plan 1787549339706)", () => {
+  test("automatically dispatches via agent_manager worktree mode", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("automatically dispatches"), "must state automatic dispatch");
+    assert.ok(n.includes("agent_manager"), "must name agent_manager");
+    assert.ok(n.includes("worktree mode"), "must state worktree mode");
+    assert.ok(n.includes("one independent task per ticket"), "one task per ticket");
+    assert.ok(n.includes("one initial prompt"), "one prompt per ticket");
+    assert.ok(n.includes("without waiting to be forced"), "no-forced wording");
+  });
+
+  test("overview-first ordering: first worker-management call is agent_manager overview before worktree dispatch", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("first worker-management call"), "must state first worker-management call");
+    assert.ok(n.includes("agent manager overview"), "must name agent manager overview as first");
+    assert.ok(n.includes('action: "list"'), "must name overview action");
+    assert.ok(n.includes("before spawning anything"), "must read overview before spawning");
+    assert.ok(n.includes("worktree mode"), "must state worktree mode");
+  });
+
+  test("explicit outer Task-substitution ban and no Task fallback", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("do not substitute the `task`"), "must ban Task substitution");
+    assert.ok(n.includes("not a worktree replacement"), "must state not a worktree replacement");
+    assert.ok(n.includes("task is not an outer-worker fallback") || n.includes("not an outer-worker fallback"), "must state Task is not outer fallback");
+    assert.ok(n.includes("do not fall back to task"), "must forbid Task fallback");
+  });
+
+  test("unavailable Agent Manager capability stops before claims or edits", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("if the host cannot provide both an isolated git worktree and a targeted worker session per ticket, stop before any claim or edit"), "unavailable stops before claims");
+    assert.ok(n.includes("unavailable agent manager capability stops the run before claims or edits"), "must state unavailable capability stops");
+  });
+
+  test("project permission gate allows agent_manager and asks for task", () => {
+    const kilo = read(".kilo/kilo.jsonc");
+    const n = norm(kilo);
+    assert.ok(kilo.includes('"agent_manager"'), "kilo.jsonc must contain agent_manager key");
+    assert.ok(kilo.includes('"task"'), "kilo.jsonc must contain task key");
+    assert.ok(n.includes("agent_manager") && n.includes("allow"), "agent_manager must be allow");
+    assert.ok(n.includes("task") && n.includes("ask"), "task must be ask");
+    // ensure snapshot false still present
+    assert.ok(kilo.includes('"snapshot": false') || kilo.includes('"snapshot":false'), "snapshot false preserved");
+    // ensure agent-manager.json not mutated by this gate (read separately if exists)
+    const agentMgrPath = path.join(ROOT, ".kilo/agent-manager.json");
+    if (fs.existsSync(agentMgrPath)) {
+      const agentMgr = fs.readFileSync(agentMgrPath, "utf8");
+      assert.ok(!agentMgr.includes("permission"), "agent-manager.json must not be edited for permissions");
+    }
+  });
+});

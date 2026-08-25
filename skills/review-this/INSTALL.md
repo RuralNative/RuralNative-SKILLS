@@ -8,6 +8,7 @@
 - Open pull requests for the current wave, each against `main` with a closing reference `Closes #<ticket>` and current head and base SHAs.
 - `/code-review` installed through its own lane. It is not published by this shelf; install it from its own source before using `review-this`. It carries no `disable-model-invocation` lock and stays model-invocable.
 - `/unslopify` installed through its registry lane: `npx skills add RuralNative/RuralNative-SKILLS --skill unslopify`.
+- Tracked project permissions in `.kilo/kilo.jsonc` allow `agent_manager` (`agent_manager: allow`) and require explicit user approval for `task` (`task: ask`), so the persistent Agent Manager PR worktree is created before any nested Standards, Spec, or fix `Task` subagents, and those nested `Task` contexts run only after approval; `.kilo/agent-manager.json` is never edited.
 
 ## Install
 

@@ -376,3 +376,73 @@ describe("review-this performance lifecycle (review-this:INV-13)", () => {
     assert.ok(skill.includes("final verification repair consumes an available fix round") || skill.includes("if final verification fails"));
   });
 });
+
+describe("Agent Manager worktree dispatch enforcement (plan 1787549339706)", () => {
+  test("agent_manager appears before Task and persistent worktree exists before nested subagents", () => {
+    const skill = read("skills/review-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("agent_manager"), "must name agent_manager");
+    assert.ok(n.includes("task"), "must name Task");
+    const agentIdx = n.indexOf("agent_manager");
+    const taskIdx = n.indexOf("task");
+    assert.ok(agentIdx !== -1 && taskIdx !== -1 && agentIdx < taskIdx, "agent_manager must appear before Task");
+    assert.ok(n.includes("persistent pr worktree"), "must name persistent PR worktree");
+    assert.ok(n.includes("before any standards, spec, or fix"), "must state PR worktree before nested subagents");
+    const worktreeIdx = n.indexOf("persistent pr worktree");
+    const standardsIdx = n.indexOf("standards and spec sub-agents");
+    assert.ok(worktreeIdx !== -1 && standardsIdx !== -1 && worktreeIdx < standardsIdx, "worktree must appear before Standards subagents");
+    const fixIdx = n.indexOf("fix `task`") !== -1 ? n.indexOf("fix `task`") : n.indexOf("fix subagent");
+    if (fixIdx !== -1) assert.ok(worktreeIdx < fixIdx, "worktree must appear before fix subagents");
+  });
+
+  test("Task cannot replace the persistent PR worktree", () => {
+    const skill = read("skills/review-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("do not replace this worktree with `task` subagents"), "must ban Task replacing worktree");
+    assert.ok(n.includes("not a worktree substitute"), "must state not a worktree substitute");
+    assert.ok(n.includes("fresh subagents inside the persistent pr worktree"), "must state subagents are inside persistent worktree");
+  });
+
+  test("nested Task subagents are valid only inside the established persistent worktree", () => {
+    const skill = read("skills/review-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("nested") && n.includes("valid only inside"), "must state nested agents valid only inside");
+    assert.ok(n.includes("established persistent pr worktree") || n.includes("persistent pr worktree"), "must reference established persistent worktree");
+    assert.ok(n.includes("created via `agent_manager` before them") || n.includes("agent_manager"), "must state created via agent_manager");
+  });
+
+  test("unavailable persistent worktree stops before verdict", () => {
+    const skill = read("skills/review-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("hosts that cannot provide the persistent worktree stop before a verdict"), "must stop before verdict if worktree unavailable");
+    assert.ok(n.includes("fresh nested agents stop before a verdict") || n.includes("stop before a verdict"), "must stop before verdict for nested agents too");
+  });
+
+  test("project permission gate allows agent_manager and asks for task", () => {
+    const kilo = read(".kilo/kilo.jsonc");
+    const n = norm(kilo);
+    assert.ok(kilo.includes('"agent_manager"'), "kilo.jsonc must contain agent_manager key");
+    assert.ok(kilo.includes('"task"'), "kilo.jsonc must contain task key");
+    assert.ok(n.includes("agent_manager") && n.includes("allow"), "agent_manager must be allow");
+    assert.ok(n.includes("task") && n.includes("ask"), "task must be ask");
+    assert.ok(kilo.includes('"snapshot": false') || kilo.includes('"snapshot":false'), "snapshot false preserved");
+    const agentMgrPath = path.join(ROOT, ".kilo/agent-manager.json");
+    if (fs.existsSync(agentMgrPath)) {
+      const agentMgr = fs.readFileSync(agentMgrPath, "utf8");
+      assert.ok(!agentMgr.includes("permission"), "agent-manager.json must not be edited");
+    }
+  });
+
+  test("overview-first ordering for review dispatch", () => {
+    const skill = read("skills/review-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("first worker-management calls are the agent manager overview"), "must state first calls are overview");
+    assert.ok(n.includes('action: "list"'), "must name overview action");
+    assert.ok(n.includes("automatically create one persistent pr worktree"), "must state automatically create");
+    assert.ok(n.includes("via the `agent_manager` tool in worktree mode"), "must state via agent_manager worktree mode");
+    assert.ok(n.includes("before any standards, spec, or fix"), "must state occurs before nested subagents");
+    const firstCallIdx = n.indexOf("first worker-management calls are the agent manager overview");
+    const beforeIdx = n.indexOf("before any standards, spec, or fix");
+    assert.ok(firstCallIdx !== -1 && beforeIdx !== -1 && firstCallIdx < beforeIdx, "first calls phrase must precede before-Task clause");
+  });
+});
