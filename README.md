@@ -6,7 +6,7 @@ A focused shelf of six installable skills in two groups — additional skills in
 
 ### Documentation and prose skills
 
-Install `unslopify` first — both documentation skills depend on it. If it is absent the documentation workflows stop and emit `npx skills add RuralNative/RuralNative-SKILLS --skill unslopify`; missing Python for the optional scanner does not stop the workflow.
+Install `unslopify` first — both documentation skills depend on it. If it is absent the documentation workflows stop and direct you to each skill's INSTALL.md; missing Python for the optional scanner does not stop the workflow.
 
 ```bash
 npx skills add RuralNative/RuralNative-SKILLS --skill unslopify
@@ -100,7 +100,7 @@ Shortcuts are tracked openly in one debt registry, and history is append-only vi
 | Agent output must stay clean while working | unslopify | Always-on once loaded; silent in chat, reported at publication |
 | Final check before publishing | unslopify | Final audit on named files |
 
-`unslopify` also runs as a hard dependency inside both documentation skills. Standalone scope is caller-provided; parent scope governs inside a documentation workflow. Once loaded, the agent's own English output is the automatic scope: ordinary conversation is audited silently, published documents, specifications, tickets, progress updates, decisions, and GitHub comments get the same cleanup with the full report at publication boundaries, and user-provided text stays inert unless explicitly requested. Technical fidelity outranks style, so exact domain terms, identifiers, commands, labels, dependencies, quotations, and implementation-critical specification and ticket wording survive even when they match a style candidate. Parent decisions, tier routing, glossary terms, invariants, and approval gates outrank style findings. Missing `unslopify` stops the parent workflow with `npx skills add RuralNative/RuralNative-SKILLS --skill unslopify`; missing Python does not.
+`unslopify` also runs as a hard dependency inside both documentation skills. Standalone scope is caller-provided; parent scope governs inside a documentation workflow. Once loaded, the agent's own English output is the automatic scope: ordinary conversation is audited silently, published documents, specifications, tickets, progress updates, decisions, and GitHub comments get the same cleanup with the full report at publication boundaries, and user-provided text stays inert unless explicitly requested. Technical fidelity outranks style, so exact domain terms, identifiers, commands, labels, dependencies, quotations, and implementation-critical specification and ticket wording survive even when they match a style candidate. Parent decisions, tier routing, glossary terms, invariants, and approval gates outrank style findings. Missing `unslopify` stops the parent workflow and directs you to each skill's INSTALL.md; missing Python does not.
 
 ## Development Workflow
 

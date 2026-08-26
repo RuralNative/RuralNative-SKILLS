@@ -1,4 +1,4 @@
-// document-for-agents:INV-6 — hard dependency composition: unslopify loads by skill identity before prose and audits again before publishing; parent scope and decisions outrank rewrites; missing unslopify stops with install instruction, missing Python does not; catalog not copied; installed behavior not repo-relative.
+// document-for-agents:INV-6 — hard dependency composition: unslopify loads by skill identity before prose and audits again before publishing; parent scope and decisions outrank rewrites; missing unslopify stops and refers the owner to INSTALL.md (no install command in SKILL.md, ADR-0015), missing Python does not; catalog not copied; installed behavior not repo-relative.
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -51,11 +51,13 @@ describe("document-for-agents hard dependency (document-for-agents:INV-6)", () =
     assert.ok(n.includes("preservation"));
   });
 
-  test("missing dependency stops with exact install instruction; missing Python permits model-only path", () => {
+  test("missing dependency stops and defers installation to INSTALL.md; missing Python permits model-only path", () => {
     const skill = read("skills/document-for-agents/SKILL.md");
     const n = norm(skill);
-    // Must give exact instruction
-    assert.ok(skill.includes("npx skills add RuralNative/RuralNative-SKILLS --skill unslopify"));
+    // Workflow execution performs no skill downloads (ADR-0015): no install command in SKILL.md
+    assert.equal(skill.includes("skills add"), false, "SKILL.md must not embed the npx skills add installer");
+    assert.equal(n.includes("npx"), false, "SKILL.md must not carry executable installer commands");
+    assert.ok(n.includes("install.md"), "absence clause must refer to INSTALL.md");
     assert.ok(n.includes("if unslopify is absent") || n.includes("if `unslopify` is absent"));
     assert.ok(n.includes("stop before"));
     assert.ok(n.includes("missing python"));

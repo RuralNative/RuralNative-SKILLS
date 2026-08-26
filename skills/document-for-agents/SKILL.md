@@ -67,8 +67,9 @@ Parent scope governs: routine work passes changed prose, an audit may sweep
 the repository. Parent decisions outrank style findings: factual correctness,
 tier routing, glossary terms and forbidden synonyms, seam invariants,
 derivation rules, and approval gates stand and the finding is rejected with
-reason. If `unslopify` is absent, stop before any draft and emit
-`npx skills add RuralNative/RuralNative-SKILLS --skill unslopify`. Missing
+reason. If `unslopify` is absent, stop before any draft and direct the owner
+to this skill's `INSTALL.md` for the install commands; workflow execution
+performs no skill downloads. Missing
 Python for the optional scanner does not stop the workflow, continue
 model-only without weakening scope or preservation. Before publishing or
 marking complete, run the final `unslopify` audit on the exact prose the

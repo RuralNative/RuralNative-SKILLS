@@ -25,10 +25,10 @@ npx skills add RuralNative/RuralNative-SKILLS --skill document-for-humans
 ```
 
 Both commands must succeed before running a human-docs workflow. If
-`unslopify` is absent the workflow stops before any draft and emits the exact
-instruction `npx skills add RuralNative/RuralNative-SKILLS --skill unslopify`.
-Missing Python for the optional scanner at `skills/unslopify/scanner.py` does
-not stop the workflow.
+`unslopify` is absent the workflow stops before any draft and directs the
+owner to this file's Install section; workflow execution performs no skill
+downloads. Missing Python for the optional scanner at
+`skills/unslopify/scanner.py` does not stop the workflow.
 
 The registry CLI clones the repository, resolves each skill by name, and
 installs it into your agent's standard skills directory.
@@ -67,10 +67,10 @@ cp -r skills/document-for-humans ~/.agents/skills/document-for-humans
 
 For other platforms, place each `SKILL.md` and `reference/` in whatever
 location your agent loads skills from, keeping the folder names `unslopify` and
-`document-for-humans`. Dependency order and recovery are as stated above for
-the registry path: install `unslopify` first, and the workflow stops with
-`npx skills add RuralNative/RuralNative-SKILLS --skill unslopify` if it is
-absent while missing Python does not stop it.
+`document-for-humans`. Dependency order and recovery are as stated in the
+Install section above: install `unslopify` first, and if it is absent the
+workflow stops before any draft and directs the owner to this file's Install
+section while missing Python does not stop it.
 
 ## Verify
 
@@ -119,8 +119,11 @@ from the same repository; record provenance for it the same way.
 
 Provenance and pinning narrow what can change under you; they do not remove
 the residual trust in the source repository. Snyk's August 2026 audit of this
-shelf reported Critical E005 and Medium W011 for `plan-this` and Medium W011
-for `implement-this` and `unslopify`; treat this skill's install path with the
+shelf reported Critical for this skill's install path — an executable
+installer instruction embedded in its agent-facing `SKILL.md`, removed under
+ADR-0015 so no install command remains in this skill's `SKILL.md` — along
+with Critical E005 and Medium W011 for `plan-this` and Medium W011 for
+`implement-this` and `unslopify`; treat this skill's install path with the
 same posture. Pinning reviewed revisions addresses that exposure, the findings
 have not gone away, and the underlying repository trust remains yours to make.
 

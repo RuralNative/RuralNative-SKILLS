@@ -63,9 +63,12 @@ change and flags the discrepancy; changing the rule requires a new decision.
 6. **INV-6** — `unslopify` loads by skill identity before any user-visible
     prose and audits again before publication; parent scope and parent
     decisions outrank prose rewrites; missing `unslopify` stops the workflow
-    with the exact registry-lane install instruction `npx skills add
-    RuralNative/RuralNative-SKILLS --skill unslopify`, missing Python does not
-    stop it and the workflow continues model-only without weakening scope or
+    and directs the owner to this skill's `INSTALL.md` for the install
+    commands; no executable installer command appears anywhere in `SKILL.md`
+    because workflow execution performs no skill downloads (ADR-0015, whose
+    no-download rule covers every seam on this shelf including this one);
+    missing Python does not stop it and the workflow continues model-only
+    without weakening scope or
     preservation; the skill does not copy the `AIT-*` catalog and installed
     runtime does not depend on a repository-relative path. Mechanism:
     short adapter in `SKILL.md` (skill-identity load, parent-owned scope,

@@ -1,4 +1,4 @@
-// document-for-humans:INV-6 — hard dependency composition: unslopify loads by skill identity before prose and audits again before publishing; parent scope and decisions outrank rewrites; missing unslopify stops with install instruction, missing Python permits model-only; catalog not copied; installed behavior not repo-relative. Plus ADR-0003 source boundaries.
+// document-for-humans:INV-6 — hard dependency composition: unslopify loads by skill identity before prose and audits again before publishing; parent scope and decisions outrank rewrites; missing unslopify stops and refers the owner to INSTALL.md (no install command in SKILL.md, ADR-0015), missing Python permits model-only; catalog not copied; installed behavior not repo-relative. Plus ADR-0003 source boundaries.
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -49,10 +49,13 @@ describe("document-for-humans hard dependency (document-for-humans:INV-6)", () =
     assert.ok(n.includes("preservation"));
   });
 
-  test("missing dependency stops with exact install instruction; missing Python permits model-only path", () => {
+  test("missing dependency stops and defers installation to INSTALL.md; missing Python permits model-only path", () => {
     const skill = read("skills/document-for-humans/SKILL.md");
     const n = norm(skill);
-    assert.ok(skill.includes("npx skills add RuralNative/RuralNative-SKILLS --skill unslopify"));
+    // Workflow execution performs no skill downloads (ADR-0015): no install command in SKILL.md
+    assert.equal(skill.includes("skills add"), false, "SKILL.md must not embed the npx skills add installer");
+    assert.equal(n.includes("npx"), false, "SKILL.md must not carry executable installer commands");
+    assert.ok(n.includes("install.md"), "absence clause must refer to INSTALL.md");
     assert.ok(n.includes("if unslopify is absent") || n.includes("if `unslopify` is absent"));
     assert.ok(n.includes("stop before"));
     assert.ok(n.includes("missing python"));
@@ -74,9 +77,12 @@ describe("document-for-humans hard dependency (document-for-humans:INV-6)", () =
     assert.ok(install.includes("cp -r skills/unslopify"));
     assert.ok(install.includes("cp -r skills/document-for-humans"));
     assert.ok(install.includes("git clone https://github.com/RuralNative/RuralNative-SKILLS.git"));
-    // recovery stated once per path — registry and manual each contain the stop instruction, but not duplicated inside a single path
+    // recovery stated once per path — the install section keeps the exact commands; the manual path directs back to it instead of repeating them
     const manualSection = install.slice(install.indexOf("Manual install"));
-    assert.ok(manualSection.includes("npx skills add RuralNative/RuralNative-SKILLS --skill unslopify"));
+    const installCommands = "npx skills add RuralNative/RuralNative-SKILLS --skill unslopify";
+    assert.ok(install.includes(installCommands), "INSTALL.md retains the dependency-order install commands");
+    assert.equal(manualSection.includes("npx skills add"), false, "manual path must not duplicate install commands");
+    assert.ok(manualSection.toLowerCase().includes("install section"), "manual path must direct to the Install section");
   });
 
   test("Establish starts when authored tree exists and lacks coherent human view; selects by audience/question, maps claims, asks approval, completes after gate checks", () => {

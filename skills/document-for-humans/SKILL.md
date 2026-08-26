@@ -31,9 +31,9 @@ from `reference/routing.md`, derivation rules, tone and plain-language
 budgets, glossary terms and their forbidden synonyms, seam invariants,
 derivation sources, and approval gates stand and the finding is rejected with
 reason.
-If `unslopify` is absent, stop before any draft and emit
-`npx skills add RuralNative/RuralNative-SKILLS --skill unslopify`.
-Missing Python for the optional scanner does not stop the workflow, continue
+If `unslopify` is absent, stop before any draft and direct the owner to this
+skill's `INSTALL.md` for the install commands; workflow execution performs no
+skill downloads. Missing Python for the optional scanner does not stop the workflow, continue
 model-only without weakening scope or preservation.
 Before publishing or marking complete, run the final `unslopify` audit on the
 exact prose the reader will see and record scope, accepted and rejected
