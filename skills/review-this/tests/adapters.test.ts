@@ -9,8 +9,15 @@ import fs from "node:fs";
 import path from "node:path";
 import { selectReviewWave } from "../discovery.ts";
 import { reconcileFindings } from "../reconciliation.ts";
-import { collectCloudReview } from "../adapters.ts";
-import { fakeCloudAdapter, fakeLocalReviewAdapter, fakeMergeAdapter, fakeVerificationAdapter } from "./fakes.ts";
+import { collectCloudReview, collectReviewEvidence } from "../adapters.ts";
+import {
+  fakeCloudAdapter,
+  fakeDeferredCloudAdapter,
+  fakeDeferredLocalAdapter,
+  fakeLocalReviewAdapter,
+  fakeMergeAdapter,
+  fakeVerificationAdapter,
+} from "./fakes.ts";
 import { isMergeEligible, promotionAfterClosure, parentClosureReady, followUpRequired } from "../workflow-state.ts";
 import type { TicketFact } from "../workflow-state.ts";
 
@@ -227,6 +234,79 @@ describe("follow-up creation and parent closure (review-this:INV-10)", () => {
     const failing = fakeVerificationAdapter(false);
     assert.equal(await failing.verifyOnMain(), false);
     assert.equal(followUpRequired({ finalVerificationPassed: false, wholeSpecReviewPassed: true }), true);
+  });
+});
+
+describe("overlapped evidence collection (review-this:INV-6, plan #170)", () => {
+  const cleanLocal = (head = HEAD): import("../adapters.ts").LocalReviewResult => ({
+    headSha: head,
+    standards: [],
+    spec: [],
+    clean: true,
+  });
+
+  test("both operations start before either resolves", async () => {
+    const cloud = fakeDeferredCloudAdapter();
+    const local = fakeDeferredLocalAdapter();
+    const evidence = collectReviewEvidence(cloud.adapter, local.adapter, HEAD);
+    await Promise.resolve();
+    assert.equal(cloud.startCount(), 1, "cloud must start immediately");
+    assert.equal(local.startCount(), 1, "local review must start before cloud resolves");
+    cloud.resolve({ status: "available", headSha: HEAD, summary: "s", inlineComments: [] });
+    local.resolve(cleanLocal());
+    const result = await evidence;
+    assert.equal(result.cloud.status, "available");
+    assert.equal(result.local.clean, true);
+  });
+
+  test("cloud rejection resolves as unavailable and never blocks the local review", async () => {
+    const cloud = fakeDeferredCloudAdapter();
+    const local = fakeDeferredLocalAdapter();
+    const evidence = collectReviewEvidence(cloud.adapter, local.adapter, HEAD, "base-a");
+    await Promise.resolve();
+    cloud.reject(new Error("timeout"));
+    local.resolve(cleanLocal());
+    const result = await evidence;
+    assert.equal(result.cloud.status, "unavailable");
+    assert.match(result.cloud.reason ?? "", /cloud collect failed/);
+    assert.equal(result.local.clean, true);
+  });
+
+  test("local review rejection is blocking even when cloud succeeded", async () => {
+    const cloud = fakeDeferredCloudAdapter();
+    const local = fakeDeferredLocalAdapter();
+    const evidence = collectReviewEvidence(cloud.adapter, local.adapter, HEAD);
+    await Promise.resolve();
+    cloud.resolve({ status: "available", headSha: HEAD, summary: "s", inlineComments: [] });
+    local.reject(new Error("fresh agents unavailable"));
+    await assert.rejects(evidence, /fresh agents unavailable/);
+  });
+
+  test("a stale local head or base blocks reconciliation with a named reason", async () => {
+    const staleHead = fakeDeferredCloudAdapter();
+    const staleHeadLocal = fakeDeferredLocalAdapter();
+    const headEvidence = collectReviewEvidence(staleHead.adapter, staleHeadLocal.adapter, HEAD);
+    staleHead.resolve({ status: "available", headSha: HEAD, summary: "s", inlineComments: [] });
+    staleHeadLocal.resolve(cleanLocal(OTHER_HEAD));
+    await assert.rejects(headEvidence, /local review head .* does not match current head/);
+
+    const staleBase = fakeDeferredCloudAdapter();
+    const staleBaseLocal = fakeDeferredLocalAdapter();
+    const baseEvidence = collectReviewEvidence(staleBase.adapter, staleBaseLocal.adapter, HEAD, "current-base");
+    staleBase.resolve({ status: "available", headSha: HEAD, summary: "s", inlineComments: [] });
+    staleBaseLocal.resolve({ ...cleanLocal(), baseSha: "stale-base" });
+    await assert.rejects(baseEvidence, /local review base .* does not match current base/);
+  });
+
+  test("cloud revision mismatch stays unavailable while matching local evidence completes", async () => {
+    const result = await collectReviewEvidence(
+      fakeCloudAdapter({ status: "available", headSha: OTHER_HEAD, summary: "stale", inlineComments: [] }),
+      fakeLocalReviewAdapter(cleanLocal()),
+      HEAD,
+    );
+    assert.equal(result.cloud.status, "unavailable");
+    assert.match(result.cloud.reason ?? "", /does not match current head/);
+    assert.equal(result.local.headSha, HEAD);
   });
 });
 

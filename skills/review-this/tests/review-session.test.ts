@@ -3,6 +3,8 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import {
   MAX_FIX_ROUNDS,
+  MAX_MANAGED_WORKERS_PER_WORKSPACE,
+  MAX_REVIEW_WORKERS_PER_STAGE,
   STRICT_REVIEW_CATEGORIES,
   canContinueAfterPublication,
   initialReviewAgents,
@@ -13,6 +15,7 @@ import {
   planFinalVerification,
   planFixBatch,
   planPush,
+  planReviewWaveDispatch,
   persistentWorktreePlan,
   planRevisionReview,
   reviewCanStart,
@@ -23,6 +26,7 @@ import {
   type ReviewOperationCounts,
   type ReviewStatus,
 } from "../review-session.ts";
+import type { ReviewWaveItem } from "../discovery.ts";
 
 const counts: ReviewOperationCounts = {
   prWorktreeSetups: 0,
@@ -445,5 +449,155 @@ describe("review push trust", () => {
     assert.equal(planPush("same-repository", false).allowed, false);
     assert.equal(planPush("untrusted-fork", false).action, "static-review");
     assert.equal(planPush("untrusted-fork", false).allowed, true);
+  });
+});
+
+describe("bounded review-wave fan-out (plan #170)", () => {
+  const wave = (count: number): ReviewWaveItem[] =>
+    Array.from({ length: count }, (_, i) => ({
+      ticket: 200 + i,
+      prNumber: 10 + i,
+      headSha: `head-${i}`,
+      baseSha: `base-${i}`,
+      mergeable: true,
+      requiredChecksGreen: true,
+    }));
+  const emptyFact = {
+    workers: [],
+    activeManagedWorkers: 0,
+    availableWorkspaceSlots: Number.MAX_SAFE_INTEGER,
+  };
+
+  test("empty capacity defers every ready PR without creating a worker", () => {
+    const plan = planReviewWaveDispatch({
+      wave: wave(2),
+      ...emptyFact,
+      availableWorkspaceSlots: 0,
+    });
+    assert.deepEqual(plan.reuse, []);
+    assert.deepEqual(plan.create, []);
+    assert.equal(plan.deferredByCapacity.length, 2);
+    for (const deferred of plan.deferredByCapacity) {
+      assert.match(deferred.reason, /no available worker-start slots/);
+    }
+  });
+
+  test("partial capacity fills every available slot in native order and defers the rest", () => {
+    const plan = planReviewWaveDispatch({
+      wave: wave(3),
+      ...emptyFact,
+      availableWorkspaceSlots: 2,
+    });
+    assert.deepEqual(plan.create.map((item) => item.prNumber), [10, 11]);
+    assert.deepEqual(plan.deferredByCapacity.map((item) => item.prNumber), [12]);
+    assert.match(plan.deferredByCapacity[0].reason, /no available worker-start slots/);
+  });
+
+  test("four ready PRs dispatch at most three stage workers", () => {
+    assert.equal(MAX_REVIEW_WORKERS_PER_STAGE, 3);
+    const plan = planReviewWaveDispatch({ wave: wave(4), ...emptyFact });
+    assert.deepEqual(plan.create.map((item) => item.prNumber), [10, 11, 12]);
+    assert.deepEqual(plan.deferredByCapacity.map((item) => item.prNumber), [13]);
+    assert.match(plan.deferredByCapacity[0].reason, /at most 3 review workers/);
+    assert.equal(plan.activeReviewWorkers, 3);
+  });
+
+  test("existing running workers are reused instead of duplicated", () => {
+    const plan = planReviewWaveDispatch({
+      wave: wave(1),
+      ...emptyFact,
+      workers: [{
+        prNumber: 10,
+        workerSessionExists: true,
+        pinnedHeadSha: "head-0",
+        pinnedBaseSha: "base-0",
+      }],
+    });
+    assert.deepEqual(plan.reuse.map((item) => item.prNumber), [10]);
+    assert.deepEqual(plan.create, []);
+    assert.equal(plan.deferredByCapacity.length, 0);
+    assert.equal(plan.activeReviewWorkers, 1);
+  });
+
+  test("a stopped worker restarts through one create instead of duplicating", () => {
+    const plan = planReviewWaveDispatch({
+      wave: wave(1),
+      ...emptyFact,
+      workers: [{
+        prNumber: 10,
+        workerSessionExists: false,
+        pinnedHeadSha: "head-0",
+        pinnedBaseSha: "base-0",
+      }],
+    });
+    assert.deepEqual(plan.reuse, []);
+    assert.deepEqual(plan.create.map((item) => item.prNumber), [10]);
+  });
+
+  test("two PRs pinning one revision pair never receive two workers", () => {
+    const shared: ReviewWaveItem[] = [
+      { ticket: 200, prNumber: 10, headSha: "head-x", baseSha: "base-x", mergeable: true, requiredChecksGreen: true },
+      { ticket: 201, prNumber: 11, headSha: "head-x", baseSha: "base-x", mergeable: true, requiredChecksGreen: true },
+    ];
+    const plan = planReviewWaveDispatch({ wave: shared, ...emptyFact });
+    assert.deepEqual(plan.create.map((item) => item.prNumber), [10]);
+    assert.deepEqual(plan.deferredByCapacity.map((item) => item.prNumber), [11]);
+    assert.match(plan.deferredByCapacity[0].reason, /already pins this head-and-base pair/);
+  });
+
+  test("native child order survives mixed reuse and creation", () => {
+    const items = wave(4);
+    const plan = planReviewWaveDispatch({
+      wave: [items[1], items[0], items[3], items[2]],
+      ...emptyFact,
+      workers: [{
+        prNumber: 11,
+        workerSessionExists: true,
+        pinnedHeadSha: "head-1",
+        pinnedBaseSha: "base-1",
+      }],
+    });
+    // Reuse first (native position), then creates fill slots in that same
+    // order [11, 10, 13, 12] until the stage cap stops the fourth.
+    assert.deepEqual(plan.reuse.map((item) => item.prNumber), [11]);
+    assert.deepEqual(plan.create.map((item) => item.prNumber), [10, 13]);
+    assert.deepEqual(
+      [...plan.reuse, ...plan.create].map((item) => item.ticket),
+      [201, 200, 203],
+    );
+    assert.deepEqual(plan.deferredByCapacity.map((item) => item.prNumber), [12]);
+  });
+
+  test("the workspace four-worker cap defers new starts even with free slots", () => {
+    assert.equal(MAX_MANAGED_WORKERS_PER_WORKSPACE, 4);
+    const plan = planReviewWaveDispatch({
+      wave: wave(2),
+      ...emptyFact,
+      activeManagedWorkers: MAX_MANAGED_WORKERS_PER_WORKSPACE,
+    });
+    assert.deepEqual(plan.create, []);
+    assert.equal(plan.deferredByCapacity.length, 2);
+    for (const deferred of plan.deferredByCapacity) {
+      assert.match(deferred.reason, /workspace cap allows at most 4 managed workers/);
+    }
+  });
+
+  test("reuse does not consume a workspace start slot while creates do", () => {
+    const items = wave(3);
+    const plan = planReviewWaveDispatch({
+      wave: items,
+      ...emptyFact,
+      activeManagedWorkers: 3,
+      availableWorkspaceSlots: 1,
+      workers: [{
+        prNumber: 10,
+        workerSessionExists: true,
+        pinnedHeadSha: "head-0",
+        pinnedBaseSha: "base-0",
+      }],
+    });
+    assert.deepEqual(plan.reuse.map((item) => item.prNumber), [10]);
+    assert.deepEqual(plan.create.map((item) => item.prNumber), [11]);
+    assert.deepEqual(plan.deferredByCapacity.map((item) => item.prNumber), [12]);
   });
 });

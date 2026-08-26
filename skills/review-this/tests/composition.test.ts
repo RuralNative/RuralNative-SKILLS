@@ -446,3 +446,116 @@ describe("Agent Manager worktree dispatch enforcement (plan 1787549339706)", () 
     assert.ok(firstCallIdx !== -1 && beforeIdx !== -1 && firstCallIdx < beforeIdx, "first calls phrase must precede before-Task clause");
   });
 });
+
+describe("review-this concurrent critical path (plan #170)", () => {
+  test("bounded multi-PR dispatch is planned once from one overview run", () => {
+    const skill = read("skills/review-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("planreviewwavedispatch"), "must name planReviewWaveDispatch from review-session.ts");
+    assert.ok(n.includes("collectreviewevidence"), "must name collectReviewEvidence from adapters.ts");
+    assert.ok(n.includes("run the required agent manager overview once"), "overview must run once per wave");
+    assert.ok(n.includes("one worktree-mode start request"), "all selected workers start in one request");
+    assert.ok(n.includes("reusing existing persistent workers rather than starting duplicates"), "reuse before create");
+    assert.ok(n.includes("never two workers for the same pull request or the same pinned head-and-base pair"), "no duplicate workers");
+    assert.ok(n.includes("at most three review workers serve the stage"), "stage cap stated");
+    assert.ok(n.includes("at most four managed workers stay active across the workspace"), "workspace cap stated");
+    assert.ok(n.includes("deferred by capacity") && n.includes("deferred prs re-enter review on the next discovery"), "deferral is named and recoverable");
+    assert.ok(n.includes("the native child order fills every available slot"), "native order preserved");
+    assert.ok(n.includes("re-list before any later spawn and defer rather than exceed it"), "stale capacity re-checked");
+  });
+
+  test("cloud collection starts immediately and overlaps local review", () => {
+    const skill = read("skills/review-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("begin cloud collection for each pinned head-and-base pair immediately"), "cloud starts at pin time");
+    assert.ok(n.includes("do not await it before worker setup"), "worker setup not blocked by cloud");
+    assert.ok(n.includes("both sources run together under `collectreviewevidence`"), "overlap runs through collectReviewEvidence");
+    assert.ok(n.includes("awaited only at that pr's reconciliation boundary"), "await only at reconciliation");
+    assert.ok(n.includes("cloud unavailability never cancels or skips the already-running local review"), "cloud failure never cancels local");
+  });
+
+  test("each active PR proceeds independently through its own lifecycle", () => {
+    const skill = read("skills/review-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("each active pull request then proceeds independently through local review, reconciliation, publication, fixes, and merge"), "independent PR progress stated");
+    assert.ok(n.includes("waiting on cloud review or ci for one pr must not block another ready pr"), "one PR's waits never block another");
+    assert.ok(n.includes("reread head and base before publication") || n.includes("before every github write, reread the current target region"), "freshness reread preserved");
+  });
+
+  test("existing gates survive the concurrency change", () => {
+    const skill = read("skills/review-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("spawn the standards and spec sub-agents in parallel"), "parallel fresh axes preserved");
+    assert.ok(n.includes("never merge or rerank findings across axes"), "no-rerank preserved");
+    assert.ok(n.includes("at most two code-fix rounds are allowed") || n.includes("At most two code-fix rounds are allowed"), "fix budget preserved");
+    assert.ok(n.includes("merge requires green required checks, resolved confirmed findings, a clean local review, and an unchanged reviewed head sha"), "merge gate preserved");
+    assert.equal(n.includes("--fast"), false, "no fast flag");
+    assert.equal(n.includes("--no-cloud"), false, "no skip-cloud flag");
+  });
+});
+
+describe("review-this shared revision packet (plan #170)", () => {
+  test("one packet per pinned head-and-base pair feeds both axes", () => {
+    const skill = read("skills/review-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("build one shared revision packet per pinned head-and-base pair"), "one packet per pair");
+    for (const content of [
+      "three-dot diff command",
+      "commit list",
+      "changed files and hunks",
+      "impacted callers",
+      "focused doc-cache sources",
+      "acceptance criteria",
+      "standards sources",
+      "full-review escalation triggers",
+    ]) {
+      assert.ok(n.includes(content), `packet must include ${content}`);
+    }
+    assert.ok(n.includes("the same packet plus only their axis-specific brief"), "shared packet with axis-specific brief");
+    assert.ok(n.includes("do not repeat github discovery, diff enumeration, or caller discovery inside each subagent"), "no duplicated discovery in subagents");
+  });
+
+  test("full-versus-delta rules and report caps stay unchanged", () => {
+    const skill = read("skills/review-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("the initial revision receives one full review"), "initial full review kept");
+    assert.ok(n.includes("within the `/code-review` report caps"), "report caps preserved");
+    assert.ok(n.includes("limited to changed hunks and impacted callers unless a named risk trigger requires full review"), "delta rule and escalation triggers unchanged");
+  });
+});
+
+describe("review-this trusted-summary phase timings (plan #170)", () => {
+  test("named phase timings exist in the upserted trusted summary", () => {
+    const skill = read("skills/review-this/SKILL.md");
+    for (const field of [
+      "packetBuildMs",
+      "cloudMs",
+      "localReviewMs",
+      "reviewCriticalPathMs",
+      "reconcileMs",
+      "ciWaitMs",
+      "activeReviewWorkers",
+      "deferredByCapacity",
+    ]) {
+      assert.ok(skill.includes(field), `trusted summary must record ${field}`);
+    }
+    const n = norm(skill);
+    assert.ok(n.includes("updated in place in the upserted trusted summary"), "timings live in the upserted summary");
+  });
+
+  test("timings are bookkeeping and never become merge evidence", () => {
+    const skill = read("skills/review-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("they are never merge evidence and remove no correctness, trust, freshness, publication, merge, or closure gate"), "timings weaken no gate");
+    assert.ok(n.includes("never through timing-only comments"), "timing-only comments stay non-evidence");
+  });
+
+  test("smoke guidance carries baseline comparison and critical-path targets", () => {
+    const n = norm(read("skills/review-this/INSTALL.md"));
+    assert.ok(n.includes("three-pr clean-wave median is at most 60% of the sequential baseline"), "clean-wave target present");
+    assert.ok(n.includes("delayed-cloud single-pr median is at most 80% of baseline"), "delayed-cloud target present");
+    assert.ok(n.includes("one-fix path does not regress by more than 10%"), "one-fix guard present");
+    assert.ok(n.includes("packetbuildms"), "critical-path fields recorded per ticket");
+    assert.ok(n.includes("review-agent input tokens fall by at least 20%"), "shared-packet token target present");
+  });
+});

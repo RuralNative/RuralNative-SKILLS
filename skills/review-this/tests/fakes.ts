@@ -84,3 +84,83 @@ export function fakeVerificationAdapter(passing: boolean): VerificationAdapter {
     },
   };
 }
+
+// Controlled deferred fakes for overlapped evidence collection (#170):
+// each records when it starts and stays pending until the test resolves or
+// rejects its gate, proving both operations start before either resolves.
+export interface DeferredCloudController {
+  adapter: CloudAdapter;
+  startCount(): number;
+  resolve(result: CloudReviewResult): void;
+  reject(reason: unknown): void;
+  settled: Promise<"resolved" | "rejected">;
+}
+
+export function fakeDeferredCloudAdapter(): DeferredCloudController {
+  let starts = 0;
+  let release: ((outcome: "resolved" | "rejected") => void) | undefined;
+  const settled = new Promise<"resolved" | "rejected">((resolve) => {
+    release = resolve;
+  });
+  let resolveResult: CloudReviewResult | undefined;
+  let rejectReason: unknown;
+  const controller: DeferredCloudController = {
+    adapter: {
+      name: "fake-cloud-deferred",
+      async collect(_headSha) {
+        starts += 1;
+        await settled;
+        if (resolveResult) return resolveResult;
+        throw rejectReason;
+      },
+    },
+    startCount: () => starts,
+    resolve(result) {
+      resolveResult = result;
+      release?.("resolved");
+    },
+    reject(reason) {
+      rejectReason = reason;
+      release?.("rejected");
+    },
+    settled,
+  };
+  return controller;
+}
+
+export interface DeferredLocalController {
+  adapter: LocalReviewAdapter;
+  startCount(): number;
+  resolve(result: LocalReviewResult): void;
+  reject(reason: unknown): void;
+}
+
+export function fakeDeferredLocalAdapter(): DeferredLocalController {
+  let starts = 0;
+  let release: (() => void) | undefined;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let result: LocalReviewResult | undefined;
+  let rejectReason: unknown;
+  return {
+    adapter: {
+      name: "fake-local-deferred",
+      async run(_headSha) {
+        starts += 1;
+        await gate;
+        if (result) return result;
+        throw rejectReason;
+      },
+    },
+    startCount: () => starts,
+    resolve(local) {
+      result = local;
+      release?.();
+    },
+    reject(reason) {
+      rejectReason = reason;
+      release?.();
+    },
+  };
+}

@@ -4,8 +4,130 @@
 // review plans out. The command session applies the plan through its host.
 
 import { fixRoundDecision, MAX_FIX_ROUNDS } from "./workflow-state.ts";
+import type { ReviewWaveItem } from "./discovery.ts";
 
 export { MAX_FIX_ROUNDS };
+
+/**
+ * Bounded review-wave fan-out (#170).
+ *
+ * At most three review workers serve one review-wave stage, and at most four
+ * managed workers stay active across the whole workspace. The command session
+ * feeds this planner the native-order wave selections, the persistent PR
+ * worker facts observed in the Agent Manager overview, and the workspace
+ * capacity the overview reports; it applies the returned plan through its host
+ * without ever exceeding either cap.
+ */
+export const MAX_REVIEW_WORKERS_PER_STAGE = 3;
+export const MAX_MANAGED_WORKERS_PER_WORKSPACE = 4;
+
+export interface PersistentPrWorkerFact {
+  prNumber: number;
+  workerSessionExists: boolean;
+  pinnedHeadSha: string;
+  pinnedBaseSha: string;
+}
+
+export interface ReviewWaveDispatchFact {
+  wave: readonly ReviewWaveItem[];
+  workers: readonly PersistentPrWorkerFact[];
+  /** Managed workers active across the whole workspace, from the overview. */
+  activeManagedWorkers: number;
+  /** Worker-start slots the overview reports as available right now. */
+  availableWorkspaceSlots: number;
+}
+
+export interface ReviewWaveDispatchItem {
+  ticket: number;
+  prNumber: number;
+  headSha: string;
+  baseSha: string;
+}
+
+export interface DeferredReviewWaveItem extends ReviewWaveDispatchItem {
+  reason: string;
+}
+
+export interface ReviewWaveDispatchPlan {
+  reuse: ReviewWaveDispatchItem[];
+  create: ReviewWaveDispatchItem[];
+  deferredByCapacity: DeferredReviewWaveItem[];
+  /** Review workers actively serving the wave after this dispatch. */
+  activeReviewWorkers: number;
+}
+
+function toDispatchItem(item: ReviewWaveItem): ReviewWaveDispatchItem {
+  return {
+    ticket: item.ticket,
+    prNumber: item.prNumber,
+    headSha: item.headSha,
+    baseSha: item.baseSha,
+  };
+}
+
+export function planReviewWaveDispatch(
+  fact: ReviewWaveDispatchFact,
+): ReviewWaveDispatchPlan {
+  const plan: ReviewWaveDispatchPlan = {
+    reuse: [],
+    create: [],
+    deferredByCapacity: [],
+    activeReviewWorkers: 0,
+  };
+  const workerByPr = new Map(
+    fact.workers.map((worker) => [worker.prNumber, worker]),
+  );
+  const pinnedPairs = new Set<string>();
+  let reviewWorkers = 0;
+  let starts = 0;
+
+  // Native child order: the wave arrives pre-sorted by selectReviewWave and
+  // every slot fills in that order without reordering.
+  for (const item of fact.wave) {
+    const dispatchItem = toDispatchItem(item);
+    const defer = (reason: string) =>
+      plan.deferredByCapacity.push({ ...dispatchItem, reason });
+
+    const pair = `${item.headSha}:${item.baseSha}`;
+    if (pinnedPairs.has(pair)) {
+      defer(
+        "another selected pull request already pins this head-and-base pair; no duplicate worker",
+      );
+      continue;
+    }
+    pinnedPairs.add(pair);
+
+    const worker = workerByPr.get(item.prNumber);
+    if (worker?.workerSessionExists) {
+      // One persistent worker per pull request: reuse instead of duplicating.
+      plan.reuse.push(dispatchItem);
+      reviewWorkers += 1;
+      continue;
+    }
+    // A stopped worker for this PR restarts here instead of duplicating.
+
+    if (reviewWorkers >= MAX_REVIEW_WORKERS_PER_STAGE) {
+      defer(`review-wave stage cap allows at most ${MAX_REVIEW_WORKERS_PER_STAGE} review workers`);
+      continue;
+    }
+    if (fact.activeManagedWorkers + starts >= MAX_MANAGED_WORKERS_PER_WORKSPACE) {
+      defer(
+        `workspace cap allows at most ${MAX_MANAGED_WORKERS_PER_WORKSPACE} managed workers`,
+      );
+      continue;
+    }
+    if (starts >= fact.availableWorkspaceSlots) {
+      defer("the Agent Manager overview reports no available worker-start slots");
+      continue;
+    }
+    plan.create.push(dispatchItem);
+    reviewWorkers += 1;
+    starts += 1;
+  }
+
+  plan.activeReviewWorkers = reviewWorkers;
+  return plan;
+}
 
 export const STRICT_REVIEW_CATEGORIES = [
   "security",

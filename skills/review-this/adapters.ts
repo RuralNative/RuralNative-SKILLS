@@ -105,3 +105,37 @@ export async function collectCloudReview(
   }
   return result;
 }
+
+/**
+ * Overlapped evidence collection for one pinned head-and-base pair (#170).
+ *
+ * Starts `collectCloudReview` and the local Standards and Spec review
+ * together, so neither operation waits for the other to resolve. Cloud
+ * failure, timeout, or revision mismatch resolves as `unavailable` and never
+ * cancels or skips local review. Local review is blocking: a rejection
+ * propagates, and local evidence that does not match the exact current pair
+ * is stale — it blocks reconciliation exactly like any other rejected local
+ * run instead of being silently dropped.
+ */
+export async function collectReviewEvidence(
+  cloudAdapter: CloudAdapter,
+  localAdapter: LocalReviewAdapter,
+  currentHeadSha: string,
+  currentBaseSha?: string,
+): Promise<{ cloud: CloudReviewResult; local: LocalReviewResult }> {
+  // Start both operations before awaiting either one.
+  const cloudPromise = collectCloudReview(cloudAdapter, currentHeadSha, currentBaseSha);
+  const localPromise = localAdapter.run(currentHeadSha, currentBaseSha);
+  const [cloud, local] = await Promise.all([cloudPromise, localPromise]);
+  if (local.headSha !== currentHeadSha) {
+    throw new Error(
+      `local review head ${local.headSha} does not match current head ${currentHeadSha}; local review is stale and blocks reconciliation`,
+    );
+  }
+  if (currentBaseSha !== undefined && local.baseSha !== undefined && local.baseSha !== currentBaseSha) {
+    throw new Error(
+      `local review base ${local.baseSha} does not match current base ${currentBaseSha}; local review is stale and blocks reconciliation`,
+    );
+  }
+  return { cloud, local };
+}

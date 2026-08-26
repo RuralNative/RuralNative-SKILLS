@@ -64,6 +64,25 @@ reservation through merge or terminal stop:
 The smoke passes when the ordinary-ticket median is at most 60 minutes, no
 ordinary ticket exceeds 90 minutes, and every correctness gate is green.
 
+## Concurrent-wave baseline comparison
+
+Benchmark the concurrent skill against the pre-#170 sequential snapshot in a
+temporary workspace outside this repository over three scenarios — one clean
+pull request with delayed cloud review, three clean pull requests ready in one
+review wave, and one pull request with one blocking fix and delta rereview.
+Record total duration, `cloudMs`, `localReviewMs`, `packetBuildMs`,
+`reviewCriticalPathMs`, `reconcileMs`, `ciWaitMs`, operation counts,
+review-agent input tokens, and output tokens per scenario. Grade every
+correctness, trust, freshness, publication, merge, and closure gate before
+comparing any time or token numbers. The measured change passes when:
+
+- The three-pr clean-wave median is at most 60% of the sequential baseline.
+- The delayed-cloud single-pr median is at most 80% of baseline.
+- The one-fix path does not regress by more than 10%.
+- Review-agent input tokens fall by at least 20% through shared revision packets.
+- Operation counts stay unchanged; `ciWaitMs` is attributed separately so CI
+  time never masks or credits review changes.
+
 ## Boundary
 
 The skill accepts one invocation only: `/review-this <target>`, where the target is a parent specification number, a child issue number, a pull-request number or URL for the current repository; cross-repository targets stop before writes unless explicitly chosen. It resolves the target before any worktree creation or GitHub write, discovers the current review wave, and runs once from the control workspace; it does not implement tickets. It creates or reuses only the one persistent PR worktree for each selected pull request and never creates a separate review or fix worktree. It never merges without green required checks, resolved confirmed findings, a clean local review, unchanged reviewed head and base SHAs, and a published trusted summary, and it never auto-merges a pull request without an originating specification. It never closes a ticket before merge. State and adapter boundaries in `targets.ts`, `discovery.ts`, `reconciliation.ts`, `adapters.ts`, `review-session.ts`, and the packaged `workflow-state.ts` remain callable by a future persistent coordinator without changing command behavior.
