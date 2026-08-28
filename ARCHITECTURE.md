@@ -11,7 +11,7 @@ invariants, and conventions that code cannot express.
 | document-for-agents | publishable agent instructions for the doc-cache lifecycle: cache accuracy, attention control, and the opt-in private skill diagnostics record | skills/document-for-agents/ | install smoke via `npx skills add`; identity == folder check; composition via `skills/document-for-agents/tests/` | docs/leaves/document-for-agents.md |
 | document-for-humans | plain-language derived documentation for human stakeholders | skills/document-for-humans/ | gate extension via scripts/docs-check.sh; composition via `skills/document-for-humans/tests/` | docs/leaves/document-for-humans.md |
 | unslopify | AI-tell detection and meaning-safe prose revision, always-on for agent-authored output once loaded | skills/unslopify/ | scanner contract via `skills/unslopify/scanner.py`; parity catalog via `skills/unslopify/reference/parity.md`; fixtures and composition via `skills/unslopify/tests/`; identity == folder check | docs/leaves/unslopify.md |
-| plan-this | fixed-template planning adapter that applies the planning prefix and delegates to `/grill-with-docs`, `/to-spec`, `/to-tickets`, and `/unslop` | skills/plan-this/ | composition via `skills/plan-this/tests/`; identity == folder check | docs/leaves/plan-this.md |
+| plan-this | structured planning workflow that defines and confirms intent, optionally explores directions, resolves the decision frontier, and publishes an approved GitHub specification and coherent tickets through `/grill-with-docs`, `/to-spec`, `/to-tickets`, and `/unslopify` | skills/plan-this/ | composition via `skills/plan-this/tests/`; identity == folder check | docs/leaves/plan-this.md |
 | implement-this | fixed-template implementation adapter that applies the implementation prefix and delegates to `/implement` and `/unslopify`, dispatching bounded ticket sets through real Agent Manager workers with pull-request-only delivery | skills/implement-this/ | composition and command-session tests via `skills/implement-this/tests/`; identity == folder check | docs/leaves/implement-this.md |
 | review-this | owns one pull-request review wave through merge, promotion, and parent closure; resolves invocation targets from parent issues, child issues, pull requests, and URLs; reconciles Kilo cloud review with the local Standards and Spec review against each current head and delegates to `/code-review` and `/unslopify` | skills/review-this/ | composition, discovery, target-resolution, reconciliation, and adapter tests via `skills/review-this/tests/`; identity == folder check | docs/leaves/review-this.md |
 | release-skills | universal release workflow that auto-detects version files and changelogs | skills/release-skills/ | composition via `skills/release-skills/tests/`; identity == folder check | docs/leaves/release-skills.md |
@@ -45,6 +45,7 @@ Covered non-seam docs are listed here; harness check 6 uses this list.
 - docs/adr/0017-doc-cache-attention-boundary.md
 - docs/adr/0018-opt-in-skill-diagnostics.md
 - docs/adr/0019-command-session-lifecycle-and-platform-limits.md
+- docs/adr/0020-plan-this-structured-workflow.md
 - docs/leaves/document-for-humans.md
 - docs/human/overview.md
 - docs/human/decision-journal.md
@@ -114,6 +115,7 @@ Every authored doc is machine-checked against disk by `scripts/docs-check.sh`
 | docs/adr/0017-doc-cache-attention-boundary.md | decision |
 | docs/adr/0018-opt-in-skill-diagnostics.md | decision |
 | docs/adr/0019-command-session-lifecycle-and-platform-limits.md | decision |
+| docs/adr/0020-plan-this-structured-workflow.md | decision |
 | docs/leaves/document-for-agents.md | leaf |
 | docs/leaves/document-for-humans.md | leaf |
 | docs/leaves/unslopify.md | leaf |
