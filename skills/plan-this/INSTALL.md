@@ -4,6 +4,8 @@
 
 Before publication, planning records an `ordinary` or `high-risk` class for every ticket. Evidenced security boundaries, migrations, shared contracts, broad public interfaces, dependency changes, and comparable blast radius are high-risk. The class sets a 60- or 90-minute reservation-to-terminal target; later implementation or review may raise it with evidence but may not lower it.
 
+Conditional quality proof stays inside the existing fields. When a task exposes a security boundary, browser-observable behavior, production-operability path, migration, rollback, or explicit product-performance obligation, the specification and tickets express the required proof through the existing acceptance criteria, risk, constraints, and smallest test-first verification fields. Unrelated work receives no extra checklist and no quality-profile field is added.
+
 ## Requirements
 
 - A codebase you want to plan work for.

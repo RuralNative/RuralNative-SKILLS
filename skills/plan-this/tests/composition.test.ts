@@ -304,3 +304,24 @@ describe("plan-this native frontier integration", () => {
     assert.deepEqual(selectFrontier(tickets, SPEC), [201, 202, 203]);
   });
 });
+
+describe("plan-this conditional quality proof stays inside existing fields (#172)", () => {
+  test("conditional quality proof lives in existing acceptance, risk, constraints, and verification fields", () => {
+    const content = body(read(SKILL));
+    const n = norm(content);
+    for (const phrase of [
+      "acceptance criteria",
+      "structural constraints",
+      "smallest test-first verification plan",
+      "security boundary",
+      "migration",
+      "rollback",
+      "performance",
+    ]) {
+      assert.ok(n.includes(phrase), `plan-this must carry conditional proof through ${phrase}`);
+    }
+    assert.equal(content.includes("## Quality profile"), false, "no mandatory quality-profile field is added");
+    assert.equal(content.includes("Quality profile:"), false, "no quality-profile field marker");
+    assert.equal(content.includes("## Quality checklist"), false, "no blanket quality checklist section");
+  });
+});
