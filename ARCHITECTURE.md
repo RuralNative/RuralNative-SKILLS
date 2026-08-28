@@ -13,7 +13,7 @@ invariants, and conventions that code cannot express.
 | unslopify | AI-tell detection and meaning-safe prose revision, always-on for agent-authored output once loaded | skills/unslopify/ | scanner contract via `skills/unslopify/scanner.py`; parity catalog via `skills/unslopify/reference/parity.md`; fixtures and composition via `skills/unslopify/tests/`; identity == folder check | docs/leaves/unslopify.md |
 | plan-this | structured planning workflow that defines and confirms intent, optionally explores directions, resolves the decision frontier, and publishes an approved GitHub specification and coherent tickets through `/grill-with-docs`, `/to-spec`, `/to-tickets`, and `/unslopify` | skills/plan-this/ | composition via `skills/plan-this/tests/`; identity == folder check | docs/leaves/plan-this.md |
 | implement-this | fixed-template implementation adapter that applies the implementation prefix and delegates to `/implement` and `/unslopify`, dispatching bounded ticket sets through real Agent Manager workers with pull-request-only delivery | skills/implement-this/ | composition and command-session tests via `skills/implement-this/tests/`; identity == folder check | docs/leaves/implement-this.md |
-| review-this | owns one pull-request review wave through merge, promotion, and parent closure; resolves invocation targets from parent issues, child issues, pull requests, and URLs; reconciles Kilo cloud review with the local Standards and Spec review against each current head and delegates to `/code-review` and `/unslopify` | skills/review-this/ | composition, discovery, target-resolution, reconciliation, and adapter tests via `skills/review-this/tests/`; identity == folder check | docs/leaves/review-this.md |
+| review-this | owns one pull-request review wave through merge, promotion, and parent closure; resolves invocation targets from parent issues, child issues, pull requests, and URLs; reconciles Kilo cloud review with the local Standards and Spec review against each current head, routes the frontier-owned authority split and mutation-worker model selection, and delegates to `/code-review` and `/unslopify` | skills/review-this/ | composition, discovery, target-resolution, reconciliation, review-authority, and adapter tests via `skills/review-this/tests/`; identity == folder check | docs/leaves/review-this.md |
 | release-skills | universal release workflow that auto-detects version files and changelogs | skills/release-skills/ | composition via `skills/release-skills/tests/`; identity == folder check | docs/leaves/release-skills.md |
 
 A new `skills/<skill-identity>/` directory needs a row, leaf doc, and matching
@@ -47,6 +47,7 @@ Covered non-seam docs are listed here; harness check 6 uses this list.
 - docs/adr/0019-command-session-lifecycle-and-platform-limits.md
 - docs/adr/0020-plan-this-structured-workflow.md
 - docs/adr/0021-implement-this-worker-evidence-contract.md
+- docs/adr/0022-frontier-review-authority-and-mutation-worker-routing.md
 - docs/leaves/document-for-humans.md
 - docs/human/overview.md
 - docs/human/decision-journal.md
@@ -78,6 +79,10 @@ Retired ADRs stay listed for complete coverage; their numbers are never reused.
 - Known shortcuts and unfinished pieces are tracked in the debt registry. See `docs/debt.md`.
 - Review scope, severity, trust, verification, and subagent rules live in
   `REVIEW.md`; cloud review reads it from the pull-request base branch.
+- Review authority splits at the frontier command session: it owns verdicts,
+  merge, labels, promotion, and closure, while one live-catalog execution
+  model drives every new persistent PR mutation worker, which may mutate and
+  fast-forward push only inside its worktree. See ADR-0022.
 - Accepted target in ADR-0019: user-created command sessions run workflow stages
   independently, and unsupported Kilo worktree closure reports
   `cleanup-pending`. Behavior tickets #154, #155, #156, #157, and #158 are
@@ -118,6 +123,7 @@ Every authored doc is machine-checked against disk by `scripts/docs-check.sh`
 | docs/adr/0019-command-session-lifecycle-and-platform-limits.md | decision |
 | docs/adr/0020-plan-this-structured-workflow.md | decision |
 | docs/adr/0021-implement-this-worker-evidence-contract.md | decision |
+| docs/adr/0022-frontier-review-authority-and-mutation-worker-routing.md | decision |
 | docs/leaves/document-for-agents.md | leaf |
 | docs/leaves/document-for-humans.md | leaf |
 | docs/leaves/unslopify.md | leaf |

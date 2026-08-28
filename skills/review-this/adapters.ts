@@ -40,6 +40,13 @@ export interface LocalReviewResult {
   standards: Finding[];
   spec: Finding[];
   clean: boolean;
+  /**
+   * Required Standards category statuses transported through the local review
+   * adapter (#173). Every REQUIRED_STANDARDS_CATEGORIES entry must be present
+   * and non-empty before reconciliation; a missing status is reported and
+   * never defaults to a blocking correctness finding.
+   */
+  standardsCategoryStatuses?: Readonly<Record<string, string>>;
 }
 
 export interface LocalReviewAdapter {
@@ -138,4 +145,42 @@ export async function collectReviewEvidence(
     );
   }
   return { cloud, local };
+}
+
+/**
+ * Transport validation for required Standards category statuses (#173).
+ *
+ * The local review adapter must carry a status for every required Standards
+ * category. A missing or empty status blocks reconciliation as incomplete
+ * evidence; it never defaults to a blocking correctness finding.
+ */
+export function validateStandardsCategoryTransport(
+  result: LocalReviewResult,
+): { valid: boolean; missing: readonly string[]; reason: string } {
+  const required = [
+    "security",
+    "performance",
+    "correctness-and-edge-cases",
+    "style",
+    "tests-and-test-bloat",
+    "documentation",
+  ];
+  const statuses = result.standardsCategoryStatuses ?? {};
+  const missing = required.filter(
+    (category) =>
+      !Object.prototype.hasOwnProperty.call(statuses, category) ||
+      String(statuses[category] ?? "").trim() === "",
+  );
+  if (missing.length > 0) {
+    return {
+      valid: false,
+      missing,
+      reason: `required Standards category statuses are missing: ${missing.join(", ")}`,
+    };
+  }
+  return {
+    valid: true,
+    missing,
+    reason: "required Standards category statuses are transported and complete",
+  };
 }

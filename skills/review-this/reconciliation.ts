@@ -56,6 +56,7 @@ export interface ReconciliationResult {
     stale: Finding[];
     outOfScope: Finding[];
     unverified: Finding[];
+    incomplete: Finding[];
   };
 }
 
@@ -66,7 +67,12 @@ export interface ReconciliationResult {
  *   -> rejected with evidence
  * - Out-of-scope: !inDiff -> rejected
  * - Unverified: !verified or no evidence/ invariant citation -> rejected
- * - Duplicate: same file+line+normalized message already retained -> rejected, first wins
+ * - Incomplete: missing category or severity -> rejected, never defaulted to
+ *   a blocking correctness finding
+ * - Duplicate: same source+file+line+normalized message already retained -> rejected,
+ *   first wins. Standards and Spec keep axis identity during deduplication; a
+ *   cloud/local duplicate collapses only when revisions and evidence identify
+ *   one defect.
  *
  * The first retained finding keeps the clearest evidence; restatements are
  * counted once. Standards and Spec are kept separate in the retainedByAxis
@@ -88,10 +94,19 @@ export function reconcileFindings(
     stale: [] as Finding[],
     outOfScope: [] as Finding[],
     unverified: [] as Finding[],
+    incomplete: [] as Finding[],
   };
   const seen = new Set<string>();
 
-  for (const f of findings) {
+  // Process local axes before cloud so a cloud finding can collapse against an
+  // already-retained Standards or Spec candidate when evidence identifies one
+  // defect, independent of the caller's input order.
+  const ordered = [...findings].sort((a, b) => {
+    const rank = (source: FindingSource) => (source === "cloud" ? 1 : 0);
+    return rank(a.source) - rank(b.source);
+  });
+
+  for (const f of ordered) {
     if (
       f.headSha !== currentHeadSha ||
       (currentBaseSha !== undefined && f.baseSha !== currentBaseSha)
@@ -107,18 +122,43 @@ export function reconcileFindings(
       rejected.unverified.push(f);
       continue;
     }
+    // A candidate with missing category or severity is rejected or reported as
+    // incomplete; it never defaults to a blocking correctness finding (#173).
+    if (!f.category || !f.severity) {
+      rejected.incomplete.push(f);
+      continue;
+    }
     const id = f.id ?? stableFindingId(f);
-    const key = `${f.file}:${f.line}:${normalizeMessage(f.message)}`;
-    if (seen.has(key)) {
+    // Deduplication preserves axis identity. Standards and Spec findings stay
+    // separate: the same location and message on different axes are both
+    // retained because one review axis cannot discard the other. A cloud
+    // finding collapses against a local axis only when the locator, the
+    // revisions, and the evidence identify one defect; otherwise it is
+    // retained as its own candidate.
+    const locator = `${f.file}:${f.line}:${normalizeMessage(f.message)}`;
+    const axisKey = `${f.source}:${locator}`;
+    let duplicate = false;
+    if (f.source === "cloud") {
+      duplicate = retained.some(
+        (r) =>
+          r.source !== "cloud" &&
+          `${r.file}:${r.line}:${normalizeMessage(r.message)}` === locator &&
+          r.baseSha === (f.baseSha ?? currentBaseSha ?? "") &&
+          r.evidence === f.evidence,
+      );
+    } else {
+      duplicate = seen.has(axisKey);
+    }
+    if (duplicate) {
       rejected.duplicate.push(f);
       continue;
     }
-    seen.add(key);
+    seen.add(axisKey);
     const r: ReconciledFinding = {
       id,
       source: f.source,
-      category: f.category ?? "correctness-and-edge-cases",
-      severity: f.severity ?? "blocking",
+      category: f.category,
+      severity: f.severity,
       file: f.file,
       line: f.line,
       message: f.message,

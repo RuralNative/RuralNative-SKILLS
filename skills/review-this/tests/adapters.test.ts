@@ -9,7 +9,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { selectReviewWave } from "../discovery.ts";
 import { reconcileFindings } from "../reconciliation.ts";
-import { collectCloudReview, collectReviewEvidence } from "../adapters.ts";
+import { collectCloudReview, collectReviewEvidence, validateStandardsCategoryTransport } from "../adapters.ts";
 import {
   fakeCloudAdapter,
   fakeDeferredCloudAdapter,
@@ -36,7 +36,7 @@ describe("current-head cloud comments (review-this:INV-6)", () => {
       headSha: HEAD,
       summary: "cloud summary",
       inlineComments: [
-        { source: "cloud", file: "src/a.ts", line: 10, message: "cloud finding", headSha: HEAD, inDiff: true, verified: true, evidence: "line 10" },
+        { source: "cloud", category: "correctness-and-edge-cases", severity: "blocking", file: "src/a.ts", line: 10, message: "cloud finding", headSha: HEAD, inDiff: true, verified: true, evidence: "line 10" },
       ],
     });
     const result = await collectCloudReview(cloud, HEAD);
@@ -130,8 +130,8 @@ describe("local fallback keeps axes separate (review-this:INV-6/INV-7)", () => {
   test("Standards and Spec axes run in parallel and are kept separate", async () => {
     const localAdapter = fakeLocalReviewAdapter({
       headSha: HEAD,
-      standards: [{ source: "standards", file: "src/s.ts", line: 1, message: "standards issue", headSha: HEAD, inDiff: true, verified: true, evidence: "inv" }],
-      spec: [{ source: "spec", file: "src/p.ts", line: 2, message: "spec drift", headSha: HEAD, inDiff: true, verified: true, evidence: "criterion" }],
+      standards: [{ source: "standards", category: "style", severity: "blocking", file: "src/s.ts", line: 1, message: "standards issue", headSha: HEAD, inDiff: true, verified: true, evidence: "inv" }],
+      spec: [{ source: "spec", category: "correctness-and-edge-cases", severity: "blocking", file: "src/p.ts", line: 2, message: "spec drift", headSha: HEAD, inDiff: true, verified: true, evidence: "criterion" }],
       clean: false,
     });
     const local = await localAdapter.run(HEAD);
@@ -146,7 +146,7 @@ describe("local fallback keeps axes separate (review-this:INV-6/INV-7)", () => {
 describe("fix batching and stale-head invalidation (review-this:INV-7/INV-8)", () => {
   test("confirmed findings remain in the PR review lifecycle for one fresh fix batch", () => {
     const reconciled = reconcileFindings(
-      [{ source: "spec", file: "src/f.ts", line: 5, message: "fix", headSha: HEAD, inDiff: true, verified: true, evidence: "evidence" }],
+      [{ source: "spec", category: "correctness-and-edge-cases", severity: "blocking", file: "src/f.ts", line: 5, message: "fix", headSha: HEAD, inDiff: true, verified: true, evidence: "evidence" }],
       HEAD,
     );
     assert.equal(reconciled.retained.length, 1);
@@ -307,6 +307,65 @@ describe("overlapped evidence collection (review-this:INV-6, plan #170)", () => 
     assert.equal(result.cloud.status, "unavailable");
     assert.match(result.cloud.reason ?? "", /does not match current head/);
     assert.equal(result.local.headSha, HEAD);
+  });
+});
+
+describe("required Standards category status transport (review-this:INV-14)", () => {
+  test("complete transported statuses validate before reconciliation", () => {
+    const result = validateStandardsCategoryTransport({
+      headSha: HEAD,
+      standards: [],
+      spec: [],
+      clean: true,
+      standardsCategoryStatuses: {
+        security: "passed",
+        performance: "not-applicable",
+        "correctness-and-edge-cases": "passed",
+        style: "advisory",
+        "tests-and-test-bloat": "passed",
+        documentation: "passed",
+      },
+    });
+    assert.equal(result.valid, true);
+    assert.deepEqual(result.missing, []);
+  });
+
+  test("a missing required category status is reported, never defaulted to blocking correctness", () => {
+    const result = validateStandardsCategoryTransport({
+      headSha: HEAD,
+      standards: [],
+      spec: [],
+      clean: true,
+      standardsCategoryStatuses: {
+        security: "passed",
+        performance: "passed",
+        "correctness-and-edge-cases": "passed",
+        style: "passed",
+        "tests-and-test-bloat": "passed",
+      },
+    });
+    assert.equal(result.valid, false);
+    assert.deepEqual(result.missing, ["documentation"]);
+    assert.match(result.reason, /missing: documentation/);
+  });
+
+  test("an empty transported status is treated as missing", () => {
+    const result = validateStandardsCategoryTransport({
+      headSha: HEAD,
+      standards: [],
+      spec: [],
+      clean: true,
+      standardsCategoryStatuses: {
+        security: "",
+        performance: "passed",
+        "correctness-and-edge-cases": "passed",
+        style: "passed",
+        "tests-and-test-bloat": "passed",
+        documentation: "passed",
+      },
+    });
+    assert.equal(result.valid, false);
+    assert.deepEqual(result.missing, ["security"]);
   });
 });
 

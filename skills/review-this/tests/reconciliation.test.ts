@@ -19,6 +19,8 @@ function finding(overrides: Partial<Finding> & { file: string; line: number; mes
     inDiff: true,
     verified: true,
     evidence: "invariant INV-1: cited",
+    category: "correctness-and-edge-cases",
+    severity: "blocking",
     ...overrides,
   };
 }
@@ -37,15 +39,55 @@ describe("reconcileFindings keeps Standards and Spec axes separate", () => {
     assert.equal(result.retained.length, 3);
   });
 
-  test("duplicate cloud and local finding counts once with clearest evidence retained", () => {
+  test("cloud and standards duplicate at the same location collapses only with one defect", () => {
+    const findings: Finding[] = [
+      finding({ source: "cloud", file: "src/x.ts", line: 42, message: "Null check missing", evidence: "cloud evidence: line 42" }),
+      finding({ source: "standards", file: "src/x.ts", line: 42, message: "Null check missing", evidence: "cloud evidence: line 42" }),
+    ];
+    const result = reconcileFindings(findings, HEAD);
+    assert.equal(result.retained.length, 1);
+    assert.equal(result.rejected.duplicate.length, 1);
+    // The local axis is processed first and keeps the identical evidence;
+    // the cloud restatement collapses into it as one defect.
+    assert.equal(result.retained[0].source, "standards");
+  });
+
+  test("cloud and a local axis with different evidence stay separate candidates", () => {
     const findings: Finding[] = [
       finding({ source: "cloud", file: "src/x.ts", line: 42, message: "Null check missing", evidence: "cloud evidence: line 42" }),
       finding({ source: "standards", file: "src/x.ts", line: 42, message: "Null check missing", evidence: "standards evidence: line 42" }),
     ];
     const result = reconcileFindings(findings, HEAD);
-    assert.equal(result.retained.length, 1);
-    assert.equal(result.rejected.duplicate.length, 1);
-    assert.equal(result.retained[0].source, "cloud");
+    assert.equal(result.retained.length, 2);
+    assert.equal(result.rejected.duplicate.length, 0);
+  });
+
+  test("Standards and Spec findings stay separate even at the same location", () => {
+    const findings: Finding[] = [
+      finding({ source: "standards", file: "src/x.ts", line: 42, message: "missing null check", evidence: "standards evidence" }),
+      finding({ source: "spec", file: "src/x.ts", line: 42, message: "missing null check", evidence: "criterion 3 requires it" }),
+    ];
+    const result = reconcileFindings(findings, HEAD);
+    assert.equal(result.retained.length, 2);
+    assert.equal(result.rejected.duplicate.length, 0);
+    assert.equal(result.retainedByAxis.standards.length, 1);
+    assert.equal(result.retainedByAxis.spec.length, 1);
+  });
+
+  test("missing category or severity is rejected as incomplete, never a blocking correctness finding", () => {
+    const missingCategory = reconcileFindings(
+      [finding({ source: "standards", file: "src/c.ts", line: 1, message: "no category", category: undefined })],
+      HEAD,
+    );
+    assert.equal(missingCategory.retained.length, 0);
+    assert.equal(missingCategory.rejected.incomplete.length, 1);
+
+    const missingSeverity = reconcileFindings(
+      [finding({ source: "spec", file: "src/s.ts", line: 2, message: "no severity", severity: undefined })],
+      HEAD,
+    );
+    assert.equal(missingSeverity.retained.length, 0);
+    assert.equal(missingSeverity.rejected.incomplete.length, 1);
   });
 
   test("stale head after a pushed fix is rejected with evidence", () => {
