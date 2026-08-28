@@ -537,3 +537,85 @@ describe("implement-this worker evidence contract (implement-this:INV-13, plan 1
     assert.equal(n.includes("supervise-this"), false, "must not name retired coordinator");
   });
 });
+
+describe("conditional quality evidence (implement-this:INV-13 extension, #172)", () => {
+  test("SKILL.md requires worker-supplied trigger facts and narrow evidence sections", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const n = norm(skill);
+    for (const fact of [
+      "touchesbrowserbehavior",
+      "touchessecurityboundary",
+      "touchesproductionoperability",
+      "touchesmigration",
+      "touchesexplicitperformance",
+    ]) {
+      assert.ok(n.includes(fact), `SKILL.md must name trigger fact ${fact}`);
+    }
+    for (const section of [
+      "browser evidence",
+      "security evidence",
+      "operability evidence",
+      "migration evidence",
+      "performance evidence",
+    ]) {
+      assert.ok(n.includes(section), `SKILL.md must name evidence section ${section}`);
+    }
+    assert.ok(n.includes("does not infer"), "trigger facts are worker-supplied, never prose-inferred");
+  });
+
+  test("acceptance-evidence.ts stays pure and renders conditional sections", () => {
+    const code = read("skills/implement-this/acceptance-evidence.ts");
+    assert.ok(code.includes("touchesBrowserBehavior"), "module must accept browser trigger");
+    assert.ok(code.includes("touchesSecurityBoundary"), "module must accept security trigger");
+    assert.ok(code.includes("touchesProductionOperability"), "module must accept operability trigger");
+    assert.ok(code.includes("touchesMigration"), "module must accept migration trigger");
+    assert.ok(code.includes("touchesExplicitPerformance"), "module must accept performance trigger");
+    const n = norm(code);
+    assert.ok(n.includes("no network"), "module must stay pure");
+  });
+
+  test("browser tooling comes from an existing host or repository capability and no skill or unpinned tool is installed", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const install = read("skills/implement-this/INSTALL.md");
+    const n = norm(`${skill}\n${install}`);
+    assert.ok(n.includes("no skill downloads"), "workflow installs no skill");
+    assert.ok(n.includes("unpinned"), "no unpinned browser tool is installed");
+    assert.ok(n.includes("existing") || n.includes("host"), "browser tooling comes from an existing repository or host capability");
+  });
+
+  test("unexpected failures use the bounded diagnostic loop and existing stops", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const n = norm(skill);
+    for (const step of ["reproduce", "isolate", "one-hypothesis", "smallest-fix", "regression-proof"]) {
+      assert.ok(n.includes(step), `diagnostic loop must name ${step}`);
+    }
+    assert.ok(n.includes("needs-info"), "terminal stops stay authoritative");
+  });
+
+  test("provenance pins the Addy revision and records dispositions without runtime dependency", () => {
+    const provenance = read("reference/vendor-facts.md");
+    const n = norm(provenance);
+    assert.ok(n.includes("f63ec56a3cc936408d792956ae583c3c96a825bd"), "provenance pins the Addy revision");
+    for (const disposition of ["adopt", "adapt", "reject", "reference-only"]) {
+      assert.ok(n.includes(disposition), `provenance records disposition ${disposition}`);
+    }
+    assert.ok(n.includes("mit"), "provenance retains the MIT notice");
+    const skill = read("skills/implement-this/SKILL.md");
+    assert.equal(norm(skill).includes("/build"), false, "no Addy /build dependency");
+    assert.equal(norm(skill).includes("npx skills add addyosmani"), false, "no Addy install command");
+  });
+
+  test("no quality-profile checklist field is added to plan-this", () => {
+    const skill = read("skills/plan-this/SKILL.md");
+    const content = body(skill);
+    assert.equal(content.includes("## Quality profile"), false, "no quality-profile field section");
+    assert.equal(content.includes("Quality profile:"), false, "no quality-profile field marker");
+    for (const field of ["`Outcome`", "`Risk`", "acceptance", "constraints", "verification"]) {
+      const check = field.replace(/^`|`$/g, "");
+      assert.ok(
+        content.includes(check) || content.toLowerCase().includes(check.toLowerCase()),
+        `plan-this must keep field ${field}`,
+      );
+    }
+  });
+});

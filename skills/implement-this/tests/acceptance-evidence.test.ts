@@ -18,6 +18,11 @@ const defaultTriggers: AcceptanceEvidenceInput["triggers"] = {
   externalDocumentationAuthoritative: false,
   isBugFix: false,
   bugFixRedConfirmed: false,
+  touchesBrowserBehavior: false,
+  touchesSecurityBoundary: false,
+  touchesProductionOperability: false,
+  touchesMigration: false,
+  touchesExplicitPerformance: false,
 };
 
 function testTriggers(
@@ -266,7 +271,7 @@ describe("acceptance evidence — exemption whitelist", () => {
             reason: "only docs",
           },
         ],
-        triggers: { touchesVersionedExternalApi: false, touchesPublicInterface: false, dependencyOrConfigCriteria: [], externalSourceResolved: false, externalDocumentationAuthoritative: false, isBugFix: false, bugFixRedConfirmed: false },
+        triggers: { touchesVersionedExternalApi: false, touchesPublicInterface: false, dependencyOrConfigCriteria: [], externalSourceResolved: false, externalDocumentationAuthoritative: false, isBugFix: false, bugFixRedConfirmed: false, touchesBrowserBehavior: false, touchesSecurityBoundary: false, touchesProductionOperability: false, touchesMigration: false, touchesExplicitPerformance: false },
       }),
     );
     assert.equal(allowed.ok, true);
@@ -283,7 +288,7 @@ describe("acceptance evidence — exemption whitelist", () => {
             reason: "only docs",
           },
         ],
-        triggers: { touchesVersionedExternalApi: false, touchesPublicInterface: false, dependencyOrConfigCriteria: [criterion], externalSourceResolved: false, externalDocumentationAuthoritative: false, isBugFix: false, bugFixRedConfirmed: false },
+        triggers: { touchesVersionedExternalApi: false, touchesPublicInterface: false, dependencyOrConfigCriteria: [criterion], externalSourceResolved: false, externalDocumentationAuthoritative: false, isBugFix: false, bugFixRedConfirmed: false, touchesBrowserBehavior: false, touchesSecurityBoundary: false, touchesProductionOperability: false, touchesMigration: false, touchesExplicitPerformance: false },
       }),
     );
     assert.equal(rejected.ok, false);
@@ -301,7 +306,7 @@ describe("acceptance evidence — exemption whitelist", () => {
             reason: "only docs",
           },
         ],
-        triggers: { touchesVersionedExternalApi: false, touchesPublicInterface: false, dependencyOrConfigCriteria: ["upgrade React"], externalSourceResolved: false, externalDocumentationAuthoritative: false, isBugFix: false, bugFixRedConfirmed: false },
+        triggers: { touchesVersionedExternalApi: false, touchesPublicInterface: false, dependencyOrConfigCriteria: ["upgrade React"], externalSourceResolved: false, externalDocumentationAuthoritative: false, isBugFix: false, bugFixRedConfirmed: false, touchesBrowserBehavior: false, touchesSecurityBoundary: false, touchesProductionOperability: false, touchesMigration: false, touchesExplicitPerformance: false },
       }),
     );
     assert.equal(rejected2.ok, false);
@@ -822,6 +827,245 @@ describe("acceptance evidence — escaping and deterministic rendering", () => {
     );
     assert.equal(httpUrl.ok, false);
     assert.ok(httpUrl.errors.join(" ").includes("https"));
+  });
+});
+
+describe("conditional quality evidence triggers (#172, ADR-0021 extension)", () => {
+  function triggeredInput(
+    overrides: Partial<AcceptanceEvidenceInput> = {},
+  ): AcceptanceEvidenceInput {
+    return {
+      ...baseInput(),
+      ...overrides,
+      triggers: {
+        ...testTriggers(),
+        ...(overrides.triggers ?? {}),
+      },
+    };
+  }
+
+  test("validation rejects a triggered fact without its narrow evidence section", () => {
+    const facts = [
+      ["touchesBrowserBehavior", "browser evidence"],
+      ["touchesSecurityBoundary", "security evidence"],
+      ["touchesProductionOperability", "operability evidence"],
+      ["touchesMigration", "migration evidence"],
+      ["touchesExplicitPerformance", "performance evidence"],
+    ] as const;
+    for (const [fact, section] of facts) {
+      const result = validateAcceptanceEvidence(
+        triggeredInput({
+          triggers: testTriggers({ [fact]: true }),
+        }),
+      );
+      assert.equal(result.ok, false, `${fact} must fail without its narrow evidence section`);
+      assert.ok(
+        result.errors.join(" ").toLowerCase().includes(section),
+        `${fact} must name the missing ${section} section`,
+      );
+    }
+  });
+
+  test("a triggered fact does not satisfy a different section", () => {
+    const browserOnly = validateAcceptanceEvidence({
+      ...triggeredInput({
+        triggers: testTriggers({
+          touchesBrowserBehavior: true,
+          touchesSecurityBoundary: true,
+        }),
+      }),
+      browserEvidence: {
+        interaction: "click submit",
+        runtimeEvidence: "console error 'x is not defined' on submit",
+        evidenceType: "console",
+        toolingOrigin: "host-browser",
+      },
+    });
+    assert.equal(browserOnly.ok, false);
+    assert.ok(
+      browserOnly.errors.join(" ").toLowerCase().includes("security"),
+      "missing security evidence must be named",
+    );
+  });
+
+  test("browser evidence rejects a generic screenshot as insufficient", () => {
+    const screenshotOnly = validateAcceptanceEvidence({
+      ...triggeredInput({ triggers: testTriggers({ touchesBrowserBehavior: true }) }),
+      browserEvidence: {
+        interaction: "load page",
+        runtimeEvidence: "screenshot of the rendered page",
+        evidenceType: "dom",
+        toolingOrigin: "host-browser",
+      },
+    });
+    assert.equal(screenshotOnly.ok, false);
+    assert.ok(screenshotOnly.errors.join(" ").toLowerCase().includes("screenshot"));
+  });
+
+  test("valid evidence for every triggered section passes", () => {
+    const input: AcceptanceEvidenceInput = {
+      ...triggeredInput({
+        triggers: testTriggers({
+          touchesBrowserBehavior: true,
+          touchesSecurityBoundary: true,
+          touchesProductionOperability: true,
+          touchesMigration: true,
+          touchesExplicitPerformance: true,
+        }),
+      }),
+      browserEvidence: {
+        interaction: "click submit",
+        runtimeEvidence: "console error 'x is not defined' logged on submit",
+        evidenceType: "console",
+        toolingOrigin: "host-browser",
+      },
+      securityEvidence: {
+        assets: "login endpoint, auth token store",
+        trustBoundaries: "untrusted network to trusted token store",
+        abuseCases: "credential stuffing, token replay",
+        controlTests: ["security-control.test.ts"],
+      },
+      operabilityEvidence: {
+        onCallQuestions: "what raises the error budget on checkout?",
+        metricLabels: ["app.checkout.errors", "app.checkout.latency"],
+        telemetryExercised: true,
+      },
+      migrationEvidence: {
+        consumers: "api clients v1",
+        phases: ["additive: new endpoint alongside v1", "destructive: remove v1 after cutover"],
+        cutover: "feature flag flips v1 off",
+        rollback: "flag flip restores v1",
+        boundaryVerification: ["migration-boundary.test.ts"],
+      },
+      performanceEvidence: {
+        baseline: { conditions: "cold cache, 1KB payload", measured: 240 },
+        result: { conditions: "cold cache, 1KB payload", measured: 120 },
+        variance: "repeat 5 runs, p95 118-124",
+        attribution: "bundler change in this PR",
+        keepOrRevert: "keep",
+      },
+    };
+    const result = validateAcceptanceEvidence(input);
+    assert.equal(result.ok, true, JSON.stringify(result.errors));
+  });
+
+  test("untriggered tickets keep the current shape and render no extra sections", () => {
+    const plain = baseInput();
+    assert.equal(validateAcceptanceEvidence(plain).ok, true);
+    const rendered = renderAcceptanceEvidence(plain);
+    for (const section of [
+      "Browser evidence",
+      "Security evidence",
+      "Operability evidence",
+      "Migration evidence",
+      "Performance evidence",
+    ]) {
+      assert.equal(rendered.includes(section), false, `${section} must not render when untriggered`);
+    }
+  });
+
+  test("operability keeps metric labels bounded and records telemetry exercise", () => {
+    const unbounded = validateAcceptanceEvidence({
+      ...triggeredInput({ triggers: testTriggers({ touchesProductionOperability: true }) }),
+      operabilityEvidence: {
+        onCallQuestions: "what is broken?",
+        metricLabels: ["app.*.errors", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"],
+        telemetryExercised: false,
+      },
+    });
+    assert.equal(unbounded.ok, false);
+    assert.ok(unbounded.errors.join(" ").toLowerCase().includes("bounded"));
+
+    const ok = validateAcceptanceEvidence({
+      ...triggeredInput({ triggers: testTriggers({ touchesProductionOperability: true }) }),
+      operabilityEvidence: {
+        onCallQuestions: "what raises the error budget on checkout?",
+        metricLabels: ["app.checkout.errors", "app.checkout.latency"],
+        telemetryExercised: true,
+      },
+    });
+    assert.equal(ok.ok, true);
+  });
+
+  test("migration evidence names consumers, phases, cutover, rollback, and boundary", () => {
+    const missingRollback = validateAcceptanceEvidence({
+      ...triggeredInput({ triggers: testTriggers({ touchesMigration: true }) }),
+      migrationEvidence: {
+        consumers: "v1 clients",
+        phases: ["additive"],
+        cutover: "flag",
+        rollback: "",
+        boundaryVerification: [],
+      },
+    });
+    assert.equal(missingRollback.ok, false);
+
+    const complete = validateAcceptanceEvidence({
+      ...triggeredInput({ triggers: testTriggers({ touchesMigration: true }) }),
+      migrationEvidence: {
+        consumers: "v1 clients",
+        phases: ["additive: new endpoint", "destructive: remove v1"],
+        cutover: "flag flip",
+        rollback: "flag restore",
+        boundaryVerification: ["migration.test.ts"],
+      },
+    });
+    assert.equal(complete.ok, true);
+  });
+
+  test("performance evidence records matched conditions, variance, attribution, and keep-or-revert", () => {
+    const unmatched = validateAcceptanceEvidence({
+      ...triggeredInput({ triggers: testTriggers({ touchesExplicitPerformance: true }) }),
+      performanceEvidence: {
+        baseline: { conditions: "cold", measured: 100 },
+        result: { conditions: "warm cache", measured: 50 },
+        variance: "",
+        attribution: "",
+        keepOrRevert: "keep",
+      },
+    });
+    assert.equal(unmatched.ok, false);
+
+    const missingDecision = validateAcceptanceEvidence({
+      ...triggeredInput({ triggers: testTriggers({ touchesExplicitPerformance: true }) }),
+      performanceEvidence: {
+        baseline: { conditions: "cold", measured: 100 },
+        result: { conditions: "cold", measured: 50 },
+        variance: "",
+        attribution: "",
+        keepOrRevert: "undecided" as never,
+      },
+    });
+    assert.equal(missingDecision.ok, false);
+
+    const complete = validateAcceptanceEvidence({
+      ...triggeredInput({ triggers: testTriggers({ touchesExplicitPerformance: true }) }),
+      performanceEvidence: {
+        baseline: { conditions: "cold cache, 1KB", measured: 240 },
+        result: { conditions: "cold cache, 1KB", measured: 120 },
+        variance: "5 runs, p95 118-124",
+        attribution: "this PR's bundler change",
+        keepOrRevert: "keep",
+      },
+    });
+    assert.equal(complete.ok, true);
+  });
+
+  test("rendering includes triggered sections and skips untriggered ones", () => {
+    const input: AcceptanceEvidenceInput = {
+      ...triggeredInput({ triggers: testTriggers({ touchesBrowserBehavior: true }) }),
+      browserEvidence: {
+        interaction: "click submit",
+        runtimeEvidence: "console error logged",
+        evidenceType: "console",
+        toolingOrigin: "host-browser",
+      },
+    };
+    const rendered = renderAcceptanceEvidence(input);
+    assert.ok(rendered.includes("Browser evidence"));
+    assert.ok(rendered.includes("- Interaction:"));
+    assert.ok(rendered.includes("click submit"));
+    assert.equal(rendered.includes("Security evidence"), false);
   });
 });
 

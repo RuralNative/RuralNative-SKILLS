@@ -38,6 +38,54 @@ export interface CompatibilityEvidence {
   boundaryTests: readonly string[];
 }
 
+export type BrowserEvidenceType =
+  | "console"
+  | "network"
+  | "accessibility"
+  | "trace"
+  | "dom";
+
+export interface BrowserEvidence {
+  interaction: string;
+  runtimeEvidence: string;
+  evidenceType: BrowserEvidenceType;
+  toolingOrigin: string;
+}
+
+export interface SecurityEvidence {
+  assets: string;
+  trustBoundaries: string;
+  abuseCases: string;
+  controlTests: readonly string[];
+}
+
+export interface OperabilityEvidence {
+  onCallQuestions: string;
+  metricLabels: readonly string[];
+  telemetryExercised: boolean;
+}
+
+export interface MigrationEvidence {
+  consumers: string;
+  phases: readonly string[];
+  cutover: string;
+  rollback: string;
+  boundaryVerification: readonly string[];
+}
+
+export interface MatchedMeasurement {
+  conditions: string;
+  measured: number;
+}
+
+export interface PerformanceEvidence {
+  baseline: MatchedMeasurement;
+  result: MatchedMeasurement;
+  variance: string;
+  attribution: string;
+  keepOrRevert: "keep" | "revert";
+}
+
 export interface AcceptanceEvidenceInput {
   criteria: readonly string[];
   evidence: readonly CriterionEvidence[];
@@ -49,9 +97,19 @@ export interface AcceptanceEvidenceInput {
     externalDocumentationAuthoritative: boolean;
     isBugFix: boolean;
     bugFixRedConfirmed: boolean;
+    touchesBrowserBehavior: boolean;
+    touchesSecurityBoundary: boolean;
+    touchesProductionOperability: boolean;
+    touchesMigration: boolean;
+    touchesExplicitPerformance: boolean;
   };
   externalSource?: ExternalSourceEvidence | null;
   compatibility?: CompatibilityEvidence | null;
+  browserEvidence?: BrowserEvidence | null;
+  securityEvidence?: SecurityEvidence | null;
+  operabilityEvidence?: OperabilityEvidence | null;
+  migrationEvidence?: MigrationEvidence | null;
+  performanceEvidence?: PerformanceEvidence | null;
 }
 
 export interface ValidationResult {
@@ -256,6 +314,150 @@ export function validateAcceptanceEvidence(
     }
   }
 
+  // Conditional quality evidence sections (#172). Each triggered fact requires
+  // exactly its narrow evidence section; sections never satisfy another.
+  if (input.triggers.touchesBrowserBehavior) {
+    if (!input.browserEvidence) {
+      errors.push("touchesBrowserBehavior requires browser evidence");
+    } else {
+      if (!isNonEmptyString(input.browserEvidence.interaction)) {
+        errors.push("browser evidence requires non-empty interaction");
+      }
+      if (!isNonEmptyString(input.browserEvidence.runtimeEvidence)) {
+        errors.push("browser evidence requires non-empty runtimeEvidence");
+      }
+      if (
+        !["console", "network", "accessibility", "trace", "dom"].includes(
+          input.browserEvidence.evidenceType,
+        )
+      ) {
+        errors.push(`browser evidence has invalid evidenceType: ${input.browserEvidence.evidenceType}`);
+      }
+      if (!isNonEmptyString(input.browserEvidence.toolingOrigin)) {
+        errors.push("browser evidence requires non-empty toolingOrigin");
+      }
+      // A generic screenshot does not demonstrate console, network,
+      // accessibility, or trace state; it is insufficient browser proof.
+      const normalizedEvidence = input.browserEvidence.runtimeEvidence.toLowerCase();
+      if (
+        normalizedEvidence.includes("screenshot") &&
+        !["console", "network", "accessibility", "trace"].some((t) =>
+          normalizedEvidence.includes(t),
+        )
+      ) {
+        errors.push("browser evidence: a generic screenshot is insufficient");
+      }
+    }
+  }
+
+  if (input.triggers.touchesSecurityBoundary) {
+    if (!input.securityEvidence) {
+      errors.push("touchesSecurityBoundary requires security evidence");
+    } else {
+      if (!isNonEmptyString(input.securityEvidence.assets)) {
+        errors.push("security evidence requires non-empty assets");
+      }
+      if (!isNonEmptyString(input.securityEvidence.trustBoundaries)) {
+        errors.push("security evidence requires non-empty trustBoundaries");
+      }
+      if (!isNonEmptyString(input.securityEvidence.abuseCases)) {
+        errors.push("security evidence requires non-empty abuseCases");
+      }
+      if (!input.securityEvidence.controlTests || input.securityEvidence.controlTests.length === 0) {
+        errors.push("security evidence requires at least one controlTests entry");
+      } else {
+        for (const t of input.securityEvidence.controlTests) {
+          if (!isNonEmptyString(t)) {
+            errors.push("security evidence has empty controlTests entry");
+          }
+        }
+      }
+    }
+  }
+
+  if (input.triggers.touchesProductionOperability) {
+    if (!input.operabilityEvidence) {
+      errors.push("touchesProductionOperability requires operability evidence");
+    } else {
+      if (!isNonEmptyString(input.operabilityEvidence.onCallQuestions)) {
+        errors.push("operability evidence requires non-empty onCallQuestions");
+      }
+      if (
+        !input.operabilityEvidence.metricLabels ||
+        input.operabilityEvidence.metricLabels.length === 0
+      ) {
+        errors.push("operability evidence requires at least one metricLabel");
+      } else {
+        const labels = input.operabilityEvidence.metricLabels;
+        if (labels.length > 10) {
+          errors.push(`operability evidence must keep metric labels bounded (${labels.length} > 10)`);
+        }
+        const wildcard = labels.find((l) => l.includes("*"));
+        if (wildcard !== undefined) {
+          errors.push(`operability evidence must not use wildcard metric labels: ${wildcard}`);
+        }
+      }
+      if (typeof input.operabilityEvidence.telemetryExercised !== "boolean") {
+        errors.push("operability evidence must record whether the telemetry path was exercised");
+      }
+    }
+  }
+
+  if (input.triggers.touchesMigration) {
+    if (!input.migrationEvidence) {
+      errors.push("touchesMigration requires migration evidence");
+    } else {
+      if (!isNonEmptyString(input.migrationEvidence.consumers)) {
+        errors.push("migration evidence requires non-empty consumers");
+      }
+      if (!input.migrationEvidence.phases || input.migrationEvidence.phases.length === 0) {
+        errors.push("migration evidence requires at least one phase");
+      }
+      if (!isNonEmptyString(input.migrationEvidence.cutover)) {
+        errors.push("migration evidence requires non-empty cutover");
+      }
+      if (!isNonEmptyString(input.migrationEvidence.rollback)) {
+        errors.push("migration evidence requires non-empty rollback");
+      }
+      if (
+        !input.migrationEvidence.boundaryVerification ||
+        input.migrationEvidence.boundaryVerification.length === 0
+      ) {
+        errors.push("migration evidence requires at least one boundaryVerification entry");
+      }
+    }
+  }
+
+  if (input.triggers.touchesExplicitPerformance) {
+    if (!input.performanceEvidence) {
+      errors.push("touchesExplicitPerformance requires performance evidence");
+    } else {
+      const p = input.performanceEvidence;
+      if (!isNonEmptyString(p.baseline?.conditions) || !isNonEmptyString(p.result?.conditions)) {
+        errors.push("performance evidence requires matched baseline and result conditions");
+      }
+      if (
+        isNonEmptyString(p.baseline?.conditions) &&
+        isNonEmptyString(p.result?.conditions) &&
+        p.baseline.conditions.trim() !== p.result.conditions.trim()
+      ) {
+        errors.push("performance evidence requires matched baseline and result conditions");
+      }
+      if (typeof p.baseline?.measured !== "number" || typeof p.result?.measured !== "number") {
+        errors.push("performance evidence requires numeric baseline and result measurements");
+      }
+      if (!isNonEmptyString(p.variance)) {
+        errors.push("performance evidence requires non-empty variance");
+      }
+      if (!isNonEmptyString(p.attribution)) {
+        errors.push("performance evidence requires non-empty attribution");
+      }
+      if (p.keepOrRevert !== "keep" && p.keepOrRevert !== "revert") {
+        errors.push("performance evidence requires a keep-or-revert decision");
+      }
+    }
+  }
+
   return { ok: errors.length === 0, errors };
 }
 
@@ -314,6 +516,52 @@ export function renderAcceptanceEvidence(input: AcceptanceEvidenceInput): string
     lines.push(`- Consumer impact: ${escapeForMarkdown(input.compatibility.consumerImpact)}`);
     lines.push(`- Migration: ${escapeForMarkdown(input.compatibility.migration)}`);
     lines.push(`- Boundary tests: ${input.compatibility.boundaryTests.map(escapeForMarkdown).join(", ")}`);
+  }
+
+  if (input.triggers.touchesBrowserBehavior && input.browserEvidence) {
+    lines.push("");
+    lines.push("### Browser evidence");
+    lines.push(`- Interaction: ${escapeForMarkdown(input.browserEvidence.interaction)}`);
+    lines.push(`- Runtime evidence: ${escapeForMarkdown(input.browserEvidence.runtimeEvidence)}`);
+    lines.push(`- Evidence type: ${escapeForMarkdown(input.browserEvidence.evidenceType)}`);
+    lines.push(`- Tooling origin: ${escapeForMarkdown(input.browserEvidence.toolingOrigin)}`);
+  }
+
+  if (input.triggers.touchesSecurityBoundary && input.securityEvidence) {
+    lines.push("");
+    lines.push("### Security evidence");
+    lines.push(`- Assets: ${escapeForMarkdown(input.securityEvidence.assets)}`);
+    lines.push(`- Trust boundaries: ${escapeForMarkdown(input.securityEvidence.trustBoundaries)}`);
+    lines.push(`- Abuse cases: ${escapeForMarkdown(input.securityEvidence.abuseCases)}`);
+    lines.push(`- Control tests: ${input.securityEvidence.controlTests.map(escapeForMarkdown).join(", ")}`);
+  }
+
+  if (input.triggers.touchesProductionOperability && input.operabilityEvidence) {
+    lines.push("");
+    lines.push("### Operability evidence");
+    lines.push(`- On-call questions: ${escapeForMarkdown(input.operabilityEvidence.onCallQuestions)}`);
+    lines.push(`- Metric labels: ${input.operabilityEvidence.metricLabels.map(escapeForMarkdown).join(", ")}`);
+    lines.push(`- Telemetry path exercised: ${input.operabilityEvidence.telemetryExercised ? "yes" : "no"}`);
+  }
+
+  if (input.triggers.touchesMigration && input.migrationEvidence) {
+    lines.push("");
+    lines.push("### Migration evidence");
+    lines.push(`- Consumers: ${escapeForMarkdown(input.migrationEvidence.consumers)}`);
+    lines.push(`- Phases: ${input.migrationEvidence.phases.map(escapeForMarkdown).join("; ")}`);
+    lines.push(`- Cutover: ${escapeForMarkdown(input.migrationEvidence.cutover)}`);
+    lines.push(`- Rollback: ${escapeForMarkdown(input.migrationEvidence.rollback)}`);
+    lines.push(`- Boundary verification: ${input.migrationEvidence.boundaryVerification.map(escapeForMarkdown).join(", ")}`);
+  }
+
+  if (input.triggers.touchesExplicitPerformance && input.performanceEvidence) {
+    lines.push("");
+    lines.push("### Performance evidence");
+    lines.push(`- Baseline: ${escapeForMarkdown(input.performanceEvidence.baseline.conditions)} — ${input.performanceEvidence.baseline.measured}ms`);
+    lines.push(`- Result: ${escapeForMarkdown(input.performanceEvidence.result.conditions)} — ${input.performanceEvidence.result.measured}ms`);
+    lines.push(`- Variance: ${escapeForMarkdown(input.performanceEvidence.variance)}`);
+    lines.push(`- Attribution: ${escapeForMarkdown(input.performanceEvidence.attribution)}`);
+    lines.push(`- Decision: ${escapeForMarkdown(input.performanceEvidence.keepOrRevert)}`);
   }
 
   lines.push(ACCEPTANCE_EVIDENCE_MARKER_END);
