@@ -46,6 +46,7 @@ Covered non-seam docs are listed here; harness check 6 uses this list.
 - docs/adr/0018-opt-in-skill-diagnostics.md
 - docs/adr/0019-command-session-lifecycle-and-platform-limits.md
 - docs/adr/0020-plan-this-structured-workflow.md
+- docs/adr/0021-implement-this-worker-evidence-contract.md
 - docs/leaves/document-for-humans.md
 - docs/human/overview.md
 - docs/human/decision-journal.md
@@ -116,6 +117,7 @@ Every authored doc is machine-checked against disk by `scripts/docs-check.sh`
 | docs/adr/0018-opt-in-skill-diagnostics.md | decision |
 | docs/adr/0019-command-session-lifecycle-and-platform-limits.md | decision |
 | docs/adr/0020-plan-this-structured-workflow.md | decision |
+| docs/adr/0021-implement-this-worker-evidence-contract.md | decision |
 | docs/leaves/document-for-agents.md | leaf |
 | docs/leaves/document-for-humans.md | leaf |
 | docs/leaves/unslopify.md | leaf |

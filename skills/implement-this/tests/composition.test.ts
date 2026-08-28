@@ -474,3 +474,66 @@ describe("Agent Manager worktree dispatch enforcement (plan 1787549339706)", () 
     }
   });
 });
+
+describe("implement-this worker evidence contract (implement-this:INV-13, plan 1787879273774)", () => {
+  test("covers six borrowed practices as ordered worker steps", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("behavioral slices") || n.includes("behavioral criterion"), "must name behavioral slices");
+    assert.ok(n.includes("first behavioral criterion must reproduce the reported defect") || n.includes("bug-fix"), "must require bug reproduction");
+    assert.ok(n.includes("docs-only") && n.includes("static-content") && n.includes("rename-only") && n.includes("format-only"), "must list four exemptions");
+    assert.ok(n.includes("version-sensitive external api") || n.includes("authoritative documentation"), "must require version-sensitive source check");
+    assert.ok(n.includes("public interface") || n.includes("compatibility"), "must require public-interface compatibility evidence");
+    assert.ok(n.includes("numbered-invariant collision"), "must handle numbered-invariant collision");
+    assert.ok(n.includes("cache gap"), "must handle cache gap");
+    assert.ok(n.includes("ticket ambiguity"), "must handle ticket ambiguity");
+  });
+
+  test("keeps exactly two hard dependencies and no transplanted skills", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("/implement") && n.includes("/unslopify"), "must name both hard dependencies");
+    assert.equal(n.includes("/code-review"), false, "must not add code-review");
+    assert.equal(n.includes("/build"), false, "must not add /build");
+    // ensure /implement still precedes /unslopify
+    assert.ok(skill.indexOf("/implement") < skill.indexOf("/unslopify"), "/implement must precede /unslopify");
+  });
+
+  test("commits once per verified ticket, not per slice, and has no nested reviewer", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("commit once per verified ticket"), "must commit once per ticket");
+    assert.ok(n.includes("do not require a commit per slice") || n.includes("do not require commit per slice"), "must not require per-slice commit");
+    assert.ok(n.includes("no nested reviewer") || n.includes("failing focused test is the implementation-stage challenge"), "must state no nested reviewer");
+    assert.ok(n.includes("review-this"), "must still handoff to review-this");
+    assert.ok(n.includes("fresh-context") || n.includes("fresh context") || n.includes("adversarial review"), "review stays in review-this");
+  });
+
+  test("validates and renders acceptance evidence with escaping and deterministic block", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("validateacceptanceevidence") || n.includes("acceptance-evidence"), "must name validation");
+    assert.ok(n.includes("renderacceptanceevidence") || n.includes("stable markdown"), "must name rendering");
+    assert.ok(n.includes("escaping") || n.includes("-->"), "must mention escaping");
+    assert.ok(n.includes("isdelivered"), "must keep durable delivery predicate");
+    for (const fact of [
+      "dependencyOrConfigCriteria",
+      "isBugFix",
+      "bugFixRedConfirmed",
+      "externalSourceResolved",
+      "externalDocumentationAuthoritative",
+    ]) {
+      assert.ok(n.includes(fact.toLowerCase()), `must use worker-supplied fact ${fact}`);
+    }
+    assert.ok(n.includes("does not infer") || n.includes("not inferred from prose"), "must not infer evidence facts from prose");
+    assert.equal(n.includes("upsertAcceptanceEvidence"), false, "must not promise historical evidence upserting");
+  });
+
+  test("keeps review-this handoff and does not fork plan-this or document-for-agents", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("run `/review-this #<spec>` from the control workspace"), "handoff stays");
+    assert.ok(n.includes("ticket worktrees do not run review"), "worktrees do not run review");
+    assert.equal(n.includes("supervise-this"), false, "must not name retired coordinator");
+  });
+});
