@@ -21,8 +21,8 @@ code would cost. Caches have a coherence problem: entries go **stale**, and a
 stale entry misleads with confidence where an empty cache would force a read of
 the source. The lifecycle has two equal outputs: **cache accuracy**, keeping
 the tree true to the code, and **attention control**, bounding what an agent
-reads through loading rows and token budgets that act as caps. This skill runs
-both.
+reads through a runtime orientation resolver with strict byte caps on the
+resolved orientation set (ADR-0024). This skill runs both.
 
 A **seam** is a module with one distinct responsibility that an agent edits as
 a unit: its own directory, entry files, tests, and, once the tree is
@@ -44,9 +44,12 @@ established, its own leaf doc.
    arrival, true once, false forever.
 4. **Two hops.** Every fact an agent needs is at most two links from the
    index, so re-orientation after context compaction is one small fixed read.
-5. **Budgets.** Index under 150 lines; leaf docs 1 to 2 minute reads; policy docs
-   under a page; generated docs carry slice instructions. The context window
-   is priced, not free.
+5. **Budgets.** Resolved orientation sets are strict byte caps on whole
+   sources, resolved at runtime from affected seams, the compact architecture
+   index, whole bounded leaves, leaf-named glossary entries, and linked
+   accepted ADRs or policies (ADR-0024). Index under 150 lines; leaf docs 1 to 2
+   minute reads; policy docs under a page. The context window is priced, not
+   free.
 6. **Size to the codebase.** The cache earns its coherence cost only past a
    threshold. A repo a single session can fully hold gets an index, a
    glossary, and a conventions policy; ADRs, the harness, and generated
@@ -147,26 +150,32 @@ Entry: the repository lacks a coherent agent-facing doc tree.
    threshold documented in `reference/classify.md`. Standard and full add
    only their assigned artifacts. See `reference/templates.md` for the shape
    of each artifact.
-   *Done when: the index's coverage table matches the docs on disk for the
-   selected tier, and the final `unslopify` audit on all created prose passes
-   before publishing.*
+   *Done when: for minimal and standard tiers the index's coverage table
+   matches the docs on disk for the selected tier; for full tier the
+   harness-owned coverage manifest (`docs/manifest.md`) lists every covered
+   doc and the compact index stays a seam index; and the final `unslopify`
+   audit on all created prose passes before publishing.*
 5. **Wire the harness when the tier requires it.** When the selected tier
-   includes the harness, install the gate from `reference/harness.md`, ten
-   checks, and hook it into the project's standard check path so it runs
-   without being remembered. See `reference/harness.md` for check detail and
-   dormancy rules. Minimal tier skips this step.
-   *Done when: for tiers with a harness, the harness fails on a deliberate
-   violation and passes after the fix, proven by running both, and the final
-   `unslopify` audit on the harness prose passes; for minimal, this step is
-   marked not applicable.*
+   includes the harness, install the gate from `reference/harness.md` — eleven
+   checks including check 11 `Orientation budget` — create the harness-owned
+   coverage manifest as the exhaustive tier and coverage inventory, and hook
+   the gate into the project's standard check path so it runs without being
+   remembered. The manifest is excluded from every resolved orientation set.
+   See `reference/harness.md` for check detail and dormancy rules. Minimal
+   tier skips this step.
+   *Done when: for tiers with a harness, the coverage manifest exists and
+   lists every covered doc, the harness fails on a deliberate violation and
+   passes after the fix, proven by running both, and the final `unslopify`
+   audit on the harness prose passes; for minimal, this step is marked not
+   applicable.*
 
 ## Branch B: Audit, diagnose an existing doc system
 
 Entry: an existing doc system needs diagnosis.
 
 1. **Run mechanical checks.** Run the harness from `reference/harness.md`
-   before manual review. It owns pointers, statuses, timestamps, expiry, and
-   debt form.
+   before manual review. It owns pointers, statuses, timestamps, expiry,
+   debt form, and the declared orientation budget routes.
    *Done when: harness output is captured and each mechanical finding has a
    tier and fix.*
 2. **Label every file and measure high-decay drift.** Classify each existing
@@ -185,8 +194,10 @@ Entry: an existing doc system needs diagnosis.
    shape.
    *Done when: every finding has a landing spot and an owner-confirmed tier
    and fix; none is deferred with no owner.*
-4. **Finish with a plan, not a report.** Output the tree delta, harness
-   changes, and the token cost of the post-change re-orientation read.
+4. **Finish with a plan, not a report.** Audit makes no repository changes:
+   it never creates, moves, deletes, or rewrites a file, and it never edits
+   the coverage manifest. Output the tree delta, harness changes, and the
+   post-change re-orientation bytes so Improve can apply it.
    *Done when: the output is a numbered, owned, executable plan an executor
    can apply without re-deriving the analysis, and the final `unslopify`
    audit on the plan prose passes before publishing.*
@@ -229,11 +240,49 @@ Entry: a seam change or re-orientation.
    current. A red harness is a work item, not a warning.
    *Done when: the prose audit and harness both pass.*
 
+## Branch D: Improve, repair an existing doc cache
+
+Entry: an existing cache is over budget or needs repair beyond diagnosis.
+Audit stays read-only; every repository change in this branch lands only
+through one approved Improve run.
+
+1. **Diagnose.** Run the harness and resolve the current orientation sets
+   (`reference/orientation.md`) for the affected seams and routes. Name every
+   over-budget route and its sources. A legacy cache without the coverage
+   manifest remains diagnosable: the manifest is created inside the previewed
+   delta, never claimed retroactively.
+   *Done when: every over-budget route and its contributing sources are
+   named.*
+2. **Preview.** Prepare one complete migration preview, showing the full tree
+   delta: trims, additions, moves, deletions, coverage-manifest changes, and
+   generated-doc actions, plus the resolved orientation bytes after the
+   change. Preserve unrecoverable facts by routing durable decisions and
+   vocabulary to their tiers, and remove code-recoverable restatement and
+   work history before proposing a seam split; a seam split is proposed only
+   when code ownership, invariants, entry points, and change cadence are
+   independently meaningful. Show the preview and wait for one explicit
+   approval.
+   *Done when: one complete preview sits in front of the owner with an
+   approval gate.*
+3. **Apply.** Make no repository changes before that approval. After it,
+   apply the complete approved delta, including manifest changes and
+   generated-doc actions, exactly as previewed. Cache-gap approval may
+   substitute or narrow sources of the resolved set but can never waive a
+   cap.
+   *Done when: the complete approved delta is applied.*
+4. **Verify.** Run the prose audit and the harness and finish only after the
+   prose audit and harness pass.
+   *Done when: the prose audit and the harness both pass, and the resolved
+   orientation bytes match the preview.*
+
 ## Reference
 
 - `reference/classify.md`: routing table, tier definitions, stay-true
   mechanisms, invariant lifecycle.
-- `reference/harness.md`: the ten checks, adaptation and dormancy rules,
+- `reference/harness.md`: the eleven checks, adaptation and dormancy rules,
   scorecard.
+- `reference/orientation.md`: the runtime orientation resolver contract — caps,
+  resolution inputs, deduplication, superseded-ADR exclusion, the coverage
+  manifest, failure reporting, and cache-gap approval.
 - `reference/templates.md`: mini-ADR, leaf doc, index, policy set,
   vendor-facts, glossary, debt registry, loading protocol, decision gate.

@@ -1,0 +1,11 @@
+{
+  "name": "audit-readonly",
+  "case": "an explicit Audit invocation diagnoses and plans but makes no repository changes",
+  "mutationGuarantee": "no file created, moved, deleted, or rewritten by Audit",
+  "contract": [
+    "branch b",
+    "no repository changes",
+    "read-only",
+    "finish with a plan, not a report"
+  ]
+}

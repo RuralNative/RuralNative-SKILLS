@@ -72,14 +72,16 @@ evidence backs it; older or ambiguous documents get `likely` or `unknown`,
 never guessed certainty.
 
 The architecture index (`ARCHITECTURE.md`) does not duplicate the five
-commands; it carries the seam table, boundaries, coverage, and loading
-protocol that the commands point into. When `AGENTS.md` is also the
-architecture index, it continues after the commands with:
+commands; it carries the seam table, boundaries, and loading protocol that the
+commands point into. When the repository runs the harness, the exhaustive
+tier and coverage inventory lives in the harness-owned coverage manifest
+(`docs/manifest.md`) and never in the index; the index stays a compact seam
+index. When `AGENTS.md` is also the architecture index, it continues after the
+commands with:
 
 - One paragraph: what the system is, as built.
 - Seam table: doc | responsibility | code root | tests.
 - Cross-cutting boundaries: one line each, linking ADRs.
-- Coverage table: every doc, machine-checked against disk.
 - Pointers to glossary, ADRs, policy, README. Link, never restate.
 
 When `AGENTS.md` is a routing index, it keeps its short orientation sections
@@ -155,20 +157,30 @@ not a parse; the harness checks form and completeness, not conditions.
 
 | Task | Read set | Budget (cap) |
 |---|---|---|
-| Any change | index → one leaf doc → glossary terms in use | ~3–6k tokens |
-| API/route change | + route map, security + testing policy | ~6–9k |
-| Schema/data change | + data doc, migrations policy, generated schema slice | ~8–12k |
-| New dependency | + one vendor-facts entry | ~0.3k |
-| Re-orient after compaction | index → task leaf doc (including its Non-negotiables) → glossary | ~4–7k |
+| Any change | index → one leaf doc → glossary terms in use → linked accepted ADRs | 6,000 bytes |
+| API/route change | + linked route, security, testing policy | 9,000 bytes |
+| Schema/data change | + data doc, migrations policy, generated schema slice | 12,000 bytes |
+| New dependency | + one vendor-facts entry — fits the selected task cap, never raises it | — |
+| Re-orient after compaction | index → task leaf doc (including its Non-negotiables) → glossary | 7,000 bytes |
 
-The budget column states hard caps on orientation documents, not guidance to
-trim later. When a task would push the read past the cap, narrow the read set
-instead of continuing wide. The caps never block code inspection inside the
-affected seam: reading the code being changed is task work, not orientation.
-When the orientation documents lack an unrecoverable fact the task needs, name
-a cache gap, record it in the issue tracker, and ask the owner for approval
-before opening more documentation; do not widen the read set until approval.
-Widening the read set silently is forbidden.
+The budget column states hard caps on orientation documents — byte caps on the
+resolved orientation set, not guidance to trim later. A command resolves the
+set at runtime from affected
+seams, the compact index, whole bounded leaves, leaf-named glossary entries,
+and linked accepted ADRs or policies — see `reference/orientation.md`.
+Duplicate sources count once; superseded or historical ADRs stay out of
+current guidance unless a leaf explicitly requires them; and the harness-owned
+coverage manifest is excluded from every resolved set. No set exceeds 12,000
+bytes. An over-budget route fails before broad loading and reports its task
+band, resolved bytes, cap, source count, and exact sources. When the
+orientation documents lack an unrecoverable fact the task needs, name a cache
+gap, record it in the issue tracker, and ask the owner for approval before
+opening more documentation; approval
+may substitute or narrow sources but can never waive the cap. Do not widen the
+read set until approval — widening the read set silently is forbidden, and the
+caps never block code inspection
+inside the affected seam: reading the code being changed is task work, not
+orientation.
 
 Rule: an agent's re-orientation is the same small read every time — that
 fixed cost is what makes compaction survivable.

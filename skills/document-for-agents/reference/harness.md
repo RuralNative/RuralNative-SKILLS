@@ -5,11 +5,14 @@ cheapest script in the repo; if it isn't tiny, it will be skipped. It is
 tooling, so it is exempt from demanding its own doc — record that exemption in
 the conventions policy to avoid infinite regress.
 
-## The ten checks
+## The eleven checks
 
 1. **Coverage ↔ disk.** The index lists every doc in the docs tree; every
    listed doc exists; every doc on disk is listed. Parse the index's coverage
-   table and diff against the directory.
+   table and diff against the directory. In a repository with a coverage
+   manifest, the harness parses the manifest instead: the exhaustive tier and
+   coverage inventory is the manifest's job, and `ARCHITECTURE.md` stays a
+   compact seam index.
 2. **Same-diff freshness.** A seam's code changed → its leaf doc changed in
    the same working-tree diff. Mechanism: read VCS status; map changed code
    roots to their docs via the seam table; fail on a documented seam whose doc
@@ -57,12 +60,28 @@ the conventions policy to avoid infinite regress.
     pre-existing numbering on day one gets deleted. Retired entries are
     tombstoned (`(Retired — <decision id>)`), never deleted; renumbering is
     forbidden except recorded duplicate repair.
+11. **Orientation budget** — Every orientation route the repository declares
+    (band + affected seams) must fit its task-band byte cap: ordinary 6,000,
+    API/route 9,000, schema/data 12,000, re-orientation 7,000, and 12,000
+    absolute. Routes resolve deterministically from the compact architecture
+    index, whole affected seam leaf docs, leaf-named glossary entries, and
+    linked accepted ADRs or policies; duplicate sources count once, and
+    superseded ADRs stay out of current guidance unless a leaf explicitly
+    requires them. An over-budget route fails **before** broad content
+    loading and reports its task band, resolved bytes, cap, source count, and
+    exact sources. The harness-owned coverage manifest is excluded from every
+    resolved set; a manifest leaking into a set is fatal. Check 11 is
+    introduced by the superseding decision that narrows the exact-ten-check
+    clause — it lives in the approved decision, never hidden in the
+    scorecard.
 
 ## Scorecard
 
 A re-runnable health statement produced by the harness: docs count, coverage
 %, stale/overdue count, ADR status counts, last-generation timestamps for
-generated docs. Per seam it also lists the seam's invariants (`INV-1..INV-N`)
+generated docs, declared orientation routes with their resolved bytes and
+caps, and the manifest's tier inventory. Per seam it also lists the seam's
+invariants (`INV-1..INV-N`)
 and marks each: **test-encoded** when the identifier appears literally in a
 file under the test location the seam table declares; otherwise **prose**, and
 a prose invariant must carry a justification naming the mechanism that keeps
@@ -77,14 +96,17 @@ turn "is our documentation lying?" into a query with an answer.
 - Directory names are conventional, not sacred: whatever the project calls its
   docs tree, the harness points at it. What must not change are the *checks*:
   coverage, same-diff, new-seam, seam-table, generated, policy, debt, status,
-  expiry, invariant.
+  expiry, invariant, orientation budget.
 - If the project has no ADRs yet, check 4 is dormant until the first decision
   is recorded — do not pre-create rules for empty categories. The same
   dormancy applies to check 7 (generated freshness) until a generated doc
   exists, to check 8 (policy coverage) until the first policy doc lands, to
-  check 9 (debt register) until the first debt entry is recorded, and to
+  check 9 (debt register) until the first debt entry is recorded, to
   check 10 (invariant integrity) until the first leaf doc with invariants
-  exists.
+  exists, and to check 11 (orientation budget) until the repository declares
+  its first orientation route in the coverage manifest. Declaring a route
+  arms the cap immediately; an undeclared over-budget leaf fails the moment
+  its route is declared, never silently.
 - Generated docs exist only where generation is possible and cheap (schemas,
   contracts, structure trees). A project with no generation pipeline gets
   checks 1–6 and 8–10, with check 7 dormant, and a scorecard.

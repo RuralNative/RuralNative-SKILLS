@@ -2,11 +2,12 @@
 
 ## Purpose
 
-The skill that runs the doc-cache lifecycle: establish, audit, and maintain a
-codebase's agent-facing documentation. Two equal outputs: cache accuracy, the
-tree staying true to the code, and attention control, orientation staying a
-small fixed read under loading budgets that act as caps (ADR-0017). It is
-published for consumers, not merely hosted here.
+The skill that runs the doc-cache lifecycle: establish, audit, improve, and
+maintain a codebase's agent-facing documentation. Two equal outputs: cache
+accuracy, the tree staying true to the code, and attention control,
+orientation staying a small resolved read under strict byte caps enforced at
+runtime (ADR-0017, ADR-0024). It is published for consumers, not merely hosted
+here.
 
 ## Scope & boundaries
 
@@ -24,11 +25,17 @@ the `unslopify` seam.
 sizing, tier routing, and the invariant lifecycle, `reference/harness.md`
 defines the gate, `reference/templates.md` holds the artifact shapes, including the
 five-command index contract with its protected management marker and provenance
-states, the sanitized skill diagnostics entry, the cap-semantics loading protocol with cache
+states, the sanitized skill diagnostics entry, the byte-cap loading protocol with cache
 gaps, the `Not here` leaf route, and the adopting-repository vendor-facts
-home. The optional private diagnostics record is governed by the consent,
+home. `reference/orientation.md` documents the runtime orientation resolver
+contract — caps, resolution inputs, deduplication, superseded-ADR exclusion,
+the coverage manifest, and cache-gap approval — and the reference
+implementation ships as `orientation.ts` beside it. The optional private
+diagnostics record is governed by the consent,
 notice, revocation, privacy, and sanitization contract in `SKILL.md` and lives
-outside every doc-cache tier. Repository review
+outside every doc-cache tier. In adopting repositories that run the harness,
+the exhaustive tier and coverage inventory lives in a harness-owned coverage
+manifest excluded from every orientation set. Repository review
 guidance routes to policy: a root `REVIEW.md` is indexed from
 `ARCHITECTURE.md`, checked by harness check 8 wherever it lives, and updated
 in the same change as the rules it states. Check 8's discovery is
@@ -42,7 +49,8 @@ main, registry discovery lists the repo, a consumer runs `npx skills add
 RuralNative/RuralNative-SKILLS --skill document-for-agents`. The repo never
 carries its own install, `.agents/` and `skills-lock.json` are ignored. The
 gate's check set is defined in `reference/harness.md`; this repo's
-`scripts/docs-check.sh` enforces it, and its ten checks are immutable.
+`scripts/docs-check.sh` enforces it, and its eleven checks are immutable while
+their superseding decisions stand.
 During Maintain, code wins a doc conflict: the agent fixes the doc in the same
 change and flags the discrepancy; changing the rule requires a new decision.
 
@@ -102,8 +110,10 @@ change and flags the discrepancy; changing the rule requires a new decision.
 12. **INV-12** — Dependency ordering: the `unslopify` dependency block sits
     below Principles and Boundaries without losing its tested guarantees.
     Mechanism: composition tests assert section order.
-13. **INV-13** — Harness size: the documentation harness remains at ten checks.
-    Mechanism: composition tests count the checks in `reference/harness.md`.
+13. **INV-13** — Harness size: the documentation harness remains at eleven
+     checks, per ADR-0024 superseding the exact-ten-check clause of ADR-0017.
+     Mechanism: composition tests count the checks in `reference/harness.md`
+     and agree with the accepted superseding ADR.
 14. **INV-14** — Opt-in private skill diagnostics: no diagnostics file is
     created before the owner gives explicit consent to create and maintain it;
     initial consent covers later maintenance but every write gets a clear
@@ -131,19 +141,39 @@ change and flags the discrepancy; changing the rule requires a new decision.
     Mechanism: marker-shape test on
     `reference/templates.md` and a placement test on this repository's own
     `AGENTS.md`.
+16. **INV-16** — Audit read-only and the Improve approval gate: an explicit
+    Audit invocation makes no repository changes; Improve shows one complete
+    migration preview and makes no changes before one explicit approval, then
+    applies the complete approved delta and finishes only after the prose
+    audit and harness pass; cache-gap approval may substitute or narrow
+    sources but never waives a cap. Mechanism: composition tests plus the
+    `improve-preview` and `audit-readonly` fixtures in
+    `skills/document-for-agents/tests/`.
+17. **INV-17** — Orientation resolver determinism: runtime resolution is
+    deterministic from affected seams and repository-owned routing data,
+    deduplicates shared sources, excludes superseded ADRs unless a leaf
+    explicitly requires them, resolves every task-band boundary with a
+    12,000-byte absolute cap, never mutates the repository, and keeps the
+    coverage manifest outside every resolved set. Mechanism:
+    `orientation.test.ts` fixtures cover boundaries, deduplication,
+    supersession, and read-only behavior.
 
 ## Links
 
 - Glossary: `CONTEXT.md` — Skill, skill identity, registry lane, attention
-  control, cache gap, Not here route.
+  control, cache gap, Not here route, orientation set, task band, coverage
+  manifest, orientation budget, Improve.
 - Decision: `docs/adr/0001-distribute-as-public-catalog-shelf.md`.
 - Decision: `docs/adr/0002-adopt-ten-check-gate.md` — the ten-check gate and
-  the invariant lifecycle.
+  the invariant lifecycle (superseded in its exact count by ADR-0024).
 - Decision: `docs/adr/0017-doc-cache-attention-boundary.md` — the
   five-command contract, cap semantics, cache gaps, `Not here` routes, and
   decision-first invariant collisions.
 - Decision: `docs/adr/0018-opt-in-skill-diagnostics.md` — the consented
   private diagnostics record and the management marker provenance states.
+- Decision: `docs/adr/0024-bounded-orientation.md` — the runtime orientation
+  resolver, byte caps, harness check 11 `Orientation budget`, the coverage
+  manifest, Audit read-only, and the Improve path.
 - Review policy: `REVIEW.md` — the root policy artifact this seam classifies,
   indexes, and keeps fresh.
 - Debt registry: `docs/debt.md`.
