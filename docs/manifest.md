@@ -5,7 +5,9 @@ for this repository, machine-checked against disk by harness check 1. It is
 **excluded from every orientation set** — no loading-protocol row routes
 agents into it, and the runtime orientation resolver never adds it to a
 resolved set (ADR-0024). `AGENTS.md` and the compact index `ARCHITECTURE.md`
-are excluded from the listing itself.
+are excluded from the listing itself. The `redirect` tier covers the
+leaf-adjacent extended detail files that the orientation resolver never
+follows (ADR-0024, `## Redirect`).
 
 ## Orientation routes
 
@@ -13,11 +15,39 @@ Declared canonical orientation routes the harness budget-checks (check 11). A
 route row is `| band | affected seams |`; seams resolve through the compact
 index exactly as a ticket's affected seams do. A route is declared only when
 its whole-leaf, index, glossary, and linked-decision bytes fit the band's cap.
-No routes are declared yet: this repository's own leaves still exceed their
-caps and migrate to the bounded contract ticket by ticket, tracked by DEBT-9.
+Each seam is declared as its own route so a task's resolved set stays
+independently bounded; every seam fits every band at its strict cap.
 
 | Band | Affected seams |
 |---|---|
+| ordinary | document-for-agents |
+| ordinary | document-for-humans |
+| ordinary | unslopify |
+| ordinary | plan-this |
+| ordinary | implement-this |
+| ordinary | review-this |
+| ordinary | release-skills |
+| api-route | document-for-agents |
+| api-route | document-for-humans |
+| api-route | unslopify |
+| api-route | plan-this |
+| api-route | implement-this |
+| api-route | review-this |
+| api-route | release-skills |
+| schema-data | document-for-agents |
+| schema-data | document-for-humans |
+| schema-data | unslopify |
+| schema-data | plan-this |
+| schema-data | implement-this |
+| schema-data | review-this |
+| schema-data | release-skills |
+| re-orientation | document-for-agents |
+| re-orientation | document-for-humans |
+| re-orientation | unslopify |
+| re-orientation | plan-this |
+| re-orientation | implement-this |
+| re-orientation | review-this |
+| re-orientation | release-skills |
 
 ## Coverage
 
@@ -61,6 +91,13 @@ caps and migrate to the bounded contract ticket by ticket, tracked by DEBT-9.
 | docs/leaves/implement-this.md | leaf |
 | docs/leaves/review-this.md | leaf |
 | docs/leaves/release-skills.md | leaf |
+| docs/leaves/ext/document-for-agents.md | redirect |
+| docs/leaves/ext/document-for-humans.md | redirect |
+| docs/leaves/ext/unslopify.md | redirect |
+| docs/leaves/ext/plan-this.md | redirect |
+| docs/leaves/ext/implement-this.md | redirect |
+| docs/leaves/ext/review-this.md | redirect |
+| docs/leaves/ext/release-skills.md | redirect |
 | docs/debt.md | debt |
 | docs/human/overview.md | human |
 | docs/human/decision-journal.md | human |

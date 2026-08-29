@@ -42,22 +42,28 @@ to `seams > 10` or the next index merge conflict, whichever first.
 
 ### DEBT-9 — Orientation routes not yet declared; own leaves exceed the caps
 
-Status: open
-Revisit-when: the repository-migration child of #176 declares the first route per seam
+Status: resolved
+Revisit-when: none — resolved 2026-08-29 by the repository-migration child of #176
 What: ADR-0024 makes the resolved orientation byte caps strict, and harness
 check 11 arms a cap the moment a route is declared. This repository's own
-leaves still exceed their aggregate route caps (the review leaf alone is
-31.6 KB against a 6,000-byte ordinary cap), so no orientation route is
-declared in `docs/manifest.md` and check 11 reports dormant here. The index
+leaves still exceed their aggregate route caps (the review leaf alone was
+31.6 KB against a 6,000-byte ordinary cap), so no orientation route was
+declared in `docs/manifest.md` and check 11 reported dormant here. The index
 has been compacted (coverage moved to the manifest); the leaf migration —
 trimming restatement and history so each seam's resolved route fits its band —
 is the repository-migration ticket's work, and declaring routes without that
 trim would fail the gate loudly rather than silently.
+Verdict 2026-08-29: #178 migrated this repository to the bounded contract.
+Each leaf keeps its specific invariants and links and points restated detail
+into `docs/leaves/ext/` redirect files that the resolver never follows.
+Every seam now resolves under every band cap (ordinary 6,000, api-route
+9,000, schema-data 12,000, re-orientation 7,000), all routes are declared in
+`docs/manifest.md`, and check 11 passes.
 
 ### DEBT-4 — Re-orientation unverified
 
-Status: open
-Revisit-when: next simulated compaction drill or ARCHITECTURE.md loading protocol change
+Status: resolved
+Revisit-when: none — drill run 2026-08-29 under #178
 What: the two-hop re-orientation read (AGENTS.md → ARCHITECTURE.md → leaf →
 CONTEXT.md) is asserted by construction; no drill proves a fresh agent can
 re-orient from the index alone. Verdict 2026-08-20: trigger `a second agent
@@ -76,6 +82,18 @@ became caps on orientation documents with a cache-gap approval gate and a
 five-command contract atop `AGENTS.md`. No formal drill has run; informal
 evidence still shows agents re-orienting via the protocol. Debt stands;
 trigger reset to the next drill only.
+Verdict 2026-08-29: #178 ran the bounded re-orientation drill. A fresh
+context read only the permitted set — `AGENTS.md` (five commands), the
+compact `ARCHITECTURE.md` seam index, the affected seam leaf in
+`docs/leaves/`, and the leaf-named glossary entries — under the re-orientation
+cap, and re-derived each seam's purpose, ownership, invariants, and routing
+without reading redirect files, the coverage manifest, or derived human docs.
+No cache gap surfaced: every fact needed to orient (seam table, loading
+protocol, invariant identifiers, `Not here` routes, decision pointers) is
+present in the permitted set, and every seam's re-orientation route resolves
+within its 7,000-byte cap. The drill is reproducible via the resolver
+(`node skills/document-for-agents/orientation.ts --band re-orientation
+--seams <seam>`).
 
 ### DEBT-5 — Layout-agnostic gaps in seam discovery
 

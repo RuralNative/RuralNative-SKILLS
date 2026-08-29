@@ -429,3 +429,49 @@ describe("orientation resolver: read-only guarantee (document-for-agents:INV-17)
     }
   });
 });
+
+describe("this repository's bounded doc migration (ticket #178)", () => {
+  const SEAMS = [
+    "document-for-agents",
+    "document-for-humans",
+    "unslopify",
+    "plan-this",
+    "implement-this",
+    "review-this",
+    "release-skills",
+  ];
+  const BANDS: Band[] = ["ordinary", "api-route", "schema-data", "re-orientation"];
+
+  test("every declared route resolves within its strict cap", () => {
+    for (const band of BANDS) {
+      for (const seam of SEAMS) {
+        const r = resolveOrientation({ root: ROOT, band, seams: [seam] });
+        assert.equal(r.over, false, `${seam} ${band} route over budget: ${r.bytes} > ${r.cap}`);
+        assert.equal(r.sources.includes("docs/manifest.md"), false, "manifest must stay out of every resolved set");
+      }
+    }
+  });
+
+  test("adding unrelated docs in a scale fixture leaves an existing seam's resolved set and bytes unchanged", () => {
+    const fixture = spec("unrelated-additions");
+    const dir = build(fixture);
+    try {
+      const before = resolveOrientation({ root: dir, band: "ordinary", seams: ["alpha"] });
+      padFile(dir, leafFor(fixture, "gamma"), 20000);
+      fs.appendFileSync(
+        path.join(dir, "docs/leaves/gamma.md"),
+        "\n- Decision: `docs/adr/0043-scaled-decision.md`.\n",
+      );
+      fs.writeFileSync(
+        path.join(dir, "docs/adr/0043-scaled-decision.md"),
+        "# 0043 — Scaled decision\n\nStatus: accepted\n\nDecision: shapes gamma only.\n",
+      );
+      fs.writeFileSync(path.join(dir, "docs/unrelated-scaled-doc.md"), "# Unrelated\n\nGrowth only.\n");
+      const after = resolveOrientation({ root: dir, band: "ordinary", seams: ["alpha"] });
+      assert.deepEqual(after.sources, before.sources);
+      assert.equal(after.bytes, before.bytes);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});

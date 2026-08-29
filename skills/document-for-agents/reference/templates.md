@@ -45,6 +45,29 @@ Six sections, 1–2 minute read; longer content moves to a referenced file. Mini
    tests live, never what they cover (coverage claims are fast-decay
    restatements).
 
+A leaf that outgrows the read budget stays one seam with one leaf. Move
+restated detail — long key-file walk-throughs, history, and coverage prose
+that code, tests, or the manifest already name — to a leaf-adjacent extended
+detail file and point at it from a `## Redirect` line placed directly under
+the `## Links` heading:
+
+```
+## Redirect
+
+Longer reference detail for this seam (restated key-file walk-throughs,
+history, and coverage prose) lives in `docs/leaves/ext/<seam>.md`. The
+orientation resolver never follows this pointer: the redirect target stays
+out of every resolved set.
+```
+
+The redirect target is a sibling of the leaf, never a second leaf in
+`docs/leaves/` with a seam-table row, and it is not a `Decision:`, `Glossary:`,
+or `Policy:` link. The leaf core always keeps Purpose, Scope and the `Not here`
+route, a compact key-files and data-flow summary, all invariants, and the
+Links section; the redirect target holds only restatement that agents do not
+need for task-driven work. See `reference/orientation.md` for the resolver
+contract.
+
 ## Index (AGENTS.md or ARCHITECTURE.md)
 
 Generated `AGENTS.md` starts with the five commands of the attention
