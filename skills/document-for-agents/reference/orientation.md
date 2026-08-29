@@ -49,8 +49,19 @@ The resolved set is, in order with duplicates counted once:
    api-route and schema-data bands, which are the bands whose loading
    protocol rows add them.
 
+A leaf doc may point at an extended detail file that holds the seam's
+longer reference material. Point only through the `## Redirect` link line,
+never through a `Decision:`, `Glossary:`, or `Policy:` line. The redirect
+target is a whole leaf-adjacent file that the resolver never follows: it is
+not a seam leaf, not a linked decision, and not a policy, so it stays out of
+every resolved set. The leaf core keeps everything an agent needs to work —
+Purpose, Scope and the `Not here` route, a compact key-files and data-flow
+summary, all invariants, and the Links section — and the redirect target
+holds restated detail that code, tests, or the manifest already name.
+
 The **re-orientation** band resolves the index, the task leaf doc, and the
-leaf-named glossary entries only — it does not pull linked ADRs or policies.
+leaf-named glossary entries only — it does not pull linked ADRs or policies,
+and it does not follow redirect targets.
 
 The harness-owned **coverage manifest** (`docs/manifest.md`) is excluded from
 every resolved set. No loading-protocol row routes agents into it.
