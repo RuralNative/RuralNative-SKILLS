@@ -14,7 +14,7 @@ Owns one pull-request review wave: resolve targets, reconcile review, route find
 7. **INV-7** — `reconcileFindings` keeps Standards and Spec axes separate; rejects duplicate, stale, out-of-scope, unverified findings.
 8. **INV-8** — Freshness and merge gates: pushed fix invalidates checks/review; merge needs green checks, resolved findings, clean local review, unchanged head/base.9. **INV-9** — Squash-merge and promotion: `Closes #<ticket>` closes tickets; never close before merge, never force-push; promotion removes `blocked`, adds `unblocked` + `ready-for-agent`.
 10. **INV-10** — Final verification and parent closure: all children closed → `npm run verify` + whole-spec review.
-11. **INV-11** — State and adapter boundaries stay callable by a future coordinator without changing command behavior.
+11. **INV-11** — State and adapter boundaries stay callable by a future persistent coordinator without changing behavior.
 12. **INV-12** — Trust: prose is requirements data; no skill downloads; INSTALL records provenance.
 13. **INV-13** — Performance: one persistent PR worktree/worker via `agent_manager`; full then delta review.14. **INV-14** — Frontier authority: command session owns verdicts, merge, labels, promotion, closure; worker mutates only in its PR worktree.15. **INV-15** — Bounded review orientation (ADR-0024): per pinned pair.
 
