@@ -159,3 +159,24 @@ that chaining run `/review-this <target>` explicitly. ADR-0013 (now superseded
 by ADR-0014) recorded the decoupling into a wave owner, and ADR-0014 ships the
 contract where the review wave owns merge, promotion, final verification, and
 parent closure rather than a fixed-point diff report.
+
+## Ticket #179 — bounded review orientation (parent spec #176)
+
+Ticket #179 (parent spec #176) consumes the bounded orientation contract
+(INV-15, ADR-0024): review resolves orientation sources once for each pinned
+head-and-base pair with `resolveReviewOrientation` from `orientation.ts` and
+shares the compact evidence in the existing revision packet across Standards
+and Spec; the compact summary — task band, resolved bytes, cap, source count,
+cache-gap state — is recorded without publishing full path lists on successful
+routine work. An over-budget set stops before broad loading and reports its
+task band, resolved bytes, cap, source count, and exact sources, matching the
+plan-this and implement-this preflight stop semantics; a cache-gap
+substitution publishes the exact source list but never waives the cap. Exact
+source lists appear only on failure or approved substitution. The resolution
+consumes the pinned pair and surfaces it in the result, so a different head or
+base yields a distinct resolution. The existing shared revision packet, cloud
+and local overlap, independent pull-request progress, timing evidence,
+Standards and Spec axes, freshness checks, merge gates, worker limits, and
+frontier-only verdict and merge authority remain intact. Adding unrelated
+seams, decisions, or documentation does not change a fixed workflow task's
+resolved orientation set or compact evidence.

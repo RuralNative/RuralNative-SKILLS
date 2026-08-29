@@ -1,4 +1,4 @@
-// plan-this:INV-1..INV-10 - semantic workflow contract and state integration.
+// plan-this:INV-1..INV-11 - semantic workflow contract and state integration.
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -261,7 +261,7 @@ describe("plan-this trust, approval, and publication (INV-8, INV-9)", () => {
 describe("plan-this documentation contract", () => {
   test("leaf records every invariant and the structured-workflow decision", () => {
     const leaf = read(LEAF);
-    for (let i = 1; i <= 10; i++) {
+    for (let i = 1; i <= 11; i++) {
       assert.ok(leaf.includes(`INV-${i}`), `leaf must contain INV-${i}`);
     }
     assert.ok(leaf.includes("ADR-0020"));
@@ -271,6 +271,37 @@ describe("plan-this documentation contract", () => {
   test("architecture and glossary retain the plan-this seam and command identity", () => {
     assert.ok(read("ARCHITECTURE.md").includes("| plan-this |"));
     assert.ok(read("CONTEXT.md").includes("`plan-this`"));
+  });
+});
+
+describe("plan-this bounded orientation preflight (plan-this:INV-11, #179)", () => {
+  test("SKILL.md resolves and preflights every proposed ticket's orientation set before publication approval", () => {
+    const content = body(read(SKILL));
+    const n = norm(content);
+    assert.ok(n.includes("orientation set") || n.includes("preflightticketorientation"), "must resolve an orientation set per ticket");
+    assert.ok(n.includes("reject a ticket whose required set exceeds its selected cap") || n.includes("exceeds its selected cap"), "must reject over-budget tickets");
+    assert.ok(n.includes("count utf-8 bytes") || n.includes("utf-8 bytes"), "must count bytes before broad loading");
+    assert.ok(n.includes("cache-gap approval") && (n.includes("substitute") || n.includes("narrow")), "must allow cache-gap substitution");
+    assert.ok(n.includes("can never waive the cap") || n.includes("cannot waive the cap"), "must never waive the cap");
+    assert.ok(n.includes("compact budget evidence"), "approval preview may show compact budget evidence");
+    assert.ok(n.includes("task band") && n.includes("resolved bytes") && n.includes("source count"), "compact evidence fields present");
+  });
+
+  test("affected seam names stay the durable join key with no transported orientation fields", () => {
+    const content = body(read(SKILL));
+    const n = norm(content);
+    assert.ok(n.includes("affected seam names as the durable join key") || n.includes("durable join key"), "seam names are the join key");
+    assert.ok(n.includes("add no ticket field") || n.includes("no ticket field"), "no transported field is added");
+    assert.ok(n.includes("paths") || n.includes("anchors") || n.includes("invariant lists") || n.includes("glossary") || n.includes("policies"), "forbidden transports named");
+  });
+
+  test("the pure orientation module stays pure with no network access", () => {
+    const code = read("skills/plan-this/orientation.ts");
+    const n = norm(code);
+    assert.ok(n.includes("pure"), "module declares purity");
+    assert.ok(n.includes("no network"), "no network access");
+    assert.ok(n.includes("github"), "no GitHub access");
+    assert.ok(n.includes("clock"), "no clock access");
   });
 });
 

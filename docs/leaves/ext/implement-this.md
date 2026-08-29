@@ -118,3 +118,19 @@ pinned Addy Osmani source matrix in `reference/vendor-facts.md` (revision
 `f63ec56a3cc936408d792956ae583c3c96a825bd`). The evidence model stays pure,
 untriggered tickets keep the current shape and cost, and no Addy source
 becomes a hard dependency.
+
+## Ticket #179 — bounded orientation consumption (parent spec #176)
+
+Ticket #179 (parent spec #176) consumes the bounded orientation contract
+(INV-14, ADR-0024): the worker resolves current orientation sources in its
+checkout before broad documentation loading with `preflightWorkerOrientation`
+from `orientation.ts`, and records the compact durable summary — task band,
+resolved bytes, cap, source count, cache-gap state — with the existing timing
+and acceptance evidence. A direct ticket with valid affected seams follows the
+same bounded path as a planned ticket. A ticket without valid seam metadata
+receives one resolution attempt with `resolveDirectTicketSeam` against the
+compact architecture index and code roots; one clear set proceeds, while
+ambiguity adds `needs-info` and stops before edits. No implementation fallback
+reads every leaf, ADR, policy, or the derived human documentation tree;
+cache-gap approval may substitute or narrow the set but cannot waive the
+selected cap.

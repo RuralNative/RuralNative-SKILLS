@@ -86,3 +86,19 @@ browser-observable behavior, production-operability path, migration, rollback,
 or explicit product-performance obligation, the existing acceptance criteria,
 risk, constraints, and smallest test-first verification state the required
 proof. No quality-profile field and no blanket checklist is added.
+
+## Ticket #179 — bounded-planning preflight (parent spec #176)
+
+Ticket #179 (parent spec #176) adds the bounded-planning preflight (INV-11,
+ADR-0024): each proposed ticket resolves its orientation set from affected
+seams before publication approval — the compact architecture index, whole
+affected seam leaf docs, leaf-named glossary entries, and linked accepted ADRs
+or policies — counts UTF-8 bytes before broad loading, and rejects a ticket
+whose required set exceeds its selected cap. Cache-gap approval may substitute
+or narrow the set but can never waive the cap. Affected seam names stay the
+durable join key; the published ticket adds no field that transports paths,
+section anchors, invariant lists, glossary excerpts, or policies. The approval
+preview may show compact budget evidence (task band, resolved bytes, cap,
+source count, cache-gap state), while the published ticket stays focused on
+behavior and sufficient verification. Adding unrelated seams, decisions, or
+documentation does not change a fixed task's resolved set or compact evidence.
