@@ -11,6 +11,7 @@
 // review-this:INV-11 — state and adapter boundaries for future coordinator
 // review-this:INV-12 — trust precedence and install boundary
 // review-this:INV-13 — persistent PR fixes, delta rereview, and bounded verification
+// review-this:INV-15 — bounded review orientation shared across Standards and Spec
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -68,7 +69,7 @@ describe("review-this discovery and installation (review-this:INV-2)", () => {
     assert.ok(arch.includes("docs/leaves/review-this.md"));
     assert.ok(fs.existsSync(path.join(ROOT, "docs/leaves/review-this.md")));
     const leaf = read("docs/leaves/review-this.md");
-    for (let i = 1; i <= 13; i++) assert.ok(leaf.includes(`INV-${i}`), `leaf must contain INV-${i}`);
+    for (let i = 1; i <= 15; i++) assert.ok(leaf.includes(`INV-${i}`), `leaf must contain INV-${i}`);
   });
 });
 
@@ -571,5 +572,42 @@ describe("review-this trusted-summary phase timings (plan #170)", () => {
     assert.ok(n.includes("one-fix path does not regress by more than 10%"), "one-fix guard present");
     assert.ok(n.includes("packetbuildms"), "critical-path fields recorded per ticket");
     assert.ok(n.includes("review-agent input tokens fall by at least 20%"), "shared-packet token target present");
+  });
+});
+
+describe("review-this bounded orientation sharing (review-this:INV-15, #179)", () => {
+  test("resolves orientation once per pinned head-and-base pair and shares it across Standards and Spec", () => {
+    const skill = read("skills/review-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("resolve the orientation set once for each pinned head-and-base pair") || n.includes("orientation set once"), "one resolution per pinned pair");
+    assert.ok(n.includes("resolverevieworientation") || n.includes("orientation.ts"), "uses the pure orientation module");
+    assert.ok(n.includes("share the compact evidence in the existing revision packet"), "compact evidence shared in the revision packet");
+    assert.ok(n.includes("across standards and spec"), "shared across both axes");
+  });
+
+  test("records the compact summary without publishing full path lists on successful routine work", () => {
+    const skill = read("skills/review-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("compact summary") || n.includes("compact evidence"), "records a compact summary");
+    assert.ok(n.includes("without publishing full path lists"), "no full path lists on success");
+    assert.ok(n.includes("task band") && n.includes("resolved bytes") && n.includes("source count"), "compact evidence fields present");
+  });
+
+  test("existing packet sharing, overlap, independent progress, timing, freshness, gates, worker limits, and frontier-only authority remain intact", () => {
+    const skill = read("skills/review-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("existing revision packet"), "existing shared revision packet intact");
+    assert.ok(n.includes("frontier") && (n.includes("verdict") || n.includes("merge")), "frontier-only authority intact");
+    assert.ok(n.includes("freshness"), "freshness checks intact");
+    assert.ok(n.includes("timing"), "timing evidence intact");
+  });
+
+  test("the pure orientation module stays pure with no network access", () => {
+    const code = read("skills/review-this/orientation.ts");
+    const n = norm(code);
+    assert.ok(n.includes("pure"), "module declares purity");
+    assert.ok(n.includes("no network"), "no network access");
+    assert.ok(n.includes("github"), "no GitHub access");
+    assert.ok(n.includes("clock"), "no clock access");
   });
 });

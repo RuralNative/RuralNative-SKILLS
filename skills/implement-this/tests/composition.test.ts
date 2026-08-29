@@ -7,6 +7,7 @@
 // implement-this:INV-7 — bounded-set parsing, frontier selection, dispatch validation
 // implement-this:INV-10 — recovery reconcile, one retry, needs-info stop
 // implement-this:INV-11 — completion handoff to review-this
+// implement-this:INV-14 — bounded orientation consumption
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -631,5 +632,58 @@ describe("conditional quality evidence (implement-this:INV-13 extension, #172)",
         `plan-this must keep field ${field}`,
       );
     }
+  });
+});
+
+describe("bounded orientation consumption (implement-this:INV-14, #179)", () => {
+  test("worker resolves current orientation sources before broad documentation loading", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("orientation set") || n.includes("preflightworkerorientation"), "worker resolves an orientation set");
+    assert.ok(n.includes("before broad documentation loading"), "resolution precedes broad loading");
+    assert.ok(n.includes("compact durable summary") || n.includes("compact summary"), "records compact durable summary");
+    assert.ok(n.includes("task band") && n.includes("resolved bytes") && n.includes("source count"), "compact evidence fields present");
+  });
+
+  test("a direct ticket with valid affected seams follows the same bounded path", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("direct ticket with valid affected seams") && n.includes("same bounded path"), "direct tickets use the bounded path");
+  });
+
+  test("missing seam metadata gets one resolution attempt; ambiguity adds needs-info and stops before edits", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("one resolution attempt") || n.includes("resolvedirectticketseam"), "one bounded resolution attempt");
+    assert.ok(n.includes("compact architecture index") && n.includes("code roots"), "resolution uses the index and code roots");
+    assert.ok(n.includes("ambiguity adds `needs-info` and stops before edits") || (n.includes("needs-info") && n.includes("stops before edits")), "ambiguity stops before edits");
+  });
+
+  test("no implementation fallback reads every leaf, ADR, policy, or derived human documentation tree", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("no implementation fallback reads every leaf"), "no broad-leaf fallback");
+    assert.ok(n.includes("derived human documentation tree") || n.includes("human docs"), "human docs excluded from fallback");
+  });
+
+  test("cache-gap approval may substitute or narrow the set but cannot waive the cap", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("cache-gap") && (n.includes("can never waive") || n.includes("cannot waive")), "cache-gap approval never waives the cap");
+  });
+
+  test("the pure orientation module stays pure with no network access", () => {
+    const code = read("skills/implement-this/orientation.ts");
+    const n = norm(code);
+    assert.ok(n.includes("pure"), "module declares purity");
+    assert.ok(n.includes("no network"), "no network access");
+    assert.ok(n.includes("github"), "no GitHub access");
+    assert.ok(n.includes("clock"), "no clock access");
+  });
+
+  test("leaf doc declares INV-14 and the same-change documentation stays compact", () => {
+    const leaf = read("docs/leaves/implement-this.md");
+    assert.ok(leaf.includes("INV-14"), "leaf must declare INV-14");
+    assert.ok(norm(leaf).includes("bounded orientation consumption"), "leaf names the invariant");
   });
 });

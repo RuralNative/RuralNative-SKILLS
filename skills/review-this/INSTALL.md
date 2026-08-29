@@ -86,6 +86,7 @@ comparing any time or token numbers. The measured change passes when:
 - The delayed-cloud single-pr median is at most 80% of baseline.
 - The one-fix path does not regress by more than 10%.
 - Review-agent input tokens fall by at least 20% through shared revision packets.
+- Orientation sources resolve once per pinned head-and-base pair and the compact evidence (task band, resolved bytes, cap, source count, cache-gap state) is shared across Standards and Spec without publishing full path lists on successful routine work.
 - Operation counts stay unchanged; `ciWaitMs` is attributed separately so CI
   time never masks or credits review changes.
 

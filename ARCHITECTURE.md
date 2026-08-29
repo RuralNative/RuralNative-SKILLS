@@ -82,7 +82,11 @@ Retired ADRs stay listed for complete coverage; their numbers are never reused.
   UTF-8 bytes — ordinary 6,000, API/route 9,000, schema/data 12,000,
   re-orientation 7,000, absolute 12,000 — while code inspection inside the
   affected seam is never blocked. The exact-ten-check clause yields to the
-  superseding budget decision. See ADR-0017, ADR-0024.
+  superseding budget decision. The workflow commands consume the contract:
+  `plan-this` preflights each proposed ticket, `implement-this` resolves
+  current sources in the worker checkout before broad loading, and
+  `review-this` shares one resolved set per pinned revision pair. See
+  ADR-0017, ADR-0024.
 - Coverage inventory is harness-owned: the exhaustive tier table lives in
   `docs/manifest.md` and is excluded from every orientation set; this index
   stays compact. `ARCHITECTURE.md` and `AGENTS.md` are excluded from the
