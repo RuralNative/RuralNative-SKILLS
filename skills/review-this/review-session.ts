@@ -24,8 +24,14 @@ export const MAX_MANAGED_WORKERS_PER_WORKSPACE = 4;
 export interface PersistentPrWorkerFact {
   prNumber: number;
   workerSessionExists: boolean;
+  /** Whether the managed worktree for this pull request still exists. */
+  worktreeExists: boolean;
   pinnedHeadSha: string;
   pinnedBaseSha: string;
+  /** Worktree path reported for a missing-session recovery (ADR-0023). */
+  worktreePath?: string;
+  /** Branch name reported for a missing-session recovery (ADR-0023). */
+  branchName?: string;
 }
 
 export interface ReviewWaveDispatchFact {
@@ -44,6 +50,12 @@ export interface ReviewWaveDispatchItem {
   baseSha: string;
 }
 
+/** A PR whose worktree exists but whose worker session is missing (ADR-0023). */
+export interface ReviewRecoveryRequiredItem extends ReviewWaveDispatchItem {
+  worktreePath: string;
+  branchName: string;
+}
+
 export interface DeferredReviewWaveItem extends ReviewWaveDispatchItem {
   reason: string;
 }
@@ -51,6 +63,7 @@ export interface DeferredReviewWaveItem extends ReviewWaveDispatchItem {
 export interface ReviewWaveDispatchPlan {
   reuse: ReviewWaveDispatchItem[];
   create: ReviewWaveDispatchItem[];
+  recovery: ReviewRecoveryRequiredItem[];
   deferredByCapacity: DeferredReviewWaveItem[];
   /** Review workers actively serving the wave after this dispatch. */
   activeReviewWorkers: number;
@@ -71,6 +84,7 @@ export function planReviewWaveDispatch(
   const plan: ReviewWaveDispatchPlan = {
     reuse: [],
     create: [],
+    recovery: [],
     deferredByCapacity: [],
     activeReviewWorkers: 0,
   };
@@ -104,7 +118,38 @@ export function planReviewWaveDispatch(
       reviewWorkers += 1;
       continue;
     }
-    // A stopped worker for this PR restarts here instead of duplicating.
+    // An existing worktree whose session disappeared is recovery-required
+    // (ADR-0023): never a duplicate worker and never a deletion. The worktree
+    // path and branch are required facts; without them the state fails closed
+    // into a deferral rather than inventing a duplicate creation.
+    if (worker?.worktreeExists) {
+      const worktreePath = worker.worktreePath;
+      const branchName = worker.branchName;
+      if (worktreePath && branchName) {
+        plan.recovery.push({ ...dispatchItem, worktreePath, branchName });
+        // A recovery item means a worker will actively serve this PR; it
+        // counts against the stage cap like reuse and create so mixed waves
+        // never exceed MAX_REVIEW_WORKERS_PER_STAGE.
+        reviewWorkers += 1;
+        continue;
+      }
+      defer(
+        "the persistent worktree exists without its session, but its path and branch are not reported; recovery is required before any new worker starts",
+      );
+      continue;
+    }
+    // `worktreeExists` absent (a worker fact captured before ADR-0023) must
+    // fail closed: the old fact shape cannot prove there is no worktree, so a
+    // sessionless worker with an unknown worktree state never receives a
+    // duplicate creation. Only an explicitly reported `false` reaches the
+    // clean-creation path below.
+    if (worker && worker.worktreeExists === undefined) {
+      defer(
+        "the worker reports no session and no recorded worktree state; recovery is required before any new worker starts",
+      );
+      continue;
+    }
+    // No prior worktree exists: a clean creation may start here.
 
     if (reviewWorkers >= MAX_REVIEW_WORKERS_PER_STAGE) {
       defer(`review-wave stage cap allows at most ${MAX_REVIEW_WORKERS_PER_STAGE} review workers`);
@@ -238,13 +283,21 @@ export interface PersistentWorktreeFact {
   workerSessionExists: boolean;
   pinnedHeadSha: string;
   pinnedBaseSha: string;
+  /** Worktree path reported for a missing-session recovery (ADR-0023). */
+  worktreePath?: string;
+  /** Branch name reported for a missing-session recovery (ADR-0023). */
+  branchName?: string;
 }
 
 export interface PersistentWorktreePlan {
-  action: "create" | "reuse";
+  action: "create" | "reuse" | "recovery-required";
   prNumber: number;
   headSha: string;
   baseSha: string;
+  /** Worktree path reported for a missing-session recovery (ADR-0023). */
+  worktreePath?: string;
+  /** Branch name reported for a missing-session recovery (ADR-0023). */
+  branchName?: string;
 }
 
 export interface ReviewStartFact {
@@ -267,14 +320,200 @@ export function reviewCanStart(fact: ReviewStartFact): boolean {
   );
 }
 
+/**
+ * One persistent PR worktree per pull request (ADR-0023). An existing
+ * worktree with a live session is reused; no prior worktree is created; an
+ * existing worktree whose session disappeared is `recovery-required` — never
+ * duplicated and never deleted.
+ */
+/**
+ * One persistent PR worktree per pull request (ADR-0023). An existing
+ * worktree with a live session is reused; no prior worktree is created; an
+ * existing worktree whose session disappeared is `recovery-required` — never
+ * duplicated and never deleted. The worktree path and branch are required
+ * facts; without them the recovery state cannot be reported and the plan
+ * fails closed rather than inventing a location.
+ */
 export function persistentWorktreePlan(
   fact: PersistentWorktreeFact,
 ): PersistentWorktreePlan {
+  if (fact.worktreeExists && !fact.workerSessionExists) {
+    const worktreePath = fact.worktreePath;
+    const branchName = fact.branchName;
+    if (!worktreePath || !branchName) {
+      return {
+        action: "recovery-required",
+        prNumber: fact.prNumber,
+        headSha: fact.pinnedHeadSha,
+        baseSha: fact.pinnedBaseSha,
+        worktreePath: undefined,
+        branchName: undefined,
+      };
+    }
+    return {
+      action: "recovery-required",
+      prNumber: fact.prNumber,
+      headSha: fact.pinnedHeadSha,
+      baseSha: fact.pinnedBaseSha,
+      worktreePath,
+      branchName,
+    };
+  }
+  // `worktreeExists` absent (a pre-ADR-0023 fact) cannot prove there is no
+  // worktree, so it never authorizes a create; it reports recovery-required
+  // with no invented location, exactly like a reported worktree.
+  if (fact.worktreeExists === undefined && !fact.workerSessionExists) {
+    return {
+      action: "recovery-required",
+      prNumber: fact.prNumber,
+      headSha: fact.pinnedHeadSha,
+      baseSha: fact.pinnedBaseSha,
+      worktreePath: undefined,
+      branchName: undefined,
+    };
+  }
   return {
     action: fact.worktreeExists ? "reuse" : "create",
     prNumber: fact.prNumber,
     headSha: fact.pinnedHeadSha,
     baseSha: fact.pinnedBaseSha,
+  };
+}
+
+export type ReviewLifecycleOutcome =
+  | "running"
+  | "interrupted"
+  | "offline"
+  | "failed"
+  | "blocked"
+  | "needs-info"
+  | "succeeded";
+
+/**
+ * Map a planner `stop` action to the lifecycle outcome the cleanup gate sees.
+ * A `stop` action means the workflow cannot continue in this context, not that
+ * the worker is being stopped (ADR-0023): publication failure, missing
+ * capability, fix-budget exhaustion, conflict refusal, and root-cause
+ * expansion refusal are blocked states that preserve the session and worktree.
+ */
+export function lifecycleOutcomeForStopAction(
+  reason: string,
+): Extract<ReviewLifecycleOutcome, "blocked" | "failed" | "needs-info"> {
+  const normalized = reason.toLowerCase();
+  if (normalized.includes("needs-info")) return "needs-info";
+  if (
+    normalized.includes("capability") ||
+    normalized.includes("cap") ||
+    normalized.includes("unavailable") ||
+    normalized.includes("budget") ||
+    normalized.includes("exhausted") ||
+    normalized.includes("publication") ||
+    normalized.includes("conflict") ||
+    normalized.includes("round") ||
+    normalized.includes("expansion") ||
+    normalized.includes("seams")
+  ) {
+    return "blocked";
+  }
+  return "failed";
+}
+
+export type ReviewWorktreeOutcome =
+  | "removed"
+  | "cleanup-pending"
+  | "preserved-for-resume"
+  | "preserved-for-diagnosis";
+
+export interface ReviewCleanupFact {
+  prNumber: number;
+  lifecycleOutcome: ReviewLifecycleOutcome;
+  worktreeExists: boolean;
+  worktreeClean: boolean;
+  localHeadSha: string;
+  remoteBranchSha: string;
+  pullRequestHeadSha: string;
+  /** The pull request merged — the implemented terminal review state. */
+  merged: boolean;
+  unpushedFix: boolean;
+  hostClosesWorktrees: boolean;
+}
+
+function reviewShaPresent(sha: string): boolean {
+  return sha.trim() !== "";
+}
+
+/**
+ * Exact source recovery evidence for a review worker (ADR-0023): the review is
+ * terminal, the worktree is clean, and local `HEAD`, the remote feature branch,
+ * and the pull-request head are one non-empty SHA. Missing SHAs fail closed.
+ *
+ * For a merged pull request the feature branch may have been deleted by the
+ * squash-merge, so the three SHAs must be the values recorded before the merge
+ * (the observed evidence that the merged head was recoverable). Reading the
+ * remote feature branch after merge would fail closed on a deleted branch.
+ */
+export function reviewExactRecovery(fact: ReviewCleanupFact): boolean {
+  if (fact.lifecycleOutcome !== "succeeded") return false;
+  if (!fact.worktreeExists || !fact.worktreeClean) return false;
+  if (fact.unpushedFix) return false;
+  if (
+    !reviewShaPresent(fact.localHeadSha) ||
+    !reviewShaPresent(fact.remoteBranchSha) ||
+    !reviewShaPresent(fact.pullRequestHeadSha)
+  ) {
+    return false;
+  }
+  return (
+    fact.localHeadSha === fact.remoteBranchSha &&
+    fact.remoteBranchSha === fact.pullRequestHeadSha
+  );
+}
+
+/**
+ * Review cleanup (ADR-0023). Only the command session cleans up, and only
+ * after a terminal successful review state with no unpushed fix, a clean
+ * worktree, and exact local/remote/PR head equality. A merged pull request
+ * retains the SHA evidence recorded before merge as proof the merged head was
+ * recoverable. A blocked review (publication failure, missing capability,
+ * fix-budget exhaustion, conflict stop), an exhausted fix budget, a dirty
+ * worktree, an unpushed fix, an offline worker, or a `needs-info` state
+ * preserves the session and worktree.
+ */
+export function reviewCleanupDecision(fact: ReviewCleanupFact): {
+  stopSession: boolean;
+  removeWorktree: boolean;
+  report: ReviewWorktreeOutcome;
+} {
+  if (
+    fact.lifecycleOutcome === "needs-info" ||
+    fact.lifecycleOutcome === "failed" ||
+    fact.lifecycleOutcome === "blocked" ||
+    fact.lifecycleOutcome === "offline"
+  ) {
+    return {
+      stopSession: false,
+      removeWorktree: false,
+      report: "preserved-for-diagnosis",
+    };
+  }
+  if (
+    fact.lifecycleOutcome !== "succeeded" ||
+    !fact.merged ||
+    !reviewExactRecovery(fact)
+  ) {
+    return {
+      stopSession: false,
+      removeWorktree: false,
+      report: "preserved-for-resume",
+    };
+  }
+  if (fact.hostClosesWorktrees) {
+    return { stopSession: true, removeWorktree: true, report: "removed" };
+  }
+  return {
+    stopSession: true,
+    removeWorktree: false,
+    report: "cleanup-pending",
   };
 }
 

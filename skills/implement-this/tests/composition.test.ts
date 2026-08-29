@@ -244,7 +244,7 @@ describe("command-session lifecycle decisions (#155)", () => {
     assert.ok(n.includes("an idle worker alone never completes a ticket"));
   });
 
-  test("cleanup stops sessions, reports cleanup-pending, preserves failed worktrees", () => {
+  test("cleanup preserves sessions until exact recovery, reports cleanup-pending, preserves failed worktrees", () => {
     const skill = read("skills/implement-this/SKILL.md");
     const n = norm(skill);
     assert.ok(n.includes("cleanupdecision"), "cleanup decision named");
@@ -252,6 +252,20 @@ describe("command-session lifecycle decisions (#155)", () => {
     assert.ok(n.includes("never delete directories behind agent manager"));
     assert.ok(n.includes(".kilo/agent-manager.json"), "Agent Manager state file stays untouched");
     assert.ok(n.includes("failed worktrees stay available for diagnosis"));
+  });
+
+  test("workers never clean up themselves and nothing stops before exact remote durability (ADR-0023)", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const install = read("skills/implement-this/INSTALL.md");
+    const n = norm(`${skill}\n${install}`);
+    assert.ok(n.includes("a worker never stops itself"), "workers never stop themselves");
+    assert.ok(n.includes("never closes its own worktree"), "workers never close their own worktree");
+    assert.ok(n.includes("only the command session may request cleanup"), "only the command session cleans up");
+    assert.ok(n.includes("checkpoint") && (n.includes("without stopping any worker") || n.includes("without stopping workers")), "checkpoints do not stop workers");
+    assert.ok(n.includes("exact recovery"), "cleanup runs only after the exact recovery gate");
+    assert.ok(n.includes("recovery-required"), "missing-session recovery state is named");
+    assert.ok(n.includes("preserved-for-resume"), "resumable preservation is named");
+    assert.ok(n.includes("preserved-for-diagnosis"), "diagnostic preservation is named");
   });
 });
 

@@ -20,6 +20,7 @@ import {
   type DeliveryFact,
   type ManagedWorkerFact,
   type ReservationFact,
+  type ResumeAction,
 } from "../command-session.ts";
 import { MAX_ACTIVE_WORKERS } from "../workflow-state.ts";
 
@@ -141,6 +142,7 @@ describe("durable delivery", () => {
     const reserved: ReservationFact = {
       assignees: ["worker"],
       featureBranchExists: true,
+      worktreeExists: true,
       liveWorkerSession: true,
       pullRequestOpen: false,
       closingReferenceValid: false,
@@ -160,8 +162,8 @@ describe("durable delivery", () => {
         { reuseFeatureBranch: true, reuseLiveSession: true },
       ],
       [
-        "reserved ticket with a dead session reuses only the branch",
-        { ...reserved, liveWorkerSession: false },
+        "reserved ticket with a dead session but no worktree reuses only the branch",
+        { ...reserved, worktreeExists: false, liveWorkerSession: false },
         "resume-worker",
         { reuseFeatureBranch: true, reuseLiveSession: false },
       ],
@@ -211,44 +213,119 @@ describe("scheduling collisions", () => {
 });
 
 describe("cleanup negotiation", () => {
-  test("stop always happens; removal needs durable success plus host support", () => {
-    const table: Array<[string, CleanupFact, string, boolean]> = [
+  const durable: CleanupFact = {
+    lifecycleOutcome: "succeeded",
+    worktreeClean: true,
+    localHeadSha: "sha-a",
+    remoteBranchSha: "sha-a",
+    pullRequestHeadSha: "sha-a",
+    pullRequestOpen: true,
+    closingReferenceValid: true,
+    acceptanceEvidencePosted: true,
+    hostClosesWorktrees: true,
+  };
+
+  test("exact durable delivery is the only stop; everything else preserves session and worktree", () => {
+    const table: Array<[string, Partial<CleanupFact>, string]> = [
+      ["running worker is never stopped", { lifecycleOutcome: "running" }, "preserved-for-resume"],
+      ["interrupted worker is never stopped", { lifecycleOutcome: "interrupted" }, "preserved-for-resume"],
+      ["offline worker is preserved for diagnosis", { lifecycleOutcome: "offline" }, "preserved-for-diagnosis"],
+      ["failed worker is preserved for diagnosis", { lifecycleOutcome: "failed" }, "preserved-for-diagnosis"],
+      ["blocked worker is preserved for diagnosis", { lifecycleOutcome: "blocked" }, "preserved-for-diagnosis"],
+      ["needs-info worker is preserved for diagnosis", { lifecycleOutcome: "needs-info" }, "preserved-for-diagnosis"],
+      ["dirty worktree is never stopped", { worktreeClean: false }, "preserved-for-resume"],
+      ["absent remote SHA fails closed", { remoteBranchSha: "" }, "preserved-for-resume"],
+      ["local/remote SHA mismatch preserves", { remoteBranchSha: "sha-b" }, "preserved-for-resume"],
+      ["remote/PR head mismatch preserves", { pullRequestHeadSha: "sha-b" }, "preserved-for-resume"],
+      ["missing PR preserves", { pullRequestOpen: false }, "preserved-for-resume"],
+      ["invalid closing reference preserves", { closingReferenceValid: false }, "preserved-for-resume"],
+      ["missing acceptance evidence preserves", { acceptanceEvidencePosted: false }, "preserved-for-resume"],
+      ["absent delivery evidence fails closed", { pullRequestOpen: false, closingReferenceValid: false, acceptanceEvidencePosted: false }, "preserved-for-resume"],
+    ];
+    for (const [name, patch, report] of table) {
+      const decision = cleanupDecision({ ...durable, ...patch });
+      assert.equal(decision.stopSession, false, `${name}: session is preserved`);
+      assert.equal(decision.removeWorktree, false, `${name}: worktree is preserved`);
+      assert.equal(decision.report, report, name);
+    }
+  });
+
+  test("exact durable delivery allows stop; removal depends separately on host support", () => {
+    const closing = cleanupDecision(durable);
+    assert.equal(closing.stopSession, true);
+    assert.equal(closing.removeWorktree, true);
+    assert.equal(closing.report, "removed");
+
+    const nonClosing = cleanupDecision({ ...durable, hostClosesWorktrees: false });
+    assert.equal(nonClosing.stopSession, true);
+    assert.equal(nonClosing.removeWorktree, false);
+    assert.equal(nonClosing.report, "cleanup-pending");
+  });
+});
+
+describe("resume recovery", () => {
+  const base: ReservationFact = {
+    assignees: ["worker"],
+    featureBranchExists: true,
+    worktreeExists: true,
+    liveWorkerSession: true,
+    pullRequestOpen: false,
+    closingReferenceValid: false,
+    acceptanceEvidencePosted: false,
+  };
+
+  test("reuses a live worker, returns recovery-required without a session, and creates clean work", () => {
+    const table: Array<[string, ReservationFact, string, object]> = [
       [
-        "delivered work on a closing host is removed",
-        { deliveredEvidenceDurable: true, stoppedWithNeedsInfo: false, hostClosesWorktrees: true },
-        "removed",
-        true,
+        "live worker session reuses branch and session",
+        base,
+        "resume-worker",
+        { reuseFeatureBranch: true, reuseLiveSession: true },
       ],
       [
-        "needs-info preserves durable work on a closing host",
-        { deliveredEvidenceDurable: true, stoppedWithNeedsInfo: true, hostClosesWorktrees: true },
-        "preserved-for-diagnosis",
-        false,
+        "missing session with an existing worktree is recovery-required",
+        {
+          ...base,
+          liveWorkerSession: false,
+          worktreePath: ".kilo/worktrees/177-bounded-orientation",
+          branchName: "177-bounded-orientation",
+        },
+        "recovery-required",
+        { worktreePath: ".kilo/worktrees/177-bounded-orientation", branchName: "177-bounded-orientation" },
       ],
       [
-        "delivered work on current Kilo reports cleanup-pending",
-        { deliveredEvidenceDurable: true, stoppedWithNeedsInfo: false, hostClosesWorktrees: false },
-        "cleanup-pending",
-        false,
+        "missing session without a reported path fails closed into recovery-required",
+        { ...base, liveWorkerSession: false },
+        "recovery-required",
+        { worktreePath: undefined, branchName: undefined },
       ],
       [
-        "failed work is preserved for diagnosis even on a closing host",
-        { deliveredEvidenceDurable: false, stoppedWithNeedsInfo: true, hostClosesWorktrees: true },
-        "preserved-for-diagnosis",
-        false,
+        "pre-ADR-0023 fact without a worktree state never reuses a missing session",
+        { ...base, worktreeExists: undefined as unknown as boolean, liveWorkerSession: false },
+        "recovery-required",
+        { worktreePath: undefined, branchName: undefined },
       ],
       [
-        "failed work on a non-closing host is preserved too",
-        { deliveredEvidenceDurable: false, stoppedWithNeedsInfo: true, hostClosesWorktrees: false },
-        "preserved-for-diagnosis",
-        false,
+        "no prior worktree creates a fresh worker",
+        { ...base, featureBranchExists: false, worktreeExists: false, liveWorkerSession: false },
+        "resume-worker",
+        { reuseFeatureBranch: false, reuseLiveSession: false },
       ],
     ];
-    for (const [name, fact, report, removeWorktree] of table) {
-      const decision = cleanupDecision(fact);
-      assert.equal(decision.stopSession, true, `${name}: session stops`);
-      assert.equal(decision.report, report, name);
-      assert.equal(decision.removeWorktree, removeWorktree, name);
+    for (const [name, fact, action, rest] of table) {
+      const decision = resumeAction(fact);
+      assert.equal(decision.action, action, name);
+      assert.deepEqual({ ...decision }, { action, ...rest }, name);
     }
+  });
+
+  test("delivery stays durable regardless of worker state", () => {
+    const delivered: ReservationFact = {
+      ...base,
+      pullRequestOpen: true,
+      closingReferenceValid: true,
+      acceptanceEvidencePosted: true,
+    };
+    assert.deepEqual(resumeAction({ ...delivered, liveWorkerSession: false }), { action: "delivery-durable" });
   });
 });

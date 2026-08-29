@@ -23,6 +23,6 @@ Edit the right-hand column to match whatever vocabulary you actually use.
 | `ready-for-agent` | Fully specified, no open blockers, claimable now | Applied at creation when no blocker is open; re-applied when the last blocker closes |
 | `blocked` | Has at least one open blocker; do not claim | Applied at creation |
 | `unblocked` | Was blocked; last blocker closed; claimable now | Applied by the closer of the final blocker, who also removes `blocked` |
-| `cleanup-pending` | Completed managed worktree the host could not close through a supported action (ADR-0019) | Recorded by the stopping command session; deletion behind Agent Manager is forbidden |
+| `cleanup-pending` | Completed managed worktree the host could not close through a supported action (ADR-0019, cleanup under ADR-0023) | Recorded by the stopping command session only after exact source recovery; deletion behind Agent Manager is forbidden |
 
 Per ADR-0019, `ready-for-human` retains its triage meaning, requires human implementation, and is no longer pull-request readiness; review readiness derives from pull-request state once #155 and #157 ship.

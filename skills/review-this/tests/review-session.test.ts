@@ -21,8 +21,13 @@ import {
   reviewCanStart,
   reviewCapabilityGate,
   reviewCategoriesComplete,
+  reviewCleanupDecision,
+  lifecycleOutcomeForStopAction,
   type CategoryResult,
+  type PersistentPrWorkerFact,
+  type PersistentWorktreeFact,
   type ReviewCapabilities,
+  type ReviewCleanupFact,
   type ReviewOperationCounts,
   type ReviewStatus,
 } from "../review-session.ts";
@@ -94,14 +99,49 @@ describe("persistent PR worktree", () => {
     });
     assert.equal(first.action, "create");
     assert.equal(later.action, "reuse");
-    assert.equal(persistentWorktreePlan({
+    assert.deepEqual(initialReviewAgents(), ["standards", "spec"]);
+  });
+
+  test("an existing worktree whose session disappeared is recovery-required, never duplicated or deleted", () => {
+    const plan = persistentWorktreePlan({
       prNumber: 157,
       worktreeExists: true,
       workerSessionExists: false,
-      pinnedHeadSha: "head-c",
+      worktreePath: ".kilo/worktrees/177-bounded-orientation",
+      branchName: "177-bounded-orientation",
+      pinnedHeadSha: "head-a",
       pinnedBaseSha: "base-a",
-    }).action, "reuse");
-    assert.deepEqual(initialReviewAgents(), ["standards", "spec"]);
+    });
+    assert.equal(plan.action, "recovery-required");
+    assert.equal(plan.prNumber, 157);
+    assert.equal(plan.worktreePath, ".kilo/worktrees/177-bounded-orientation");
+    assert.equal(plan.branchName, "177-bounded-orientation");
+  });
+
+  test("a missing session without a reported worktree path fails closed instead of inventing one", () => {
+    const plan = persistentWorktreePlan({
+      prNumber: 157,
+      worktreeExists: true,
+      workerSessionExists: false,
+      pinnedHeadSha: "head-a",
+      pinnedBaseSha: "base-a",
+    });
+    assert.equal(plan.action, "recovery-required");
+    assert.equal(plan.worktreePath, undefined);
+    assert.equal(plan.branchName, undefined);
+  });
+
+  test("a pre-ADR-0023 fact without a worktree state never creates; it reports recovery-required", () => {
+    const plan = persistentWorktreePlan({
+      prNumber: 157,
+      // `worktreeExists` is absent — the pre-ADR-0023 fact shape.
+      workerSessionExists: false,
+      pinnedHeadSha: "head-a",
+      pinnedBaseSha: "base-a",
+    } as unknown as PersistentWorktreeFact);
+    assert.equal(plan.action, "recovery-required");
+    assert.equal(plan.worktreePath, undefined);
+    assert.equal(plan.branchName, undefined);
   });
 
   test("stops before a verdict when fresh nested agents are unavailable", () => {
@@ -116,6 +156,77 @@ describe("persistent PR worktree", () => {
     );
     assert.equal(decision.allowed, false);
     assert.match(decision.reason ?? "", /fresh Standards and Spec/);
+  });
+});
+
+describe("review cleanup and recovery", () => {
+  const durable: ReviewCleanupFact = {
+    prNumber: 157,
+    lifecycleOutcome: "succeeded",
+    worktreeExists: true,
+    worktreeClean: true,
+    localHeadSha: "sha-a",
+    remoteBranchSha: "sha-a",
+    pullRequestHeadSha: "sha-a",
+    merged: true,
+    unpushedFix: false,
+    hostClosesWorktrees: true,
+  };
+
+  test("review cleanup preserves session and worktree for every non-terminal or unrecoverable state", () => {
+    const table: Array<[string, Partial<ReviewCleanupFact>, string]> = [
+      ["review still running preserves", { lifecycleOutcome: "running" }, "preserved-for-resume"],
+      ["interrupted review preserves", { lifecycleOutcome: "interrupted" }, "preserved-for-resume"],
+      ["offline review preserves for diagnosis", { lifecycleOutcome: "offline" }, "preserved-for-diagnosis"],
+      ["failed review preserves for diagnosis", { lifecycleOutcome: "failed" }, "preserved-for-diagnosis"],
+      ["blocked review preserves for diagnosis", { lifecycleOutcome: "blocked" }, "preserved-for-diagnosis"],
+      ["needs-info review preserves for diagnosis", { lifecycleOutcome: "needs-info" }, "preserved-for-diagnosis"],
+      ["dirty worktree preserves", { worktreeClean: false }, "preserved-for-resume"],
+      ["absent remote SHA fails closed", { remoteBranchSha: "" }, "preserved-for-resume"],
+      ["local/remote mismatch preserves", { remoteBranchSha: "sha-b" }, "preserved-for-resume"],
+      ["remote/PR head mismatch preserves", { pullRequestHeadSha: "sha-b" }, "preserved-for-resume"],
+      ["unmerged terminal review preserves", { merged: false }, "preserved-for-resume"],
+      ["unpushed fix preserves", { unpushedFix: true }, "preserved-for-resume"],
+      ["missing worktree preserves", { worktreeExists: false }, "preserved-for-resume"],
+    ];
+    for (const [name, patch, report] of table) {
+      const decision = reviewCleanupDecision({ ...durable, ...patch });
+      assert.equal(decision.stopSession, false, `${name}: session preserved`);
+      assert.equal(decision.removeWorktree, false, `${name}: worktree preserved`);
+      assert.equal(decision.report, report, name);
+    }
+  });
+
+  test("a merged terminal review with exact SHA equality allows cleanup", () => {
+    const closing = reviewCleanupDecision(durable);
+    assert.equal(closing.stopSession, true);
+    assert.equal(closing.removeWorktree, true);
+    assert.equal(closing.report, "removed");
+    const nonClosing = reviewCleanupDecision({ ...durable, hostClosesWorktrees: false });
+    assert.equal(nonClosing.stopSession, true);
+    assert.equal(nonClosing.removeWorktree, false);
+    assert.equal(nonClosing.report, "cleanup-pending");
+  });
+
+  test("planner stop actions map to blocked or needs-info, never to a worker stop", () => {
+    const table: Array<[string, string]> = [
+      ["publication failure blocks", "review publication is incomplete; fixes and merge must stop"],
+      ["missing capability blocks", "fresh fix context is unavailable"],
+      ["fix-budget exhaustion blocks", "at most 2 code-fix rounds are allowed per pull request"],
+      ["conflict stop blocks", "conflict resolution consumes one bounded fix round"],
+      ["root-cause expansion blocks", "root-cause expansion is outside the approved affected seams"],
+      ["needs-info stop is preserved", "continued failure adds needs-info and stops"],
+    ];
+    for (const [name, reason] of table) {
+      const outcome = lifecycleOutcomeForStopAction(reason);
+      if (reason.includes("needs-info")) {
+        assert.equal(outcome, "needs-info", name);
+      } else {
+        assert.equal(outcome, "blocked", name);
+      }
+      const decision = reviewCleanupDecision({ ...durable, lifecycleOutcome: outcome });
+      assert.equal(decision.stopSession, false, `${name}: worker session preserved`);
+    }
   });
 });
 
@@ -509,6 +620,7 @@ describe("bounded review-wave fan-out (plan #170)", () => {
       workers: [{
         prNumber: 10,
         workerSessionExists: true,
+        worktreeExists: true,
         pinnedHeadSha: "head-0",
         pinnedBaseSha: "base-0",
       }],
@@ -519,19 +631,105 @@ describe("bounded review-wave fan-out (plan #170)", () => {
     assert.equal(plan.activeReviewWorkers, 1);
   });
 
-  test("a stopped worker restarts through one create instead of duplicating", () => {
+  test("a stopped worker with no prior worktree restarts through one create instead of duplicating", () => {
     const plan = planReviewWaveDispatch({
       wave: wave(1),
       ...emptyFact,
       workers: [{
         prNumber: 10,
         workerSessionExists: false,
+        worktreeExists: false,
         pinnedHeadSha: "head-0",
         pinnedBaseSha: "base-0",
       }],
     });
     assert.deepEqual(plan.reuse, []);
     assert.deepEqual(plan.create.map((item) => item.prNumber), [10]);
+  });
+
+  test("a missing session with an existing worktree is recovery-required, never a duplicate creation", () => {
+    const plan = planReviewWaveDispatch({
+      wave: wave(1),
+      ...emptyFact,
+      workers: [{
+        prNumber: 10,
+        workerSessionExists: false,
+        worktreeExists: true,
+        worktreePath: ".kilo/worktrees/10-bounded-orientation",
+        branchName: "10-bounded-orientation",
+        pinnedHeadSha: "head-0",
+        pinnedBaseSha: "base-0",
+      }],
+    });
+    assert.deepEqual(plan.reuse, []);
+    assert.deepEqual(plan.create, []);
+    assert.equal(plan.recovery.length, 1);
+    assert.equal(plan.recovery[0].prNumber, 10);
+    assert.equal(plan.recovery[0].worktreePath, ".kilo/worktrees/10-bounded-orientation");
+    assert.equal(plan.recovery[0].branchName, "10-bounded-orientation");
+  });
+
+  test("a missing session with an existing worktree but no reported path defers instead of creating", () => {
+    const plan = planReviewWaveDispatch({
+      wave: wave(1),
+      ...emptyFact,
+      workers: [{
+        prNumber: 10,
+        workerSessionExists: false,
+        worktreeExists: true,
+        pinnedHeadSha: "head-0",
+        pinnedBaseSha: "base-0",
+      }],
+    });
+    assert.deepEqual(plan.reuse, []);
+    assert.deepEqual(plan.create, []);
+    assert.deepEqual(plan.recovery, []);
+    assert.equal(plan.deferredByCapacity.length, 1);
+    assert.match(plan.deferredByCapacity[0].reason, /recovery is required/);
+  });
+
+  test("a worker fact captured before ADR-0023 without a worktree state fails closed instead of creating", () => {
+    const plan = planReviewWaveDispatch({
+      wave: wave(1),
+      ...emptyFact,
+      workers: [{
+        prNumber: 10,
+        workerSessionExists: false,
+        // `worktreeExists` is absent — the pre-ADR-0023 fact shape.
+        pinnedHeadSha: "head-0",
+        pinnedBaseSha: "base-0",
+      } as unknown as PersistentPrWorkerFact],
+    });
+    assert.deepEqual(plan.reuse, []);
+    assert.deepEqual(plan.create, []);
+    assert.deepEqual(plan.recovery, []);
+    assert.equal(plan.deferredByCapacity.length, 1);
+    assert.match(plan.deferredByCapacity[0].reason, /no recorded worktree state/);
+  });
+
+  test("recovery items count against the stage cap in mixed waves", () => {
+    const items = wave(4);
+    const plan = planReviewWaveDispatch({
+      wave: items,
+      ...emptyFact,
+      workers: [
+        {
+          prNumber: 10,
+          workerSessionExists: false,
+          worktreeExists: true,
+          worktreePath: ".kilo/worktrees/10-bounded-orientation",
+          branchName: "10-bounded-orientation",
+          pinnedHeadSha: "head-0",
+          pinnedBaseSha: "base-0",
+        },
+      ],
+    });
+    // PR 10 is recovery (counts 1), then 11 and 12 create (counts 2 and 3);
+    // the stage cap of three stops PR 13.
+    assert.equal(plan.recovery.length, 1);
+    assert.deepEqual(plan.create.map((item) => item.prNumber), [11, 12]);
+    assert.deepEqual(plan.deferredByCapacity.map((item) => item.prNumber), [13]);
+    assert.equal(plan.activeReviewWorkers, 3);
   });
 
   test("two PRs pinning one revision pair never receive two workers", () => {
@@ -553,6 +751,7 @@ describe("bounded review-wave fan-out (plan #170)", () => {
       workers: [{
         prNumber: 11,
         workerSessionExists: true,
+        worktreeExists: true,
         pinnedHeadSha: "head-1",
         pinnedBaseSha: "base-1",
       }],
@@ -592,6 +791,7 @@ describe("bounded review-wave fan-out (plan #170)", () => {
       workers: [{
         prNumber: 10,
         workerSessionExists: true,
+        worktreeExists: true,
         pinnedHeadSha: "head-0",
         pinnedBaseSha: "base-0",
       }],

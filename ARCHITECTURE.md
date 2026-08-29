@@ -48,6 +48,7 @@ Covered non-seam docs are listed here; harness check 6 uses this list.
 - docs/adr/0020-plan-this-structured-workflow.md
 - docs/adr/0021-implement-this-worker-evidence-contract.md
 - docs/adr/0022-frontier-review-authority-and-mutation-worker-routing.md
+- docs/adr/0023-retain-workers-until-durable.md
 - docs/leaves/document-for-humans.md
 - docs/human/overview.md
 - docs/human/decision-journal.md
@@ -83,6 +84,10 @@ Retired ADRs stay listed for complete coverage; their numbers are never reused.
   merge, labels, promotion, and closure, while one live-catalog execution
   model drives every new persistent PR mutation worker, which may mutate and
   fast-forward push only inside its worktree. See ADR-0022.
+- Workers are retained until delivery is durable: stop and removal are
+  separate decisions, only the command session cleans up, and cleanup requires
+  a terminal state, a clean worktree, and exact local/remote/PR head equality.
+  See ADR-0023.
 - Accepted target in ADR-0019: user-created command sessions run workflow stages
   independently, and unsupported Kilo worktree closure reports
   `cleanup-pending`. Behavior tickets #154, #155, #156, #157, and #158 are
@@ -124,6 +129,7 @@ Every authored doc is machine-checked against disk by `scripts/docs-check.sh`
 | docs/adr/0020-plan-this-structured-workflow.md | decision |
 | docs/adr/0021-implement-this-worker-evidence-contract.md | decision |
 | docs/adr/0022-frontier-review-authority-and-mutation-worker-routing.md | decision |
+| docs/adr/0023-retain-workers-until-durable.md | decision |
 | docs/leaves/document-for-agents.md | leaf |
 | docs/leaves/document-for-humans.md | leaf |
 | docs/leaves/unslopify.md | leaf |

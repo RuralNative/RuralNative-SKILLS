@@ -375,6 +375,20 @@ describe("review-this performance lifecycle (review-this:INV-13)", () => {
     assert.ok(skill.includes("one fresh fix subagent inside the same pr worktree per round"));
     assert.ok(skill.includes("final verification repair consumes an available fix round") || skill.includes("if final verification fails"));
   });
+
+  test("review workers never clean up themselves and cleanup needs exact remote durability (ADR-0023)", () => {
+    const skill = read("skills/review-this/SKILL.md");
+    const install = read("skills/review-this/INSTALL.md");
+    const n = norm(`${skill}\n${install}`);
+    assert.ok(n.includes("a worker never stops itself"), "workers never stop themselves");
+    assert.ok(n.includes("never closes its own worktree"), "workers never close their own worktree");
+    assert.ok(n.includes("only the command session may request cleanup"), "only the command session cleans up");
+    assert.ok(n.includes("no unpushed fix"), "an unpushed fix blocks cleanup");
+    assert.ok(n.includes("recovery-required"), "missing-session recovery state is named");
+    assert.ok(n.includes("preserved-for-resume"), "resumable preservation is named");
+    assert.ok(n.includes("preserved-for-diagnosis"), "diagnostic preservation is named");
+    assert.ok(n.includes("cleanup-pending"), "unsupported closure is visible");
+  });
 });
 
 describe("Agent Manager worktree dispatch enforcement (plan 1787549339706)", () => {

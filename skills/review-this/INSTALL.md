@@ -42,7 +42,7 @@ From the control workspace, after an implementation wave has delivered pull requ
 /review-this #130
 ```
 
-The skill discovers the current review wave, creates or reuses one persistent PR worktree, collects Kilo cloud summary and inline comments for the current head and base when available (recording `unavailable` when disabled, absent, failed, or timed out without blocking a complete local review), runs fresh Standards and Spec sub-agents in parallel for the initial full review, uses delta review for later revisions unless a named risk trigger escalates it, and keeps strict category statuses and stable finding evidence. Confirmed findings use one fresh fix context in the same worktree per round, with at most two code-fix rounds; safe advisories join a blocking batch, while advisory-only findings receive a reasoned deferral. A trusted summary is updated once per revision with machine-readable timings and verified inline comments; publication failure stops fixes and merge. A final-verification repair consumes an available fix round and receives delta or escalated rereview, never a third round. The skill rejects duplicate, stale, out-of-scope, and unverified findings, invalidates previous verdicts when either the head or base SHA changes, squash-merges only after exact-revision gates pass, promotes only dependents whose final blocker closed (`unblocked` plus `ready-for-agent`, `blocked` removed), and on the penultimate wave tells you to run `implement-this #<spec>` for the next wave. When every child ticket closes, it checks updated `main` with the one planned `npm run verify` and a whole-spec Standards and Spec review, creates the smallest independently verifiable native child ticket for a confirmed integration defect while keeping the parent open, and closes the parent only when all gates pass.
+The skill discovers the current review wave, creates or reuses one persistent PR worktree, collects Kilo cloud summary and inline comments for the current head and base when available (recording `unavailable` when disabled, absent, failed, or timed out without blocking a complete local review), runs fresh Standards and Spec sub-agents in parallel for the initial full review, uses delta review for later revisions unless a named risk trigger escalates it, and keeps strict category statuses and stable finding evidence. Confirmed findings use one fresh fix context in the same worktree per round, with at most two code-fix rounds; safe advisories join a blocking batch, while advisory-only findings receive a reasoned deferral. A trusted summary is updated once per revision with machine-readable timings and verified inline comments; publication failure stops fixes and merge. A final-verification repair consumes an available fix round and receives delta or escalated rereview, never a third round. The skill rejects duplicate, stale, out-of-scope, and unverified findings, invalidates previous verdicts when either the head or base SHA changes, squash-merges only after exact-revision gates pass, promotes only dependents whose final blocker closed (`unblocked` plus `ready-for-agent`, `blocked` removed), and on the penultimate wave tells you to run `implement-this #<spec>` for the next wave. When every child ticket closes, it checks updated `main` with the one planned `npm run verify` and a whole-spec Standards and Spec review, creates the smallest independently verifiable native child ticket for a confirmed integration defect while keeping the parent open, and closes the parent only when all gates pass. The persistent PR worker never stops itself: the command session cleans up only after a successful terminal review state with no unpushed fix and exact local/remote/PR head equality, reports `cleanup-pending` when the host cannot close the worktree, and reports `recovery-required` when a worktree exists without its session — never duplicating or deleting it.
 
 Repository checks run via:
 
@@ -55,14 +55,20 @@ npm run verify
 Run three ordinary tickets through independent `/implement-this` and
 `/review-this` sessions on Kilo after the targeted tests and repository gate
 are green. Record one machine-readable timing object per ticket from durable
-reservation through merge or terminal stop:
+reservation through merge or terminal outcome:
 
 ```json
 {"ticket":101,"riskClass":"ordinary","reservationToTerminalMs":0,"phases":{"fixes":0,"delta-review":0,"final-verification":0},"gatesGreen":true}
 ```
 
 The smoke passes when the ordinary-ticket median is at most 60 minutes, no
-ordinary ticket exceeds 90 minutes, and every correctness gate is green.
+ordinary ticket exceeds 90 minutes, and every correctness gate is green. The
+smoke also verifies worker retention: a fix left dirty or unpushed keeps the
+persistent PR worker session and worktree, a blocked or `needs-info` review
+keeps them for diagnosis, and cleanup runs only after merge (or another
+successful terminal state) with the recorded local/remote/PR head SHAs proven
+recoverable — a merged PR's feature branch may be deleted by the squash-merge,
+so the pre-merge head evidence is recorded before cleanup is assessed.
 
 ## Concurrent-wave baseline comparison
 

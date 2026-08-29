@@ -126,7 +126,13 @@ export function isDelivered(fact: DeliveryFact): boolean {
 export interface ReservationFact extends DeliveryFact {
   assignees: readonly string[];
   featureBranchExists: boolean;
+  /** Whether an Agent Manager worktree for this ticket still exists. */
+  worktreeExists: boolean;
   liveWorkerSession: boolean;
+  /** Worktree path reported for a missing-session recovery (ADR-0023). */
+  worktreePath?: string;
+  /** Branch name reported for a missing-session recovery (ADR-0023). */
+  branchName?: string;
 }
 
 export type ResumeAction =
@@ -136,12 +142,21 @@ export type ResumeAction =
       reuseFeatureBranch: boolean;
       reuseLiveSession: boolean;
     }
+  | {
+      action: "recovery-required";
+      /** Observed worktree path; undefined when the host did not report it. */
+      worktreePath?: string;
+      /** Observed branch name; undefined when the host did not report it. */
+      branchName?: string;
+    }
   | { action: "delivery-durable" };
 
 /**
  * What one ticket needs after interruption or resume. Nothing here creates a
  * second assignee, branch, session, pull request, or comment: reserved work
- * reuses what exists, and durable delivery is left alone.
+ * reuses what exists, durable delivery is left alone, and an existing worktree
+ * whose session disappeared is a named recovery state instead of a duplicate
+ * worktree (ADR-0023).
  */
 export function resumeAction(fact: ReservationFact): ResumeAction {
   if (isDelivered(fact)) {
@@ -150,6 +165,23 @@ export function resumeAction(fact: ReservationFact): ResumeAction {
   if (fact.assignees.length === 0) {
     return { action: "reserve", claimTicket: true };
   }
+  if (fact.worktreeExists && !fact.liveWorkerSession) {
+    return {
+      action: "recovery-required",
+      worktreePath: fact.worktreePath,
+      branchName: fact.branchName,
+    };
+  }
+  // `worktreeExists` absent (a pre-ADR-0023 fact) cannot prove there is no
+  // worktree, so a sessionless worker never reuses a missing session: report
+  // recovery-required without an invented location instead of resuming blind.
+  if (fact.worktreeExists === undefined && !fact.liveWorkerSession) {
+    return {
+      action: "recovery-required",
+      worktreePath: undefined,
+      branchName: undefined,
+    };
+  }
   return {
     action: "resume-worker",
     reuseFeatureBranch: fact.featureBranchExists,
@@ -157,37 +189,109 @@ export function resumeAction(fact: ReservationFact): ResumeAction {
   };
 }
 
-export type WorktreeOutcome = "removed" | "cleanup-pending" | "preserved-for-diagnosis";
+export type LifecycleOutcome =
+  | "running"
+  | "interrupted"
+  | "offline"
+  | "failed"
+  | "blocked"
+  | "needs-info"
+  | "succeeded";
+
+export type WorktreeOutcome =
+  | "removed"
+  | "cleanup-pending"
+  | "preserved-for-resume"
+  | "preserved-for-diagnosis";
 
 export interface CleanupFact {
-  /** The pull request and acceptance evidence are durable on GitHub. */
-  deliveredEvidenceDurable: boolean;
-  /** The ticket is stopped with `needs-info`. */
-  stoppedWithNeedsInfo: boolean;
+  /** Terminal lifecycle outcome of the worker (ADR-0023). */
+  lifecycleOutcome: LifecycleOutcome;
+  /** The managed worktree has no uncommitted changes. */
+  worktreeClean: boolean;
+  /** Local worktree `HEAD`. */
+  localHeadSha: string;
+  /** Remote feature-branch `HEAD`. */
+  remoteBranchSha: string;
+  /** The pull-request head SHA. */
+  pullRequestHeadSha: string;
+  pullRequestOpen: boolean;
+  closingReferenceValid: boolean;
+  acceptanceEvidencePosted: boolean;
   /** The host supports safe managed worktree closure. */
   hostClosesWorktrees: boolean;
 }
 
+function nonEmptySha(sha: string): boolean {
+  return sha.trim() !== "";
+}
+
 /**
- * Closure for one finished worker. Sessions always stop; only successful
- * durable work becomes eligible for removal, and only when the host can
- * close worktrees through a supported action. Failed worktrees stay on disk
- * for diagnosis, and unsupported hosts leave the worktree in place as
- * `cleanup-pending` — never deleted behind Agent Manager.
+ * Exact source recovery evidence: the successful worker is terminal, the
+ * worktree is clean, and the local `HEAD`, the remote feature branch, and the
+ * pull-request head are one non-empty SHA. Missing SHAs fail closed (ADR-0023).
+ */
+export function exactRecovery(fact: CleanupFact): boolean {
+  if (fact.lifecycleOutcome !== "succeeded") return false;
+  if (!fact.worktreeClean) return false;
+  if (
+    !nonEmptySha(fact.localHeadSha) ||
+    !nonEmptySha(fact.remoteBranchSha) ||
+    !nonEmptySha(fact.pullRequestHeadSha)
+  ) {
+    return false;
+  }
+  return (
+    fact.localHeadSha === fact.remoteBranchSha &&
+    fact.remoteBranchSha === fact.pullRequestHeadSha
+  );
+}
+
+/**
+ * Closure for one finished worker (ADR-0023). `stopSession` is a real decision
+ * and defaults to false: a running, interrupted, failed, dirty, unpushed,
+ * SHA-mismatched, missing-PR, missing-evidence, or `needs-info` worker keeps
+ * its session and worktree. The command session may stop a session and ask the
+ * host to remove the worktree only after `exactRecovery` and the durable
+ * delivery facts both pass. On hosts that cannot close managed worktrees the
+ * stopped, remotely recoverable worker reports `cleanup-pending`; everything
+ * else reports `preserved-for-resume` or `preserved-for-diagnosis` and is
+ * never stopped.
  */
 export function cleanupDecision(fact: CleanupFact): {
-  stopSession: true;
+  stopSession: boolean;
   removeWorktree: boolean;
   report: WorktreeOutcome;
 } {
-  if (fact.stoppedWithNeedsInfo || !fact.deliveredEvidenceDurable) {
+  if (
+    fact.lifecycleOutcome === "needs-info" ||
+    fact.lifecycleOutcome === "failed" ||
+    fact.lifecycleOutcome === "blocked" ||
+    fact.lifecycleOutcome === "offline"
+  ) {
     return {
-      stopSession: true,
+      stopSession: false,
       removeWorktree: false,
       report: "preserved-for-diagnosis",
     };
   }
-  if (fact.deliveredEvidenceDurable && fact.hostClosesWorktrees) {
+  if (fact.lifecycleOutcome !== "succeeded") {
+    return {
+      stopSession: false,
+      removeWorktree: false,
+      report: "preserved-for-resume",
+    };
+  }
+  const delivered = isDelivered(fact);
+  const recoverable = exactRecovery(fact);
+  if (!delivered || !recoverable) {
+    return {
+      stopSession: false,
+      removeWorktree: false,
+      report: "preserved-for-resume",
+    };
+  }
+  if (fact.hostClosesWorktrees) {
     return { stopSession: true, removeWorktree: true, report: "removed" };
   }
   return {

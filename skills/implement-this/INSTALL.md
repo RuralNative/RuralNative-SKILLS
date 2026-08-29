@@ -66,9 +66,9 @@ Every listed ticket is validated first; the run stops before any claim or edit i
 
 Where `#99` is the parent specification, the skill takes up to three current frontier tickets from its open children in native child order and dispatches them like an explicit set. While it runs, it recomputes the frontier whenever a ticket, blocker, pull request, or follow-up child changes and fills free slots up to both caps.
 
-A failed worker gets one reconciled retry that reuses existing branches, sessions, and pull requests; a second failure adds `needs-info` to that ticket and stops it, keeping the worktree for diagnosis. When all bounded tickets have open pull requests with evidence posted, the run ends by telling you to review from the control workspace with `/review-this #<spec>`; ticket worktrees do not run review.
+A failed worker gets one reconciled retry that reuses existing branches, sessions, and pull requests; a second failure adds `needs-info` to that ticket and stops work on it, keeping the worker session and its worktree for diagnosis. When all bounded tickets have open pull requests with evidence posted, the run ends by telling you to review from the control workspace with `/review-this #<spec>`; ticket worktrees do not run review.
 
-Completed sessions stop. Current Kilo chat cannot close a managed worktree, so finished worktrees are reported as `cleanup-pending`; nothing is deleted behind Agent Manager and `.kilo/agent-manager.json` is never edited.
+A checkpoint ends the command turn without stopping any worker, and workers never call Agent Manager stop or close. Only the command session may clean up, and only after the exact recovery gate: terminal success, a clean worktree, one matching local/remote/PR head SHA, and durable pull-request evidence. Current Kilo chat cannot close a managed worktree, so stopped, remotely recoverable finished worktrees are reported as `cleanup-pending`; nothing is deleted behind Agent Manager and `.kilo/agent-manager.json` is never edited. If a session is missing while its worktree remains, the run reports `recovery-required` and does not duplicate or delete it.
 
 ## Kilo VS Code smoke run
 
@@ -78,7 +78,7 @@ One documented smoke run proves visible isolation on Kilo Code's VS Code extensi
 2. From one command session in the repo root, run `/implement-this #<spec>`.
 3. Open the Agent Manager panel during dispatch. Expect two independent managed worktrees under `.kilo/worktrees/` and two running sessions — one per ticket — created by one parent command session.
 4. Confirm each session received exactly one initial prompt (its rendered template) and works in its own worktree; the command session itself edits no ticket code.
-5. After delivery, confirm one open pull request per ticket with a valid closing reference and posted evidence, stopped worker sessions, and any unclosable worktree reported as `cleanup-pending` rather than deleted.
+5. After delivery, confirm one open pull request per ticket with a valid closing reference and posted evidence. Confirm worker sessions and worktrees are still present before cleanup eligibility, that any unclosable worktree is reported as `cleanup-pending` rather than deleted, and that nothing was cleaned before remote recovery was proven. Interrupt a run with an uncommitted edit in the worker worktree and confirm the session and worktree remain until the work is committed, pushed, and its pull-request head matches.
 
 Record the observed overview counts and outcomes in the run notes for the specification.
 

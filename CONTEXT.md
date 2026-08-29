@@ -130,12 +130,24 @@ The user-created session running one workflow command such as `/implement-this` 
 _Avoid_: supervisor, coordinator, orchestrator
 
 **Worker session**:
-A targeted session inside an isolated git worktree that claims exactly its own ticket and never touches sibling state. A command session creates it through the `agent_manager` tool in worktree mode, one independent task and one initial prompt per ticket (ADR-0019).
+A targeted session inside an isolated git worktree that claims exactly its own ticket and never touches sibling state. A command session creates it through the `agent_manager` tool in worktree mode, one independent task and one initial prompt per ticket (ADR-0019). A worker session never stops itself and never closes its own worktree; it remains live through unfinished, interrupted, failed, dirty, unpushed, and `needs-info` states until the command session proves delivery is durable (ADR-0023).
 _Avoid_: agent (when the session is meant), subagent
 
 **Cleanup-pending**:
-The visible state recorded when completed managed-worktree closure is unavailable on the host: the session stops, the worktree stays, and deletion behind Agent Manager is forbidden (ADR-0019).
+The visible state recorded when completed managed-worktree closure is unavailable on the host: the session stops, the worktree stays, and deletion behind Agent Manager is forbidden (ADR-0019). Under ADR-0023 the session stops only after the exact recovery gate — terminal success, a clean worktree, and one matching local/remote/PR head SHA.
 _Avoid_: orphaned worktree, manual cleanup
+
+**Preserved-for-resume**:
+The lifecycle state of a worker whose code is not yet provably durable on GitHub but is resumable: running, interrupted, dirty, unpushed, SHA-mismatched, or missing delivery evidence. The session and worktree stay live; only the command session may later clean up after exact recovery (ADR-0023).
+_Avoid_: paused worker, idle worker
+
+**Preserved-for-diagnosis**:
+The lifecycle state of a failed or `needs-info` worker kept for diagnosis. The session and worktree stay live and are never stopped or removed automatically (ADR-0023).
+_Avoid_: dead worker, stopped worker
+
+**Recovery-required**:
+The lifecycle state when a managed worktree exists but its worker session is missing. The command session reports the worktree path and branch, never creates a replacement worktree or deletes the existing one, and reuses the existing session when the host exposes it (ADR-0023).
+_Avoid_: duplicate worktree, recreate worker
 
 **Workflow command**:
 One of the three direct human entry points, `plan-this`, `implement-this`, or `review-this`. It owns the boundaries and state changes of its stage while delegated skills supply methods inside those boundaries.
