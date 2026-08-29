@@ -85,7 +85,9 @@ Retired ADRs stay listed for complete coverage; their numbers are never reused.
   superseding budget decision. The workflow commands consume the contract:
   `plan-this` preflights each proposed ticket, `implement-this` resolves
   current sources in the worker checkout before broad loading, and
-  `review-this` shares one resolved set per pinned revision pair. See
+  `review-this` resolves one set per pinned head-and-base pair, stopping
+  before broad loading when the set is over budget and reporting its exact
+  sources. See
   ADR-0017, ADR-0024.
 - Coverage inventory is harness-owned: the exhaustive tier table lives in
   `docs/manifest.md` and is excluded from every orientation set; this index

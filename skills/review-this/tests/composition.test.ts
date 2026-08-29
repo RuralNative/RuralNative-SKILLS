@@ -593,6 +593,14 @@ describe("review-this bounded orientation sharing (review-this:INV-15, #179)", (
     assert.ok(n.includes("task band") && n.includes("resolved bytes") && n.includes("source count"), "compact evidence fields present");
   });
 
+  test("an over-budget pair stops before broad loading and reports its exact sources", () => {
+    const skill = read("skills/review-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("over-budget") || n.includes("exceeds its selected cap"), "over-budget handling present");
+    assert.ok(n.includes("stop before broad loading") || n.includes("stops before broad loading"), "over-budget stops before broad loading");
+    assert.ok(n.includes("exact sources") || (n.includes("task band") && n.includes("source count")), "reports exact sources or the compact fields");
+  });
+
   test("existing packet sharing, overlap, independent progress, timing, freshness, gates, worker limits, and frontier-only authority remain intact", () => {
     const skill = read("skills/review-this/SKILL.md");
     const n = norm(skill);
