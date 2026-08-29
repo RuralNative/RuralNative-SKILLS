@@ -64,6 +64,26 @@ code?"**
   scorecard. A dormant category creates no file and its harness checks stay
   dormant. Cross the threshold only on verified need: more seams, durable
   decisions, or a coordination cost that the check would have caught.
+- **Coverage inventory is manifest-owned.** When a repository runs the
+  harness, the exhaustive tier and coverage inventory lives in the
+  harness-owned coverage manifest, excluded from every orientation set; the
+  architecture index stays a compact seam index (ADR-0024).
+- **Orientation sets resolve at runtime.** A command resolves its orientation
+  set from affected seams, the compact architecture index, whole bounded
+  leaves, leaf-named glossary entries, and linked accepted ADRs or policies.
+  Byte caps are hard, duplicate sources count once, superseded ADRs stay out
+  of current guidance unless a leaf explicitly requires them, and no set
+  exceeds 12,000 bytes (ADR-0024).
+- **Improve repairs existing caches.** Audit stays read-only. Improve
+  diagnoses an existing cache, shows one complete migration preview, waits for
+  one explicit approval, and only then applies trims, additions, moves,
+  deletions, coverage-manifest changes, and generated-doc actions — finishing
+  only after the prose audit and harness pass. It routes durable decisions and
+  vocabulary to their tiers and removes code-recoverable restatement and work
+  history before considering a seam split.
+- **Seam splits need independent life.** Propose a split only when code
+  ownership, invariants, entry points, and change cadence are independently
+  meaningful for each half — never only because a leaf is long.
 - **Skill diagnostics are outside every tier.** The private mistake record is
   not a doc-cache tier artifact: no routing row classifies it, it never enters
   a read set, and it never becomes policy, debt, an invariant, or guidance.

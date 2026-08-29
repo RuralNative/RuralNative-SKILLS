@@ -196,7 +196,27 @@ _Avoid_: routing table, see-also
 **Skill diagnostics**:
 The opt-in private record of confirmed agent mistakes that `document-for-agents` keeps only with explicit owner consent to create and maintain it: one append-only local file outside the doc cache and version control, excluded from every normal agent read set, sanitized, and evidence for optional user-reviewed submission to the skill developer — never policy, debt, an invariant, or task guidance (ADR-0018).
 _Avoid_: telemetry, error log, mistake tracker
-
 **Management marker**:
-The protected HTML comment placed directly after the five commands in generated `AGENTS.md`, recording the `document-for-agents` skill identity and available revision evidence; provenance is confirmed only when the marker plus supporting evidence backs it, otherwise `likely` or `unknown` (ADR-0018).
+The protected HTML comment placed directly after the five commands in generated
+`AGENTS.md`, recording the `document-for-agents` skill identity and available revision evidence; provenance is confirmed only when the marker plus supporting evidence backs it, otherwise `likely` or `unknown` (ADR-0018).
 _Avoid_: watermark, badge, signature
+
+**Orientation set**:
+The unique, deduplicated set of authored documentation a workflow resolves before task-driven code inspection: the compact architecture index, whole affected seam leaf docs, leaf-named glossary entries, and linked accepted ADRs or policies (ADR-0024).
+_Avoid_: read set (when the resolved contract is meant), context bundle
+
+**Task band**:
+The task class that selects the orientation cap — ordinary (6,000 bytes), API or route (9,000), schema or data (12,000), or re-orientation (7,000); no set exceeds 12,000 bytes (ADR-0024).
+_Avoid_: task type, complexity class
+
+**Coverage manifest**:
+The harness-owned exhaustive tier and coverage inventory (`docs/manifest.md`) that replaced the index's coverage table; excluded from every orientation set (ADR-0024).
+_Avoid_: coverage table (when the manifest is meant), index inventory
+
+**Orientation budget**:
+The eleventh docs-check (`Orientation budget`), introduced through ADR-0024: it rejects any declared orientation route over its task-band cap before broad loading, reporting band, resolved bytes, cap, source count, and exact sources.
+_Avoid_: token budget, scorecard entry
+
+**Improve**:
+`document-for-agents` Branch D, the existing-cache repair path: diagnose, show one complete migration preview, wait for one explicit approval, apply the complete approved delta, then pass the prose audit and harness. Audit stays read-only (ADR-0024).
+_Avoid_: migration wizard, cache repair (when the branch is meant)

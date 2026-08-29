@@ -1,0 +1,17 @@
+{
+  "name": "improve-preview",
+  "case": "Improve shows one complete migration preview and makes no repository changes before one explicit approval",
+  "approved": false,
+  "preview": {
+    "diagnosis": "three leaf docs exceed their whole-leaf contribution to the ordinary orientation cap",
+    "delta": [
+      { "action": "trim", "target": "docs/adr/0009-history.md", "note": "remove restatement covered by code" },
+      { "action": "add", "target": "docs/leaves/tooling.md", "note": "new seam leaf for the tooling seam" },
+      { "action": "move", "target": "docs/leaves/old-naming.md", "to": "docs/leaves/graphql.md", "note": "rename to stable responsibility" },
+      { "action": "delete", "target": "docs/scratch/plan-2026-08.md", "note": "work doc die with the work" },
+      { "action": "manifest", "target": "docs/manifest.md", "note": "move coverage inventory to the harness-owned manifest" },
+      { "action": "generate", "target": "docs/generated/schema.md", "note": "regenerate the schema slice" }
+    ],
+    "split": null
+  }
+}

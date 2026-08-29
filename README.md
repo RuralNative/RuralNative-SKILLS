@@ -81,7 +81,7 @@ Agents start every conversation from zero. Without help they re-read the whole c
 2. **Code wins.** On conflict, fix the doc in the same change.
 3. **Place claims by decay rate.** Vocabulary and invariants decay slowly; pointers are checkable; restatements decay fastest and are avoided.
 4. **Two hops.** Every needed fact is at most two links from the index.
-5. **Keep it short.** Index under 150 lines; leaf docs a 1–2 minute read. Loading budgets are caps on orientation documents, not suggestions.
+5. **Keep it short.** Index under 150 lines; leaf docs a 1–2 minute read. Orientation sets resolve at runtime and are hard-capped in bytes — ordinary 6,000, API/route 9,000, schema/data 12,000, re-orientation 7,000, absolute 12,000 — never raised by new material.
 6. **Size to the codebase.** Start smaller than you think; grow the tree only as history and sessions multiply.
 
 Shortcuts are tracked openly in one debt registry, and history is append-only via short decision records.
@@ -92,6 +92,7 @@ Shortcuts are tracked openly in one debt registry, and history is append-only vi
 |---|---|---|
 | New codebase — no docs yet | document-for-agents | Establish |
 | Docs bloated or messy — need trimming | document-for-agents | Audit |
+| Existing bloated cache to repair | document-for-agents | Audit → Improve (one approved preview first) |
 | Docs outdated — need updating | document-for-agents | Audit, then Maintain |
 | Everyday work — docs must change with code | document-for-agents | Maintain |
 | Stakeholders need a plain-language view | document-for-humans | Establish (needs agent doc tree first) |
@@ -141,7 +142,8 @@ Every fresh `/plan-this` run grills at least one decision frontier before anythi
 - **Docs change with code.** Same-diff updates keep the cache honest.
 - **Gate enforces it.** `scripts/docs-check.sh` checks coverage, same-diff freshness, leaf and ADR validity, and derived-doc freshness. Wire it into CI or a pre-commit hook.
 - **Review policy ships as a file.** `REVIEW.md` at the repository root states review scope, severity, trust, verification, and subagent rules; Kilo cloud Code Review reads it from the pull-request base branch. Configuring the cloud side (app installation, repository selection, model) stays an external setup prerequisite; the shelf ships the policy file, not the platform wiring.
-- **Built for context loss.** The two-hop index lets an agent re-orient after compaction with one small read that the loading protocol caps; a missing fact becomes a named cache gap that requires owner approval before the read set widens.
+- **Built for context loss.** The two-hop index lets an agent re-orient after compaction with one small read whose byte budget the harness enforces; orientation sets resolve at runtime from affected seams and deduplicate shared sources, so unrelated documentation growth never changes a task's cost. A missing fact becomes a named cache gap that requires owner approval before the read set widens (approval substitutes or narrows sources, never waives the cap).
+- **Improve repairs bloated caches.** Audit stays read-only; the Improve path shows one complete migration preview, waits for one explicit approval, then applies the approved trims, additions, moves, deletions, manifest changes, and generated-doc actions before the prose audit and harness pass (ADR-0024).
 - **Diagnostics stay yours.** An optional private record of confirmed agent mistakes exists only with your consent to create and maintain it. Every write announces itself in advance, revocation stops all writes before a separate keep, export, or delete choice, and the file stays outside the doc cache, version control, and every agent read set. Entries are sanitized summaries with no prompts, code, secrets, personal data, absolute paths, or repository remotes, and nothing uploads — submission to the skill developer is manual after your review (ADR-0018).
 - **Provenance stays honest.** Generated `AGENTS.md` files carry one protected comment after the five commands naming `document-for-agents` as manager plus available revision evidence; a document counts as managed only when that marker plus supporting evidence backs it, and unclear cases stay `likely` or `unknown`.
 

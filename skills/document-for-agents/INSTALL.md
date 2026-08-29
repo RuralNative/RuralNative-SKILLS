@@ -77,10 +77,19 @@ Ask the agent:
 
 > Run the doc-cache audit on this repo.
 
-A healthy run labels every documentation file into a tier and ends with a
-diff-able plan. If the repo has no docs yet, run Branch A instead:
+A healthy run labels every documentation file into a tier, resolves the
+orientation sets, and ends with a diff-able plan. If the repo has no docs yet,
+run Branch A instead:
 
 > Establish the doc tree for this repo.
+
+## Existing caches and the Improve path
+
+An existing documentation tree that grew under an older install may not have
+the coverage manifest or may exceed the orientation byte caps. The skill never
+claims such a cache is compliant: it stays diagnosable, and the Improve path
+(Branch D) repairs it after one approved migration preview. The same install
+covers both outcomes — no reinstall or migration flag is needed.
 
 ## Integrate
 
@@ -88,20 +97,29 @@ diff-able plan. If the repo has no docs yet, run Branch A instead:
    a small repo, the size step intentionally keeps it minimal, index,
    glossary, conventions only.
 2. **Audit** (Branch B) any existing documentation you distrust before
-   building on it.
-3. Add the harness check to your standard check path, a script entry,
+   building on it. Audit stays read-only — it diagnoses and plans, it never
+   changes the repo.
+3. **Improve** (Branch D) applies repairs to an existing bloated cache: it
+   shows one complete migration preview, waits for one explicit approval, then
+   applies the approved trims, additions, moves, deletions, manifest changes,
+   and generated-doc actions before the prose audit and harness pass.
+4. Add the harness check to your standard check path, a script entry,
    pre-commit hook, or CI job, so freshness is enforced mechanically.
-4. **Maintain** (Branch C) is the steady state: same-diff doc updates, the
+5. **Maintain** (Branch C) is the steady state: same-diff doc updates, the
    code-wins rule, append-only ADRs, and a green harness.
 
 ## Files
 
-- `SKILL.md`: the lifecycle, six principles, three branches, completion
+- `SKILL.md`: the lifecycle, six principles, four branches, completion
   criteria.
 - `reference/classify.md`: routes every fact to its doc tier.
-- `reference/harness.md`: the portable change-aware gate.
+- `reference/harness.md`: the portable change-aware gate (eleven checks).
+- `reference/orientation.md`: the runtime orientation resolver contract and
+  caps.
 - `reference/templates.md`: mini-ADR, leaf doc, index, policy set,
   vendor-facts, glossary, debt registry, loading protocol.
+- `orientation.ts`: the deterministic orientation resolver reference
+  implementation, runnable as a CLI.
 
 ## Source provenance and trust
 

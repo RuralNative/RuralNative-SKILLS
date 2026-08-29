@@ -1,18 +1,22 @@
 #!/usr/bin/env bash
 # docs-check.sh — the doc-cache coherence gate for RuralNative-SKILLS.
-# Implements the ten checks of skills/document-for-agents/reference/harness.md.
+# Implements the eleven checks of skills/document-for-agents/reference/harness.md.
 # Tooling: exempt from demanding its own doc (see ARCHITECTURE.md, Checks).
 set -u
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT" || exit 1
 ARCH="ARCHITECTURE.md"
+MANIFEST="docs/manifest.md"
 fail=0
 note() { printf '  ok   %s\n' "$*"; }
 bad()  { printf '  FAIL %s\n' "$*"; fail=1; }
 
-# Coverage <-> disk (check 1).
-mapfile -t COVERED < <(grep -oE '^\| [^|]+\.md' "$ARCH" | sed -E 's/^\| //; s/[[:space:]]*$//' | sort -u)
+# Coverage <-> disk (check 1). The exhaustive tier and coverage inventory lives
+# in the harness-owned manifest when present; legacy repositories without the
+# manifest stay diagnosable against the index's coverage table.
+if [[ -f "$MANIFEST" ]]; then COVERAGE_SRC="$MANIFEST"; else COVERAGE_SRC="$ARCH"; fi
+mapfile -t COVERED < <(grep -oE '^\| [^|]+\.md' "$COVERAGE_SRC" | sed -E 's/^\| //; s/[[:space:]]*$//' | sort -u)
 mapfile -t ONDISK < <({ find docs -name '*.md' -type f; for f in CONTEXT.md README.md REVIEW.md reference/vendor-facts.md; do [[ -f $f ]] && printf '%s\n' "$f"; done; } | sort)
 missing=0
 for f in "${COVERED[@]}"; do [[ -f "$f" ]] || { bad "coverage: listed but not on disk — $f"; missing=1; }; done
@@ -59,8 +63,12 @@ done
 for f in docs/adr/*.md; do
   [[ -f "$f" ]] || continue
   grep -qE '^Status: (accepted|superseded|rejected)$' "$f" || bad "ADR: no parseable Status line — $f"
-  if grep -q '^Status: superseded' "$f" && grep -vE '^\| [^|]+\.md' "$ARCH" | grep -qF "$(basename "$f")"; then
-    bad "ADR: superseded but referenced as current by $ARCH — $f"
+  if grep -q '^Status: superseded' "$f"; then
+    bf="$(basename "$f")"
+    if grep -vE '^\| [^|]+\.md' "$ARCH" | grep -qF "$bf" \
+       || { [[ -f "$MANIFEST" ]] && grep -vE '^\| [^|]+\.md' "$MANIFEST" | grep -qF "$bf"; }; then
+      bad "ADR: superseded but referenced as current by the index or manifest — $f"
+    fi
   fi
 done
 [[ $fail -eq 0 ]] && note "ADR: statuses parse"
@@ -131,7 +139,7 @@ fi
 # policy with declared governing sources changes in the same working-tree diff
 # as any modified source.
 mapfile -t POLICIES < <({ find docs/policies -name '*.md' -type f 2>/dev/null; [[ -f REVIEW.md ]] && printf '%s\n' REVIEW.md; } | sort)
-mapfile -t POLICYROWS < <(awk -F'|' '/^\| [^|]+\.md \| policy \|/ {gsub(/ /,"",$2); print $2}' "$ARCH")
+mapfile -t POLICYROWS < <(awk -F'|' '/^\| [^|]+\.md \| policy \|/ {gsub(/ /,"",$2); print $2}' "$COVERAGE_SRC")
 pol_fail=0
 if [[ ${#POLICIES[@]} -eq 0 && ${#POLICYROWS[@]} -eq 0 ]]; then
   note "policy coverage: dormant (no policy docs)"
@@ -290,6 +298,114 @@ else
     note "human docs: derived freshness skipped (not a git work tree)"
   fi
   [[ $human_fail -eq 0 ]] && note "human docs: ${#HUMAN[@]} docs fresh"
+fi
+
+# Orientation budget (check 11): every route the manifest declares must fit
+# its task-band byte cap. Routes resolve deterministically from the compact
+# index, whole affected seam leaf docs, leaf-named glossary entries, and
+# linked accepted ADRs; duplicate sources count once; superseded ADRs stay out
+# of current guidance unless a leaf explicitly requires them. The manifest
+# itself is never part of a resolved set. Dormant until routes are declared:
+# un-migrated leaves fail loudly once declared, never silently.
+if [[ -f "$MANIFEST" ]]; then
+  mapfile -t ROUTES < <(awk -F'|' '/^\| (ordinary|api-route|schema-data|re-orientation) \|/ {gsub(/ /,"",$2); gsub(/ /,"",$3); print $2 "|" $3}' "$MANIFEST")
+  if [[ ${#ROUTES[@]} -eq 0 ]]; then
+    note "orientation budget: no declared routes (declared per seam as leaves come within budget)"
+  else
+    route_ok=0
+    for route in "${ROUTES[@]}"; do
+      band="${route%%|*}"; seams="${route#*|}"
+      case "$band" in
+        ordinary) cap=6000 ;;
+        api-route) cap=9000 ;;
+        schema-data) cap=12000 ;;
+        re-orientation) cap=7000 ;;
+      esac
+      route_err=0
+      # Byte accounting is per resolved file, so a source shared by several
+      # seams (index, glossary, linked ADR or policy) counts once, matching the
+      # resolver's deduplicated Buffer.byteLength semantics. Glossary blocks
+      # are partial-file contributions summed under their glossary file; the
+      # same block named twice counts once.
+      declare -A BYTES=()
+      declare -A BLOCKSEEN=()
+      BYTES["$ARCH"]=$(wc -c < "$ARCH")
+      for seam in $(printf '%s' "$seams" | tr ',' ' '); do
+        leaf=$(awk -F'|' -v n="$seam" '$0 ~ /^\|/ {gsub(/ /,"",$2); gsub(/ /,"",$6); if ($2==n && $6 ~ /\.md$/) print $6}' "$ARCH")
+        if [[ -z "$leaf" ]]; then
+          bad "orientation budget: seam '$seam' has no leaf row in the index"; route_err=1; continue
+        fi
+        BYTES["$leaf"]=$(wc -c < "$leaf")
+        gline=$(grep -m1 -E '^- Glossary: ' "$leaf" || true)
+        if [[ -n "$gline" ]]; then
+          gfile=$(sed -E 's/^- Glossary: `([^`]+)`.*/\1/' <<<"$gline")
+          terms=$(sed -E 's/^- Glossary: `[^`]+`[[:space:]]*—[[:space:]]*(.*)$/\1/' <<<"$gline")
+          while IFS= read -r term; do
+            term=$(printf '%s' "$term" | sed -E 's/^[[:space:]]+//; s/[[:space:].]+$//' | tr '[:upper:]' '[:lower:]')
+            [[ -z "$term" ]] && continue
+            bkey="block:$gfile:$term"
+            [[ -n "${BLOCKSEEN[$bkey]+x}" ]] && continue
+            BLOCKSEEN[$bkey]=1
+            # C-locale awk makes length() count UTF-8 bytes, matching the
+            # resolver's Buffer.byteLength over the joined block text. The
+            # resolver joins block lines with \n, so the block's byte count
+            # is sum(line lengths) + (line count - 1) newlines; the +1 per
+            # line below includes every newline, so the final newline (which
+            # the join omits) is subtracted.
+            blockbytes=$(LC_ALL=C awk -v k="$term" '
+              BEGIN { want="**" k "**:"; got=0; b=0 }
+              { line=$0 }
+              /^\*\*/ { if (got) exit; if (tolower(line) == want) got=1; if (got) b += length(line) + 1; next }
+              got { b += length(line) + 1 }
+              END { print (got ? b - 1 : 0) }
+            ' "$gfile")
+            BYTES["$gfile"]=$(( ${BYTES[$gfile]:-0} + blockbytes ))
+          done < <(printf '%s\n' "$terms" | tr ',' '\n')
+        fi
+        if [[ "$band" != "re-orientation" ]]; then
+          while IFS= read -r dline; do
+            dfile=$(sed -E 's/^- Decision: `([^`]+\.md)`.*/\1/' <<<"$dline")
+            [[ "$dfile" =~ \.md$ ]] || continue
+            st=$(grep -m1 -E '^Status: ' "$dfile" | cut -d' ' -f2)
+            if [[ "$st" == "accepted" ]]; then
+              BYTES["$dfile"]=$(wc -c < "$dfile")
+            elif [[ "$st" == "superseded" ]] && grep -qi 'requires' <<<"$dline"; then
+              BYTES["$dfile"]=$(wc -c < "$dfile")
+            fi
+          done < <(grep -E '^- Decision: ' "$leaf" || true)
+        fi
+        if [[ "$band" == "api-route" || "$band" == "schema-data" ]]; then
+          while IFS= read -r pline; do
+            pfile=$(sed -E 's/^- (Policy|Review policy): `([^`]+\.md)`.*/\2/' <<<"$pline")
+            [[ "$pfile" =~ \.md$ ]] || continue
+            BYTES["$pfile"]=$(wc -c < "$pfile")
+          done < <(grep -E '^- (Policy|Review policy): ' "$leaf" || true)
+        fi
+      done
+      mapfile -t SRCDEDUP < <(printf '%s\n' "${!BYTES[@]}" | sort -u)
+      bytes=0
+      for f in "${!BYTES[@]}"; do bytes=$((bytes + ${BYTES[$f]})); done
+      unset BYTES BLOCKSEEN
+      for s in "${SRCDEDUP[@]}"; do
+        [[ -e "$s" ]] || { bad "orientation budget: resolved source missing — $s"; route_err=1; }
+      done
+      if printf '%s\n' "${SRCDEDUP[@]}" | grep -qxF "$MANIFEST"; then
+        bad "orientation budget: the coverage manifest leaked into a resolved set"
+        route_err=1
+      fi
+      if (( route_err == 0 )); then
+        if (( bytes > cap )); then
+          bad "orientation budget: route ($band [$seams]) over budget — task band $band, resolved bytes $bytes, cap $cap, source count ${#SRCDEDUP[@]}"
+          for s in "${SRCDEDUP[@]}"; do printf '       source: %s\n' "$s"; done
+        else
+          route_ok=$((route_ok+1))
+        fi
+      fi
+    done
+    [[ $route_ok -eq ${#ROUTES[@]} ]] && note "orientation budget: ${#ROUTES[@]} declared route(s) within caps"
+  fi
+else
+  note "orientation budget: dormant (no coverage manifest)"
 fi
 
 # Scorecard.

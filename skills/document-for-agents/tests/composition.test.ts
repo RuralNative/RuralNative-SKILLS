@@ -277,12 +277,35 @@ describe("attention boundary contract (document-for-agents:INV-7..INV-13)", () =
   });
 
   // document-for-agents:INV-13
-  test("the ten-check harness remains ten checks", () => {
+  test("the harness has eleven checks and check 11 is the accepted Orientation budget", () => {
     const h = read(HARNESS);
-    const section = h.slice(h.indexOf("## The ten checks"), h.indexOf("## Scorecard"));
+    const section = h.slice(h.indexOf("## The eleven checks"), h.indexOf("## Scorecard"));
     const count = (section.match(/^\d+\. /gm) || []).length;
-    assert.equal(count, 10);
-    assert.ok(norm(read("ARCHITECTURE.md")).includes("ten checks"));
+    assert.equal(count, 11);
+    assert.match(section, /11\. \*\*Orientation budget\*\*/,
+      "check 11 must be explicitly named Orientation budget");
+    const adr = read("docs/adr/0024-bounded-orientation.md");
+    assert.ok(/^Status: accepted$/m.test(adr), "the superseding decision must be accepted");
+    assert.ok(adr.includes("Orientation budget"), "the accepted decision must name check 11");
+    assert.ok(adr.includes("supersedes") || adr.includes("Supersedes"), "the accepted decision must supersede the exact-ten-check clause");
+    assert.match(adr, /ten checks/, "the superseded clause must be named");
+    assert.ok(norm(adr).includes("narrows"), "the accepted decision must narrow INV-13");
+    const leaf = read("docs/leaves/document-for-agents.md");
+    assert.ok(leaf.includes("INV-13") && leaf.includes("eleven"), "the narrowed INV-13 must state eleven checks");
+    assert.ok(norm(read("ARCHITECTURE.md")).includes("eleven checks"));
+  });
+
+  test("the accepted ADR freezes the new glossary terms it introduces", () => {
+    const glossary = norm(read("CONTEXT.md"));
+    for (const term of [
+      "orientation set",
+      "task band",
+      "coverage manifest",
+      "orientation budget",
+      "improve",
+    ]) {
+      assert.ok(glossary.includes(term), `glossary must freeze the ${term} term`);
+    }
   });
 
   // document-for-agents:INV-12

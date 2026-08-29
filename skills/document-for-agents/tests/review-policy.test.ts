@@ -75,9 +75,10 @@ describe("review policy classification (document-for-agents #136)", () => {
   test("REVIEW.md exists at the root, is indexed, and fits the one-page budget", () => {
     const review = read("REVIEW.md");
     const arch = read("ARCHITECTURE.md");
+    const manifest = read("docs/manifest.md");
     const lines = review.split("\n").length;
     assert.ok(lines <= 70, `policy must stay within a one-page budget, got ${lines} lines`);
-    assert.ok(arch.includes("| REVIEW.md | policy |"), "coverage table must list REVIEW.md as policy");
+    assert.ok(manifest.includes("| REVIEW.md | policy |"), "coverage manifest must list REVIEW.md as policy");
     assert.ok(arch.includes("- REVIEW.md"), "non-seam list must carry REVIEW.md");
     // The marker line the freshness mechanism parses must exist
     assert.ok(review.includes("<!-- Governs-from:"), "Governs-from declaration line must exist");

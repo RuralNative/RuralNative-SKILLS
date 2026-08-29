@@ -34,6 +34,25 @@ two more seam additions before mandatory review, or immediate review if a merge
 conflict in ARCHITECTURE.md forces manual resolution — whichever first.
 Reasoning: 10 doubles the window since the missed trigger while any real
 conflict proves semantics are needed sooner than count alone.
+Verdict 2026-08-29: ADR-0024 moved the coverage table out of
+`ARCHITECTURE.md` into the harness-owned `docs/manifest.md`, so the coverage
+half of the hotspot now lives in one manifest row per doc; the seam table
+remains in the compact index and still collides. Debt stands; trigger reset
+to `seams > 10` or the next index merge conflict, whichever first.
+
+### DEBT-9 — Orientation routes not yet declared; own leaves exceed the caps
+
+Status: open
+Revisit-when: the repository-migration child of #176 declares the first route per seam
+What: ADR-0024 makes the resolved orientation byte caps strict, and harness
+check 11 arms a cap the moment a route is declared. This repository's own
+leaves still exceed their aggregate route caps (the review leaf alone is
+31.6 KB against a 6,000-byte ordinary cap), so no orientation route is
+declared in `docs/manifest.md` and check 11 reports dormant here. The index
+has been compacted (coverage moved to the manifest); the leaf migration —
+trimming restatement and history so each seam's resolved route fits its band —
+is the repository-migration ticket's work, and declaring routes without that
+trim would fail the gate loudly rather than silently.
 
 ### DEBT-4 — Re-orientation unverified
 

@@ -1,0 +1,299 @@
+// Runtime orientation resolver — document-for-agents orientation budget
+// (ADR-0024). Computes the unique, deduplicated orientation set a task
+// requires before code inspection: the compact architecture index, whole
+// affected seam leaf docs, leaf-named glossary entries, and linked accepted
+// ADRs or policies. Counts UTF-8 bytes before any broad loading; over-budget
+// routes fail and report band, resolved bytes, cap, source count, and exact
+// sources. Deterministic: resolution is a pure function of the repository.
+//
+// The harness-owned coverage manifest (docs/manifest.md) is never part of a
+// resolved set. Cache-gap approval can substitute or narrow sources through
+// --include / --drop but can never waive the cap.
+import fs from "node:fs";
+import path from "node:path";
+
+export type Band = "ordinary" | "api-route" | "schema-data" | "re-orientation";
+
+export const CAPS: Record<Band, number> = {
+  ordinary: 6000,
+  "api-route": 9000,
+  "schema-data": 12000,
+  "re-orientation": 7000,
+};
+
+// No orientation set exceeds this absolute cap.
+export const ABSOLUTE_CAP = 12000;
+
+export type ResolveOptions = Readonly<{
+  root: string;
+  band: Band;
+  seams: readonly string[];
+  include?: readonly string[];
+  drop?: readonly string[];
+  verbose?: boolean;
+}>;
+
+export type Resolved = Readonly<{
+  band: Band;
+  cap: number;
+  bytes: number;
+  sourceCount: number;
+  sources: readonly string[];
+  cacheGap: boolean;
+  over: boolean;
+}>;
+
+export class OrientationResolutionError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "OrientationResolutionError";
+  }
+}
+
+const SEAM_ROW = /^\|\s*([a-z0-9-]+)\s*\|/;
+const TERM_BLOCK = /^\*\*(.+)\*\*:/;
+const GLOSSARY_LINK = /^-\s+Glossary:\s*`([^`]+)`(?:\s*—\s*(.+))?$/i;
+const DOC_LINK = /^-\s+(Decision|Policy|Review policy):\s*`([^`]+\.md)`/i;
+
+function normalizeKey(s: string): string {
+  return s.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function listSeams(indexContent: string): Map<string, string> {
+  const seams = new Map<string, string>();
+  for (const line of indexContent.split("\n")) {
+    if (!line.startsWith("|")) continue;
+    const cells = line.split("|").map((c) => c.trim());
+    if (cells.length < 6) continue;
+    const name = cells[1];
+    const doc = cells[cells.length - 2];
+    if (/^[a-z0-9-]+$/.test(name) && /^docs\/.+\.md$/.test(doc)) {
+      seams.set(name, doc);
+    }
+  }
+  return seams;
+}
+
+function glossaryBlocks(glossaryContent: string): Map<string, string> {
+  const blocks = new Map<string, string>();
+  let currentKey: string | null = null;
+  const buffer: string[] = [];
+  const flush = () => {
+    if (currentKey) blocks.set(currentKey, buffer.join("\n"));
+    buffer.length = 0;
+  };
+  for (const line of glossaryContent.split("\n")) {
+    const m = line.match(TERM_BLOCK);
+    if (m) {
+      flush();
+      currentKey = normalizeKey(m[1]);
+    }
+    if (currentKey) buffer.push(line);
+  }
+  flush();
+  return blocks;
+}
+
+interface Contribution {
+  file: string;
+  bytes: number;
+  key: string;
+}
+
+function contributionOf(
+  root: string,
+  rel: string,
+): { bytes: number; content: string } {
+  const abs = path.join(root, rel);
+  if (!fs.existsSync(abs)) {
+    throw new OrientationResolutionError(`resolved source missing on disk: ${rel}`);
+  }
+  const content = fs.readFileSync(abs, "utf8");
+  return { bytes: Buffer.byteLength(content, "utf8"), content };
+}
+
+function leafLinks(leafContent: string) {
+  const glossaryLinks: Array<{ file: string; terms: string[] }> = [];
+  const decisionLinks: Array<{ file: string; requires: boolean }> = [];
+  const policyLinks: string[] = [];
+  for (const line of leafContent.split("\n")) {
+    const g = line.match(GLOSSARY_LINK);
+    if (g) {
+      const terms = (g[2] ?? "")
+        .split(",")
+        .map((t) => t.trim().replace(/\.$/, ""))
+        .filter(Boolean);
+      glossaryLinks.push({ file: g[1], terms });
+      continue;
+    }
+    const d = line.match(DOC_LINK);
+    if (d) {
+      const file = d[2];
+      if (/^Decision/i.test(d[1])) {
+        decisionLinks.push({ file, requires: /requires/i.test(line) });
+      } else {
+        policyLinks.push(file);
+      }
+    }
+  }
+  return { glossaryLinks, decisionLinks, policyLinks };
+}
+
+// document-for-agents:INV-17 — resolve the deterministic orientation set.
+export function resolveOrientation(opts: ResolveOptions): Resolved {
+  const root = opts.root;
+  const indexRel = "ARCHITECTURE.md";
+  let indexContent: string;
+  try {
+    indexContent = fs.readFileSync(path.join(root, indexRel), "utf8");
+  } catch {
+    throw new OrientationResolutionError(
+      `no compact architecture index found at ${indexRel} in ${root}`,
+    );
+  }
+  const seams = listSeams(indexContent);
+  const contributions = new Map<string, Contribution>();
+  const addWhole = (rel: string) => {
+    const { bytes } = contributionOf(root, rel);
+    contributions.set(rel, { file: rel, bytes, key: `whole:${rel}` });
+  };
+  const addBlock = (rel: string, blockKey: string, blockText: string) => {
+    const key = `block:${rel}:${blockKey}`;
+    if (contributions.has(key)) return;
+    contributions.set(key, {
+      file: rel,
+      bytes: Buffer.byteLength(blockText, "utf8"),
+      key,
+    });
+  };
+
+  addWhole(indexRel);
+
+  const includeAdrs = opts.band !== "re-orientation";
+  const includePolicies = opts.band === "api-route" || opts.band === "schema-data";
+
+  for (const seam of opts.seams) {
+    const leaf = seams.get(seam);
+    if (!leaf) {
+      throw new OrientationResolutionError(
+        `unknown affected seam '${seam}'; known seams: ${[...seams.keys()].sort().join(", ") || "none"}`,
+      );
+    }
+    const { content: leafContent } = contributionOf(root, leaf);
+    addWhole(leaf);
+    const { glossaryLinks, decisionLinks, policyLinks } = leafLinks(leafContent);
+
+    for (const g of glossaryLinks) {
+      const glossaryContent = fs.readFileSync(
+        path.join(root, g.file),
+        "utf8",
+      );
+      const blocks = glossaryBlocks(glossaryContent);
+      for (const term of g.terms) {
+        const block = blocks.get(normalizeKey(term));
+        if (block) addBlock(g.file, normalizeKey(term), block);
+      }
+    }
+
+    if (includeAdrs) {
+      for (const decision of decisionLinks) {
+        const { content } = contributionOf(root, decision.file);
+        const status = /^Status:\s*(accepted|superseded|rejected)/m.exec(
+          content,
+        )?.[1];
+        if (status === "superseded" && !decision.requires) continue;
+        if (status === "rejected") continue;
+        addWhole(decision.file);
+      }
+    }
+
+    if (includePolicies) {
+      for (const policy of policyLinks) addWhole(policy);
+    }
+  }
+
+  const includes = opts.include ?? [];
+  const drops = opts.drop ?? [];
+  for (const rel of includes) addWhole(rel);
+
+  let files = [...contributions.values()]
+    .filter((c) => !drops.includes(c.file))
+    .reduce((acc, c) => {
+      const prev = acc.get(c.file);
+      const bytes = (prev ?? 0) + c.bytes;
+      acc.set(c.file, bytes);
+      return acc;
+    }, new Map<string, number>());
+
+  const sources = [...files.keys()].sort();
+  const bytes = sources.reduce((sum, f) => sum + (files.get(f) ?? 0), 0);
+  const cap = Math.min(CAPS[opts.band], ABSOLUTE_CAP);
+  return {
+    band: opts.band,
+    cap,
+    bytes,
+    sourceCount: sources.length,
+    sources,
+    cacheGap: includes.length > 0 || drops.length > 0,
+    over: bytes > cap,
+  };
+}
+
+function parseList(value: string | undefined): string[] {
+  if (!value) return [];
+  return value.split(",").map((s) => s.trim()).filter(Boolean);
+}
+
+export function main(argv: string[]): number {
+  const args = new Map<string, string>();
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (!a.startsWith("--")) continue;
+    const key = a.slice(2);
+    const value = i + 1 < argv.length && !argv[i + 1].startsWith("--") ? argv[++i] : "true";
+    args.set(key, value);
+  }
+  const root = args.get("root") ?? process.cwd();
+  const band = args.get("band") as Band | undefined;
+  if (!band || !(band in CAPS)) {
+    console.error("error: --band must be ordinary | api-route | schema-data | re-orientation");
+    return 2;
+  }
+  const seams = parseList(args.get("seams"));
+  if (seams.length === 0) {
+    console.error("error: --seams expects at least one affected seam name");
+    return 2;
+  }
+  const include = parseList(args.get("include"));
+  const drop = parseList(args.get("drop"));
+  const verbose = args.get("verbose") === "true";
+
+  let resolved: Resolved;
+  try {
+    resolved = resolveOrientation({ root, band, seams, include, drop });
+  } catch (err) {
+    const e = err as Error;
+    console.error(`error: ${e.message}`);
+    return 2;
+  }
+
+  console.log(`band: ${resolved.band}`);
+  console.log(`cap: ${resolved.cap}`);
+  console.log(`bytes: ${resolved.bytes}`);
+  console.log(`sources: ${resolved.sourceCount}`);
+  if (resolved.over) {
+    console.log(`result: over budget`);
+    console.log(`task band: ${resolved.band}`);
+    console.log(`resolved bytes: ${resolved.bytes}`);
+    console.log(`cap: ${resolved.cap}`);
+    console.log(`source count: ${resolved.sourceCount}`);
+  }
+  if (resolved.sources.length > 0 && (resolved.over || resolved.cacheGap || verbose)) {
+    for (const s of resolved.sources) console.log(`source: ${s}`);
+  }
+  return resolved.over ? 1 : 0;
+}
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+  process.exitCode = main(process.argv.slice(2));
+}
