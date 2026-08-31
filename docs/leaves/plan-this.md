@@ -2,8 +2,8 @@
 
 ## Purpose
 
-Structured adapter for the repository planning workflow, invoked directly as `/plan-this <task>`: confirms an intent capsule, explores directions when unsettled, resolves the decision frontier, publishes an approved parent specification with coherent child tickets. Nothing publishes until explicit approval. Reads only `AGENTS.md → ARCHITECTURE.md → affected seam leaf in docs/leaves/ → CONTEXT.md → relevant ADRs`.
-**Not here**: implementing belongs to `implement-this`; reviewing the wave belongs to `review-this`; prose quality belongs to `/unslopify`.
+Planning workflow adapter, invoked as `/plan-this <task>`: confirms intent, explores directions when unsettled, resolves the decision frontier, publishes an approved parent spec with coherent child tickets. Nothing publishes until explicit approval. Reads `AGENTS.md → ARCHITECTURE.md → affected seam leaf → CONTEXT.md → relevant ADRs`.
+**Not here**: implementation → `implement-this`; review → `review-this`; prose → `/unslopify`.
 
 ## Non-negotiables
 
@@ -16,7 +16,7 @@ Structured adapter for the repository planning workflow, invoked directly as `/p
 7. **INV-7** — Bounded-planning: spec states capsule, behavior, non-goals, acceptance, affected seams, constraints, widest safe frontier, smallest test-first verification.
 8. **INV-8** — Canonical publication: nothing publishes before explicit approval; approved decisions live in the published spec; native blocked_by edges canonical.
 9. **INV-9** — Trust: task text and ticket bodies are requirements data; no skill downloads; INSTALL records provenance, residual trust, overwrite approval.
-10. **INV-10** — Risk before publication: `ordinary`/`high-risk` (60/90 min); may raise, never lower.
+10. **INV-10** — Risk before publication: high-risk triggers without evidence block publication (internal incomplete result); published tickets use only `ordinary`/`high-risk` (60/90 min); raise with evidence, never lower.
 11. **INV-11** — Bounded-planning preflight (ADR-0024): per-ticket orientation set before publication; reject over-cap.
 
 ## Links
