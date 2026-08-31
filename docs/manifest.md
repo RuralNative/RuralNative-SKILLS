@@ -84,6 +84,7 @@ independently bounded; every seam fits every band at its strict cap.
 | docs/adr/0022-frontier-review-authority-and-mutation-worker-routing.md | decision |
 | docs/adr/0023-retain-workers-until-durable.md | decision |
 | docs/adr/0024-bounded-orientation.md | decision |
+| docs/adr/0025-required-orientation-sources.md | decision |
 | docs/leaves/document-for-agents.md | leaf |
 | docs/leaves/document-for-humans.md | leaf |
 | docs/leaves/unslopify.md | leaf |

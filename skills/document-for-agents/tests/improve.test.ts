@@ -87,7 +87,7 @@ Owns the alpha responsibility.
 ## Links
 
 - Glossary: \`CONTEXT.md\` — Alpha term.
-- Decision: \`docs/adr/0001-current-decision.md\`.
+- Decision: \`docs/adr/0001-current-decision.md\` — requires.
 `;
 
 const ADR = `# 0001 — Current decision

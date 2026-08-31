@@ -242,6 +242,32 @@ describe("orientation resolver: resolved set (document-for-agents:INV-17)", () =
     }
   });
 
+  test("only machine-required declarations load; compact decision and policy citations never load", () => {
+    const fixture = spec("machine-required-forms");
+    const dir = build(fixture);
+    try {
+      const r = resolveOrientation({
+        root: dir,
+        band: "api-route",
+        seams: ["alpha"],
+      });
+      assert.deepEqual(r.sources, [
+        "ARCHITECTURE.md",
+        "CONTEXT.md",
+        "docs/adr/0002-required-decision.md",
+        "docs/leaves/alpha.md",
+        "docs/policies/testing.md",
+      ]);
+      // Compact citations (bare decision bullet, bare policy bullet, prose
+      // mention) never enter the set.
+      assert.equal(r.sources.includes("docs/adr/0001-accepted-decision.md"), false, "bare decision bullet is navigation only");
+      assert.equal(r.sources.includes("REVIEW.md"), false, "bare policy bullet is navigation only");
+      assert.equal(r.sources.includes("docs/adr/0003-rejected-decision.md"), false, "a rejected decision never enters, even when declared required");
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   test("unknown affected seams fail cleanly and name the known seams", () => {
     const fixture = spec("unrelated-additions");
     const dir = build(fixture);
@@ -449,6 +475,49 @@ describe("this repository's bounded doc migration (ticket #178)", () => {
         assert.equal(r.over, false, `${seam} ${band} route over budget: ${r.bytes} > ${r.cap}`);
         assert.equal(r.sources.includes("docs/manifest.md"), false, "manifest must stay out of every resolved set");
       }
+    }
+  });
+
+  test("real seams resolve exact sources: prose citations stay navigation (AC-4)", () => {
+    const expected = (seam: string) => [
+      "ARCHITECTURE.md",
+      `docs/leaves/${seam}.md`,
+    ];
+    for (const seam of SEAMS) {
+      for (const band of BANDS) {
+        const r = resolveOrientation({ root: ROOT, band, seams: [seam] });
+        assert.deepEqual(r.sources, expected(seam), `${seam} ${band} exact sources`);
+        // The real leaves only compact-cite their decisions, glossary, and
+        // review policy in prose — none of that source content may load.
+        assert.equal(r.sources.includes("CONTEXT.md"), false, `${seam}: glossary stays a pointer`);
+        assert.equal(r.sources.includes("REVIEW.md"), false, `${seam}: review policy stays a pointer`);
+        for (const f of r.sources) {
+          assert.ok(f === "ARCHITECTURE.md" || f === `docs/leaves/${seam}.md`,
+            `${seam}: unexpected loaded source ${f}`);
+        }
+      }
+    }
+  });
+
+  test("this repository's own leaf confirms required-source exclusivity (AC-4)", () => {
+    // The owning leaf cites ADR-0024 and ADR-0025 among many in prose; none of
+    // them are marked `— requires.`, so the live route must not load any ADR.
+    for (const band of BANDS) {
+      const r = resolveOrientation({ root: ROOT, band, seams: ["document-for-agents"] });
+      assert.equal(r.sources.length, 2, `${band}: index + leaf only`);
+      assert.ok(r.sources.every((f) => !f.startsWith("docs/adr/")));
+    }
+  });
+
+  test("escalating bands never pull bare policy mentions into the set (AC-4)", () => {
+    for (const seam of ["document-for-agents", "implement-this", "plan-this"]) {
+      const ordinary = resolveOrientation({ root: ROOT, band: "ordinary", seams: [seam] });
+      const route = resolveOrientation({ root: ROOT, band: "api-route", seams: [seam] });
+      const data = resolveOrientation({ root: ROOT, band: "schema-data", seams: [seam] });
+      assert.deepEqual(route.sources, ordinary.sources,
+        `${seam}: api-route must not add policy sources that the leaf never declares`);
+      assert.deepEqual(data.sources, ordinary.sources,
+        `${seam}: schema-data must not add policy sources that the leaf never declares`);
     }
   });
 

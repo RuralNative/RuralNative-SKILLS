@@ -13,7 +13,7 @@
   "files": {
     "ARCHITECTURE.md": "# Architecture — orientation fixture\n\n## Seams\n\n| Seam | Responsibility | Code root | Tests | Doc |\n|---|---|---|---|---|\n| alpha | the alpha responsibility | src/alpha/ | src/alpha/tests/ | docs/leaves/alpha.md |\n| gamma | the gamma responsibility | src/gamma/ | src/gamma/tests/ | docs/leaves/gamma.md |\n",
     "CONTEXT.md": "## Language\n\n**Alpha term**:\nthe alpha vocabulary entry.\n_Avoid_: alpha alias\n\n**Gamma term**:\nthe gamma vocabulary entry.\n_Avoid_: gamma alias\n",
-    "docs/leaves/alpha.md": "# Seam: alpha\n\n## Purpose\n\nOwns the alpha responsibility.\n\n## Scope & boundaries\n\n**Not here**: beta work routes to the beta seam.\n\n## Links\n\n- Glossary: `CONTEXT.md` — Alpha term.\n- Decision: `docs/adr/0001-current-decision.md`.\n",
+    "docs/leaves/alpha.md": "# Seam: alpha\n\n## Purpose\n\nOwns the alpha responsibility.\n\n## Scope & boundaries\n\n**Not here**: beta work routes to the beta seam.\n\n## Links\n\n- Glossary: `CONTEXT.md` — Alpha term.\n- Decision: `docs/adr/0001-current-decision.md` — requires.\n",
     "docs/leaves/gamma.md": "# Seam: gamma\n\n## Purpose\n\nOwns the gamma responsibility.\n\n## Scope & boundaries\n\n**Not here**: alpha work routes to the alpha seam.\n\n## Links\n\n- Glossary: `CONTEXT.md` — Gamma term.\n- Decision: `docs/adr/0099-unrelated-decision.md`.\n",
     "docs/adr/0001-current-decision.md": "# 0001 — Current decision\n\nStatus: accepted\nDate: 2026-08-29\n\nDecision: the current decision shapes alpha.\n",
     "docs/adr/0099-unrelated-decision.md": "# 0099 — Unrelated decision\n\nStatus: accepted\nDate: 2026-08-29\n\nDecision: an accepted decision that no affected leaf links.\n"

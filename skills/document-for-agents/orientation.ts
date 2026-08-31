@@ -1,10 +1,21 @@
 // Runtime orientation resolver — document-for-agents orientation budget
-// (ADR-0024). Computes the unique, deduplicated orientation set a task
-// requires before code inspection: the compact architecture index, whole
-// affected seam leaf docs, leaf-named glossary entries, and linked accepted
-// ADRs or policies. Counts UTF-8 bytes before any broad loading; over-budget
-// routes fail and report band, resolved bytes, cap, source count, and exact
-// sources. Deterministic: resolution is a pure function of the repository.
+// (ADR-0024, ADR-0025). Computes the unique, deduplicated orientation set a
+// task requires before code inspection: the compact architecture index, whole
+// affected seam leaf docs, leaf-named glossary entries, and explicitly
+// required decisions or policies. Machine-required declarations enter the
+// set; compact citations are visible navigation only and never load source
+// content. One machine-readable declaration form per category:
+//
+//   - Required glossary term: `- Glossary: CONTEXT.md — Alpha term.`
+//   - Required decision:      `- Decision: docs/adr/000N-....md — requires.`
+//   - Required policy:        `- Policy: docs/policies/testing.md — requires.`
+//
+// A bare `- Decision:` or `- Policy:` link (or a prose mention) stays
+// navigation. Rejected decisions never enter the set, even when a leaf
+// declares them required. Counts UTF-8 bytes before any broad loading;
+// over-budget routes fail and report band, resolved bytes, cap, source count,
+// and exact sources. Deterministic: resolution is a pure function of the
+// repository.
 //
 // The harness-owned coverage manifest (docs/manifest.md) is never part of a
 // resolved set. Cache-gap approval can substitute or narrow sources through
@@ -115,7 +126,7 @@ function contributionOf(
 function leafLinks(leafContent: string) {
   const glossaryLinks: Array<{ file: string; terms: string[] }> = [];
   const decisionLinks: Array<{ file: string; requires: boolean }> = [];
-  const policyLinks: string[] = [];
+  const policyLinks: Array<{ file: string; requires: boolean }> = [];
   for (const line of leafContent.split("\n")) {
     const g = line.match(GLOSSARY_LINK);
     if (g) {
@@ -132,7 +143,7 @@ function leafLinks(leafContent: string) {
       if (/^Decision/i.test(d[1])) {
         decisionLinks.push({ file, requires: /requires/i.test(line) });
       } else {
-        policyLinks.push(file);
+        policyLinks.push({ file, requires: /requires/i.test(line) });
       }
     }
   }
@@ -197,18 +208,25 @@ export function resolveOrientation(opts: ResolveOptions): Resolved {
 
     if (includeAdrs) {
       for (const decision of decisionLinks) {
+        // A compact citation (no explicit required marker) is navigation
+        // only: it never loads the decision's source content.
+        if (!decision.requires) continue;
         const { content } = contributionOf(root, decision.file);
         const status = /^Status:\s*(accepted|superseded|rejected)/m.exec(
           content,
         )?.[1];
-        if (status === "superseded" && !decision.requires) continue;
         if (status === "rejected") continue;
         addWhole(decision.file);
       }
     }
 
     if (includePolicies) {
-      for (const policy of policyLinks) addWhole(policy);
+      for (const policy of policyLinks) {
+        // Same citation/declaration split: only an explicitly required policy
+        // enters the set; a bare policy link is navigation.
+        if (!policy.requires) continue;
+        addWhole(policy.file);
+      }
     }
   }
 

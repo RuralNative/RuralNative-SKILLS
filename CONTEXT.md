@@ -202,8 +202,16 @@ The protected HTML comment placed directly after the five commands in generated
 _Avoid_: watermark, badge, signature
 
 **Orientation set**:
-The unique, deduplicated set of authored documentation a workflow resolves before task-driven code inspection: the compact architecture index, whole affected seam leaf docs, leaf-named glossary entries, and linked accepted ADRs or policies (ADR-0024).
+The unique, deduplicated set of authored documentation a workflow resolves before task-driven code inspection: the compact architecture index, whole affected seam leaf docs, leaf-named glossary entries, and only the decisions and policies a leaf declares required (ADR-0024, ADR-0025). Compact citations stay navigation and never load source content.
 _Avoid_: read set (when the resolved contract is meant), context bundle
+
+**Compact citation**:
+A leaf link that stays visible navigation and never loads the linked source: a bare `- Decision:` or `- Policy:` bullet, or a prose mention, without the `— requires.` declaration (ADR-0025).
+_Avoid_: helpful link, navigation link
+
+**Required source**:
+A decision, policy, or glossary entry a leaf marks as loading the agent must read: `- Decision: … — requires.`, `- Policy: … — requires.`, or a `- Glossary:` line naming the entry (ADR-0025). Rejected decisions never enter the set even when declared required.
+_Avoid_: linked decision, must-read (when the resolved contract is meant)
 
 **Task band**:
 The task class that selects the orientation cap — ordinary (6,000 bytes), API or route (9,000), schema or data (12,000), or re-orientation (7,000); no set exceeds 12,000 bytes (ADR-0024).

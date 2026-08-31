@@ -312,10 +312,10 @@ fi
 # Orientation budget (check 11): every route the manifest declares must fit
 # its task-band byte cap. Routes resolve deterministically from the compact
 # index, whole affected seam leaf docs, leaf-named glossary entries, and
-# linked accepted ADRs; duplicate sources count once; superseded ADRs stay out
-# of current guidance unless a leaf explicitly requires them. The manifest
-# itself is never part of a resolved set. Dormant until routes are declared:
-# un-migrated leaves fail loudly once declared, never silently.
+# machine-required decisions or policies; a compact citation (a bare decision
+# or policy bullet) stays navigation and never loads source content. The
+# manifest itself is never part of a resolved set. Dormant until routes are
+# declared: un-migrated leaves fail loudly once declared, never silently.
 if [[ -f "$MANIFEST" ]]; then
   mapfile -t ROUTES < <(awk -F'|' '/^\| (ordinary|api-route|schema-data|re-orientation) \|/ {gsub(/ /,"",$2); gsub(/ /,"",$3); print $2 "|" $3}' "$MANIFEST")
   if [[ ${#ROUTES[@]} -eq 0 ]]; then
@@ -375,18 +375,21 @@ if [[ -f "$MANIFEST" ]]; then
           while IFS= read -r dline; do
             dfile=$(sed -E 's/^- Decision: `([^`]+\.md)`.*/\1/' <<<"$dline")
             [[ "$dfile" =~ \.md$ ]] || continue
+            # Only an explicit required declaration loads; a bare decision
+            # bullet is a compact citation that stays navigation.
+            grep -qi 'requires' <<<"$dline" || continue
             st=$(grep -m1 -E '^Status: ' "$dfile" | cut -d' ' -f2)
-            if [[ "$st" == "accepted" ]]; then
-              BYTES["$dfile"]=$(wc -c < "$dfile")
-            elif [[ "$st" == "superseded" ]] && grep -qi 'requires' <<<"$dline"; then
-              BYTES["$dfile"]=$(wc -c < "$dfile")
-            fi
+            [[ "$st" == "rejected" ]] && continue
+            BYTES["$dfile"]=$(wc -c < "$dfile")
           done < <(grep -E '^- Decision: ' "$leaf" || true)
         fi
         if [[ "$band" == "api-route" || "$band" == "schema-data" ]]; then
           while IFS= read -r pline; do
             pfile=$(sed -E 's/^- (Policy|Review policy): `([^`]+\.md)`.*/\2/' <<<"$pline")
             [[ "$pfile" =~ \.md$ ]] || continue
+            # Same split: explicitly required policies enter, bare policy
+            # bullets stay compact navigation.
+            grep -qi 'requires' <<<"$pline" || continue
             BYTES["$pfile"]=$(wc -c < "$pfile")
           done < <(grep -E '^- (Policy|Review policy): ' "$leaf" || true)
         fi
