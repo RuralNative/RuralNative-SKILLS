@@ -128,6 +128,8 @@ function makeCheckFixture(opts: {
   routes?: string;
   padLeafBytes?: number;
   withManifest?: boolean;
+  leaf?: string;
+  glossary?: string;
 }): { dir: string; run(): { status: number; out: string }; destroy(): void } {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "docs-check-orientation-fixture-"));
   fs.mkdirSync(path.join(dir, "scripts"));
@@ -135,8 +137,8 @@ function makeCheckFixture(opts: {
   fs.mkdirSync(path.join(dir, "docs/leaves"), { recursive: true });
   fs.copyFileSync(path.join(ROOT, "scripts/docs-check.sh"), path.join(dir, "scripts/docs-check.sh"));
   fs.writeFileSync(path.join(dir, "ARCHITECTURE.md"), opts.withManifest === false ? LEGACY_ARCH : manifestArch());
-  fs.writeFileSync(path.join(dir, "CONTEXT.md"), GLOSSARY);
-  fs.writeFileSync(path.join(dir, "docs/leaves/alpha.md"), LEAF);
+  fs.writeFileSync(path.join(dir, "CONTEXT.md"), opts.glossary ?? GLOSSARY);
+  fs.writeFileSync(path.join(dir, "docs/leaves/alpha.md"), opts.leaf ?? LEAF);
   fs.writeFileSync(path.join(dir, "docs/adr/0001-current-decision.md"), ADR);
   if (opts.withManifest !== false) {
     fs.writeFileSync(
@@ -291,6 +293,53 @@ describe("docs-check.sh check 11: Orientation budget fixtures", () => {
       const r = f.run();
       assert.equal(r.status, 1, `expected re-orientation over-budget failure:\n${r.out}`);
       assert.ok(r.out.includes("re-orientation"), r.out);
+    } finally {
+      f.destroy();
+    }
+  });
+
+  test("check 11 processes every `- Glossary:` declaration, not just the first", () => {
+    // The second declaration's block alone pushes the route past the 6,000
+    // ordinary cap; with only the first declaration the same route fits.
+    const glossary = `## Language
+
+**Alpha term**:
+the alpha vocabulary entry.
+_Avoid_: alpha alias
+
+**Beta term**:
+${"x".repeat(6000)}
+`;
+    const twoDeclarations = LEAF.replace(
+      "- Glossary: `CONTEXT.md` — Alpha term.\n",
+      "- Glossary: `CONTEXT.md` — Alpha term.\n- Glossary: `CONTEXT.md` — Beta term.\n",
+    );
+    const f = makeCheckFixture({ routes: "| ordinary | alpha |", leaf: twoDeclarations, glossary });
+    try {
+      const over = f.run();
+      assert.equal(over.status, 1, `expected over-budget failure from the second declaration:\n${over.out}`);
+      assert.ok(over.out.includes("over budget"), over.out);
+      // Dropping the second declaration brings the identical route back
+      // under the cap, proving the failure came from its block bytes.
+      fs.writeFileSync(path.join(f.dir, "docs/leaves/alpha.md"), LEAF);
+      const within = f.run();
+      assert.equal(within.status, 0, `expected green harness without the second declaration:\n${within.out}`);
+      assert.ok(within.out.includes("within caps"), within.out);
+    } finally {
+      f.destroy();
+    }
+  });
+
+  test("the same glossary block declared twice counts once", () => {
+    const twice = LEAF.replace(
+      "- Glossary: `CONTEXT.md` — Alpha term.\n",
+      "- Glossary: `CONTEXT.md` — Alpha term.\n- Glossary: `CONTEXT.md` — Alpha term.\n",
+    );
+    const f = makeCheckFixture({ routes: "| ordinary | alpha |", leaf: twice });
+    try {
+      const r = f.run();
+      assert.equal(r.status, 0, `expected green harness with a double declaration:\n${r.out}`);
+      assert.ok(r.out.includes("within caps"), r.out);
     } finally {
       f.destroy();
     }

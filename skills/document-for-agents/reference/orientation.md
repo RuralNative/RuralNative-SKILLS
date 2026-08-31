@@ -48,8 +48,9 @@ The resolved set is, in order with duplicates counted once:
    `Status: rejected` decision never joins, even when declared required.
 5. **Required policies** (route, security, testing, review): included for
    the api-route and schema-data bands, the bands whose loading-protocol rows
-   add them. A `- Policy:` or `- Review policy:` line loads the policy only
-   with the `— requires.` clause; a bare link stays compact navigation.
+   add them. A `- Policy:` line loads the policy only with the `— requires.`
+   clause; a bare link stays compact navigation. A `- Review policy:` bullet
+   is ordinary navigation prose, not a machine form, and never loads.
 
 Each category has one machine-readable declaration form:
 

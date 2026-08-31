@@ -11,8 +11,9 @@
 //   - Required policy:        `- Policy: docs/policies/testing.md — requires.`
 //
 // A bare `- Decision:` or `- Policy:` link (or a prose mention) stays
-// navigation. Rejected decisions never enter the set, even when a leaf
-// declares them required. Counts UTF-8 bytes before any broad loading;
+// navigation. Only decisions whose Status parses as accepted or superseded
+// enter the set, even when a leaf declares them required — missing, draft,
+// malformed, and rejected statuses never load. Counts UTF-8 bytes before any broad loading;
 // over-budget routes fail and report band, resolved bytes, cap, source count,
 // and exact sources. Deterministic: resolution is a pure function of the
 // repository.
@@ -64,7 +65,12 @@ export class OrientationResolutionError extends Error {
 const SEAM_ROW = /^\|\s*([a-z0-9-]+)\s*\|/;
 const TERM_BLOCK = /^\*\*(.+)\*\*:/;
 const GLOSSARY_LINK = /^-\s+Glossary:\s*`([^`]+)`(?:\s*—\s*(.+))?$/i;
-const DOC_LINK = /^-\s+(Decision|Policy|Review policy):\s*`([^`]+\.md)`/i;
+const DOC_LINK = /^-\s+(Decision|Policy):\s*`([^`]+\.md)`/i;
+// The exact required clause: the line must end with `— requires.` (trailing
+// whitespace tolerated). Any text after the period — free prose, another
+// sentence — makes the line a compact citation. A filename containing
+// "requires" is irrelevant.
+const REQUIRES_CLAUSE = /—\s*requires\.\s*$/;
 
 function normalizeKey(s: string): string {
   return s.trim().toLowerCase().replace(/\s+/g, " ");
@@ -141,9 +147,9 @@ function leafLinks(leafContent: string) {
     if (d) {
       const file = d[2];
       if (/^Decision/i.test(d[1])) {
-        decisionLinks.push({ file, requires: /requires/i.test(line) });
+        decisionLinks.push({ file, requires: REQUIRES_CLAUSE.test(line) });
       } else {
-        policyLinks.push({ file, requires: /requires/i.test(line) });
+        policyLinks.push({ file, requires: REQUIRES_CLAUSE.test(line) });
       }
     }
   }
@@ -215,7 +221,9 @@ export function resolveOrientation(opts: ResolveOptions): Resolved {
         const status = /^Status:\s*(accepted|superseded|rejected)/m.exec(
           content,
         )?.[1];
-        if (status === "rejected") continue;
+        // Only a parseable accepted or superseded status joins the set;
+        // missing, draft, malformed, and rejected statuses never load.
+        if (status !== "accepted" && status !== "superseded") continue;
         addWhole(decision.file);
       }
     }

@@ -156,15 +156,12 @@ describe("orientation resolver: resolved set (document-for-agents:INV-17)", () =
         "docs/adr/0003-current-decision.md",
         "docs/leaves/alpha.md",
       ]);
-      // Default-exclusion half: without the "requires" clause the superseded
-      // ADR must be absent.
+      // Default-exclusion half: stripping the exact `— requires.` clause
+      // (leaving the bare bullet) keeps the superseded ADR out.
       fs.writeFileSync(
         path.join(dir, "docs/leaves/alpha.md"),
         fixture.files["docs/leaves/alpha.md"].replace(
-          "- Decision: `docs/adr/0002-superseded-decision.md` — requires the historical context.",
-          "",
-        ).replace(
-          "- Decision: `docs/adr/0002-superseded-decision.md`.",
+          "- Decision: `docs/adr/0002-superseded-decision.md` — requires.",
           "- Decision: `docs/adr/0002-superseded-decision.md`.",
         ),
       );
@@ -174,6 +171,21 @@ describe("orientation resolver: resolved set (document-for-agents:INV-17)", () =
         seams: ["alpha"],
       });
       assert.equal(without.sources.includes("docs/adr/0002-superseded-decision.md"), false);
+      // Negative half: the old free-text form `— requires the historical
+      // context.` is no longer a required declaration.
+      fs.writeFileSync(
+        path.join(dir, "docs/leaves/alpha.md"),
+        fixture.files["docs/leaves/alpha.md"].replace(
+          "- Decision: `docs/adr/0002-superseded-decision.md` — requires.",
+          "- Decision: `docs/adr/0002-superseded-decision.md` — requires the historical context.",
+        ),
+      );
+      const freetext = resolveOrientation({
+        root: dir,
+        band: "ordinary",
+        seams: ["alpha"],
+      });
+      assert.equal(freetext.sources.includes("docs/adr/0002-superseded-decision.md"), false);
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }
@@ -267,6 +279,128 @@ describe("orientation resolver: resolved set (document-for-agents:INV-17)", () =
       fs.rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  test("the exact required clause: free text after `— requires.` is a compact citation", () => {
+    const fixture = spec("machine-required-forms");
+    const dir = build(fixture);
+    try {
+      // Text after the period (`— requires context.`) is prose, not the
+      // declaration clause.
+      fs.writeFileSync(
+        path.join(dir, "docs/leaves/alpha.md"),
+        fixture.files["docs/leaves/alpha.md"].replace(
+          "- Decision: `docs/adr/0002-required-decision.md` — requires.",
+          "- Decision: `docs/adr/0002-required-decision.md` — requires context.",
+        ),
+      );
+      const contextual = resolveOrientation({
+        root: dir,
+        band: "api-route",
+        seams: ["alpha"],
+      });
+      assert.equal(contextual.sources.includes("docs/adr/0002-required-decision.md"), false);
+      // Extra trailing text after the clause period is equally navigation.
+      fs.writeFileSync(
+        path.join(dir, "docs/leaves/alpha.md"),
+        fixture.files["docs/leaves/alpha.md"].replace(
+          "- Decision: `docs/adr/0002-required-decision.md` — requires.",
+          "- Decision: `docs/adr/0002-required-decision.md` — requires. (see also the historical notes)",
+        ),
+      );
+      const trailing = resolveOrientation({
+        root: dir,
+        band: "api-route",
+        seams: ["alpha"],
+      });
+      assert.equal(trailing.sources.includes("docs/adr/0002-required-decision.md"), false);
+      // Trailing whitespace after the exact clause is tolerated.
+      fs.writeFileSync(
+        path.join(dir, "docs/leaves/alpha.md"),
+        fixture.files["docs/leaves/alpha.md"].replace(
+          "- Decision: `docs/adr/0002-required-decision.md` — requires.",
+          "- Decision: `docs/adr/0002-required-decision.md` — requires. ",
+        ),
+      );
+      const padded = resolveOrientation({
+        root: dir,
+        band: "api-route",
+        seams: ["alpha"],
+      });
+      assert.equal(padded.sources.includes("docs/adr/0002-required-decision.md"), true);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("a bare decision bullet whose filename contains 'requires' never loads", () => {
+    const fixture = spec("machine-required-forms");
+    const dir = build(fixture);
+    try {
+      fs.writeFileSync(
+        path.join(dir, "docs/adr/0004-requires-named-decision.md"),
+        "# 0004 — Requires-named decision\n\nStatus: accepted\n\nDecision: the filename contains 'requires' but the bullet is bare.\n",
+      );
+      fs.appendFileSync(
+        path.join(dir, "docs/leaves/alpha.md"),
+        "\n- Decision: `docs/adr/0004-requires-named-decision.md`.\n",
+      );
+      const r = resolveOrientation({
+        root: dir,
+        band: "api-route",
+        seams: ["alpha"],
+      });
+      assert.equal(r.sources.includes("docs/adr/0004-requires-named-decision.md"), false);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("a `- Review policy:` bullet is ordinary navigation and never loads, even with the exact clause", () => {
+    const fixture = spec("machine-required-forms");
+    const dir = build(fixture);
+    try {
+      fs.appendFileSync(
+        path.join(dir, "docs/leaves/alpha.md"),
+        "\n- Review policy: `REVIEW.md` — requires.\n",
+      );
+      const r = resolveOrientation({
+        root: dir,
+        band: "api-route",
+        seams: ["alpha"],
+      });
+      assert.equal(r.sources.includes("REVIEW.md"), false);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  for (const c of [
+    { name: "a missing Status line", line: "" },
+    { name: "Status: draft", line: "Status: draft" },
+    { name: "malformed status text", line: "Status: acccepted" },
+  ]) {
+    test(`a required decision with ${c.name} stays out of the set`, () => {
+      const fixture = spec("machine-required-forms");
+      const dir = build(fixture);
+      try {
+        fs.writeFileSync(
+          path.join(dir, "docs/adr/0002-required-decision.md"),
+          fixture.files["docs/adr/0002-required-decision.md"].replace(
+            "Status: accepted\n",
+            c.line === "" ? "" : `${c.line}\n`,
+          ),
+        );
+        const r = resolveOrientation({
+          root: dir,
+          band: "api-route",
+          seams: ["alpha"],
+        });
+        assert.equal(r.sources.includes("docs/adr/0002-required-decision.md"), false);
+      } finally {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+  }
 
   test("unknown affected seams fail cleanly and name the known seams", () => {
     const fixture = spec("unrelated-additions");
@@ -479,33 +613,54 @@ describe("this repository's bounded doc migration (ticket #178)", () => {
   });
 
   test("real seams resolve exact sources: prose citations stay navigation (AC-4)", () => {
-    const expected = (seam: string) => [
-      "ARCHITECTURE.md",
-      `docs/leaves/${seam}.md`,
-    ];
     for (const seam of SEAMS) {
       for (const band of BANDS) {
         const r = resolveOrientation({ root: ROOT, band, seams: [seam] });
-        assert.deepEqual(r.sources, expected(seam), `${seam} ${band} exact sources`);
-        // The real leaves only compact-cite their decisions, glossary, and
-        // review policy in prose — none of that source content may load.
-        assert.equal(r.sources.includes("CONTEXT.md"), false, `${seam}: glossary stays a pointer`);
+        // document-for-agents declares one explicit required source (the
+        // Decision journal glossary entry); every other seam only
+        // compact-cites.
+        const expected = seam === "document-for-agents"
+          ? ["ARCHITECTURE.md", "CONTEXT.md", `docs/leaves/${seam}.md`]
+          : ["ARCHITECTURE.md", `docs/leaves/${seam}.md`];
+        assert.deepEqual(r.sources, expected, `${seam} ${band} exact sources`);
+        // The other real leaves only compact-cite their decisions, glossary,
+        // and review policy in prose — none of that source content may load.
+        if (seam !== "document-for-agents") {
+          assert.equal(r.sources.includes("CONTEXT.md"), false, `${seam}: glossary stays a pointer`);
+        }
         assert.equal(r.sources.includes("REVIEW.md"), false, `${seam}: review policy stays a pointer`);
         for (const f of r.sources) {
-          assert.ok(f === "ARCHITECTURE.md" || f === `docs/leaves/${seam}.md`,
-            `${seam}: unexpected loaded source ${f}`);
+          assert.ok(
+            f === "ARCHITECTURE.md" || f === "CONTEXT.md" || f === `docs/leaves/${seam}.md`,
+            `${seam}: unexpected loaded source ${f}`,
+          );
+        }
+        if (seam === "document-for-agents") {
+          // The required source is the Decision journal BLOCK, not the whole
+          // CONTEXT.md: the route exceeds index+leaf but stays far below
+          // index+whole-glossary+leaf.
+          const sizes = ["ARCHITECTURE.md", "CONTEXT.md", `docs/leaves/${seam}.md`]
+            .map((f) => fs.statSync(path.join(ROOT, f)).size);
+          const whole = sizes.reduce((a, b) => a + b, 0);
+          const withoutGlossary = sizes[0] + sizes[2];
+          assert.ok(r.bytes > withoutGlossary, "the Decision journal block must contribute bytes");
+          assert.ok(r.bytes < whole, "only the named Decision journal block loads, never the whole glossary");
         }
       }
     }
   });
 
   test("this repository's own leaf confirms required-source exclusivity (AC-4)", () => {
-    // The owning leaf cites ADR-0024 and ADR-0025 among many in prose; none of
-    // them are marked `— requires.`, so the live route must not load any ADR.
+    // The owning leaf declares exactly one required source — the Decision
+    // journal glossary entry — and cites ADR-0024 and ADR-0025 among many in
+    // prose; none of them are marked `— requires.`, so the live route must
+    // load index + glossary block + leaf and no ADR or policy.
     for (const band of BANDS) {
       const r = resolveOrientation({ root: ROOT, band, seams: ["document-for-agents"] });
-      assert.equal(r.sources.length, 2, `${band}: index + leaf only`);
-      assert.ok(r.sources.every((f) => !f.startsWith("docs/adr/")));
+      assert.equal(r.sources.length, 3, `${band}: index + Decision journal + leaf only`);
+      assert.deepEqual(r.sources, ["ARCHITECTURE.md", "CONTEXT.md", "docs/leaves/document-for-agents.md"]);
+      assert.ok(r.sources.every((f) => !f.startsWith("docs/adr/")), `${band}: no ADR loads`);
+      assert.equal(r.sources.includes("REVIEW.md"), false, `${band}: review policy stays a pointer`);
     }
   });
 
