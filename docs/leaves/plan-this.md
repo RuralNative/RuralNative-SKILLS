@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Planning workflow adapter, invoked as `/plan-this <task>`: confirms intent, explores directions when unsettled, resolves the decision frontier, publishes an approved parent spec with coherent child tickets. Nothing publishes until explicit approval. Reads `AGENTS.md → ARCHITECTURE.md → affected seam leaf → CONTEXT.md → relevant ADRs`.
+Planning workflow adapter, invoked as `/plan-this <task>`: confirms intent, explores directions when unsettled, resolves the decision frontier, publishes an approved parent spec with coherent child tickets. Reads `AGENTS.md → ARCHITECTURE.md → affected seam leaf → CONTEXT.md → relevant ADRs`. Published criteria carry local `AC-N` IDs.
 **Not here**: implementation → `implement-this`; review → `review-this`; prose → `/unslopify`.
 
 ## Non-negotiables

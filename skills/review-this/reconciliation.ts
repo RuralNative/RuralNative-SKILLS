@@ -1,9 +1,14 @@
-// Finding reconciliation for the review wave (#135, parent #130).
+// Finding reconciliation for the review wave (#135, parent #130; stable
+// criterion identity #188).
 //
 // Pure: facts in, decisions out. No network, GitHub, git, or worker calls.
 // Reconciles Kilo cloud findings with the local Standards and Spec findings
 // against one current head per pull request, keeping the two local axes
-// separate as required by verification.
+// separate as required by verification. Spec findings and whole-spec
+// verification name the same stable criterion key `(authority issue number,
+// local ID)` that planning, dispatch, and implementation evidence uses.
+
+import { criterionKey } from "./workflow-state.ts";
 
 export type FindingSource = "cloud" | "standards" | "spec";
 export type FindingCategory =
@@ -14,6 +19,15 @@ export type FindingCategory =
   | "tests-and-test-bloat"
   | "documentation";
 export type FindingSeverity = "advisory" | "blocking";
+
+/**
+ * The stable key one review finding or whole-spec verification uses to name an
+ * acceptance criterion: the authority issue number plus the local criterion
+ * ID. Review references `#188:AC-1` exactly where dispatch and evidence did.
+ */
+export function criterionReference(issue: number, id: string): string {
+  return criterionKey(issue, id);
+}
 
 export interface Finding {
   /** Stable across cloud and local reports when supplied by the reviewer. */

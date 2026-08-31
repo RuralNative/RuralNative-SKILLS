@@ -6,6 +6,8 @@ Before publication, planning records an `ordinary` or `high-risk` class for ever
 
 Conditional quality proof stays inside the existing fields. When a task exposes a security boundary, browser-observable behavior, production-operability path, migration, rollback, or explicit product-performance obligation, the specification and tickets express the required proof through the existing acceptance criteria, risk, constraints, and smallest test-first verification fields. Unrelated work receives no extra checklist and no quality-profile field is added.
 
+Every published criterion carries a local ID unique within its own issue, written `- \`AC-1\`: text`. The stable criterion key is the authority issue number plus that local ID, so two issues may both use `AC-1`. Clearer wording keeps the same ID; changed observable behavior gets a new ID and retires the old one, and retired IDs are never reused or renumbered.
+
 Before publication approval, planning resolves an orientation set for every proposed ticket from its affected seams (ADR-0024): the compact architecture index, whole affected seam leaf docs, leaf-named glossary entries, and linked accepted ADRs or policies, counted in UTF-8 bytes before broad loading. A ticket whose required set exceeds its selected cap is rejected; a cache-gap approval may substitute or narrow the set but can never waive the cap. The approval preview may show compact budget evidence — task band, resolved bytes, cap, source count, cache-gap state — while the published ticket stays focused on behavior and sufficient verification. Affected seam names remain the durable join key; no ticket field transports paths, section anchors, invariant lists, glossary excerpts, or policies.
 
 ## Requirements

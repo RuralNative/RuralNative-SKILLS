@@ -5,7 +5,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { reconcileFindings } from "../reconciliation.ts";
+import { reconcileFindings, criterionReference } from "../reconciliation.ts";
 import { reviewIsFresh, isMergeEligible } from "../workflow-state.ts";
 import type { Finding } from "../reconciliation.ts";
 
@@ -26,6 +26,10 @@ function finding(overrides: Partial<Finding> & { file: string; line: number; mes
 }
 
 describe("reconcileFindings keeps Standards and Spec axes separate", () => {
+  test("review findings name the stable criterion key the evidence used", () => {
+    assert.equal(criterionReference(188, "AC-1"), "#188:AC-1");
+    assert.equal(criterionReference(183, "AC-3"), "#183:AC-3");
+  });
   test("retainedByAxis separates cloud, standards, and spec", () => {
     const findings: Finding[] = [
       finding({ source: "cloud", file: "a.ts", line: 10, message: "missing check" }),

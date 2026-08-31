@@ -1,8 +1,13 @@
-// Compact worker dispatch packets (#157, parent spec #152).
+// Compact worker dispatch packets (#157, parent spec #152; stable criterion
+// IDs #188).
 //
 // The packet carries settled scope and revisions. Workers still load the
 // mandated orientation and owning-seam docs, but do not rediscover the whole
-// repository by default.
+// repository by default. Acceptance criteria travel as records carrying their
+// stable local ID, text, and active or retired status so evidence matches by
+// ID, never by full sentence text.
+
+import type { AcceptanceCriterion } from "./workflow-state.ts";
 
 export type DispatchRiskClass = "ordinary" | "high-risk";
 
@@ -14,7 +19,7 @@ export interface DispatchPacket {
     head: string;
   };
   affectedSeams: readonly string[];
-  acceptanceCriteria: readonly string[];
+  acceptanceCriteria: readonly AcceptanceCriterion[];
   settledDecisions: readonly string[];
 }
 
@@ -24,7 +29,11 @@ export function createDispatchPacket(input: DispatchPacket): DispatchPacket {
     riskClass: input.riskClass,
     revisions: { ...input.revisions },
     affectedSeams: [...input.affectedSeams],
-    acceptanceCriteria: [...input.acceptanceCriteria],
+    acceptanceCriteria: input.acceptanceCriteria.map((criterion) => ({
+      id: criterion.id,
+      text: criterion.text,
+      status: criterion.status,
+    })),
     settledDecisions: [...input.settledDecisions],
   };
 }
@@ -35,12 +44,19 @@ export function serializeDispatchPacket(packet: DispatchPacket): string {
 
 export function renderDispatchPacket(packet: DispatchPacket): string {
   const normalized = createDispatchPacket(packet);
+  const acceptance = normalized.acceptanceCriteria
+    .map((criterion) =>
+      criterion.status === "retired"
+        ? `\`${criterion.id}\` (retired): ${criterion.text}`
+        : `\`${criterion.id}\`: ${criterion.text}`,
+    )
+    .join("; ");
   return [
     `ticket: #${normalized.ticket}`,
     `risk: ${normalized.riskClass}`,
     `revisions: ${normalized.revisions.base} -> ${normalized.revisions.head}`,
     `affected seams: ${normalized.affectedSeams.join(", ")}`,
-    `acceptance: ${normalized.acceptanceCriteria.join("; ")}`,
+    `acceptance: ${acceptance}`,
     `settled decisions: ${normalized.settledDecisions.join("; ")}`,
   ].join("\n");
 }
