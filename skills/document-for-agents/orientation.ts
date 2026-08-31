@@ -1,10 +1,25 @@
 // Runtime orientation resolver — document-for-agents orientation budget
-// (ADR-0024). Computes the unique, deduplicated orientation set a task
-// requires before code inspection: the compact architecture index, whole
-// affected seam leaf docs, leaf-named glossary entries, and linked accepted
-// ADRs or policies. Counts UTF-8 bytes before any broad loading; over-budget
-// routes fail and report band, resolved bytes, cap, source count, and exact
-// sources. Deterministic: resolution is a pure function of the repository.
+// (ADR-0024, ADR-0025). Computes the unique, deduplicated orientation set a
+// task requires before code inspection: the compact architecture index, whole
+// affected seam leaf docs, leaf-named glossary entries, and explicitly
+// required decisions or policies. Machine-required declarations enter the
+// set; compact citations are visible navigation only and never load source
+// content. One machine-readable declaration form per category:
+//
+//   - Required glossary term: `- Glossary: CONTEXT.md — Alpha term.`
+//   - Required decision:      `- Decision: docs/adr/000N-....md — requires.`
+//   - Required policy:        `- Policy: docs/policies/testing.md — requires.`
+//
+// A bare `- Decision:` or `- Policy:` link (or a prose mention) stays
+// navigation. A decision loads only when its `Status:` line value is exactly
+// `accepted` or `superseded` — the exact-token rule: no prefix junk before the
+// token and no trailing text after it ("Status: accepted-ish" or "Status:
+// accepted extra" never match). Missing, draft, malformed, and rejected
+// statuses never load, even when a leaf declares them required. Counts UTF-8
+// bytes before any broad loading;
+// over-budget routes fail and report band, resolved bytes, cap, source count,
+// and exact sources. Deterministic: resolution is a pure function of the
+// repository.
 //
 // The harness-owned coverage manifest (docs/manifest.md) is never part of a
 // resolved set. Cache-gap approval can substitute or narrow sources through
@@ -53,7 +68,12 @@ export class OrientationResolutionError extends Error {
 const SEAM_ROW = /^\|\s*([a-z0-9-]+)\s*\|/;
 const TERM_BLOCK = /^\*\*(.+)\*\*:/;
 const GLOSSARY_LINK = /^-\s+Glossary:\s*`([^`]+)`(?:\s*—\s*(.+))?$/i;
-const DOC_LINK = /^-\s+(Decision|Policy|Review policy):\s*`([^`]+\.md)`/i;
+const DOC_LINK = /^-\s+(Decision|Policy):\s*`([^`]+\.md)`/i;
+// The exact required clause: the line must end with `— requires.` (trailing
+// whitespace tolerated). Any text after the period — free prose, another
+// sentence — makes the line a compact citation. A filename containing
+// "requires" is irrelevant.
+const REQUIRES_CLAUSE = /—\s*requires\.\s*$/;
 
 function normalizeKey(s: string): string {
   return s.trim().toLowerCase().replace(/\s+/g, " ");
@@ -115,7 +135,7 @@ function contributionOf(
 function leafLinks(leafContent: string) {
   const glossaryLinks: Array<{ file: string; terms: string[] }> = [];
   const decisionLinks: Array<{ file: string; requires: boolean }> = [];
-  const policyLinks: string[] = [];
+  const policyLinks: Array<{ file: string; requires: boolean }> = [];
   for (const line of leafContent.split("\n")) {
     const g = line.match(GLOSSARY_LINK);
     if (g) {
@@ -130,9 +150,9 @@ function leafLinks(leafContent: string) {
     if (d) {
       const file = d[2];
       if (/^Decision/i.test(d[1])) {
-        decisionLinks.push({ file, requires: /requires/i.test(line) });
+        decisionLinks.push({ file, requires: REQUIRES_CLAUSE.test(line) });
       } else {
-        policyLinks.push(file);
+        policyLinks.push({ file, requires: REQUIRES_CLAUSE.test(line) });
       }
     }
   }
@@ -197,18 +217,31 @@ export function resolveOrientation(opts: ResolveOptions): Resolved {
 
     if (includeAdrs) {
       for (const decision of decisionLinks) {
+        // A compact citation (no explicit required marker) is navigation
+        // only: it never loads the decision's source content.
+        if (!decision.requires) continue;
         const { content } = contributionOf(root, decision.file);
-        const status = /^Status:\s*(accepted|superseded|rejected)/m.exec(
+        // Exact-token, fail-closed boundary: the Status line value must be
+        // exactly accepted | superseded | rejected — no prefix junk and no
+        // trailing text after the token ("Status: accepted-ish" or "Status:
+        // accepted extra" never match).
+        const status = /^Status:\s*(accepted|superseded|rejected)\s*$/m.exec(
           content,
         )?.[1];
-        if (status === "superseded" && !decision.requires) continue;
-        if (status === "rejected") continue;
+        // Only a parseable accepted or superseded status joins the set;
+        // missing, draft, malformed, and rejected statuses never load.
+        if (status !== "accepted" && status !== "superseded") continue;
         addWhole(decision.file);
       }
     }
 
     if (includePolicies) {
-      for (const policy of policyLinks) addWhole(policy);
+      for (const policy of policyLinks) {
+        // Same citation/declaration split: only an explicitly required policy
+        // enters the set; a bare policy link is navigation.
+        if (!policy.requires) continue;
+        addWhole(policy.file);
+      }
     }
   }
 

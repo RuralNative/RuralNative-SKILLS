@@ -180,17 +180,31 @@ not a parse; the harness checks form and completeness, not conditions.
 
 | Task | Read set | Budget (cap) |
 |---|---|---|
-| Any change | index → one leaf doc → glossary terms in use → linked accepted ADRs | 6,000 bytes |
-| API/route change | + linked route, security, testing policy | 9,000 bytes |
-| Schema/data change | + data doc, migrations policy, generated schema slice | 12,000 bytes |
+| Any change | index → one leaf doc → required glossary entries → required decisions | 6,000 bytes |
+| API/route change | + required route, security, testing policy | 9,000 bytes |
+| Schema/data change | + required data doc, migrations policy, generated schema slice | 12,000 bytes |
 | New dependency | + one vendor-facts entry — fits the selected task cap, never raises it | — |
-| Re-orient after compaction | index → task leaf doc (including its Non-negotiables) → glossary | 7,000 bytes |
+| Re-orient after compaction | index → task leaf doc (including its Non-negotiables) → required glossary entries | 7,000 bytes |
+
+A leaf marks the sources an agent must load with one machine-readable
+declaration form per category:
+
+```
+- Glossary: `CONTEXT.md` — Term.
+- Decision: `docs/adr/000N-....md` — requires.
+- Policy: `docs/policies/testing.md` — requires.
+```
+
+A compact citation — a bare `- Decision:` or `- Policy:` bullet, or a prose
+mention without the `— requires.` clause — stays visible navigation and never
+loads the linked source. Rejected decisions never load even when declared
+required.
 
 The budget column states hard caps on orientation documents — byte caps on the
 resolved orientation set, not guidance to trim later. A command resolves the
 set at runtime from affected
-seams, the compact index, whole bounded leaves, leaf-named glossary entries,
-and linked accepted ADRs or policies — see `reference/orientation.md`.
+seams, the compact index, whole bounded leaves, required glossary entries,
+and required decisions or policies — see `reference/orientation.md`.
 Duplicate sources count once; superseded or historical ADRs stay out of
 current guidance unless a leaf explicitly requires them; and the harness-owned
 coverage manifest is excluded from every resolved set. No set exceeds 12,000

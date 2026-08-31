@@ -38,16 +38,34 @@ The resolved set is, in order with duplicates counted once:
    index is combined into it).
 2. The whole leaf doc of every **affected seam**, each leaf resolving from
    the index's seam table by seam *name*.
-3. **Leaf-named glossary entries**: the glossary entries a leaf names in its
-   `Links` glossary line. Entries are whole units; the rest of the glossary is
-   not part of the set.
-4. **Linked accepted ADRs**: the `Decision:` links a leaf lists. A linked ADR
-   with `Status: accepted` joins the set; a `Status: superseded` or
-   `Status: rejected` ADR stays out of current guidance unless the leaf's link
-   explicitly requires it (the link line names a requirement).
-5. **Linked policies** (route, security, testing, review): included for the
-   api-route and schema-data bands, which are the bands whose loading
-   protocol rows add them.
+3. **Required glossary entries**: the glossary entries a leaf names in its
+   `- Glossary:` link line. Entries are whole units; the rest of the glossary
+   is not part of the set.
+4. **Required decisions**: the decisions a leaf's `- Decision:` line
+   explicitly marks with a `— requires.` clause. A decision a leaf cites
+   without that clause stays compact navigation and does not load. The status
+   boundary is exact-token and fail-closed: a decision joins only when its
+   `Status:` line value is exactly `accepted` or `superseded` — no prefix junk
+   before the token and no trailing text after it. `Status: accepted-ish`,
+   `Status: accepted extra`, and `Status: acceptedX` never join; a missing,
+   draft, or malformed status never joins either. A `Status: rejected`
+   decision never joins, even when declared required.
+5. **Required policies** (route, security, testing, review): included for
+   the api-route and schema-data bands, the bands whose loading-protocol rows
+   add them. A `- Policy:` line loads the policy only with the `— requires.`
+   clause; a bare link stays compact navigation. A `- Review policy:` bullet
+   is ordinary navigation prose, not a machine form, and never loads.
+
+Each category has one machine-readable declaration form:
+
+- `- Glossary: `CONTEXT.md` — Term.` loads the named glossary entry.
+- `- Decision: `docs/adr/000N-....md` — requires.` loads the decision.
+- `- Policy: `docs/policies/testing.md` — requires.` loads the policy.
+
+A compact citation is any other mention — a bare `- Decision:` or
+`- Policy:` bullet, or prose — and it is visible navigation only; it never
+loads the linked source content. Trust the declaration, not the link's
+existence.
 
 A leaf doc may point at an extended detail file that holds the seam's
 longer reference material. Point only through the `## Redirect` link line,

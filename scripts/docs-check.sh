@@ -312,10 +312,10 @@ fi
 # Orientation budget (check 11): every route the manifest declares must fit
 # its task-band byte cap. Routes resolve deterministically from the compact
 # index, whole affected seam leaf docs, leaf-named glossary entries, and
-# linked accepted ADRs; duplicate sources count once; superseded ADRs stay out
-# of current guidance unless a leaf explicitly requires them. The manifest
-# itself is never part of a resolved set. Dormant until routes are declared:
-# un-migrated leaves fail loudly once declared, never silently.
+# machine-required decisions or policies; a compact citation (a bare decision
+# or policy bullet) stays navigation and never loads source content. The
+# manifest itself is never part of a resolved set. Dormant until routes are
+# declared: un-migrated leaves fail loudly once declared, never silently.
 if [[ -f "$MANIFEST" ]]; then
   mapfile -t ROUTES < <(awk -F'|' '/^\| (ordinary|api-route|schema-data|re-orientation) \|/ {gsub(/ /,"",$2); gsub(/ /,"",$3); print $2 "|" $3}' "$MANIFEST")
   if [[ ${#ROUTES[@]} -eq 0 ]]; then
@@ -345,8 +345,11 @@ if [[ -f "$MANIFEST" ]]; then
           bad "orientation budget: seam '$seam' has no leaf row in the index"; route_err=1; continue
         fi
         BYTES["$leaf"]=$(wc -c < "$leaf")
-        gline=$(grep -m1 -E '^- Glossary: ' "$leaf" || true)
-        if [[ -n "$gline" ]]; then
+        # Every `- Glossary:` declaration in the leaf is processed, parsing
+        # file + comma-separated terms per line; the same block (dedupe key
+        # block:<file>:<term>, term trimmed/lowercased with trailing spaces
+        # and periods stripped) counts once, matching the resolver.
+        while IFS= read -r gline; do
           gfile=$(sed -E 's/^- Glossary: `([^`]+)`.*/\1/' <<<"$gline")
           terms=$(sed -E 's/^- Glossary: `[^`]+`[[:space:]]*—[[:space:]]*(.*)$/\1/' <<<"$gline")
           while IFS= read -r term; do
@@ -370,25 +373,38 @@ if [[ -f "$MANIFEST" ]]; then
             ' "$gfile")
             BYTES["$gfile"]=$(( ${BYTES[$gfile]:-0} + blockbytes ))
           done < <(printf '%s\n' "$terms" | tr ',' '\n')
-        fi
+        done < <(grep -E '^- Glossary: ' "$leaf" || true)
         if [[ "$band" != "re-orientation" ]]; then
           while IFS= read -r dline; do
             dfile=$(sed -E 's/^- Decision: `([^`]+\.md)`.*/\1/' <<<"$dline")
             [[ "$dfile" =~ \.md$ ]] || continue
-            st=$(grep -m1 -E '^Status: ' "$dfile" | cut -d' ' -f2)
-            if [[ "$st" == "accepted" ]]; then
-              BYTES["$dfile"]=$(wc -c < "$dfile")
-            elif [[ "$st" == "superseded" ]] && grep -qi 'requires' <<<"$dline"; then
-              BYTES["$dfile"]=$(wc -c < "$dfile")
-            fi
+            # Only the exact `— requires.` clause (line end, trailing
+            # whitespace tolerated) loads; free text after the period or a
+            # bare decision bullet is a compact citation that stays
+            # navigation. A filename containing "requires" is irrelevant.
+            grep -qE -- '—[[:space:]]*requires\.[[:space:]]*$' <<<"$dline" || continue
+            # Exact-token, fail-closed boundary (must agree with
+            # orientation.ts): the Status line value is exactly
+            # accepted | superseded | rejected — no prefix junk and no
+            # trailing text after the token ("Status: accepted-ish" or
+            # "Status: accepted extra" never match).
+            st=$(sed -nE 's/^Status:[[:space:]]*(accepted|superseded|rejected)[[:space:]]*$/\1/p' "$dfile" | head -n1)
+            # Only a parseable accepted or superseded status joins; missing,
+            # draft, malformed, and rejected statuses never load.
+            [[ "$st" == "accepted" || "$st" == "superseded" ]] || continue
+            BYTES["$dfile"]=$(wc -c < "$dfile")
           done < <(grep -E '^- Decision: ' "$leaf" || true)
         fi
         if [[ "$band" == "api-route" || "$band" == "schema-data" ]]; then
           while IFS= read -r pline; do
-            pfile=$(sed -E 's/^- (Policy|Review policy): `([^`]+\.md)`.*/\2/' <<<"$pline")
+            pfile=$(sed -E 's/^- Policy: `([^`]+\.md)`.*/\1/' <<<"$pline")
             [[ "$pfile" =~ \.md$ ]] || continue
+            # Same split: only the exact `— requires.` clause loads; a bare
+            # policy bullet and a `- Review policy:` bullet (ordinary
+            # navigation, not a machine form) stay compact citations.
+            grep -qE -- '—[[:space:]]*requires\.[[:space:]]*$' <<<"$pline" || continue
             BYTES["$pfile"]=$(wc -c < "$pfile")
-          done < <(grep -E '^- (Policy|Review policy): ' "$leaf" || true)
+          done < <(grep -E '^- Policy: ' "$leaf" || true)
         fi
       done
       mapfile -t SRCDEDUP < <(printf '%s\n' "${!BYTES[@]}" | sort -u)

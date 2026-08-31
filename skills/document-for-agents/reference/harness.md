@@ -64,10 +64,14 @@ the conventions policy to avoid infinite regress.
     (band + affected seams) must fit its task-band byte cap: ordinary 6,000,
     API/route 9,000, schema/data 12,000, re-orientation 7,000, and 12,000
     absolute. Routes resolve deterministically from the compact architecture
-    index, whole affected seam leaf docs, leaf-named glossary entries, and
-    linked accepted ADRs or policies; duplicate sources count once, and
-    superseded ADRs stay out of current guidance unless a leaf explicitly
-    requires them. An over-budget route fails **before** broad content
+    index, whole affected seam leaf docs, required glossary entries, and
+    required decisions or policies; a leaf's `- Decision:`, `- Policy:`, and
+    `- Glossary:` lines load only when the declaration marks them required
+    (`— requires.` on the decision or policy line), and a compact citation
+    without that clause stays navigation and never loads. Duplicate sources
+    count once; superseded ADRs stay out of current guidance unless a leaf
+    explicitly requires them, and rejected decisions never enter even when
+    declared required. An over-budget route fails **before** broad content
     loading and reports its task band, resolved bytes, cap, source count, and
     exact sources. The harness-owned coverage manifest is excluded from every
     resolved set; a manifest leaking into a set is fatal. Check 11 is

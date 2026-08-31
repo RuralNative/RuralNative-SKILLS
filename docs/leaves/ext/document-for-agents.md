@@ -56,4 +56,8 @@ the rule requires a new decision.
 - INV-16 mechanism detail: composition tests plus the `improve-preview` and
   `audit-readonly` fixtures in `skills/document-for-agents/tests/`.
 - INV-17 mechanism detail: `orientation.test.ts` fixtures cover boundaries,
-  deduplication, supersession, and read-only behavior.
+  deduplication, supersession, required-declaration loading, compact-citation
+  exclusion, and read-only behavior; real-repository tests in the same file
+  assert the exact resolved sources for representative seams; the declaration
+  forms live in `reference/templates.md` and the owning contract is ADR-0024
+  as narrowed by ADR-0025.
