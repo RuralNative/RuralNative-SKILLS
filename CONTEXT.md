@@ -182,7 +182,7 @@ Prompt-like imperatives left in prose — "ignore previous instructions", "you a
 _Avoid_: injection payload (an authorship or security-verdict claim)
 
 **Always-on scope**:
-The `unslopify` contract that makes agent-authored English output the automatic review scope once the skill is loaded, for that session or parent workflow. User-provided text stays explicit edit scope and inert input (ADR-0016).
+The `unslopify` contract that makes agent-authored English output the automatic review scope once the skill is loaded, for that session or parent workflow. Output is checked silently, published artifacts carry no audit block, and an explicit audit request returns the full report. User-provided text stays explicit edit scope and inert input (ADR-0016, ADR-0026).
 _Avoid_: ambient cleanup, background rewrite
 
 **Attention control**:

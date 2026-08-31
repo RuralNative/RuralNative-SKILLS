@@ -687,3 +687,39 @@ describe("bounded orientation consumption (implement-this:INV-14, #179)", () => 
     assert.ok(norm(leaf).includes("bounded orientation consumption"), "leaf names the invariant");
   });
 });
+
+describe("dependency reconciliation controls worker setup (#187, #183 AC-11)", () => {
+  test("worker instructions carry one setup rule with no unconditional npm ci contradiction", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("reconciledependencystate"), "worker contract names the reconciliation decision");
+    assert.equal(n.includes("runs `npm ci`, then `/implement`"), false, "no unconditional npm ci precedes /implement");
+    assert.equal(n.includes("the worker runs `npm ci`"), false, "no always-run npm ci instruction");
+    assert.ok(n.includes("runs dependency setup only when"), "setup stays conditional on dependency state");
+  });
+
+  test("rendered worker contract follows the reconciliation result for missing, changed, and unchanged state", () => {
+    const worker = body(read("skills/implement-this/SKILL.md")).replace("Issue #0", "Issue 187");
+    const n = norm(worker);
+    assert.equal(n.includes("Issue #0"), false, "ticket slot is substituted");
+    assert.ok(n.includes("runs dependency setup only when `reconciledependencystate` reports"), "setup rule names the helper result");
+    assert.ok(n.includes("missing or changed"), "missing and changed state run setup");
+    assert.ok(n.includes("unchanged") && n.includes("reuses"), "unchanged state reuses the worktree setup");
+  });
+
+  test("each worktree keeps its own dependency directory", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("keep a separate `node_modules` in every worktree"), "per-worktree node_modules rule");
+  });
+
+  test("setup timing and retry behavior stay recorded and bounded", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const timing = read("skills/implement-this/timing.ts");
+    const n = norm(skill);
+    assert.ok(timing.includes("setup-script") && timing.includes("dependency-setup"), "setup phases stay recorded");
+    assert.ok(n.includes("rerun measured setup only when dependency state differs"), "setup decision stays conditional");
+    assert.ok(n.includes("retry that worker once"), "retry count stays bounded");
+    assert.ok(n.includes("bounded"), "retry behavior stays bounded");
+  });
+});

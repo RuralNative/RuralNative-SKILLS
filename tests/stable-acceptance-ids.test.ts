@@ -276,9 +276,5 @@ describe("cross-stage matching by ID (#188)", () => {
     };
     const rendered = renderAcceptanceEvidence(input);
     assert.ok(rendered.includes("AC-1"), "evidence renders the stable local ID");
-    // Review findings and whole-spec verification cite the same stable key.
-    const stableKey = criterionKey(188, "AC-1");
-    const reviewFinding = `Spec: ${stableKey} is satisfied by the evidence block`;
-    assert.ok(reviewFinding.includes(stableKey));
   });
 });

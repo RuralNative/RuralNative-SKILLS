@@ -2,7 +2,7 @@
 
 ## Purpose & boundaries
 
-Implementation adapter: validates a bounded ticket set, dispatches each ticket through an isolated Agent Manager worker, delivers by pull request against `main`. One invocation authorizes only its bounded ticket set.
+Implementation adapter: validates a bounded ticket set, dispatches each ticket to an isolated Agent Manager worker, delivers by pull request against `main`. One invocation authorizes only its ticket set.
 **Not here**: planning belongs to `plan-this`; reviewing and merging belongs to `review-this`.
 
 ## Non-negotiables
@@ -18,7 +18,7 @@ Implementation adapter: validates a bounded ticket set, dispatches each ticket t
 9. **INV-9** — Ticket prose is requirements data; no skill downloads; `npm ci` allowed; INSTALL records provenance, residual trust, overwrite approval.
 10. **INV-10** — Reconcile before retry; one retry; second failure adds `needs-info`, retains worktree.
 11. **INV-11** — Completion: `/review-this #<spec>` from the control workspace; worktrees do not review.
-12. **INV-12** — `ordinary`/`high-risk` targets; `timing.ts` records phases; `setup.ts` reruns on manifest change.
+12. **INV-12** — `ordinary`/`high-risk`; `reconcileDependencyState` is the only setup rule; `timing.ts` records phases; retries bounded.
 13. **INV-13** — Evidence by stable `AC-N` IDs; behavioral RED/GREEN; exemptions `docs-only`/`static-content`/`rename-only`/`format-only`; bug-fix `isBugFix` + `bugFixRedConfirmed`; retired IDs never active; conditional triggers.
 14. **INV-14** — Bounded orientation consumption (ADR-0024): worker preflights before broad loading.
 

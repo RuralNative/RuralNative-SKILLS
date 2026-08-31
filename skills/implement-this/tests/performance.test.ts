@@ -88,6 +88,13 @@ describe("phase timing and trusted summary", () => {
 });
 
 describe("measured setup reconciliation", () => {
+  test("missing prior setup state always runs dependency setup", () => {
+    const setup = { setupManifestDigest: null, worktreeNodeModulesPath: "/worktrees/187/node_modules" };
+    const missing = reconcileDependencyState("manifest-a", setup);
+    assert.equal(missing.rerunSetup, true);
+    assert.equal(missing.reason, "dependency-state-changed");
+  });
+
   test("reruns dependency setup only when the manifest state differs", () => {
     const setup = {
       setupManifestDigest: "manifest-a",
