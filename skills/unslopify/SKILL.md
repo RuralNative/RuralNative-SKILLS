@@ -66,9 +66,10 @@ and outside the live scope; they change only on an explicit edit request.
 Ordinary conversation performs the full model-only self-audit silently,
 without showing a completion report or findings. At publication boundaries
 (documents, specifications, tickets, progress updates, recommendations,
-decisions, and GitHub comments) run the same cleanup before publishing and
-retain the structured completion report
-and preservation audit. Routine chat adds no report noise.
+decisions, and GitHub comments) the same cleanup runs before publishing, and
+published content carries no audit block. The structured completion report
+and preservation audit stay available when the writer asks for an explicit
+rewrite audit. Routine chat adds no report noise.
 
 Technical fidelity outranks style. Exact domain terms, identifiers, commands,
 labels, dependencies, quotations, evidence, and implementation-critical
@@ -95,7 +96,9 @@ completion report instead of continuing.
    context demands.
 3. Rewrite only spans supported by an accepted finding. Keep edits minimal.
 4. Add soul only when requested or already present in the source voice (see below).
-5. Self-audit and preservation audit. Publish the completion report.
+5. Self-audit and preservation audit. Publish the completion report only on an
+   explicit rewrite-audit request; routine and publication-boundary output
+   stays silent.
 
 ## Adding soul
 
@@ -248,9 +251,9 @@ The completion report states:
 - preservation audit result
 - changed spans and changed-line ratio
 
-Routine conversation performs the self-audit silently and shows no completion
-report. Explicit rewrite jobs and publication-boundary passes publish the
-full report above.
+Routine conversation and publication-boundary passes perform the audit
+silently and show no completion report. Only an explicit rewrite-audit
+request or a named standalone rewrite job publishes the full report above.
 
 ## Optional advisory scanner
 
