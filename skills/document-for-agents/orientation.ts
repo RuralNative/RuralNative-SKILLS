@@ -11,9 +11,12 @@
 //   - Required policy:        `- Policy: docs/policies/testing.md — requires.`
 //
 // A bare `- Decision:` or `- Policy:` link (or a prose mention) stays
-// navigation. Only decisions whose Status parses as accepted or superseded
-// enter the set, even when a leaf declares them required — missing, draft,
-// malformed, and rejected statuses never load. Counts UTF-8 bytes before any broad loading;
+// navigation. A decision loads only when its `Status:` line value is exactly
+// `accepted` or `superseded` — the exact-token rule: no prefix junk before the
+// token and no trailing text after it ("Status: accepted-ish" or "Status:
+// accepted extra" never match). Missing, draft, malformed, and rejected
+// statuses never load, even when a leaf declares them required. Counts UTF-8
+// bytes before any broad loading;
 // over-budget routes fail and report band, resolved bytes, cap, source count,
 // and exact sources. Deterministic: resolution is a pure function of the
 // repository.
@@ -218,7 +221,11 @@ export function resolveOrientation(opts: ResolveOptions): Resolved {
         // only: it never loads the decision's source content.
         if (!decision.requires) continue;
         const { content } = contributionOf(root, decision.file);
-        const status = /^Status:\s*(accepted|superseded|rejected)/m.exec(
+        // Exact-token, fail-closed boundary: the Status line value must be
+        // exactly accepted | superseded | rejected — no prefix junk and no
+        // trailing text after the token ("Status: accepted-ish" or "Status:
+        // accepted extra" never match).
+        const status = /^Status:\s*(accepted|superseded|rejected)\s*$/m.exec(
           content,
         )?.[1];
         // Only a parseable accepted or superseded status joins the set;

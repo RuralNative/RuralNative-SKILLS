@@ -70,10 +70,13 @@ code?"**
   architecture index stays a compact seam index (ADR-0024).
 - **Orientation sets resolve at runtime.** A command resolves its orientation
   set from affected seams, the compact architecture index, whole bounded
-  leaves, leaf-named glossary entries, and linked accepted ADRs or policies.
-  Byte caps are hard, duplicate sources count once, superseded ADRs stay out
-  of current guidance unless a leaf explicitly requires them, and no set
-  exceeds 12,000 bytes (ADR-0024).
+  leaves, leaf-named glossary entries, and only the decisions and policies a
+  leaf marks with an explicit `— requires.` declaration; a compact citation —
+  a bare `- Decision:` or `- Policy:` bullet or a prose mention — stays visible
+  navigation and never loads source content (ADR-0025). Byte caps are hard,
+  duplicate sources count once, rejected decisions never enter the set even
+  when declared required, superseded ADRs load only when a leaf explicitly
+  requires them, and no set exceeds 12,000 bytes (ADR-0024, ADR-0025).
 - **Improve repairs existing caches.** Audit stays read-only. Improve
   diagnoses an existing cache, shows one complete migration preview, waits for
   one explicit approval, and only then applies trims, additions, moves,

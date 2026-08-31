@@ -378,6 +378,9 @@ describe("orientation resolver: resolved set (document-for-agents:INV-17)", () =
     { name: "a missing Status line", line: "" },
     { name: "Status: draft", line: "Status: draft" },
     { name: "malformed status text", line: "Status: acccepted" },
+    { name: "a valid-token prefix with trailing letters", line: "Status: accepted-ish" },
+    { name: "a valid token with trailing text", line: "Status: accepted extra" },
+    { name: "a valid token with a trailing suffix letter", line: "Status: acceptedX" },
   ]) {
     test(`a required decision with ${c.name} stays out of the set`, () => {
       const fixture = spec("machine-required-forms");

@@ -344,4 +344,54 @@ ${"x".repeat(6000)}
       f.destroy();
     }
   });
+
+  function bulkADR(status: string): string {
+    return `# 0001 — Current decision
+
+${status}
+Date: 2026-08-29
+
+Decision: ${"x".repeat(6000)}.
+`;
+  }
+
+  // Exact-token, fail-closed status boundary: a required decision whose
+  // `Status:` value is not exactly accepted | superseded (no prefix junk, no
+  // trailing text) never loads. The bulk body would blow the ordinary cap if
+  // parsed statuses loaded, so staying within caps proves exclusion. The
+  // malformed status also fails the check-4 parseable-Status gate, so the
+  // harness is red on the status, never on an orientation load.
+  for (const bad of [
+    "Status: draft",
+    "Status: accepted-ish",
+    "Status: accepted extra",
+    "Status: acceptedX",
+  ]) {
+    test(`check 11 never loads a required decision with '${bad}'`, () => {
+      const f = makeCheckFixture({ routes: "| ordinary | alpha |" });
+      try {
+        fs.writeFileSync(path.join(f.dir, "docs/adr/0001-current-decision.md"), bulkADR(bad));
+        const r = f.run();
+        assert.equal(r.status, 1, `expected check-4 status rejection:\n${r.out}`);
+        assert.ok(r.out.includes("no parseable Status line"), r.out);
+        assert.ok(r.out.includes("within caps"), "the orientation budget must run green without the decision:\n" + r.out);
+        assert.equal(r.out.includes("over budget"), false, "a malformed status must never load into the budget:\n" + r.out);
+      } finally {
+        f.destroy();
+      }
+    });
+  }
+
+  test("control: the same bulk with an exact 'Status: accepted' loads and pushes the route over budget", () => {
+    const f = makeCheckFixture({ routes: "| ordinary | alpha |" });
+    try {
+      fs.writeFileSync(path.join(f.dir, "docs/adr/0001-current-decision.md"), bulkADR("Status: accepted"));
+      const r = f.run();
+      assert.equal(r.status, 1, `expected over-budget failure:\n${r.out}`);
+      assert.ok(r.out.includes("over budget"), r.out);
+      assert.ok(r.out.includes("docs/adr/0001-current-decision.md"), "an exactly-accepted required decision must be a resolved source:\n" + r.out);
+    } finally {
+      f.destroy();
+    }
+  });
 });

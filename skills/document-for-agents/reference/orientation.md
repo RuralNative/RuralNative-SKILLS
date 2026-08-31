@@ -43,9 +43,13 @@ The resolved set is, in order with duplicates counted once:
    is not part of the set.
 4. **Required decisions**: the decisions a leaf's `- Decision:` line
    explicitly marks with a `— requires.` clause. A decision a leaf cites
-   without that clause stays compact navigation and does not load. A required
-   decision with `Status: accepted` or `Status: superseded` joins the set; a
-   `Status: rejected` decision never joins, even when declared required.
+   without that clause stays compact navigation and does not load. The status
+   boundary is exact-token and fail-closed: a decision joins only when its
+   `Status:` line value is exactly `accepted` or `superseded` — no prefix junk
+   before the token and no trailing text after it. `Status: accepted-ish`,
+   `Status: accepted extra`, and `Status: acceptedX` never join; a missing,
+   draft, or malformed status never joins either. A `Status: rejected`
+   decision never joins, even when declared required.
 5. **Required policies** (route, security, testing, review): included for
    the api-route and schema-data bands, the bands whose loading-protocol rows
    add them. A `- Policy:` line loads the policy only with the `— requires.`

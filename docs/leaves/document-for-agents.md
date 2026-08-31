@@ -18,7 +18,7 @@ Doc-cache lifecycle: establish, audit, improve, maintain. Two outputs: cache acc
 11. **INV-11** — Adopting repos use the singular `reference/vendor-facts.md`.
 12. **INV-12** — `unslopify` dependency block below Principles and Boundaries.
 13. **INV-13** — Harness: eleven checks; ADR-0024 supersedes ADR-0017's exact-ten clause.14. **INV-14** — Opt-in private diagnostics (ADR-0018): consent, notice, revocation; sanitized; append-only outside cache/read sets; confirmed/likely/unknown.
-15. **INV-15** — Generated `AGENTS.md` carries one protected management marker after the five commands; evidence backs provenance, else likely/unknown.16. **INV-16** — Audit read-only; Improve: one preview, no changes before one approval.17. **INV-17** — Deterministic; dedupes; only exact `— requires.` declarations (accepted/superseded) and every `- Glossary:` entry load; citations navigate; 12,000 cap; manifest out.## Links
+15. **INV-15** — Generated `AGENTS.md` carries one protected management marker after the five commands; evidence backs provenance, else likely/unknown.16. **INV-16** — Audit read-only; Improve: one preview, no changes before one approval.17. **INV-17** — Deterministic; dedupes; only exact `— requires.` declarations and every `- Glossary:` entry load; exact-token status; citations navigate; 12,000 cap; manifest out.## Links
 
 Glossary: `CONTEXT.md`. Decisions: ADR-0001, ADR-0002, ADR-0017, ADR-0018, ADR-0024, ADR-0025. Review policy: `REVIEW.md` (check 8). Harness: `scripts/docs-check.sh`. Redirect: `docs/leaves/ext/document-for-agents.md`.
 - Glossary: `CONTEXT.md` — Decision journal.

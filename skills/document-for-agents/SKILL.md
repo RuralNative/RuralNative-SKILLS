@@ -46,10 +46,12 @@ established, its own leaf doc.
    index, so re-orientation after context compaction is one small fixed read.
 5. **Budgets.** Resolved orientation sets are strict byte caps on whole
    sources, resolved at runtime from affected seams, the compact architecture
-   index, whole bounded leaves, leaf-named glossary entries, and linked
-   accepted ADRs or policies (ADR-0024). Index under 150 lines; leaf docs 1 to 2
-   minute reads; policy docs under a page. The context window is priced, not
-   free.
+   index, whole bounded leaves, leaf-named glossary entries, and only the
+   decisions and policies a leaf marks with an explicit `— requires.`
+   declaration; compact citations — bare links or prose mentions — stay
+   navigation and never load (ADR-0024, ADR-0025). Index under 150 lines;
+   leaf docs 1 to 2 minute reads; policy docs under a page. The context window
+   is priced, not free.
 6. **Size to the codebase.** The cache earns its coherence cost only past a
    threshold. A repo a single session can fully hold gets an index, a
    glossary, and a conventions policy; ADRs, the harness, and generated

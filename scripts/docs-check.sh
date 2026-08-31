@@ -383,7 +383,12 @@ if [[ -f "$MANIFEST" ]]; then
             # bare decision bullet is a compact citation that stays
             # navigation. A filename containing "requires" is irrelevant.
             grep -qE -- '—[[:space:]]*requires\.[[:space:]]*$' <<<"$dline" || continue
-            st=$(grep -m1 -E '^Status: ' "$dfile" | cut -d' ' -f2)
+            # Exact-token, fail-closed boundary (must agree with
+            # orientation.ts): the Status line value is exactly
+            # accepted | superseded | rejected — no prefix junk and no
+            # trailing text after the token ("Status: accepted-ish" or
+            # "Status: accepted extra" never match).
+            st=$(sed -nE 's/^Status:[[:space:]]*(accepted|superseded|rejected)[[:space:]]*$/\1/p' "$dfile" | head -n1)
             # Only a parseable accepted or superseded status joins; missing,
             # draft, malformed, and rejected statuses never load.
             [[ "$st" == "accepted" || "$st" == "superseded" ]] || continue
