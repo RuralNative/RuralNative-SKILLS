@@ -26,12 +26,30 @@ describe("compact dispatch packets", () => {
       riskClass: "high-risk",
       revisions: { base: "base-a", head: "head-a" },
       affectedSeams: ["implement-this", "review-this"],
-      acceptanceCriteria: ["record phase timings"],
+      acceptanceCriteria: [{ id: "AC-1", text: "record phase timings", status: "active" }],
       settledDecisions: ["one persistent PR worktree"],
     });
     assert.equal(JSON.parse(serializeDispatchPacket(packet)).ticket, 157);
     assert.match(renderDispatchPacket(packet), /risk: high-risk/);
     assert.match(renderDispatchPacket(packet), /base-a -> head-a/);
+    assert.match(renderDispatchPacket(packet), /`AC-1`: record phase timings/);
+  });
+
+  test("dispatch criteria travel by stable ID with retained active or retired status", () => {
+    const packet = createDispatchPacket({
+      ticket: 157,
+      riskClass: "high-risk",
+      revisions: { base: "base-a", head: "head-a" },
+      affectedSeams: ["implement-this"],
+      acceptanceCriteria: [
+        { id: "AC-1", text: "active behavior", status: "active" },
+        { id: "AC-2", text: "retired behavior", status: "retired" },
+      ],
+      settledDecisions: [],
+    });
+    const rendered = renderDispatchPacket(packet);
+    assert.ok(rendered.includes("`AC-1`: active behavior"));
+    assert.ok(rendered.includes("`AC-2` (retired): retired behavior"));
   });
 });
 

@@ -1,4 +1,6 @@
-// implement-this:INV-13 — worker evidence contract (plan 1787879273774).
+// implement-this:INV-13 — worker evidence contract (plan 1787879273774;
+// stable criterion identity #188). Evidence matches criteria by stable local
+// ID, never by full sentence text.
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import {
@@ -9,6 +11,8 @@ import {
   type AcceptanceEvidenceInput,
   type CriterionEvidence,
 } from "../acceptance-evidence.ts";
+import type { AcceptanceCriterion } from "../workflow-state.ts";
+import { criterionKey, criteriaRevision } from "../workflow-state.ts";
 
 const defaultTriggers: AcceptanceEvidenceInput["triggers"] = {
   touchesVersionedExternalApi: false,
@@ -31,20 +35,32 @@ function testTriggers(
   return { ...defaultTriggers, ...overrides };
 }
 
+function recordsOf(
+  entries: Array<[string, string]>,
+): AcceptanceCriterion[] {
+  return entries.map(([id, text]) => ({ id, text, status: "active" as const }));
+}
+
+/** ID 1 text, ID 2 text, mixing wording so 2 issues share local IDs safely. */
+const TWO_ACTIVE = [
+  ["AC-1", "criterion A"],
+  ["AC-2", "criterion B"],
+] as Array<[string, string]>;
+
 function baseInput(overrides: Partial<AcceptanceEvidenceInput> = {}): AcceptanceEvidenceInput {
-  const criteria = overrides.criteria ?? ["criterion A", "criterion B"];
+  const criteria = overrides.criteria ?? recordsOf(TWO_ACTIVE);
   const evidence: readonly CriterionEvidence[] =
     overrides.evidence ??
     ([
       {
-        criterion: "criterion A",
+        criterionId: "AC-1",
         kind: "behavior",
         focusedTests: ["a.test.ts"],
         redReason: "fails without feature",
         greenPassed: true,
       },
       {
-        criterion: "criterion B",
+        criterionId: "AC-2",
         kind: "non-behavior",
         exemption: "docs-only",
         reason: "only updates README",
@@ -59,8 +75,8 @@ function baseInput(overrides: Partial<AcceptanceEvidenceInput> = {}): Acceptance
   };
 }
 
-describe("acceptance evidence — criterion coverage", () => {
-  test("requires exactly one entry per criterion", () => {
+describe("acceptance evidence — criterion coverage by ID", () => {
+  test("requires exactly one entry per active criterion, matched by ID", () => {
     const ok = validateAcceptanceEvidence(baseInput());
     assert.equal(ok.ok, true);
 
@@ -68,7 +84,7 @@ describe("acceptance evidence — criterion coverage", () => {
       baseInput({
         evidence: [
           {
-            criterion: "criterion A",
+            criterionId: "AC-1",
             kind: "behavior",
             focusedTests: ["a.test.ts"],
             redReason: "fails",
@@ -81,19 +97,19 @@ describe("acceptance evidence — criterion coverage", () => {
     assert.ok(missing.errors.join(" ").includes("expected 2"));
   });
 
-  test("rejects unknown and duplicate criteria", () => {
+  test("rejects unknown and duplicate criteria IDs", () => {
     const duplicate = validateAcceptanceEvidence(
       baseInput({
         evidence: [
           {
-            criterion: "criterion A",
+            criterionId: "AC-1",
             kind: "behavior",
             focusedTests: ["a.test.ts"],
             redReason: "fails",
             greenPassed: true,
           },
           {
-            criterion: "criterion A",
+            criterionId: "AC-1",
             kind: "behavior",
             focusedTests: ["b.test.ts"],
             redReason: "fails",
@@ -109,14 +125,14 @@ describe("acceptance evidence — criterion coverage", () => {
       baseInput({
         evidence: [
           {
-            criterion: "criterion A",
+            criterionId: "AC-1",
             kind: "behavior",
             focusedTests: ["a.test.ts"],
             redReason: "fails",
             greenPassed: true,
           },
           {
-            criterion: "unknown criterion",
+            criterionId: "AC-99",
             kind: "non-behavior",
             exemption: "docs-only",
             reason: "docs",
@@ -127,6 +143,34 @@ describe("acceptance evidence — criterion coverage", () => {
     assert.equal(unknown.ok, false);
     assert.ok(unknown.errors.join(" ").includes("unknown"));
   });
+
+  test("wording drift between issues with the same local ID still matches by ID", () => {
+    const input = baseInput({
+      criteria: recordsOf([
+        ["AC-1", "criterion A wording one"],
+        ["AC-2", "criterion B wording one"],
+      ]),
+      evidence: [
+        {
+          criterionId: "AC-1",
+          kind: "behavior",
+          focusedTests: ["a.test.ts"],
+          redReason: "fails",
+          greenPassed: true,
+        },
+        {
+          criterionId: "AC-2",
+          kind: "non-behavior",
+          exemption: "docs-only",
+          reason: "docs",
+        },
+      ],
+    });
+    assert.equal(validateAcceptanceEvidence(input).ok, true);
+    const rendered = renderAcceptanceEvidence(input);
+    assert.ok(rendered.includes("AC-1"));
+    assert.ok(rendered.includes("AC-2"));
+  });
 });
 
 describe("acceptance evidence — RED requirements", () => {
@@ -134,7 +178,7 @@ describe("acceptance evidence — RED requirements", () => {
     {
       name: "empty redReason",
       evidence: {
-        criterion: "criterion A",
+        criterionId: "AC-1",
         kind: "behavior",
         focusedTests: ["a.test.ts"],
         redReason: "   ",
@@ -144,7 +188,7 @@ describe("acceptance evidence — RED requirements", () => {
     {
       name: "empty focusedTests",
       evidence: {
-        criterion: "criterion A",
+        criterionId: "AC-1",
         kind: "behavior",
         focusedTests: [],
         redReason: "fails",
@@ -154,7 +198,7 @@ describe("acceptance evidence — RED requirements", () => {
     {
       name: "blank focusedTests entry",
       evidence: {
-        criterion: "criterion A",
+        criterionId: "AC-1",
         kind: "behavior",
         focusedTests: ["   "],
         redReason: "fails",
@@ -164,7 +208,7 @@ describe("acceptance evidence — RED requirements", () => {
     {
       name: "greenPassed false",
       evidence: {
-        criterion: "criterion A",
+        criterionId: "AC-1",
         kind: "behavior",
         focusedTests: ["a.test.ts"],
         redReason: "fails",
@@ -175,7 +219,7 @@ describe("acceptance evidence — RED requirements", () => {
     test(`behavioral criterion rejects ${name}`, () => {
       const result = validateAcceptanceEvidence(
         baseInput({
-          criteria: ["criterion A"],
+          criteria: recordsOf([["AC-1", "criterion A"]]),
           evidence: [evidence],
         }),
       );
@@ -186,10 +230,10 @@ describe("acceptance evidence — RED requirements", () => {
   test("behavioral criterion requires non-empty RED and focused test", () => {
     const ok = validateAcceptanceEvidence(
       baseInput({
-        criteria: ["criterion A"],
+        criteria: recordsOf([["AC-1", "criterion A"]]),
         evidence: [
           {
-            criterion: "criterion A",
+            criterionId: "AC-1",
             kind: "behavior",
             focusedTests: ["a.test.ts"],
             redReason: "fails without implementation",
@@ -207,10 +251,10 @@ describe("acceptance evidence — exemption whitelist", () => {
     test(`accepts exemption ${exemption}`, () => {
       const result = validateAcceptanceEvidence(
         baseInput({
-          criteria: ["criterion A"],
+          criteria: recordsOf([["AC-1", "criterion A"]]),
           evidence: [
             {
-              criterion: "criterion A",
+              criterionId: "AC-1",
               kind: "non-behavior",
               exemption,
               reason: "no observable behavior",
@@ -225,10 +269,10 @@ describe("acceptance evidence — exemption whitelist", () => {
   test("rejects unknown exemption", () => {
     const result = validateAcceptanceEvidence(
       baseInput({
-        criteria: ["criterion A"],
+        criteria: recordsOf([["AC-1", "criterion A"]]),
         evidence: [
           {
-            criterion: "criterion A",
+            criterionId: "AC-1",
             kind: "non-behavior",
             exemption: "other" as never,
             reason: "reason",
@@ -243,10 +287,10 @@ describe("acceptance evidence — exemption whitelist", () => {
   test("non-behavior requires non-empty reason", () => {
     const result = validateAcceptanceEvidence(
       baseInput({
-        criteria: ["criterion A"],
+        criteria: recordsOf([["AC-1", "criterion A"]]),
         evidence: [
           {
-            criterion: "criterion A",
+            criterionId: "AC-1",
             kind: "non-behavior",
             exemption: "docs-only",
             reason: "   ",
@@ -258,14 +302,14 @@ describe("acceptance evidence — exemption whitelist", () => {
   });
 
   test("dependency/configuration changes are never exempt (diff-derived trigger)", () => {
-    const criterion = "criterion A";
+    const criterion = "AC-1";
     // Without trigger, exemption is allowed
     const allowed = validateAcceptanceEvidence(
       baseInput({
-        criteria: [criterion],
+        criteria: recordsOf([["AC-1", "criterion A"]]),
         evidence: [
           {
-            criterion,
+            criterionId: criterion,
             kind: "non-behavior",
             exemption: "docs-only",
             reason: "only docs",
@@ -279,10 +323,10 @@ describe("acceptance evidence — exemption whitelist", () => {
     // With diff-derived dependency/config trigger, same evidence is rejected regardless of wording
     const rejected = validateAcceptanceEvidence(
       baseInput({
-        criteria: [criterion],
+        criteria: recordsOf([["AC-1", "criterion A"]]),
         evidence: [
           {
-            criterion,
+            criterionId: criterion,
             kind: "non-behavior",
             exemption: "docs-only",
             reason: "only docs",
@@ -294,46 +338,121 @@ describe("acceptance evidence — exemption whitelist", () => {
     assert.equal(rejected.ok, false);
     assert.ok(rejected.errors.join(" ").toLowerCase().includes("never exempt"));
 
-    // Even differently worded criterion is rejected when trigger is set
-    const rejected2 = validateAcceptanceEvidence(
+    // An unknown dependency/config ID is rejected too
+    const unknownDep = validateAcceptanceEvidence(
       baseInput({
-        criteria: ["upgrade React"],
+        criteria: recordsOf([["AC-1", "criterion A"]]),
         evidence: [
           {
-            criterion: "upgrade React",
-            kind: "non-behavior",
-            exemption: "docs-only",
-            reason: "only docs",
+            criterionId: "AC-1",
+            kind: "behavior",
+            focusedTests: ["a.test.ts"],
+            redReason: "fails",
+            greenPassed: true,
           },
         ],
-        triggers: { touchesVersionedExternalApi: false, touchesPublicInterface: false, dependencyOrConfigCriteria: ["upgrade React"], externalSourceResolved: false, externalDocumentationAuthoritative: false, isBugFix: false, bugFixRedConfirmed: false, touchesBrowserBehavior: false, touchesSecurityBoundary: false, touchesProductionOperability: false, touchesMigration: false, touchesExplicitPerformance: false },
+        triggers: testTriggers({ dependencyOrConfigCriteria: ["AC-99"] }),
       }),
     );
-    assert.equal(rejected2.ok, false);
+    assert.equal(unknownDep.ok, false);
+    assert.ok(unknownDep.errors.join(" ").toLowerCase().includes("unknown or retired"));
 
     // A dependency/configuration criterion is blocked without blocking an unrelated docs-only criterion
     const mixed = validateAcceptanceEvidence(
       baseInput({
-        criteria: ["upgrade React", "update migration guide"],
+        criteria: recordsOf([
+          ["AC-1", "upgrade React"],
+          ["AC-2", "update migration guide"],
+        ]),
         evidence: [
           {
-            criterion: "upgrade React",
+            criterionId: "AC-1",
             kind: "behavior",
             focusedTests: ["dependency.test.ts"],
             redReason: "old API fails",
             greenPassed: true,
           },
           {
-            criterion: "update migration guide",
+            criterionId: "AC-2",
             kind: "non-behavior",
             exemption: "docs-only",
             reason: "documentation only",
           },
         ],
-        triggers: testTriggers({ dependencyOrConfigCriteria: ["upgrade React"] }),
+        triggers: testTriggers({ dependencyOrConfigCriteria: ["AC-1"] }),
       }),
     );
     assert.equal(mixed.ok, true);
+  });
+});
+
+describe("acceptance evidence — retired criteria (#188)", () => {
+  test("a retired criterion is never accepted as active evidence", () => {
+    const input = baseInput({
+      criteria: [
+        { id: "AC-1", text: "current behavior", status: "active" },
+        { id: "AC-2", text: "old behavior", status: "retired" },
+      ],
+      evidence: [
+        {
+          criterionId: "AC-1",
+          kind: "behavior",
+          focusedTests: ["a.test.ts"],
+          redReason: "fails",
+          greenPassed: true,
+        },
+        {
+          criterionId: "AC-2",
+          kind: "non-behavior",
+          exemption: "docs-only",
+          reason: "docs",
+        },
+      ],
+    });
+    const result = validateAcceptanceEvidence(input);
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.join(" ").includes("retired criterion is never accepted"));
+  });
+
+  test("retired records may be retained while only active evidence is required", () => {
+    const input = baseInput({
+      criteria: [
+        { id: "AC-1", text: "current behavior", status: "active" },
+        { id: "AC-2", text: "superseded behavior", status: "retired" },
+      ],
+      evidence: [
+        {
+          criterionId: "AC-1",
+          kind: "behavior",
+          focusedTests: ["a.test.ts"],
+          redReason: "fails",
+          greenPassed: true,
+        },
+      ],
+    });
+    const result = validateAcceptanceEvidence(input);
+    assert.equal(result.ok, true, JSON.stringify(result.errors));
+  });
+
+  test("duplicate or reused IDs within an issue are rejected", () => {
+    const input = baseInput({
+      criteria: [
+        { id: "AC-1", text: "first", status: "active" },
+        { id: "AC-1", text: "renumbered reuse", status: "retired" },
+      ],
+      evidence: [
+        {
+          criterionId: "AC-1",
+          kind: "behavior",
+          focusedTests: ["a.test.ts"],
+          redReason: "fails",
+          greenPassed: true,
+        },
+      ],
+    });
+    const result = validateAcceptanceEvidence(input);
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.join(" ").includes("duplicate or reused"));
   });
 });
 
@@ -341,10 +460,10 @@ describe("acceptance evidence — conditional source and compatibility", () => {
   test("requires externalSource when touchesVersionedExternalApi", () => {
     const missing = validateAcceptanceEvidence(
       baseInput({
-        criteria: ["criterion A"],
+        criteria: recordsOf([["AC-1", "criterion A"]]),
         evidence: [
           {
-            criterion: "criterion A",
+            criterionId: "AC-1",
             kind: "behavior",
             focusedTests: ["a.test.ts"],
             redReason: "fails",
@@ -359,10 +478,10 @@ describe("acceptance evidence — conditional source and compatibility", () => {
 
     const missingWorkerFacts = validateAcceptanceEvidence(
       baseInput({
-        criteria: ["criterion A"],
+        criteria: recordsOf([["AC-1", "criterion A"]]),
         evidence: [
           {
-            criterion: "criterion A",
+            criterionId: "AC-1",
             kind: "behavior",
             focusedTests: ["a.test.ts"],
             redReason: "fails",
@@ -383,10 +502,10 @@ describe("acceptance evidence — conditional source and compatibility", () => {
 
     const ok = validateAcceptanceEvidence(
       baseInput({
-        criteria: ["criterion A"],
+        criteria: recordsOf([["AC-1", "criterion A"]]),
         evidence: [
           {
-            criterion: "criterion A",
+            criterionId: "AC-1",
             kind: "behavior",
             focusedTests: ["a.test.ts"],
             redReason: "fails",
@@ -408,10 +527,10 @@ describe("acceptance evidence — conditional source and compatibility", () => {
   test("requires compatibility when touchesPublicInterface", () => {
     const missing = validateAcceptanceEvidence(
       baseInput({
-        criteria: ["criterion A"],
+        criteria: recordsOf([["AC-1", "criterion A"]]),
         evidence: [
           {
-            criterion: "criterion A",
+            criterionId: "AC-1",
             kind: "behavior",
             focusedTests: ["a.test.ts"],
             redReason: "fails",
@@ -426,10 +545,10 @@ describe("acceptance evidence — conditional source and compatibility", () => {
 
     const ok = validateAcceptanceEvidence(
       baseInput({
-        criteria: ["criterion A"],
+        criteria: recordsOf([["AC-1", "criterion A"]]),
         evidence: [
           {
-            criterion: "criterion A",
+            criterionId: "AC-1",
             kind: "behavior",
             focusedTests: ["a.test.ts"],
             redReason: "fails",
@@ -452,10 +571,10 @@ describe("acceptance evidence — conditional source and compatibility", () => {
   test("compatibility rejects invalid change and empty boundaryTests", () => {
     const invalid = validateAcceptanceEvidence(
       baseInput({
-        criteria: ["criterion A"],
+        criteria: recordsOf([["AC-1", "criterion A"]]),
         evidence: [
           {
-            criterion: "criterion A",
+            criterionId: "AC-1",
             kind: "behavior",
             focusedTests: ["a.test.ts"],
             redReason: "fails",
@@ -476,10 +595,10 @@ describe("acceptance evidence — conditional source and compatibility", () => {
 
     const emptyBoundary = validateAcceptanceEvidence(
       baseInput({
-        criteria: ["criterion A"],
+        criteria: recordsOf([["AC-1", "criterion A"]]),
         evidence: [
           {
-            criterion: "criterion A",
+            criterionId: "AC-1",
             kind: "behavior",
             focusedTests: ["a.test.ts"],
             redReason: "fails",
@@ -503,16 +622,19 @@ describe("acceptance evidence — conditional source and compatibility", () => {
     // Valid: first behavioral (second criterion) has RED — docs-only first is allowed
     const validWithDocsFirst = validateAcceptanceEvidence(
       baseInput({
-        criteria: ["criterion A", "criterion B"],
+        criteria: recordsOf([
+          ["AC-1", "criterion A"],
+          ["AC-2", "criterion B"],
+        ]),
         evidence: [
           {
-            criterion: "criterion A",
+            criterionId: "AC-1",
             kind: "non-behavior",
             exemption: "docs-only",
             reason: "docs",
           },
           {
-            criterion: "criterion B",
+            criterionId: "AC-2",
             kind: "behavior",
             focusedTests: ["b.test.ts"],
             redReason: "reproduces defect #123",
@@ -527,16 +649,19 @@ describe("acceptance evidence — conditional source and compatibility", () => {
     // Invalid: no behavioral criterion at all
     const noBehavioral = validateAcceptanceEvidence(
       baseInput({
-        criteria: ["criterion A", "criterion B"],
+        criteria: recordsOf([
+          ["AC-1", "criterion A"],
+          ["AC-2", "criterion B"],
+        ]),
         evidence: [
           {
-            criterion: "criterion A",
+            criterionId: "AC-1",
             kind: "non-behavior",
             exemption: "docs-only",
             reason: "docs",
           },
           {
-            criterion: "criterion B",
+            criterionId: "AC-2",
             kind: "non-behavior",
             exemption: "format-only",
             reason: "format",
@@ -551,10 +676,10 @@ describe("acceptance evidence — conditional source and compatibility", () => {
     // Invalid: first behavioral has empty RED
     const emptyRed = validateAcceptanceEvidence(
       baseInput({
-        criteria: ["criterion A"],
+        criteria: recordsOf([["AC-1", "criterion A"]]),
         evidence: [
           {
-            criterion: "criterion A",
+            criterionId: "AC-1",
             kind: "behavior",
             focusedTests: ["a.test.ts"],
             redReason: "   ",
@@ -569,10 +694,10 @@ describe("acceptance evidence — conditional source and compatibility", () => {
     // Invalid: worker did not confirm that the RED reproduces the defect
     const genericRed = validateAcceptanceEvidence(
       baseInput({
-        criteria: ["criterion A"],
+        criteria: recordsOf([["AC-1", "criterion A"]]),
         evidence: [
           {
-            criterion: "criterion A",
+            criterionId: "AC-1",
             kind: "behavior",
             focusedTests: ["a.test.ts"],
             redReason: "fails",
@@ -588,10 +713,10 @@ describe("acceptance evidence — conditional source and compatibility", () => {
     // Valid: the worker supplies the semantic confirmation; the validator does not parse RED prose
     const naturalRed = validateAcceptanceEvidence(
       baseInput({
-        criteria: ["criterion A"],
+        criteria: recordsOf([["AC-1", "criterion A"]]),
         evidence: [
           {
-            criterion: "criterion A",
+            criterionId: "AC-1",
             kind: "behavior",
             focusedTests: ["a.test.ts"],
             redReason: "crashes on empty input",
@@ -604,10 +729,10 @@ describe("acceptance evidence — conditional source and compatibility", () => {
     assert.equal(naturalRed.ok, true);
 
     const omittedClassification = validateAcceptanceEvidence({
-      criteria: ["criterion A"],
+      criteria: recordsOf([["AC-1", "criterion A"]]),
       evidence: [
         {
-          criterion: "criterion A",
+          criterionId: "AC-1",
           kind: "behavior",
           focusedTests: ["a.test.ts"],
           redReason: "crashes on empty input",
@@ -632,10 +757,10 @@ describe("acceptance evidence — conditional source and compatibility", () => {
 describe("acceptance evidence — escaping and deterministic rendering", () => {
   test("escaping prevents --> corruption", () => {
     const input: AcceptanceEvidenceInput = {
-      criteria: ["criterion A"],
+      criteria: recordsOf([["AC-1", "criterion A"]]),
       evidence: [
         {
-          criterion: "criterion A",
+          criterionId: "AC-1",
           kind: "behavior",
           focusedTests: ["a.test.ts"],
           redReason: "blocked by --> injection",
@@ -653,17 +778,20 @@ describe("acceptance evidence — escaping and deterministic rendering", () => {
 
   test("deterministic rendering: same input yields same output", () => {
     const input: AcceptanceEvidenceInput = {
-      criteria: ["criterion A", "criterion B"],
+      criteria: recordsOf([
+        ["AC-1", "criterion A"],
+        ["AC-2", "criterion B"],
+      ]),
       evidence: [
         {
-          criterion: "criterion A",
+          criterionId: "AC-1",
           kind: "behavior",
           focusedTests: ["a.test.ts"],
           redReason: "fails",
           greenPassed: true,
         },
         {
-          criterion: "criterion B",
+          criterionId: "AC-2",
           kind: "non-behavior",
           exemption: "format-only",
           reason: "whitespace only",
@@ -676,13 +804,30 @@ describe("acceptance evidence — escaping and deterministic rendering", () => {
     assert.equal(first, second);
   });
 
+  test("a wording clarification keeps the ID and changes the requirements revision", () => {
+    const clarifiedText = "criterion A wording clarified";
+    const original = baseInput();
+    const clarified = baseInput({
+      criteria: recordsOf([[ "AC-1", clarifiedText]]),
+    });
+    assert.notEqual(
+      criteriaRevision(clarified.criteria),
+      criteriaRevision(original.criteria),
+      "clarification must change the requirements revision",
+    );
+    assert.ok(
+      criteriaRevision(clarified.criteria).includes("AC-1"),
+      "the same stable ID survives the clarification",
+    );
+  });
+
   test("external and compatibility sections appear only when triggered", () => {
     const without = renderAcceptanceEvidence(
       baseInput({
-        criteria: ["criterion A"],
+        criteria: recordsOf([["AC-1", "criterion A"]]),
         evidence: [
           {
-            criterion: "criterion A",
+            criterionId: "AC-1",
             kind: "behavior",
             focusedTests: ["a.test.ts"],
             redReason: "fails",
@@ -696,10 +841,10 @@ describe("acceptance evidence — escaping and deterministic rendering", () => {
 
     const withBoth = renderAcceptanceEvidence(
       baseInput({
-        criteria: ["criterion A"],
+        criteria: recordsOf([["AC-1", "criterion A"]]),
         evidence: [
           {
-            criterion: "criterion A",
+            criterionId: "AC-1",
             kind: "behavior",
             focusedTests: ["a.test.ts"],
             redReason: "fails",
@@ -734,10 +879,10 @@ describe("acceptance evidence — escaping and deterministic rendering", () => {
   test("external source requires semver and authoritative https URL", () => {
     const badVersion = validateAcceptanceEvidence(
       baseInput({
-        criteria: ["criterion A"],
+        criteria: recordsOf([["AC-1", "criterion A"]]),
         evidence: [
           {
-            criterion: "criterion A",
+            criterionId: "AC-1",
             kind: "behavior",
             focusedTests: ["a.test.ts"],
             redReason: "fails",
@@ -758,10 +903,10 @@ describe("acceptance evidence — escaping and deterministic rendering", () => {
 
     const badUrl = validateAcceptanceEvidence(
       baseInput({
-        criteria: ["criterion A"],
+        criteria: recordsOf([["AC-1", "criterion A"]]),
         evidence: [
           {
-            criterion: "criterion A",
+            criterionId: "AC-1",
             kind: "behavior",
             focusedTests: ["a.test.ts"],
             redReason: "fails",
@@ -782,10 +927,10 @@ describe("acceptance evidence — escaping and deterministic rendering", () => {
 
     const garbageVersion = validateAcceptanceEvidence(
       baseInput({
-        criteria: ["criterion A"],
+        criteria: recordsOf([["AC-1", "criterion A"]]),
         evidence: [
           {
-            criterion: "criterion A",
+            criterionId: "AC-1",
             kind: "behavior",
             focusedTests: ["a.test.ts"],
             redReason: "fails",
@@ -806,10 +951,10 @@ describe("acceptance evidence — escaping and deterministic rendering", () => {
 
     const httpUrl = validateAcceptanceEvidence(
       baseInput({
-        criteria: ["criterion A"],
+        criteria: recordsOf([["AC-1", "criterion A"]]),
         evidence: [
           {
-            criterion: "criterion A",
+            criterionId: "AC-1",
             kind: "behavior",
             focusedTests: ["a.test.ts"],
             redReason: "fails",
@@ -1070,12 +1215,12 @@ describe("conditional quality evidence triggers (#172, ADR-0021 extension)", () 
 });
 
 describe("fixture review cases — four plan fixtures", () => {
-  test("ordinary behavioral feature renders RED/GREEN", () => {
+  test("ordinary behavioral feature renders RED/GREEN by ID", () => {
     const input: AcceptanceEvidenceInput = {
-      criteria: ["add validation"],
+      criteria: recordsOf([["AC-1", "add validation"]]),
       evidence: [
         {
-          criterion: "add validation",
+          criterionId: "AC-1",
           kind: "behavior",
           focusedTests: ["validation.test.ts"],
           redReason: "fails without validation",
@@ -1091,10 +1236,10 @@ describe("fixture review cases — four plan fixtures", () => {
 
   test("bug fix reproduces defect in first behavioral RED", () => {
     const input: AcceptanceEvidenceInput = {
-      criteria: ["fix crash on empty input"],
+      criteria: recordsOf([["AC-1", "fix crash on empty input"]]),
       evidence: [
         {
-          criterion: "fix crash on empty input",
+          criterionId: "AC-1",
           kind: "behavior",
           focusedTests: ["reproduce-crash.test.ts"],
           redReason: "reproduces crash on empty input",
@@ -1109,10 +1254,10 @@ describe("fixture review cases — four plan fixtures", () => {
 
   test("docs-only exemption records whitelist reason", () => {
     const input: AcceptanceEvidenceInput = {
-      criteria: ["update README"],
+      criteria: recordsOf([["AC-1", "update README"]]),
       evidence: [
         {
-          criterion: "update README",
+          criterionId: "AC-1",
           kind: "non-behavior",
           exemption: "docs-only",
           reason: "no observable behavior, only documentation",
@@ -1126,10 +1271,10 @@ describe("fixture review cases — four plan fixtures", () => {
 
   test("version-sensitive public-interface change includes source and compatibility", () => {
     const input: AcceptanceEvidenceInput = {
-      criteria: ["expose new public API"],
+      criteria: recordsOf([["AC-1", "expose new public API"]]),
       evidence: [
         {
-          criterion: "expose new public API",
+          criterionId: "AC-1",
           kind: "behavior",
           focusedTests: ["api.test.ts"],
           redReason: "fails without new endpoint",
@@ -1161,5 +1306,16 @@ describe("fixture review cases — four plan fixtures", () => {
     assert.ok(rendered.includes("External source"));
     assert.ok(rendered.includes("worker-confirmed"));
     assert.ok(rendered.includes("Compatibility"));
+  });
+});
+
+describe("stable criterion key (parent #183, ticket #188)", () => {
+  test("the stable key is the authority issue number plus the local ID", () => {
+    assert.equal(criterionKey(188, "AC-1"), "#188:AC-1");
+    assert.equal(criterionKey(183, "AC-1"), "#183:AC-1");
+  });
+
+  test("two issues using the same local ID are safe because keys differ", () => {
+    assert.notEqual(criterionKey(183, "AC-1"), criterionKey(188, "AC-1"));
   });
 });

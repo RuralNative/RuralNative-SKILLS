@@ -1,23 +1,28 @@
-// Acceptance evidence for implement-this worker contract (#152).
+// Acceptance evidence for implement-this worker contract (#152; stable
+// criterion identity #188).
 //
 // Pure: facts in, decisions out. No network, GitHub, filesystem-mutation,
 // clocks, or Agent Manager calls. The worker supplies trigger facts from the
-// current diff; this module validates criterion coverage and renders a stable
-// Markdown block. Caller-provided text is escaped consistently with
-// timing.ts so "-->" cannot corrupt the trusted HTML-comment marker.
+// current diff; this module validates criterion coverage by stable criterion
+// ID (never by full sentence text) and renders a stable Markdown block.
+// Caller-provided text is escaped consistently with timing.ts so "-->"
+// cannot corrupt the trusted HTML-comment marker.
+
+import type { AcceptanceCriterion } from "./workflow-state.ts";
+import { activeCriteria, criteriaRevision } from "./workflow-state.ts";
 
 export type ExemptionKind = "docs-only" | "static-content" | "rename-only" | "format-only";
 
 export type CriterionEvidence =
   | {
-      criterion: string;
+      criterionId: string;
       kind: "behavior";
       focusedTests: readonly string[];
       redReason: string;
       greenPassed: true;
     }
   | {
-      criterion: string;
+      criterionId: string;
       kind: "non-behavior";
       exemption: ExemptionKind;
       reason: string;
@@ -87,11 +92,13 @@ export interface PerformanceEvidence {
 }
 
 export interface AcceptanceEvidenceInput {
-  criteria: readonly string[];
+  /** Criterion records carrying stable local IDs, text, and status. */
+  criteria: readonly AcceptanceCriterion[];
   evidence: readonly CriterionEvidence[];
   triggers: {
     touchesVersionedExternalApi: boolean;
     touchesPublicInterface: boolean;
+    /** Criterion IDs the diff touches as dependency/configuration change. */
     dependencyOrConfigCriteria: readonly string[];
     externalSourceResolved: boolean;
     externalDocumentationAuthoritative: boolean;
@@ -147,6 +154,16 @@ function escapeForMarkdown(value: string): string {
   return escapeEvidenceText(value);
 }
 
+function activeCriterionIds(criteria: readonly AcceptanceCriterion[]): Set<string> {
+  return new Set(activeCriteria(criteria).map((c) => c.id));
+}
+
+function retiredCriterionIds(criteria: readonly AcceptanceCriterion[]): Set<string> {
+  return new Set(
+    criteria.filter((c) => c.status === "retired").map((c) => c.id),
+  );
+}
+
 export function validateAcceptanceEvidence(
   input: AcceptanceEvidenceInput,
 ): ValidationResult {
@@ -159,41 +176,65 @@ export function validateAcceptanceEvidence(
     errors.push("worker must confirm the first behavioral RED for a bug fix");
   }
 
+  // Criteria records must carry a stable local ID and an active or retired
+  // status, and duplicate or reused IDs make the issue record invalid.
+  const activeIds = activeCriterionIds(input.criteria);
+  const retiredIds = retiredCriterionIds(input.criteria);
+  const allCriterionIds = new Set(input.criteria.map((c) => c.id));
+  const seenCriterionIds = new Set<string>();
+  for (const criterion of input.criteria) {
+    if (!/^[A-Za-z]{2,3}-\d+$/.test(criterion.id)) {
+      errors.push(`malformed criterion id: ${criterion.id}`);
+      continue;
+    }
+    if (seenCriterionIds.has(criterion.id)) {
+      errors.push(`duplicate or reused criterion id within the issue: ${criterion.id}`);
+      continue;
+    }
+    seenCriterionIds.add(criterion.id);
+    if (criterion.status !== "active" && criterion.status !== "retired") {
+      errors.push(`criterion ${criterion.id} must be active or retired`);
+    }
+  }
+
   const dependencyCriteriaValues = input.triggers.dependencyOrConfigCriteria;
   const dependencyCriteria = new Set(
     Array.isArray(dependencyCriteriaValues) ? dependencyCriteriaValues : [],
   );
   if (!Array.isArray(dependencyCriteriaValues)) {
-    errors.push("worker must supply dependency/configuration criterion names from the diff");
+    errors.push("worker must supply dependency/configuration criterion IDs from the diff");
   }
-  for (const criterion of dependencyCriteria) {
-    if (!input.criteria.includes(criterion)) {
-      errors.push(`dependency/configuration trigger names unknown criterion: ${criterion}`);
+  for (const criterionId of dependencyCriteria) {
+    if (!activeIds.has(criterionId)) {
+      errors.push(`dependency/configuration trigger names unknown or retired criterion: ${criterionId}`);
     }
   }
 
-  // Exact coverage: one entry per criterion, no unknown, no duplicate, no missing
-  const criterionSet = new Set(input.criteria);
-  if (input.evidence.length !== input.criteria.length) {
+  // Exact coverage by stable ID: one entry per active criterion, no unknown
+  // or retired ID accepted as active evidence, no duplicate, no missing.
+  const expectedActive = activeCriteria(input.criteria).length;
+  if (input.evidence.length !== expectedActive) {
     errors.push(
-      `criterion coverage: expected ${input.criteria.length} evidence entries, got ${input.evidence.length}`,
+      `criterion coverage: expected ${expectedActive} evidence entries, got ${input.evidence.length}`,
     );
   }
 
   const seen = new Set<string>();
   for (const ev of input.evidence) {
-    if (!criterionSet.has(ev.criterion)) {
-      errors.push(`unknown criterion: ${ev.criterion}`);
+    if (!allCriterionIds.has(ev.criterionId)) {
+      errors.push(`unknown criterion: ${ev.criterionId}`);
+    } else if (retiredIds.has(ev.criterionId)) {
+      errors.push(`retired criterion is never accepted as active evidence: ${ev.criterionId}`);
     }
-    if (seen.has(ev.criterion)) {
-      errors.push(`duplicate criterion: ${ev.criterion}`);
+    if (seen.has(ev.criterionId)) {
+      errors.push(`duplicate criterion: ${ev.criterionId}`);
     }
-    seen.add(ev.criterion);
+    seen.add(ev.criterionId);
   }
 
-  for (const c of input.criteria) {
-    if (!seen.has(c)) {
-      errors.push(`missing evidence for criterion: ${c}`);
+  for (const id of activeIds) {
+    if (!seen.has(id)) {
+      errors.push(`missing evidence for criterion: ${id}`);
     }
   }
 
@@ -201,46 +242,47 @@ export function validateAcceptanceEvidence(
   for (const ev of input.evidence) {
     if (ev.kind === "behavior") {
       if (!isNonEmptyString(ev.redReason)) {
-        errors.push(`behavior criterion "${ev.criterion}" requires non-empty redReason`);
+        errors.push(`behavior criterion "${ev.criterionId}" requires non-empty redReason`);
       }
       if (!ev.focusedTests || ev.focusedTests.length === 0) {
-        errors.push(`behavior criterion "${ev.criterion}" requires at least one focusedTests entry`);
+        errors.push(`behavior criterion "${ev.criterionId}" requires at least one focusedTests entry`);
       } else {
         for (const t of ev.focusedTests) {
           if (!isNonEmptyString(t)) {
-            errors.push(`behavior criterion "${ev.criterion}" has empty focusedTests entry`);
+            errors.push(`behavior criterion "${ev.criterionId}" has empty focusedTests entry`);
           }
         }
       }
       if (ev.greenPassed !== true) {
-        errors.push(`behavior criterion "${ev.criterion}" requires greenPassed true`);
+        errors.push(`behavior criterion "${ev.criterionId}" requires greenPassed true`);
       }
     } else if (ev.kind === "non-behavior") {
       if (!(ALLOWED_EXEMPTIONS as readonly string[]).includes(ev.exemption)) {
-        errors.push(`non-behavior criterion "${ev.criterion}" has invalid exemption: ${ev.exemption}`);
+        errors.push(`non-behavior criterion "${ev.criterionId}" has invalid exemption: ${ev.exemption}`);
       }
       if (!isNonEmptyString(ev.reason)) {
-        errors.push(`non-behavior criterion "${ev.criterion}" requires non-empty reason`);
+        errors.push(`non-behavior criterion "${ev.criterionId}" requires non-empty reason`);
       }
     } else {
-      errors.push(`criterion "${(ev as { criterion: string }).criterion}" has unknown kind`);
+      errors.push(`criterion "${(ev as { criterionId: string }).criterionId}" has unknown kind`);
     }
   }
 
-  // Dependency/configuration changes are never exempt. The worker supplies the
-  // affected criterion names from the diff; this module does not inspect prose.
+  // Dependency/configuration changes are never exempt. The worker supplies
+  // the affected criterion IDs from the diff; this module does not inspect
+  // prose.
   for (const ev of input.evidence) {
-    if (ev.kind === "non-behavior" && dependencyCriteria.has(ev.criterion)) {
-      errors.push(`dependency/configuration change is never exempt: "${ev.criterion}"`);
+    if (ev.kind === "non-behavior" && dependencyCriteria.has(ev.criterionId)) {
+      errors.push(`dependency/configuration change is never exempt: "${ev.criterionId}"`);
     }
   }
 
   // Bug-fix: first behavioral criterion must reproduce defect
   if (input.triggers.isBugFix === true) {
-    const evidenceByCriterion = new Map(input.evidence.map((e) => [e.criterion, e] as const));
+    const evidenceByCriterion = new Map(input.evidence.map((e) => [e.criterionId, e] as const));
     let firstBehavioral: CriterionEvidence | null = null;
-    for (const c of input.criteria) {
-      const ev = evidenceByCriterion.get(c);
+    for (const id of activeIds) {
+      const ev = evidenceByCriterion.get(id);
       if (ev && ev.kind === "behavior") {
         firstBehavioral = ev;
         break;
@@ -467,18 +509,17 @@ export function renderAcceptanceEvidence(input: AcceptanceEvidenceInput): string
     throw new Error(`invalid acceptance evidence: ${validation.errors.join("; ")}`);
   }
 
-  // Deterministic order: follow criteria order
-  const evidenceByCriterion = new Map(input.evidence.map((e) => [e.criterion, e] as const));
+  // Deterministic order: follow the dispatch criteria order, active only.
+  const evidenceByCriterion = new Map(input.evidence.map((e) => [e.criterionId, e] as const));
 
   const lines: string[] = [];
   lines.push(ACCEPTANCE_EVIDENCE_MARKER_START);
   lines.push("## Acceptance evidence");
   lines.push("");
 
-  for (const criterion of input.criteria) {
-    const ev = evidenceByCriterion.get(criterion)!;
-    const safeCriterion = escapeForMarkdown(criterion);
-    lines.push(`- **Criterion:** ${safeCriterion}`);
+  for (const criterion of activeCriteria(input.criteria)) {
+    const ev = evidenceByCriterion.get(criterion.id)!;
+    lines.push(`- **Criterion:** \`${escapeForMarkdown(criterion.id)}\` — ${escapeForMarkdown(criterion.text)}`);
     if (ev.kind === "behavior") {
       lines.push(`  - Kind: behavior`);
       lines.push(`  - RED: ${escapeForMarkdown(ev.redReason)}`);
@@ -563,6 +604,9 @@ export function renderAcceptanceEvidence(input: AcceptanceEvidenceInput): string
     lines.push(`- Attribution: ${escapeForMarkdown(input.performanceEvidence.attribution)}`);
     lines.push(`- Decision: ${escapeForMarkdown(input.performanceEvidence.keepOrRevert)}`);
   }
+
+  lines.push("");
+  lines.push(`- Requirements revision: ${escapeForMarkdown(criteriaRevision(input.criteria))}`);
 
   lines.push(ACCEPTANCE_EVIDENCE_MARKER_END);
   return lines.join("\n");

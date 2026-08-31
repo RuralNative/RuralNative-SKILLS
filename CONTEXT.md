@@ -157,6 +157,10 @@ _Avoid_: Wrapper, coordinator
 The GitHub issue that records the agreed scope and groups every implementation ticket as a native child. It is a lifecycle record, not claimable work.
 _Avoid_: Parent ticket, spec ticket
 
+**Acceptance criterion**:
+A requirement row in a published ticket that carries a local ID unique within its own issue, written `- \`AC-1\`: text`. The stable criterion key is the authority issue number plus the local ID, so two issues may both use `AC-1`. Clearer wording keeps the same ID; changed observable behavior gets a new ID and retires the old one, and retired IDs are never reused or accepted as active evidence. Workers cite and prove criteria by ID, never by full sentence text.
+_Avoid_: acceptance requirement (when the stable ID is meant)
+
 **Ticket frontier**:
 The open, unassigned child tickets of a parent specification that have no open native blockers and carry `ready-for-agent`.
 _Avoid_: Ready queue, batch

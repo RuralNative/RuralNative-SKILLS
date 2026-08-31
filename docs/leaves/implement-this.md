@@ -19,7 +19,7 @@ Implementation adapter: validates a bounded ticket set, dispatches each ticket t
 10. **INV-10** — Reconcile before retry; one retry; second failure adds `needs-info`, retains worktree.
 11. **INV-11** — Completion: `/review-this #<spec>` from the control workspace; worktrees do not review.
 12. **INV-12** — `ordinary`/`high-risk` targets; `timing.ts` records phases; `setup.ts` reruns on manifest change.
-13. **INV-13** — Evidence: behavioral RED/GREEN; exemptions `docs-only`/`static-content`/`rename-only`/`format-only`; bug-fix `isBugFix` + `bugFixRedConfirmed`; conditional triggers (browser, security, operability, migration, performance)
+13. **INV-13** — Evidence by stable `AC-N` IDs; behavioral RED/GREEN; exemptions `docs-only`/`static-content`/`rename-only`/`format-only`; bug-fix `isBugFix` + `bugFixRedConfirmed`; retired IDs never active; conditional triggers.
 14. **INV-14** — Bounded orientation consumption (ADR-0024): worker preflights before broad loading.
 
 ## Verification

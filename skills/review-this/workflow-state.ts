@@ -25,6 +25,95 @@ export interface TicketFact {
   openBlockers: number[];
 }
 
+/** Stable acceptance-criterion identity (parent #183, ticket #188). */
+export type CriterionStatus = "active" | "retired";
+
+export interface AcceptanceCriterion {
+  /** Issue-scoped local ID, e.g. `AC-1`. Unique within one issue. */
+  id: string;
+  text: string;
+  status: CriterionStatus;
+}
+
+export const CRITERION_REVISION_VERSION = "criteria-v1";
+
+/**
+ * The stable key of one acceptance criterion: the authority issue number plus
+ * its local ID. Two issues may use `AC-1` safely because the key differs.
+ */
+export function criterionKey(issue: number, id: string): string {
+  return `#${issue}:${id}`;
+}
+
+const CRITERION_LINE =
+  /^\s*-\s*(?:~~)?`?([A-Za-z]{2,3}-\d+)`?(?:~~)?\s*(?:\(retired\))\s*:\s*(.+)$/;
+const ACTIVE_CRITERION_LINE = /^\s*-\s*`?([A-Za-z]{2,3}-\d+)`?\s*:\s*(.+)$/;
+
+/**
+ * Parse the published acceptance-criteria bullets of one issue body.
+ * An active bullet is `- \`AC-1\`: text`; a retired bullet carries a
+ * `(retired)` marker, e.g. `- \`AC-2\` (retired): old text`.
+ */
+export function parseAcceptanceCriteria(body: string): AcceptanceCriterion[] {
+  const criteria: AcceptanceCriterion[] = [];
+  for (const line of body.split("\n")) {
+    const retired = line.match(CRITERION_LINE);
+    if (retired) {
+      criteria.push({ id: retired[1], text: retired[2].trim(), status: "retired" });
+      continue;
+    }
+    const active = line.match(ACTIVE_CRITERION_LINE);
+    if (active) {
+      criteria.push({ id: active[1], text: active[2].trim(), status: "active" });
+    }
+  }
+  return criteria;
+}
+
+/**
+ * Local uniqueness within one issue: the same ID never appears twice (active
+ * or retired), so a retired ID is never reused or renumbered. Retired records
+ * are legitimate carriers of the retired status; they stay in the revision.
+ */
+export function validateCriterionRecords(
+  criteria: readonly AcceptanceCriterion[],
+): string[] {
+  const errors: string[] = [];
+  const seen = new Set<string>();
+  const idShape = /^[A-Za-z]{2,3}-\d+$/;
+  for (const criterion of criteria) {
+    if (!idShape.test(criterion.id)) {
+      errors.push(`malformed criterion id: ${criterion.id}`);
+      continue;
+    }
+    if (seen.has(criterion.id)) {
+      errors.push(`duplicate or reused criterion id within the issue: ${criterion.id}`);
+      continue;
+    }
+    seen.add(criterion.id);
+  }
+  return errors;
+}
+
+/**
+ * Versioned requirements revision over the criterion records. A wording
+ * clarification keeps the local ID but changes this revision; changed
+ * observable behavior carries a new ID and retires the old one.
+ */
+export function criteriaRevision(criteria: readonly AcceptanceCriterion[]): string {
+  const canonical = [...criteria]
+    .sort((a, b) => a.id.localeCompare(b.id))
+    .map((c) => `${c.id}\t${c.status}\t${c.text.trim().replace(/\s+/g, " ")}`)
+    .join("\n");
+  return `${CRITERION_REVISION_VERSION}:${canonical}`;
+}
+
+export function activeCriteria(
+  criteria: readonly AcceptanceCriterion[],
+): AcceptanceCriterion[] {
+  return criteria.filter((c) => c.status === "active");
+}
+
 export interface WorkerFact {
   id: string;
   ticket: number;

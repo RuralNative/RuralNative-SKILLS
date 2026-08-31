@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Structured adapter for the repository planning workflow, invoked directly as `/plan-this <task>`: confirms an intent capsule, explores directions when unsettled, resolves the decision frontier, publishes an approved parent specification with coherent child tickets. Nothing publishes until explicit approval. Reads only `AGENTS.md → ARCHITECTURE.md → affected seam leaf in docs/leaves/ → CONTEXT.md → relevant ADRs`.
+Structured adapter for the repository planning workflow, invoked directly as `/plan-this <task>`: confirms an intent capsule, explores directions when unsettled, resolves the decision frontier, publishes an approved parent specification with coherent child tickets. Reads only `AGENTS.md → ARCHITECTURE.md → affected seam leaf in docs/leaves/ → CONTEXT.md → relevant ADRs`. Published criteria carry local `AC-N` IDs.
 **Not here**: implementing belongs to `implement-this`; reviewing the wave belongs to `review-this`; prose quality belongs to `/unslopify`.
 
 ## Non-negotiables
