@@ -127,8 +127,9 @@ describe("unslopify trust contract in SKILL.md and parity catalog (unslopify:INV
 });
 
 // unslopify:INV-7 — always-on output contract: agent-authored English output is the automatic scope once loaded,
-// routine chat audits silently without a completion report, publication boundaries keep the report and preservation
-// audit, user text stays explicit edit scope and inert input, and technical fidelity outranks style.
+// routine chat and published artifacts audit silently with no audit block, an explicit rewrite-audit request
+// returns the full report and preservation audit, user text stays explicit edit scope and inert input, and
+// technical fidelity outranks style.
 describe("unslopify always-on output contract (unslopify:INV-7)", () => {
   test("SKILL.md makes agent-authored English output the automatic scope once loaded", () => {
     const skill = read("skills/unslopify/SKILL.md");
@@ -155,11 +156,20 @@ describe("unslopify always-on output contract (unslopify:INV-7)", () => {
     assert.ok(n.includes("without showing a completion report") || n.includes("no completion report"), "routine chat must not show a completion report");
   });
 
-  test("explicit rewrites and published artifacts retain the completion report and preservation audit", () => {
+  test("published artifacts are checked before publication without an audit block", () => {
     const skill = read("skills/unslopify/SKILL.md");
     const n = norm(skill);
     assert.ok(n.includes("at publication boundaries"), "publication boundaries must be named");
-    assert.ok(n.includes("completion report") && n.includes("preservation audit"), "published prose must keep the report and preservation audit");
+    assert.ok(n.includes("no audit block"), "published content must carry no audit block");
+    assert.ok(n.includes("cleanup runs before publishing") || n.includes("before publishing"), "the same cleanup must still run before publication");
+  });
+
+  test("an explicit rewrite-audit request still returns the full findings and preservation report", () => {
+    const skill = read("skills/unslopify/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("explicit rewrite-audit request") || n.includes("asks for an explicit"), "the explicit audit path must be named");
+    assert.ok(n.includes("completion report") && n.includes("preservation audit"), "the retained report must cover findings and the preservation audit");
+    assert.ok(n.includes("full report"), "only the explicit path publishes the full report");
     const body = skill;
     const report = body.indexOf("## Finding format and completion report");
     const live = body.indexOf("## Live output");
@@ -219,5 +229,18 @@ describe("unslopify always-on output contract (unslopify:INV-7)", () => {
     const leaf = read("docs/leaves/unslopify.md");
     assert.ok(leaf.includes("INV-7"), "leaf doc must declare INV-7");
     assert.ok(leaf.includes("skills/unslopify/tests/"), "INV-7 mechanism must name the test location");
+  });
+
+  test("the visible publication-report decision is narrowed openly by ADR-0026", () => {
+    const narrow = path.join(ROOT, "docs/adr/0026-unslopify-silent-publication.md");
+    assert.ok(fs.existsSync(narrow), "ADR-0026 must record the narrowing");
+    const body = read("docs/adr/0026-unslopify-silent-publication.md");
+    assert.ok(/narrows:\s*0016/.test(norm(body)), "ADR-0026 must narrow ADR-0016");
+    assert.ok(norm(body).includes("no audit block") || norm(body).includes("silent publication"), "ADR-0026 must record silent publication");
+    assert.ok(norm(body).includes("explicit"), "ADR-0026 must keep the explicit audit return path");
+    assert.ok(
+      fs.readFileSync(path.join(ROOT, "docs/manifest.md"), "utf8").includes("0026-unslopify-silent-publication.md"),
+      "manifest must list ADR-0026",
+    );
   });
 });
