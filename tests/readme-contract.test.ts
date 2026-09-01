@@ -93,8 +93,9 @@ describe("README contract #107 #159",()=>{
     assert.ok(!/the only (compatible )?host\b(?! —)/i.test(readme.replace("not the only compatible host","")),"must not claim Kilo is the only host");
   });
 
-  test("mandatory grill and explicit publication approval language",()=>{
-    assert.ok(readme.includes("at least one decision frontier"),"missing mandatory grill frontier language");
+  test("ask-only planning and explicit publication approval language",()=>{
+    assert.ok(readme.includes("cannot decide a choice"),"missing ask-only planning language");
+    assert.ok(readme.includes("without a forced question"),"missing no-forced-question language");
     assert.ok(/waits? for explicit approval/i.test(readme),"missing explicit approval gate language");
   });
 

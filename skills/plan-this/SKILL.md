@@ -1,6 +1,6 @@
 ---
 name: plan-this
-description: Run the repository planning workflow when the user invokes /plan-this <task>. Define and confirm intent, explore alternatives only when the solution form is unsettled, resolve the decision frontier, then publish an approved GitHub specification and coherent tickets through /grill-with-docs, /to-spec, /to-tickets, and /unslopify. Unrelated invocation is rejected.
+description: Run the repository planning workflow when the user invokes /plan-this <task>. Publish an approved GitHub specification and coherent tickets through /grill-with-docs, /to-spec, /to-tickets, and /unslopify, asking only when a human must decide. Unrelated invocation is rejected.
 ---
 
 Run this planning-only workflow: `/grill-with-docs` → `/to-spec` → `/to-tickets`
@@ -16,9 +16,11 @@ One direct `/plan-this <task>` invocation is the explicit human invocation that 
 
 ## 1. Define intent
 
-Draft an intent capsule with `Outcome`, `User`, `Why now`, `Success`, `Constraints`, and `Non-goals`. Use the task, conversation, code, and documentation before asking for missing information.
+Draft an intent capsule with `Outcome`, `User`, `Why now`, `Success`, `Constraints`, and `Non-goals`. Use the task, conversation, code, and documentation to fill every field before asking the user anything.
 
-Ask one decision at a time in ELI18 language. Attach a recommended answer and the evidence or reasoning behind it so the user can correct a concrete proposal. A fresh run completes at least one real decision round; when the capsule is already complete, confirmation of the capsule is that round. The phase is complete when the user confirms the capsule and no field contains an unresolved product decision.
+Ask a question only when repository facts and the confirmed task cannot decide a choice, and the choice changes product behavior, scope, cost, risk, or an action that is hard to undo. Ask one real question at a time. Write every question for a general reader: one plain sentence stating the choice, at most three short options, one short recommendation based on effects the user can understand, and explain any needed technical term in plain words where it appears. Repository facts, standard safe defaults, reversible implementation choices, and internal process choices never become user questions.
+
+When the capsule is complete and settled — every field is decided and no field contains an unresolved product decision — record it and move on without a question. The phase is complete when the capsule is recorded and no field contains an unresolved product decision.
 
 ## 2. Explore if needed
 
@@ -26,7 +28,7 @@ When the intended outcome is clear but the solution form is unsettled, present t
 
 ## 3. Resolve decisions
 
-Run `/grill-with-docs` as a decision tree and resume its recorded tree after interruption. Work one frontier decision at a time until no branch remains silently assumed. This command's one-decision rule overrides `/grilling` frontier batching, and its planning-only boundary overrides `/domain-modeling` write-as-you-go behavior: record approved decisions in the future GitHub specification and do not edit repository ADR or glossary files during this run.
+Run `/grill-with-docs` as a decision tree and resume its recorded tree after interruption. Work one frontier decision at a time until no branch remains silently assumed. A complete capsule with a settled solution has an empty frontier: record the decisions and move on without a question. This command's one-decision rule overrides `/grilling` frontier batching, and its planning-only boundary overrides `/domain-modeling` write-as-you-go behavior: record approved decisions in the future GitHub specification and do not edit repository ADR or glossary files during this run.
 
 ## 4. Design the specification and tickets
 
@@ -34,7 +36,7 @@ Run `/grill-with-docs` as a decision tree and resume its recorded tree after int
 - Publish every acceptance criterion with a local ID unique within its own issue, such as `- \`AC-1\`: text`. The stable criterion key is the authority issue number plus that local ID, so two issues may use `AC-1` safely. Clearer wording keeps the same ID; changed observable behavior gets a new ID and retires the old one, and retired IDs are never reused or renumbered.
 - When a task exposes a security boundary, browser-observable behavior, production-operability path, migration, rollback, or explicit product-performance obligation, express the required proof through the existing acceptance criteria, risk, constraints, and smallest test-first verification fields. Unrelated work receives no extra checklist and no quality-profile field is added.
 - Record `ordinary` or `high-risk` on every ticket before publication. Security boundaries, migrations, shared contracts, broad public interfaces, dependency changes, and comparable evidenced blast radius are high-risk and require evidence. A high-risk trigger without evidence returns an internal incomplete result that blocks publication and risk labeling. Plan for no more than three workers per stage and four active managed workers across the workspace.
-- Resolve an orientation set for every proposed ticket from its affected seams before publication approval (ADR-0024). Resolve the set at runtime from the compact architecture index, the whole affected seam leaf docs, leaf-named glossary entries, and linked accepted ADRs or policies; count UTF-8 bytes before broad loading. Reject a ticket whose required set exceeds its selected cap; a cache-gap approval may substitute or narrow the set but can never waive the cap. Use `preflightTicketOrientation` and `validateTicketOrientationShape` from `orientation.ts`. The approval preview may show compact budget evidence — task band, resolved bytes, cap, source count, cache-gap state — while the published ticket stays focused on behavior and sufficient verification.
+- Resolve an orientation set for every proposed ticket from its affected seams before publication approval (ADR-0024). Resolve the set at runtime from the compact architecture index, the whole affected seam leaf docs, leaf-named glossary entries, and linked accepted ADRs or policies; count UTF-8 bytes before broad loading. Reject a ticket whose required set exceeds its selected cap; a cache-gap approval may substitute or narrow the set but can never waive the cap. Use `preflightTicketOrientation` and `validateTicketOrientationShape` from `orientation.ts`. The published ticket stays focused on behavior and sufficient verification.
 - Keep affected seam names as the durable join key on every ticket. Add no ticket field that transports paths, section anchors, invariant lists, glossary excerpts, or policies; the runtime resolver derives current sources at consumption time.
 - Form the fewest coherent, independently verifiable behavior tickets before considering parallel execution. Keep tests, documentation, refactors, and plumbing with the behavior they support. A small task remains one ticket.
 - Split only at a separately verifiable behavior, true blocker, independent release or rollback boundary, distinct risk boundary, or fresh-context limit within the risk SLO. Derive parallelism from settled boundaries. Independent slices have no blocker edge and may share the initial frontier.
@@ -44,7 +46,7 @@ Run `/grill-with-docs` as a decision tree and resume its recorded tree after int
 
 ## 5. Approve and publish
 
-Show the confirmed intent capsule, specification outline, and proposed ticket graph. When more than one ticket exists, show each split boundary. Stop for explicit approval; only that approval authorizes `/to-spec` and `/to-tickets`.
+Show the confirmed intent capsule, specification outline, and proposed ticket graph. When more than one ticket exists, show each split boundary. Explain in plain language what will be created, the main risks, and what happens next. Questions and previews omit internal audit notes, tool details, byte calculations, and implementation terms unless the user needs them to choose safely. Stop for explicit approval; only that approval authorizes `/to-spec` and `/to-tickets`.
 
 Publish the parent specification as a GitHub issue with no claimable label. Link each implementation ticket as a native sub-issue, or place `Part of #<spec>` at the top when sub-issues are unavailable. Create native `blocked_by` edges from the blocker's numeric database ID read with `gh api repos/<owner>/<repo>/issues/<n> --jq .id`; never use `gh issue view --json databaseId`, the issue number, or `node_id`. Native edges are canonical and human-readable `Blocked by` text is fallback.
 

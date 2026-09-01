@@ -86,6 +86,7 @@ independently bounded; every seam fits every band at its strict cap.
 | docs/adr/0024-bounded-orientation.md | decision |
 | docs/adr/0025-required-orientation-sources.md | decision |
 | docs/adr/0026-unslopify-silent-publication.md | decision |
+| docs/adr/0027-plan-this-ask-when-a-human-must-decide.md | decision |
 | docs/leaves/document-for-agents.md | leaf |
 | docs/leaves/document-for-humans.md | leaf |
 | docs/leaves/unslopify.md | leaf |

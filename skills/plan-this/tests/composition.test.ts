@@ -103,7 +103,7 @@ describe("plan-this structured workflow (INV-3, INV-4)", () => {
 });
 
 describe("plan-this intent and decision gates (INV-5)", () => {
-  test("requires a confirmed intent capsule with all six fields", () => {
+  test("requires a six-field intent capsule settled without an unresolved product decision", () => {
     const content = body(read(SKILL));
     for (const field of [
       "`Outcome`",
@@ -115,17 +115,46 @@ describe("plan-this intent and decision gates (INV-5)", () => {
     ]) {
       assert.ok(content.includes(field), `intent capsule must include ${field}`);
     }
-    assert.ok(content.includes("user confirms the capsule"));
+    assert.ok(content.includes("complete and settled"));
     assert.ok(content.includes("no field contains an unresolved product decision"));
   });
 
-  test("uses one concrete decision at a time and retains the fresh-run gate", () => {
+  test("asks no forced decision round and keeps one question at a time", () => {
     const content = body(read(SKILL));
-    assert.ok(content.includes("Ask one decision at a time in ELI18 language"));
-    assert.ok(content.includes("Attach a recommended answer"));
-    assert.ok(content.includes("evidence or reasoning behind it"));
-    assert.ok(content.includes("A fresh run completes at least one real decision round"));
-    assert.ok(content.includes("confirmation of the capsule is that round"));
+    assert.equal(
+      content.includes("A fresh run completes at least one real decision round"),
+      false,
+      "the fresh-run decision round is removed",
+    );
+    assert.equal(
+      content.includes("confirmation of the capsule is that round"),
+      false,
+      "forced capsule confirmation is removed",
+    );
+    assert.ok(content.includes("Ask a question only when"));
+    assert.ok(content.includes("repository facts and the confirmed task cannot decide"));
+    assert.ok(
+      content.includes(
+        "product behavior, scope, cost, risk, or an action that is hard to undo",
+      ),
+    );
+    assert.ok(content.includes("Ask one real question at a time"));
+  });
+
+  test("writes every question plainly for a general reader", () => {
+    const content = body(read(SKILL));
+    assert.ok(content.includes("one plain sentence"));
+    assert.ok(content.includes("at most three short options"));
+    assert.ok(content.includes("one short recommendation"));
+    assert.ok(content.includes("explain any needed technical term in plain words"));
+  });
+
+  test("never turns safe defaults, reversible, or internal choices into questions", () => {
+    const content = body(read(SKILL));
+    assert.ok(content.includes("standard safe defaults"));
+    assert.ok(content.includes("reversible implementation choices"));
+    assert.ok(content.includes("internal process choices"));
+    assert.ok(content.includes("never become user questions"));
   });
 
   test("explores three directions only when the solution form is unsettled", () => {
@@ -232,6 +261,18 @@ describe("plan-this trust, approval, and publication (INV-8, INV-9)", () => {
     assert.ok(content.includes("only that approval authorizes `/to-spec` and `/to-tickets`"));
   });
 
+  test("shows a plain preview that names what will be created, the risks, and the next step", () => {
+    const content = body(read(SKILL));
+    assert.ok(content.includes("what will be created"));
+    assert.ok(content.includes("main risks"));
+    assert.ok(content.includes("what happens next"));
+    assert.ok(
+      content.includes(
+        "omit internal audit notes, tool details, byte calculations, and implementation terms",
+      ),
+    );
+  });
+
   test("publishes canonical GitHub membership, edges, and labels", () => {
     const content = body(read(SKILL));
     assert.ok(content.includes("GitHub issue with no claimable label"));
@@ -268,6 +309,20 @@ describe("plan-this documentation contract", () => {
     assert.ok(norm(leaf).includes("structured workflow"));
   });
 
+  test("documents the narrowed decision openly instead of contradicting it", () => {
+    const leaf = read(LEAF);
+    const adr = read("docs/adr/0027-plan-this-ask-when-a-human-must-decide.md");
+    assert.ok(adr.includes("Status: accepted"));
+    assert.ok(adr.includes("Narrows: 0020"));
+    assert.ok(leaf.includes("ADR-0027"));
+    const content = body(read(SKILL));
+    assert.equal(
+      content.includes("A fresh run completes at least one real decision round"),
+      false,
+      "the skill prose no longer carries the superseded clause",
+    );
+  });
+
   test("architecture and glossary retain the plan-this seam and command identity", () => {
     assert.ok(read("ARCHITECTURE.md").includes("| plan-this |"));
     assert.ok(read("CONTEXT.md").includes("`plan-this`"));
@@ -283,8 +338,9 @@ describe("plan-this bounded orientation preflight (plan-this:INV-11, #179)", () 
     assert.ok(n.includes("count utf-8 bytes") || n.includes("utf-8 bytes"), "must count bytes before broad loading");
     assert.ok(n.includes("cache-gap approval") && (n.includes("substitute") || n.includes("narrow")), "must allow cache-gap substitution");
     assert.ok(n.includes("can never waive the cap") || n.includes("cannot waive the cap"), "must never waive the cap");
-    assert.ok(n.includes("compact budget evidence"), "approval preview may show compact budget evidence");
-    assert.ok(n.includes("task band") && n.includes("resolved bytes") && n.includes("source count"), "compact evidence fields present");
+    assert.equal(content.includes("compact budget evidence"), false, "the approval preview omits budgeting details");
+    assert.equal(content.includes("task band"), false, "the approval preview omits task-band jargon");
+    assert.equal(content.includes("resolved bytes"), false, "the approval preview omits byte calculations");
   });
 
   test("affected seam names stay the durable join key with no transported orientation fields", () => {
