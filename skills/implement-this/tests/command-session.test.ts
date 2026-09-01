@@ -126,16 +126,27 @@ describe("durable delivery", () => {
       pullRequestOpen: false,
       closingReferenceValid: false,
       acceptanceEvidencePosted: false,
+      requirementsCurrent: false,
     };
-    const keys = ["pullRequestOpen", "closingReferenceValid", "acceptanceEvidencePosted"] as const;
-    for (let mask = 0; mask < 8; mask++) {
+    const keys = ["pullRequestOpen", "closingReferenceValid", "acceptanceEvidencePosted", "requirementsCurrent"] as const;
+    for (let mask = 0; mask < 16; mask++) {
       const fact: DeliveryFact = { ...base };
       keys.forEach((k, bit) => {
         if (mask & (1 << bit)) fact[k] = true;
       });
-      const expected = mask === 7;
+      const expected = mask === 15;
       assert.equal(isDelivered(fact), expected, `mask ${mask}`);
     }
+  });
+
+  test("a requirements mismatch invalidates otherwise durable delivery (ticket #190)", () => {
+    const delivered: DeliveryFact = {
+      pullRequestOpen: true,
+      closingReferenceValid: true,
+      acceptanceEvidencePosted: true,
+      requirementsCurrent: false,
+    };
+    assert.equal(isDelivered(delivered), false);
   });
 
   test("reservation and resume decisions never duplicate artifacts", () => {
@@ -147,6 +158,7 @@ describe("durable delivery", () => {
       pullRequestOpen: false,
       closingReferenceValid: false,
       acceptanceEvidencePosted: false,
+      requirementsCurrent: true,
     };
     const table: Array<[string, ReservationFact, string, object]> = [
       [
@@ -190,6 +202,18 @@ describe("durable delivery", () => {
         "delivery-durable",
         {},
       ],
+      [
+        "a body edit invalidates delivery and resumes the worker instead",
+        {
+          ...reserved,
+          pullRequestOpen: true,
+          closingReferenceValid: true,
+          acceptanceEvidencePosted: true,
+          requirementsCurrent: false,
+        },
+        "resume-worker",
+        { reuseFeatureBranch: true, reuseLiveSession: true },
+      ],
     ];
     for (const [name, fact, action, rest] of table) {
       const decision = resumeAction(fact);
@@ -222,6 +246,7 @@ describe("cleanup negotiation", () => {
     pullRequestOpen: true,
     closingReferenceValid: true,
     acceptanceEvidencePosted: true,
+    requirementsCurrent: true,
     hostClosesWorktrees: true,
   };
 
@@ -272,6 +297,7 @@ describe("resume recovery", () => {
     pullRequestOpen: false,
     closingReferenceValid: false,
     acceptanceEvidencePosted: false,
+    requirementsCurrent: true,
   };
 
   test("reuses a live worker, returns recovery-required without a session, and creates clean work", () => {

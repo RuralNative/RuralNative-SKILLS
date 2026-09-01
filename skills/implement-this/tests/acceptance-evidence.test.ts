@@ -72,6 +72,7 @@ function baseInput(overrides: Partial<AcceptanceEvidenceInput> = {}): Acceptance
     triggers: overrides.triggers ?? testTriggers(),
     externalSource: overrides.externalSource ?? null,
     compatibility: overrides.compatibility ?? null,
+    requirementsRevision: overrides.requirementsRevision,
   };
 }
 
@@ -819,6 +820,32 @@ describe("acceptance evidence — escaping and deterministic rendering", () => {
       criteriaRevision(clarified.criteria).includes("AC-1"),
       "the same stable ID survives the clarification",
     );
+  });
+
+  test("the versioned requirements revision rides the evidence block (ticket #190)", () => {
+    const revision = "requirements-v1:parent=0000000000000000000000000000000000000000000000000000000000000000;ticket=1111111111111111111111111111111111111111111111111111111111111111";
+    const rendered = renderAcceptanceEvidence(
+      baseInput({
+        requirementsRevision: revision,
+      }),
+    );
+    assert.ok(rendered.includes(`- Requirements revision: ${revision}`));
+    assert.ok(rendered.includes("- Criteria revision: "));
+  });
+
+  test("a misshapen requirements revision is rejected; legacy absence stays valid", () => {
+    const malformed = baseInput({
+      requirementsRevision: "parent=stale",
+    });
+    const errors = validateAcceptanceEvidence(malformed).errors;
+    assert.ok(
+      errors.some((e) => e.includes("requirements revision")),
+      "a value outside the contract version is rejected",
+    );
+    const legacy = baseInput();
+    assert.deepEqual(validateAcceptanceEvidence(legacy).errors, []);
+    const rendered = renderAcceptanceEvidence(legacy);
+    assert.equal(rendered.includes("- Requirements revision: "), false);
   });
 
   test("external and compatibility sections appear only when triggered", () => {

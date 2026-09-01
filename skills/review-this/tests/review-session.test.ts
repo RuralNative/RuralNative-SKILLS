@@ -61,6 +61,7 @@ describe("persistent PR worktree", () => {
       headSha: "head-a",
       baseSha: "base-a",
       implementationEvidencePosted: true,
+      requirementsCurrent: true,
     }), true);
     assert.equal(reviewCanStart({
       pullRequestOpen: true,
@@ -68,6 +69,7 @@ describe("persistent PR worktree", () => {
       headSha: "head-a",
       baseSha: "",
       implementationEvidencePosted: true,
+      requirementsCurrent: true,
     }), false);
   });
 
@@ -78,8 +80,20 @@ describe("persistent PR worktree", () => {
       headSha: "head-a",
       baseSha: "base-a",
       implementationEvidencePosted: true,
+      requirementsCurrent: true,
       siblingImplementationWorkersActive: true,
     }), true);
+  });
+
+  test("a requirements mismatch stops review publication until the bodies are reconciled (ticket #190)", () => {
+    assert.equal(reviewCanStart({
+      pullRequestOpen: true,
+      closingReferenceValid: true,
+      headSha: "head-a",
+      baseSha: "base-a",
+      implementationEvidencePosted: true,
+      requirementsCurrent: false,
+    }), false);
   });
 
   test("creates once and reuses the same pinned worktree through review", () => {

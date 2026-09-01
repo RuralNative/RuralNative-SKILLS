@@ -28,6 +28,8 @@ describe("compact dispatch packets", () => {
       affectedSeams: ["implement-this", "review-this"],
       acceptanceCriteria: [{ id: "AC-1", text: "record phase timings", status: "active" }],
       settledDecisions: ["one persistent PR worktree"],
+      requirementsRevision:
+        "requirements-v1:parent=0000000000000000000000000000000000000000000000000000000000000000;ticket=0000000000000000000000000000000000000000000000000000000000000000",
     });
     assert.equal(JSON.parse(serializeDispatchPacket(packet)).ticket, 157);
     assert.match(renderDispatchPacket(packet), /risk: high-risk/);
@@ -46,6 +48,8 @@ describe("compact dispatch packets", () => {
         { id: "AC-2", text: "retired behavior", status: "retired" },
       ],
       settledDecisions: [],
+      requirementsRevision:
+        "requirements-v1:parent=0000000000000000000000000000000000000000000000000000000000000000;ticket=0000000000000000000000000000000000000000000000000000000000000000",
     });
     const rendered = renderDispatchPacket(packet);
     assert.ok(rendered.includes("`AC-1`: active behavior"));

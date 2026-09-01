@@ -159,6 +159,8 @@ describe("cross-stage matching by ID (#188)", () => {
       affectedSeams: ["plan-this", "implement-this", "review-this"],
       acceptanceCriteria: parseAcceptanceCriteria(TICKET_BODY),
       settledDecisions: ["criteria are matched by ID"],
+      requirementsRevision:
+        "requirements-v1:parent=0000000000000000000000000000000000000000000000000000000000000000;ticket=1111111111111111111111111111111111111111111111111111111111111111",
     });
     const rendered = renderDispatchPacket(packet);
     assert.ok(rendered.includes("`AC-1`"));

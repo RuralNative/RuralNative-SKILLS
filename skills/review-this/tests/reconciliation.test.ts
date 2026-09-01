@@ -167,7 +167,7 @@ describe("reconcileFindings keeps Standards and Spec axes separate", () => {
 
   test("merge gates require green checks, resolved findings, clean local, unchanged head", () => {
     const pr = { headSha: HEAD, mergeable: true, requiredChecksGreen: true };
-    const clean = { reviewedHeadSha: HEAD, unresolvedConfirmedFindings: 0, localReviewClean: true, cloudReviewAvailable: true, trustedSummaryUpdated: true, inlineFindingsVerified: true };
+    const clean = { reviewedHeadSha: HEAD, unresolvedConfirmedFindings: 0, localReviewClean: true, cloudReviewAvailable: true, trustedSummaryUpdated: true, inlineFindingsVerified: true, requirementsCurrent: true };
     assert.equal(isMergeEligible(pr, clean).eligible, true);
     assert.equal(isMergeEligible(pr, { ...clean, cloudReviewAvailable: false }).eligible, true);
     assert.equal(isMergeEligible(pr, { ...clean, unresolvedConfirmedFindings: 1 }).eligible, false);

@@ -21,6 +21,12 @@ export interface PullRequestLink {
   closesTicket: number | null;
   /** Posted implementation acceptance evidence on the current head. */
   hasAcceptanceEvidence: boolean;
+  /**
+   * Requirements revision the implementation evidence pinned (ticket #190).
+   * Absent on evidence posted before the revision contract existed; the
+   * session compares only when a pin is present.
+   */
+  requirementsRevision?: string;
 }
 
 export interface ReviewedRevision {
@@ -36,6 +42,8 @@ export interface ReviewWaveItem {
   baseSha: string;
   mergeable: boolean;
   requiredChecksGreen: boolean;
+  /** Same requirements revision the dispatch packet carried (ticket #190). */
+  requirementsRevision?: string;
 }
 
 /**
@@ -90,6 +98,7 @@ export function selectReviewWave(
       baseSha: pr.baseSha,
       mergeable: pr.mergeable,
       requiredChecksGreen: pr.requiredChecksGreen,
+      requirementsRevision: pr.requirementsRevision,
     });
   }
   // Preserve native child order: sort by ticket appearance in the tickets array.
