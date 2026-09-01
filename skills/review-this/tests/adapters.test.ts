@@ -103,7 +103,7 @@ describe("current-head cloud comments (review-this:INV-6)", () => {
     const local = await localAdapter.run(HEAD);
     assert.equal(local.clean, true);
     const pr = { headSha: HEAD, mergeable: true, requiredChecksGreen: true };
-    const review = { reviewedHeadSha: HEAD, unresolvedConfirmedFindings: 0, localReviewClean: local.clean, cloudReviewAvailable: (cloudResult.status as string) === "available", trustedSummaryUpdated: true, inlineFindingsVerified: true };
+    const review = { reviewedHeadSha: HEAD, unresolvedConfirmedFindings: 0, localReviewClean: local.clean, cloudReviewAvailable: (cloudResult.status as string) === "available", trustedSummaryUpdated: true, inlineFindingsVerified: true, requirementsCurrent: true };
     assert.equal(isMergeEligible(pr, review).eligible, true);
     assert.equal(isMergeEligible(pr, review).cloudReview, "unavailable");
   });
@@ -121,7 +121,7 @@ describe("current-head cloud comments (review-this:INV-6)", () => {
     assert.match(result.reason ?? "", /timeout/);
     // still does not block local review
     const pr = { headSha: HEAD, mergeable: true, requiredChecksGreen: true };
-    const review = { reviewedHeadSha: HEAD, unresolvedConfirmedFindings: 0, localReviewClean: true, cloudReviewAvailable: (result.status as string) === "available", trustedSummaryUpdated: true, inlineFindingsVerified: true };
+    const review = { reviewedHeadSha: HEAD, unresolvedConfirmedFindings: 0, localReviewClean: true, cloudReviewAvailable: (result.status as string) === "available", trustedSummaryUpdated: true, inlineFindingsVerified: true, requirementsCurrent: true };
     assert.equal(isMergeEligible(pr, review).eligible, true);
   });
 });
@@ -158,7 +158,7 @@ describe("fix batching and stale-head invalidation (review-this:INV-7/INV-8)", (
 
   test("a pushed fix invalidates previous checks and review and forces a fresh head", () => {
     const before = { headSha: HEAD, mergeable: true, requiredChecksGreen: true };
-    const review = { reviewedHeadSha: OTHER_HEAD, unresolvedConfirmedFindings: 0, localReviewClean: true, cloudReviewAvailable: true, trustedSummaryUpdated: true, inlineFindingsVerified: true };
+    const review = { reviewedHeadSha: OTHER_HEAD, unresolvedConfirmedFindings: 0, localReviewClean: true, cloudReviewAvailable: true, trustedSummaryUpdated: true, inlineFindingsVerified: true, requirementsCurrent: true };
     const decision = isMergeEligible(before, review);
     assert.equal(decision.eligible, false);
     assert.ok(decision.blockers.some((b) => b.includes("reviewed head SHA does not match")));
@@ -168,7 +168,7 @@ describe("fix batching and stale-head invalidation (review-this:INV-7/INV-8)", (
 describe("merge gates and squash merge decisions (review-this:INV-8/INV-9)", () => {
   test("merge requires green checks, resolved findings, clean local review, unchanged head", () => {
     const pr = { headSha: HEAD, mergeable: true, requiredChecksGreen: true };
-    const ok = { reviewedHeadSha: HEAD, unresolvedConfirmedFindings: 0, localReviewClean: true, cloudReviewAvailable: false, trustedSummaryUpdated: true, inlineFindingsVerified: true };
+    const ok = { reviewedHeadSha: HEAD, unresolvedConfirmedFindings: 0, localReviewClean: true, cloudReviewAvailable: false, trustedSummaryUpdated: true, inlineFindingsVerified: true, requirementsCurrent: true };
     assert.equal(isMergeEligible(pr, ok).eligible, true);
     assert.equal(isMergeEligible({ ...pr, requiredChecksGreen: false }, ok).eligible, false);
     assert.equal(isMergeEligible(pr, { ...ok, unresolvedConfirmedFindings: 1 }).eligible, false);
@@ -188,7 +188,7 @@ describe("merge gates and squash merge decisions (review-this:INV-8/INV-9)", () 
     const merge = fakeMergeAdapter();
     for (const item of wave) {
       const pr = { headSha: item.headSha, mergeable: item.mergeable, requiredChecksGreen: item.requiredChecksGreen };
-      const review = { reviewedHeadSha: item.headSha, unresolvedConfirmedFindings: 0, localReviewClean: true, cloudReviewAvailable: true, trustedSummaryUpdated: true, inlineFindingsVerified: true };
+      const review = { reviewedHeadSha: item.headSha, unresolvedConfirmedFindings: 0, localReviewClean: true, cloudReviewAvailable: true, trustedSummaryUpdated: true, inlineFindingsVerified: true, requirementsCurrent: true };
       assert.equal(isMergeEligible(pr, review).eligible, true);
       const res = await merge.squashMerge(item.prNumber, item.headSha);
       assert.equal(res.merged, true);

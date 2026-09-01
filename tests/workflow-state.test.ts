@@ -419,6 +419,7 @@ describe("merge eligibility", () => {
     cloudReviewAvailable: true,
     trustedSummaryUpdated: true,
     inlineFindingsVerified: true,
+    requirementsCurrent: true,
   };
 
   test("eligible when checks are green, findings resolved, local review clean, head unchanged", () => {
@@ -469,6 +470,12 @@ describe("merge eligibility", () => {
       { ...pr, mergeable: false },
       cleanReview,
       /pull request is not mergeable/,
+    ],
+    [
+      "stale requirements after a body edit",
+      pr,
+      { ...cleanReview, requirementsCurrent: false },
+      /requirements revision no longer matches the current issue bodies/,
     ],
   ];
   for (const [name, p, r, pattern] of cases) {

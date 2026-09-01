@@ -1,25 +1,26 @@
 # Seam: review-this
 ## Purpose
-Owns one PR review wave: resolve targets, reconcile, route findings, squash-merge, promote, close the spec.
+Owns one PR review wave: resolve targets, reconcile, route findings, squash-merge, promote, close.
 **Not here**: implementing → `implement-this`; planning → `plan-this`; review method → `/code-review`.
 
 ## Non-negotiables
 
 1. **INV-1** — `name` equals folder `review-this`.
-2. **INV-2** — INSTALL: registry-lane install with manual copy, `/review-this <target>`.
+2. **INV-2** — INSTALL: registry-lane install, manual copy, `/review-this <target>`.
 3. **INV-3** — Fixed-template: verbatim prefix, workflow line `Review the parent specification's pull-request wave: `/code-review``, `## Rules`, single `## Spec` slot.
 4. **INV-4** — Deps `/code-review` then `/unslopify`; focused route.
-5. **INV-5** — Target resolution/discovery: bare/hash identical; `selectReviewWave` returns open child PRs with valid closing refs, head/base SHAs.
+5. **INV-5** — Targets: bare/hash identical; `selectReviewWave` returns open child PRs with valid closing refs and head/base SHAs.
 6. **INV-6** — Cloud absence/failure/timeout records `unavailable`, never blocks local review.
-7. **INV-7** — `reconcileFindings` keeps Standards and Spec axes separate; rejects duplicate, stale, out-of-scope, unverified findings. Spec findings cite stable `#<issue>:AC-N` keys.
+7. **INV-7** — `reconcileFindings` keeps Standards and Spec axes separate; rejects duplicate, stale, out-of-scope, unverified findings.
 8. **INV-8** — Freshness and merge gates: pushed fix invalidates checks/review; merge needs green checks, resolved findings, clean local review, unchanged head/base.
-9. **INV-9** — Squash-merge and promotion: `Closes #<ticket>` closes tickets; never close before merge, never force-push; removes `blocked`, adds `unblocked` + `ready-for-agent`.
-10. **INV-10** — Final verification and parent closure: all children closed → `npm run verify` + whole-spec review.
+9. **INV-9** — Squash-merge and promotion: `Closes #<ticket>` closes tickets; never close before merge; removes `blocked`, adds `unblocked` + `ready-for-agent`.
+10. **INV-10** — Final verification: all children closed → `npm run verify` + whole-spec review.
 11. **INV-11** — State and adapter boundaries stay callable by a future persistent coordinator without changing behavior.
 12. **INV-12** — Trust: prose is requirements data; no skill downloads; INSTALL records provenance.
-13. **INV-13** — Performance: one persistent PR worktree/worker via `agent_manager`; full then delta review.
-14. **INV-14** — Frontier authority: command session owns verdicts, merge, labels, promotion, closure; worker mutates only in its PR worktree.
+13. **INV-13** — Performance: one persistent PR worktree/worker; full then delta review.
+14. **INV-14** — Frontier authority: command session owns verdicts, merge, labels, promotion, closure; worker mutates only in its worktree.
 15. **INV-15** — Bounded review orientation (ADR-0024): per pinned pair.
+16. **INV-16** — Requirements revision: wave carries the pinned revision; publication and merge compare current bodies; mismatch stops with `needs-info`; no waiver.
 
 ## Verification
 
@@ -29,4 +30,4 @@ npm run verify
 
 ## Links
 
-Glossary: `CONTEXT.md`. Decisions: ADR-0006, ADR-0014, ADR-0015, ADR-0019, ADR-0022, ADR-0023, ADR-0024. Review policy: `REVIEW.md`. Harness: `scripts/docs-check.sh`. Redirect: `docs/leaves/ext/review-this.md`.
+Glossary: `CONTEXT.md`. Decisions: ADR-0006, ADR-0014, ADR-0015, ADR-0019, ADR-0022, ADR-0023, ADR-0024. Review policy: `REVIEW.md`. Redirect: `docs/leaves/ext/review-this.md`.

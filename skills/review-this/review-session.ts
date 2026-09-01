@@ -48,6 +48,8 @@ export interface ReviewWaveDispatchItem {
   prNumber: number;
   headSha: string;
   baseSha: string;
+  /** Same requirements revision the implementation evidence pinned. */
+  requirementsRevision?: string;
 }
 
 /** A PR whose worktree exists but whose worker session is missing (ADR-0023). */
@@ -75,6 +77,7 @@ function toDispatchItem(item: ReviewWaveItem): ReviewWaveDispatchItem {
     prNumber: item.prNumber,
     headSha: item.headSha,
     baseSha: item.baseSha,
+    requirementsRevision: item.requirementsRevision,
   };
 }
 
@@ -306,6 +309,12 @@ export interface ReviewStartFact {
   headSha: string;
   baseSha: string;
   implementationEvidencePosted: boolean;
+  /**
+   * The current issue bodies still match the pinned requirements revision
+   * (ticket #190); true when no pin exists (legacy evidence). A changed
+   * body invalidates review against the old revision.
+   */
+  requirementsCurrent: boolean;
   /** Recorded so evidence shows siblings never delay an eligible PR. */
   siblingImplementationWorkersActive?: boolean;
 }
@@ -316,7 +325,8 @@ export function reviewCanStart(fact: ReviewStartFact): boolean {
     fact.closingReferenceValid &&
     fact.headSha.trim() !== "" &&
     fact.baseSha.trim() !== "" &&
-    fact.implementationEvidencePosted
+    fact.implementationEvidencePosted &&
+    fact.requirementsCurrent === true
   );
 }
 

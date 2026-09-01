@@ -114,6 +114,209 @@ export function activeCriteria(
   return criteria.filter((c) => c.status === "active");
 }
 
+/**
+ * Versioned requirements revision (parent #183, ticket #190).
+ *
+ * A fingerprint over the normalized authoritative sections of the parent
+ * specification and ticket bodies: affected seams, criterion IDs/text/status,
+ * structural constraints, blockers, settled decisions, risk, and verification
+ * intent. SHA-256 comes from the standard library; this core stays
+ * import-free, so callers pass the hasher. Comments, acceptance evidence,
+ * timing summaries, paths, branches, commit SHAs, and runtime output never
+ * enter the fingerprint. Section lists keep body order, so an ordering
+ * change is never hidden; line endings and insignificant trailing whitespace
+ * normalize.
+ */
+export const REQUIREMENTS_REVISION_VERSION = "requirements-v1";
+
+export type RevisionHasher = (canonicalText: string) => string;
+
+/** One versioned revision: a contract version plus separate parent and ticket fingerprints. */
+export interface RequirementsRevision {
+  version: string;
+  parent: string;
+  ticket: string;
+}
+
+/** The canonical authoritative sections a fingerprint is built from. */
+export interface AuthoritativeSections {
+  affectedSeams: string[];
+  criteria: AcceptanceCriterion[];
+  constraints: string[];
+  blockers: string[];
+  settledDecisions: string[];
+  risk: string[];
+  verificationIntent: string[];
+}
+
+const SECTION_HEADERS = {
+  affectedSeams: "## Affected seams",
+  criteria: "## Acceptance criteria",
+  constraints: "## Structural constraints",
+  blockers: "## Blocked by",
+  settledDecisions: "## Settled decisions",
+  solution: "## Solution",
+  risk: "## Risk",
+  verificationSufficient: "## Smallest sufficient verification",
+  verificationTestFirst: "## Smallest test-first verification",
+} as const;
+
+function normalizedBodyLines(body: string): string[] {
+  return body
+    .replace(/\r\n?/g, "\n")
+    .split("\n")
+    .map((line) => line.replace(/[ \t]+$/g, ""));
+}
+
+function sectionContent(
+  lines: readonly string[],
+  header: string,
+  alternativeHeader?: string,
+): string[] {
+  const start = lines.findIndex(
+    (line) => line.trim() === header || line.trim() === alternativeHeader,
+  );
+  if (start < 0) return [];
+  const content: string[] = [];
+  for (let i = start + 1; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.startsWith("## ")) break;
+    const trimmed = line.trim();
+    if (trimmed === "") continue;
+    content.push(trimmed.replace(/^-\s+/, ""));
+  }
+  return content;
+}
+
+/** Section lines with bullet markers intact, e.g. for the criteria parser. */
+function rawSectionContent(
+  lines: readonly string[],
+  header: string,
+): string[] {
+  const start = lines.findIndex((line) => line.trim() === header);
+  if (start < 0) return [];
+  const content: string[] = [];
+  for (let i = start + 1; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.startsWith("## ")) break;
+    const trimmed = line.trim();
+    if (trimmed === "") continue;
+    content.push(trimmed);
+  }
+  return content;
+}
+
+function bulletLines(lines: readonly string[], header: string): string[] {
+  return sectionContent(lines, header);
+}
+
+/**
+ * Extract the authoritative sections of one issue body. Only the seven
+ * named categories enter the fingerprint; every other section (behavior
+ * prose, sibling scheduling collisions, parallel safety, evidence, timings)
+ * is excluded, so requirement text and ordering changes inside the named
+ * sections always change the revision and everything else never does.
+ */
+export function parseAuthoritativeSections(body: string): AuthoritativeSections {
+  const lines = normalizedBodyLines(body);
+  const criteriaText = rawSectionContent(lines, SECTION_HEADERS.criteria).join("\n");
+  return {
+    affectedSeams: bulletLines(lines, SECTION_HEADERS.affectedSeams),
+    criteria: parseAcceptanceCriteria(criteriaText),
+    constraints: bulletLines(lines, SECTION_HEADERS.constraints),
+    blockers: bulletLines(lines, SECTION_HEADERS.blockers),
+    settledDecisions: sectionContent(
+      lines,
+      SECTION_HEADERS.settledDecisions,
+      SECTION_HEADERS.solution,
+    ),
+    risk: bulletLines(lines, SECTION_HEADERS.risk),
+    verificationIntent: sectionContent(
+      lines,
+      SECTION_HEADERS.verificationSufficient,
+      SECTION_HEADERS.verificationTestFirst,
+    ),
+  };
+}
+
+/**
+ * Deterministic canonical serialization of the authoritative sections.
+ * Criteria sort by local ID like `criteriaRevision`; every other list keeps
+ * body order so ordering changes stay visible. A contract version line heads
+ * the text, so a canonical-format change also changes every fingerprint.
+ */
+export function canonicalRequirementsText(sections: AuthoritativeSections): string {
+  const canonical = {
+    affectedSeams: [...sections.affectedSeams],
+    criteria: [...sections.criteria]
+      .sort((a, b) => a.id.localeCompare(b.id))
+      .map((c) => ({
+        id: c.id,
+        status: c.status,
+        text: c.text.trim().replace(/\s+/g, " "),
+      })),
+    constraints: [...sections.constraints],
+    blockers: [...sections.blockers],
+    settledDecisions: [...sections.settledDecisions],
+    risk: [...sections.risk],
+    verificationIntent: [...sections.verificationIntent],
+  };
+  return `${REQUIREMENTS_REVISION_VERSION}\n${JSON.stringify(canonical)}`;
+}
+
+export function requirementsRevision(
+  parentBody: string,
+  ticketBody: string,
+  hash: RevisionHasher,
+): RequirementsRevision {
+  return {
+    version: REQUIREMENTS_REVISION_VERSION,
+    parent: hash(canonicalRequirementsText(parseAuthoritativeSections(parentBody))),
+    ticket: hash(canonicalRequirementsText(parseAuthoritativeSections(ticketBody))),
+  };
+}
+
+/** One stable carrier string so dispatch and review packets compare the same value. */
+export function requirementsRevisionValue(rev: RequirementsRevision): string {
+  return `${REQUIREMENTS_REVISION_VERSION}:parent=${rev.parent};ticket=${rev.ticket}`;
+}
+
+/** Raw equality of two revision carrier values. */
+export function requirementsMatch(dispatched: string, current: string): boolean {
+  return dispatched === current;
+}
+
+export interface RequirementsGateDecision {
+  action: "continue" | "stop";
+  addLabels: readonly string[];
+  reason: string;
+}
+
+/**
+ * The requirements gate (AC-8, AC-9). A mismatch stops and records
+ * `needs-info`; there is no waiver path, so a worker or reviewer can never
+ * override a mismatch. Only reconciling the issue bodies changes the input;
+ * the resumed run compares the reconciled bodies against a fresh dispatch.
+ */
+export function requirementsGate(
+  dispatched: string,
+  current: string,
+): RequirementsGateDecision {
+  if (dispatched === current) {
+    return {
+      action: "continue",
+      addLabels: [],
+      reason: "the issue bodies still match the dispatched requirements revision",
+    };
+  }
+  return {
+    action: "stop",
+    addLabels: [LABEL_NEEDS_INFO],
+    reason:
+      "the parent or ticket body changed after dispatch; reconcile the issue bodies and resume explicitly",
+  };
+}
+
 export interface WorkerFact {
   id: string;
   ticket: number;
@@ -137,6 +340,11 @@ export interface ReviewFact {
   cloudReviewAvailable: boolean;
   trustedSummaryUpdated: boolean;
   inlineFindingsVerified: boolean;
+  /**
+   * The current issue bodies still match the requirements revision the
+   * review pinned (ticket #190). A body edit invalidates the verdict.
+   */
+  requirementsCurrent: boolean;
 }
 
 export interface FinalVerificationFact {
@@ -384,6 +592,11 @@ export function isMergeEligible(
   }
   if (review.inlineFindingsVerified === false) {
     blockers.push("inline findings were not verified");
+  }
+  if (review.requirementsCurrent === false) {
+    blockers.push(
+      "the requirements revision no longer matches the current issue bodies",
+    );
   }
   if (pullRequest.headSha !== review.reviewedHeadSha) {
     blockers.push("reviewed head SHA does not match the current head SHA");

@@ -217,6 +217,10 @@ _Avoid_: helpful link, navigation link
 A decision, policy, or glossary entry a leaf marks as loading the agent must read: `- Decision: … — requires.`, `- Policy: … — requires.`, or a `- Glossary:` line naming the entry (ADR-0025). Rejected decisions never enter the set even when declared required.
 _Avoid_: linked decision, must-read (when the resolved contract is meant)
 
+**Requirements revision**:
+The versioned fingerprint of the authoritative sections of a parent specification and ticket body — affected seams, criterion IDs/text/status, structural constraints, blockers, settled decisions, risk, and verification intent. It carries a contract version plus separate parent and ticket SHA-256 digests, normalizes line endings and insignificant trailing whitespace, and excludes comments, acceptance evidence, timing summaries, paths, branches, commit SHAs, and runtime output. Dispatch and review packets carry the same value; a body change stops delivery and review with `needs-info` until the body is reconciled and the user resumes, with no waiver (ticket #190).
+_Avoid_: requirement hash (when the versioned object is meant), body checksum
+
 **Task band**:
 The task class that selects the orientation cap — ordinary (6,000 bytes), API or route (9,000), schema or data (12,000), or re-orientation (7,000); no set exceeds 12,000 bytes (ADR-0024).
 _Avoid_: task type, complexity class

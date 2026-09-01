@@ -9,7 +9,11 @@
 // cannot corrupt the trusted HTML-comment marker.
 
 import type { AcceptanceCriterion } from "./workflow-state.ts";
-import { activeCriteria, criteriaRevision } from "./workflow-state.ts";
+import {
+  REQUIREMENTS_REVISION_VERSION,
+  activeCriteria,
+  criteriaRevision,
+} from "./workflow-state.ts";
 
 export type ExemptionKind = "docs-only" | "static-content" | "rename-only" | "format-only";
 
@@ -117,6 +121,11 @@ export interface AcceptanceEvidenceInput {
   operabilityEvidence?: OperabilityEvidence | null;
   migrationEvidence?: MigrationEvidence | null;
   performanceEvidence?: PerformanceEvidence | null;
+  /**
+   * The versioned requirements revision value carried from the dispatch
+   * packet (ticket #190). Review reads the same value from this evidence.
+   */
+  requirementsRevision?: string;
 }
 
 export interface ValidationResult {
@@ -500,6 +509,19 @@ export function validateAcceptanceEvidence(
     }
   }
 
+  // Versioned requirements revision (ticket #190): when supplied it must be a
+  // value of the current contract version. Legacy evidence without the field
+  // stays valid; a misshapen value is never accepted as a fresh pin.
+  if (input.requirementsRevision !== undefined && input.requirementsRevision !== null) {
+    if (!isNonEmptyString(input.requirementsRevision)) {
+      errors.push("requirements revision must be a non-empty value");
+    } else if (!input.requirementsRevision.startsWith(`${REQUIREMENTS_REVISION_VERSION}:`)) {
+      errors.push(
+        `requirements revision must start with the contract version ${REQUIREMENTS_REVISION_VERSION}`,
+      );
+    }
+  }
+
   return { ok: errors.length === 0, errors };
 }
 
@@ -606,7 +628,10 @@ export function renderAcceptanceEvidence(input: AcceptanceEvidenceInput): string
   }
 
   lines.push("");
-  lines.push(`- Requirements revision: ${escapeForMarkdown(criteriaRevision(input.criteria))}`);
+  lines.push(`- Criteria revision: ${escapeForMarkdown(criteriaRevision(input.criteria))}`);
+  if (input.requirementsRevision !== undefined && input.requirementsRevision !== null) {
+    lines.push(`- Requirements revision: ${escapeForMarkdown(input.requirementsRevision)}`);
+  }
 
   lines.push(ACCEPTANCE_EVIDENCE_MARKER_END);
   return lines.join("\n");

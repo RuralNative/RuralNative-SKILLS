@@ -108,18 +108,25 @@ export interface DeliveryFact {
   pullRequestOpen: boolean;
   closingReferenceValid: boolean;
   acceptanceEvidencePosted: boolean;
+  /**
+   * The current parent and ticket bodies still match the dispatched
+   * requirements revision (ticket #190). A body edit invalidates delivery.
+   */
+  requirementsCurrent: boolean;
 }
 
 /**
  * Durable delivery lives entirely on GitHub: an open pull request with a
- * valid closing reference and posted acceptance evidence. An idle worker
- * alone never completes a ticket.
+ * valid closing reference and posted acceptance evidence, computed against
+ * a requirements revision that still matches the current issue bodies. An
+ * idle worker alone never completes a ticket.
  */
 export function isDelivered(fact: DeliveryFact): boolean {
   return (
     fact.pullRequestOpen &&
     fact.closingReferenceValid &&
-    fact.acceptanceEvidencePosted
+    fact.acceptanceEvidencePosted &&
+    fact.requirementsCurrent
   );
 }
 
@@ -218,6 +225,8 @@ export interface CleanupFact {
   pullRequestOpen: boolean;
   closingReferenceValid: boolean;
   acceptanceEvidencePosted: boolean;
+  /** The issue bodies still match the dispatched requirements revision. */
+  requirementsCurrent: boolean;
   /** The host supports safe managed worktree closure. */
   hostClosesWorktrees: boolean;
 }
