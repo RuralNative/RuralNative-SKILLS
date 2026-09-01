@@ -33,8 +33,8 @@ Consequences:
 - `skills/plan-this/decisions.ts` models the ask-or-proceed rule, question
   shape, capsule completeness, and publication approval as a pure module with
   scenario tests.
-- `docs/leaves/plan-this.md` INV-5 states the narrowed decision gate with at
-  most three short options and one short recommendation, and the leaf Links
-  carry this decision.
+- `docs/leaves/plan-this.md` INV-5 states the narrowed decision gate, and the
+  leaf Links carry this decision; the question shape lives in
+  `skills/plan-this/SKILL.md` and `skills/plan-this/INSTALL.md`.
 - Derived human pages and README describe the narrower behavior in the same
   change.

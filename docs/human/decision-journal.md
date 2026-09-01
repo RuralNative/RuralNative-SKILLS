@@ -155,8 +155,6 @@ What it costs: the five phases, intent capsule, three-direction exploration gate
 
 Depth: `docs/adr/0027-plan-this-ask-when-a-human-must-decide.md`.
 
-Depth: `docs/adr/0020-plan-this-structured-workflow.md`.
-
 ### 2026-08-28 — Strengthen implement-this worker with evidence contract (ADR-0021)
 
 What changed: each `implement-this` worker now classifies every acceptance criterion as behavioral with a focused RED/GREEN test or one of four non-behavior exemptions, reproduces the defect as the first behavioral RED on bug fixes, records authoritative external documentation for version-sensitive API changes and compatibility evidence for public interfaces, and renders one stable escaped Markdown block through a pure `acceptance-evidence` module.

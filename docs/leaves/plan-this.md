@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Planning workflow adapter, invoked as `/plan-this <task>`: defines the intent capsule, asks only the choices a human must decide, publishes an approved parent spec with coherent child tickets. Reads `AGENTS.md → ARCHITECTURE.md → affected seam leaf → CONTEXT.md → relevant ADRs`. Published criteria carry local `AC-N` IDs.
+Planning workflow adapter, invoked as `/plan-this <task>`: defines the intent capsule and publishes an approved parent spec with coherent child tickets, asking only when a human must decide. Reads `AGENTS.md → ARCHITECTURE.md → affected seam leaf → CONTEXT.md → relevant ADRs`. Published criteria carry local `AC-N` IDs.
 **Not here**: implementation → `implement-this`; review → `review-this`; prose → `/unslopify`.
 
 ## Non-negotiables

@@ -1,6 +1,6 @@
 ---
 name: plan-this
-description: Run the repository planning workflow when the user invokes /plan-this <task>. Define and confirm intent, explore alternatives only when the solution form is unsettled, resolve the decision frontier, then publish an approved GitHub specification and coherent tickets through /grill-with-docs, /to-spec, /to-tickets, and /unslopify. Unrelated invocation is rejected.
+description: Run the repository planning workflow when the user invokes /plan-this <task>. Publish an approved GitHub specification and coherent tickets through /grill-with-docs, /to-spec, /to-tickets, and /unslopify, asking only when a human must decide. Unrelated invocation is rejected.
 ---
 
 Run this planning-only workflow: `/grill-with-docs` → `/to-spec` → `/to-tickets`
