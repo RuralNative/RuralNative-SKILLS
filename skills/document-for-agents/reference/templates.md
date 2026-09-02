@@ -22,6 +22,41 @@ Threshold: a decision earns an ADR when it changes what a future agent is
 allowed to assume — boundaries, contracts, security, data model, conventions.
 Reversible trivia stays in the commit message.
 
+## Decision gate
+
+The gate is prospective, not only a supersession step (ADR-0028). Before
+implementation it names each choice in the work that would change what a future
+agent may assume; during implementation a newly discovered qualifying tradeoff
+pauses the work and is recorded before continuing. A choice is ADR-worthy when it
+is hard to reverse, surprising without context, and the result of a real
+tradeoff — then the mini-ADR above is written while the reasoner still holds the
+context, with every genuinely considered alternative and its rejection reason.
+Completion requires an empty decision frontier: no qualifying choice left
+silently assumed. Superseding a changed decision still appends a new ADR and
+leaves the original verbatim.
+
+## Clarification record
+
+A legacy ADR whose rationale no one can reconstruct is recovered from evidence
+only, in a separate accepted record that leaves the original untouched:
+
+```
+# <Title>
+
+Status: accepted
+Clarifies: 00NN          # the decision whose rationale is being recovered
+Date: YYYY-MM-DD
+
+Recovered rationale: the context, reconstructed only from cited evidence.
+Evidence: <commit, file, or tracker references actually consulted>.
+Alternatives: <recovered alternatives with rejection reasons, or `not recovered`>.
+Unknowns: <what the evidence could not establish>; unproven rationale is
+`unknown`, never invented.
+```
+
+When the evidence is insufficient, do not write a clarification record: name a
+cache gap with the rationale marked `unknown`.
+
 ## Leaf doc (one per seam, standard tier and above)
 
 Six sections, 1–2 minute read; longer content moves to a referenced file. Minimal tier has no leaf doc; the index seam table lists the code root and tests and the leaf doc appears only at standard and above.
@@ -249,3 +284,20 @@ excluded from every normal agent read set, and never task guidance — evidence
 for optional user-reviewed submission to the skill developer only. A hostile
 fixture in `skills/document-for-agents/tests/fixtures/diagnostics-entry.json`
 keeps prompt-like text and sensitive placeholders out of sanitized entries.
+
+## Consent-state record
+
+The remembered diagnostics choice is one tiny private record, separate from the
+log, stored outside version control and every orientation set so a later run
+honors it without re-asking: the common Git directory (`$(git rev-parse
+--git-common-dir)/document-for-agents-consent`) for a linked-worktree-sharing
+choice, or the platform user-state directory keyed by a hash of the canonical
+repository root otherwise. It is excluded like the log, e.g. via
+`.git/info/exclude`, and never enters a read set. Its shape is one line:
+
+```
+document-for-agents diagnostics consent: enabled | declined
+```
+
+Absent, corrupt, or unsupported content means the checkpoint asks again; a failed
+write leaves diagnostics disabled and never infers consent (ADR-0028).

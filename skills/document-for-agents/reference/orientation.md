@@ -82,7 +82,10 @@ leaf-named glossary entries only — it does not pull linked ADRs or policies,
 and it does not follow redirect targets.
 
 The harness-owned **coverage manifest** (`docs/manifest.md`) is excluded from
-every resolved set. No loading-protocol row routes agents into it.
+every resolved set. No loading-protocol row routes agents into it. The manifest's
+`Seam verification` fingerprints and the private diagnostics consent-state record
+are manifest and local state, never resolution inputs: they never join a resolved
+set and never affect orientation bytes (ADR-0028).
 
 ## Determinism and deduplication
 

@@ -18,11 +18,16 @@ adopting-repository vendor-facts home. `reference/orientation.md` documents
 the runtime orientation resolver contract — caps, resolution inputs,
 deduplication, superseded-ADR exclusion, the coverage manifest, and cache-gap
 approval — and the reference implementation ships as `orientation.ts` beside
-it. The optional private diagnostics record is governed by the consent,
-notice, revocation, privacy, and sanitization contract in `SKILL.md` and lives
-outside every doc-cache tier. In adopting repositories that run the harness,
+it. `governance.ts` beside it implements the deterministic tier governor
+(monotonic, additive promotion), the canonical seam fingerprint, and consent
+resolution. The optional private diagnostics record and its private consent-state
+record are governed by the consent checkpoint, notice, revocation, privacy, and
+sanitization contract in `SKILL.md` and live outside every doc-cache tier and
+orientation set. In adopting repositories that run the harness,
 the exhaustive tier and coverage inventory lives in a harness-owned coverage
-manifest excluded from every orientation set. Repository review guidance
+manifest excluded from every orientation set, and that manifest carries a `Seam
+verification` table holding each documented seam's code fingerprint. Repository
+review guidance
 routes to policy: a root `REVIEW.md` is indexed from `ARCHITECTURE.md`,
 checked by harness check 8 wherever it lives, and updated in the same change
 as the rules it states. Cloud review reads the policy from the pull-request
@@ -61,3 +66,16 @@ the rule requires a new decision.
   assert the exact resolved sources for representative seams; the declaration
   forms live in `reference/templates.md` and the owning contract is ADR-0024
   as narrowed by ADR-0025.
+- INV-18 mechanism detail: `governance.ts` resolves the required tier and the
+  monotonic, additive promotion; `governance.test.ts` proves every trigger,
+  entry/completion re-evaluation, and the no-auto-demote rule; the SKILL.md
+  preflight names the evidence thresholds.
+- INV-19 mechanism detail: `governance.test.ts` and the decision-gate fixtures
+  prove prospective capture, required alternatives and rejection reasons,
+  evidence-only `Clarifies:` recovery, and `unknown` for unsupported rationale;
+  the shapes live in `reference/templates.md`.
+- INV-20 mechanism detail: `governance.ts` computes the canonical seam digest
+  and `scripts/docs-check.sh` check 2 recomputes and compares it against the
+  manifest's `Seam verification` table; `governance.test.ts` and the
+  seam-coherence harness fixtures prove a code change fails without a refresh,
+  a clean checkout fails, a leaf-only touch fails, and a reviewed refresh passes.

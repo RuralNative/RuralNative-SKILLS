@@ -95,31 +95,49 @@ covers both outcomes — no reinstall or migration flag is needed.
 
 1. **Establish** (Branch A) builds the tree and harness for your codebase. On
    a small repo, the size step intentionally keeps it minimal, index,
-   glossary, conventions only.
+   glossary, conventions only. When evidence later shows more seams, a durable
+   decision, coordination, or generated-doc need, the preflight promotes the
+   tier automatically and additively in the same run — no reinstall, no second
+   command (ADR-0028).
 2. **Audit** (Branch B) any existing documentation you distrust before
    building on it. Audit stays read-only — it diagnoses and plans, it never
-   changes the repo.
+   changes the repo, and it reports a promotion it would need rather than
+   applying it.
 3. **Improve** (Branch D) applies repairs to an existing bloated cache: it
    shows one complete migration preview, waits for one explicit approval, then
    applies the approved trims, additions, moves, deletions, manifest changes,
-   and generated-doc actions before the prose audit and harness pass.
+   fingerprint refreshes, and generated-doc actions before the prose audit and
+   harness pass. Additive tier promotion needs no approval; only the destructive
+   half is gated.
 4. Add the harness check to your standard check path, a script entry,
-   pre-commit hook, or CI job, so freshness is enforced mechanically.
-5. **Maintain** (Branch C) is the steady state: same-diff doc updates, the
-   code-wins rule, append-only ADRs, and a green harness.
+   pre-commit hook, or CI job, so coherence is enforced mechanically. The
+   standard tier installs the harness and a `Seam verification` fingerprint per
+   documented seam, so a stale leaf fails in a dirty worktree and a clean CI
+   checkout alike.
+5. **Maintain** (Branch C) is the steady state: same-diff doc updates plus a
+   reviewed seam-fingerprint refresh, the code-wins rule, prospective decision
+   capture in an ADR, append-only ADRs, and a green harness. The first run asks
+   once whether to keep a private diagnostics record and remembers your answer in
+   a private local state file outside version control; later runs honor the
+   remembered choice (ADR-0018, ADR-0028).
 
 ## Files
 
-- `SKILL.md`: the lifecycle, six principles, four branches, completion
-  criteria.
-- `reference/classify.md`: routes every fact to its doc tier.
-- `reference/harness.md`: the portable change-aware gate (eleven checks).
+- `SKILL.md`: the lifecycle, six principles, the preflight, four branches,
+  completion criteria.
+- `reference/classify.md`: routes every fact to its doc tier; the tier-governor
+  evidence and seam-coherence notes.
+- `reference/harness.md`: the portable change-aware gate (eleven checks, check 2
+  `Seam coherence`).
 - `reference/orientation.md`: the runtime orientation resolver contract and
   caps.
-- `reference/templates.md`: mini-ADR, leaf doc, index, policy set,
-  vendor-facts, glossary, debt registry, loading protocol.
+- `reference/templates.md`: mini-ADR, decision gate, clarification record, leaf
+  doc, index, policy set, vendor-facts, glossary, debt registry, loading
+  protocol, skill diagnostics entry, consent-state record.
 - `orientation.ts`: the deterministic orientation resolver reference
   implementation, runnable as a CLI.
+- `governance.ts`: the deterministic tier governor, seam fingerprint, and
+  consent-resolution reference implementation, runnable as a CLI.
 
 ## Source provenance and trust
 

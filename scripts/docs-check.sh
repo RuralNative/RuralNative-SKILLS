@@ -12,6 +12,30 @@ fail=0
 note() { printf '  ok   %s\n' "$*"; }
 bad()  { printf '  FAIL %s\n' "$*"; fail=1; }
 
+# seam_fp — canonical SHA-256 of a seam's VCS-visible code root (tracked plus
+# non-ignored untracked). Each file contributes `path<TAB>type<TAB>size<TAB>hash`
+# (f=file bytes, l=symlink target, g=other present, d=listed-absent), entries
+# sort by path, each line ends in a newline, and the joined preimage is hashed.
+# Byte-for-byte the algorithm governance.ts implements, so a manifest digest and
+# a live digest agree (document-for-agents:INV-20).
+seam_fp() {
+  local root="$1"
+  { git ls-files -c -- "$root" 2>/dev/null; git ls-files -o --exclude-standard -- "$root" 2>/dev/null; } \
+    | LC_ALL=C sort -u \
+    | while IFS= read -r p; do
+        if [[ -L "$p" ]]; then
+          tgt=$(readlink "$p"); sz=$(printf '%s' "$tgt" | wc -c | tr -d ' '); h=$(printf '%s' "$tgt" | sha256sum | cut -d' ' -f1); t=l
+        elif [[ -f "$p" ]]; then
+          sz=$(wc -c < "$p" | tr -d ' '); h=$(sha256sum "$p" | cut -d' ' -f1); t=f
+        elif [[ -e "$p" ]]; then
+          sz=0; h=$(printf '' | sha256sum | cut -d' ' -f1); t=g
+        else
+          sz=0; h=$(printf '' | sha256sum | cut -d' ' -f1); t=d
+        fi
+        printf '%s\t%s\t%s\t%s\n' "$p" "$t" "$sz" "$h"
+      done | LC_ALL=C sort | sha256sum | cut -d' ' -f1
+}
+
 # Coverage <-> disk (check 1). The exhaustive tier and coverage inventory lives
 # in the harness-owned manifest when present; legacy repositories without the
 # manifest stay diagnosable against the index's coverage table.
@@ -29,18 +53,54 @@ done
 # Seam table (name | root | tests | doc).
 mapfile -t SEAMS < <(awk -F'|' '/^\| / && $4 ~ /skills\// {gsub(/ /,"",$2); gsub(/ /,"",$4); gsub(/ +/," ",$5); gsub(/^ | $/,"",$5); gsub(/ /,"",$6); print $2 "|" $4 "|" $5 "|" $6}' "$ARCH")
 
-# Same-diff freshness (check 2).
-if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-  samdiff_fail=0
-  for s in "${SEAMS[@]}"; do
-    name="${s%%|*}"; rest="${s#*|}"; root="${rest%%|*}"; rest="${rest#*|}"; doc="${rest#*|}"
-    if [[ -n "$(git status --porcelain -- "$root")" ]] && [[ -z "$(git status --porcelain -- "$doc")" ]]; then
-      bad "same-diff: '$root' changed but '$doc' did not"; samdiff_fail=1
+# Seam coherence (check 2): each documented seam's stored code fingerprint must
+# match a fresh digest of its code root. A stale or missing fingerprint fails in
+# a dirty worktree and a clean CI checkout alike, because the comparison is
+# content against a stored digest, not git status. Dormant until the manifest
+# carries a Seam verification table; a standard/full declared tier that omits
+# the table, or a documented seam without a row in it, is a failure, because the
+# standard tier arms this protection.
+tier=$(grep -oE '^Documentation tier:[[:space:]]*(minimal|standard|full)' "$ARCH" | head -1 | awk '{print $NF}')
+ver_ok=0; ver_total=${#SEAMS[@]}
+if [[ -f "$MANIFEST" ]] && grep -q '^## Seam verification' "$MANIFEST"; then
+  if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    note "seam coherence: skipped (not a git work tree)"
+  else
+    ver_fail=0
+    declare -A present=()
+    while IFS='|' read -r _ name _root stored verified _claims; do
+      name=$(sed -E 's/^ +| +$//g' <<<"$name")
+      [[ "$name" =~ ^[a-z0-9-]*[a-z][a-z0-9-]*$ ]] || continue
+      present[$name]=1
+      stored=$(sed -E 's/^ +| +$//g' <<<"$stored")
+      verified=$(sed -E 's/^ +| +$//g' <<<"$verified")
+      root=$(awk -F'|' -v n="$name" '/^\| / {gsub(/ /,"",$2); gsub(/ /,"",$4); if($2==n) print $4}' "$ARCH")
+      if [[ -z "$root" ]]; then bad "coherence: seam '$name' has no code root in the index"; ver_fail=1; continue; fi
+      if [[ -z "$verified" || "$verified" == *'---'* ]]; then bad "coherence: seam '$name' has no Verified date"; ver_fail=1; continue; fi
+      cur=$(seam_fp "$root")
+      want=${stored#sha256:}
+      if [[ -z "$stored" || "$cur" != "$want" ]]; then
+        bad "coherence: seam '$name' fingerprint stale — expected sha256:$cur, recorded ${stored:-none}; review its claims then refresh"; ver_fail=1
+      else
+        ver_ok=$((ver_ok+1))
+      fi
+    done < <(awk '/^## Seam verification/{f=1;next} /^## /{f=0} f && /^\|/' "$MANIFEST")
+    for s in "${SEAMS[@]}"; do
+      name=${s%%|*}
+      if [[ -z "${present[$name]:-}" ]]; then
+        bad "coherence: documented seam '$name' has no Seam verification row in the manifest"; ver_fail=1
+      fi
+    done
+    if [[ $ver_fail -eq 0 ]]; then
+      note "coherence: $ver_ok/$ver_total seam fingerprints verified"
+    else
+      bad "coherence: $ver_ok of $ver_total documented seams verified"
     fi
-  done
-  [[ $samdiff_fail -eq 0 ]] && note "same-diff: seams change with their leaf docs"
+  fi
+elif [[ "$tier" == "standard" || "$tier" == "full" ]]; then
+  bad "coherence: declared tier '$tier' arms seam coherence but the manifest has no Seam verification table"
 else
-  note "same-diff: skipped (not a git work tree)"
+  note "seam coherence: dormant (no Seam verification table)"
 fi
 
 # New seam requires a doc + identity == folder (check 3).
@@ -472,7 +532,7 @@ if [[ -f "$DEBT_REG" ]]; then
   debt_open=$(grep -cE '^Status: open$' "$DEBT_REG")
   debt_resolved=$(grep -cE '^Status: resolved$' "$DEBT_REG")
 fi
-printf 'scorecard: docs %d/%d (%d%%), seams %d, invariants:%s, ADRs accepted %d / superseded %d / rejected %d, debt open %d / resolved %d, human docs %d\n' \
-  "$covered" "$ondisk" "$pct" "${#SEAMS[@]}" "$inv_list" "$adr_accepted" "$adr_superseded" "$adr_rejected" "$debt_open" "$debt_resolved" "${#HUMAN[@]}"
+printf 'scorecard: docs %d/%d (%d%%), seams %d, tier %s, coherence %d/%d, invariants:%s, ADRs accepted %d / superseded %d / rejected %d, debt open %d / resolved %d, human docs %d\n' \
+  "$covered" "$ondisk" "$pct" "${#SEAMS[@]}" "${tier:-undeclared}" "$ver_ok" "$ver_total" "$inv_list" "$adr_accepted" "$adr_superseded" "$adr_rejected" "$debt_open" "$debt_resolved" "${#HUMAN[@]}"
 
 exit "$fail"

@@ -119,6 +119,49 @@ describe("opt-in skill diagnostics (document-for-agents:INV-14)", () => {
   });
 });
 
+describe("remembered diagnostics consent (document-for-agents:INV-14, ADR-0028)", () => {
+  const SKILL = "skills/document-for-agents/SKILL.md";
+  const TEMPLATES = "skills/document-for-agents/reference/templates.md";
+
+  test("the checkpoint is an unavoidable first-run ask and a remembered enabled or declined is honored without re-asking", () => {
+    const n = norm(read(SKILL));
+    assert.ok(n.includes("first run"), "the checkpoint must be a first-run ask");
+    assert.ok(n.includes("remembered `enabled` or `declined` is honored without") || n.includes("a remembered `enabled` or `declined` is honored"));
+    assert.ok(n.includes("ask once"));
+  });
+
+  test("the consent-state record is private, outside version control and every orientation set", () => {
+    const t = norm(read(TEMPLATES));
+    const n = norm(read(SKILL));
+    assert.ok(t.includes("consent-state record") || n.includes("consent-state record"));
+    assert.ok(t.includes("common git directory") || t.includes("git-common-dir"));
+    assert.ok(t.includes("platform user-state directory keyed by a hash of the canonical repository root"));
+    assert.ok(t.includes("linked-worktree-sharing"));
+    assert.ok(n.includes("outside version control and every orientation set") || n.includes("outside version control"));
+  });
+
+  test("absent, corrupt, or unsupported state asks again; a failed write never infers consent", () => {
+    const t = norm(read(TEMPLATES));
+    const n = norm(read(SKILL));
+    assert.ok(t.includes("absent, corrupt, or unsupported content means the checkpoint asks again"));
+    assert.ok(t.includes("a failed write leaves diagnostics disabled and never infers consent"));
+    assert.ok(n.includes("failed write to the state record leaves diagnostics disabled and never infers consent"));
+  });
+
+  test("the consent-state record is excluded like the log and never enters a read set", () => {
+    const t = norm(read(TEMPLATES));
+    assert.ok(t.includes("excluded like the log"));
+    assert.ok(t.includes(".git/info/exclude"));
+    assert.ok(t.includes("never enters a read set"));
+  });
+
+  test("the consent state shape is one exact line enumerating enabled | declined", () => {
+    const t = read(TEMPLATES);
+    const shape = t.slice(t.indexOf("Its shape is one line:"), t.indexOf("Absent, corrupt"));
+    assert.ok(shape.includes("enabled | declined"), shape);
+  });
+});
+
 describe("management marker and provenance states (document-for-agents:INV-15)", () => {
   const SKILL = "skills/document-for-agents/SKILL.md";
   const TEMPLATES = "skills/document-for-agents/reference/templates.md";

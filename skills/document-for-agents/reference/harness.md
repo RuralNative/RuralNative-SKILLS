@@ -13,10 +13,19 @@ the conventions policy to avoid infinite regress.
    manifest, the harness parses the manifest instead: the exhaustive tier and
    coverage inventory is the manifest's job, and `ARCHITECTURE.md` stays a
    compact seam index.
-2. **Same-diff freshness.** A seam's code changed → its leaf doc changed in
-   the same working-tree diff. Mechanism: read VCS status; map changed code
-   roots to their docs via the seam table; fail on a documented seam whose doc
-   is untouched. (Git: `git status --porcelain`; adapt the call for other VCS.)
+2. **Seam coherence.** A documented seam's code must match the fingerprint the
+   manifest recorded when its claims were last reviewed. Mechanism: read the
+   manifest's `Seam verification` table; for each seam, recompute a canonical
+   SHA-256 over its VCS-visible code root (tracked plus non-ignored untracked
+   files, each contributing path, type, byte length, and content hash, sorted by
+   path); fail when the recomputed digest differs from the stored one, when a
+   documented seam has no row, or when a row has no `Verified` date. Because the
+   comparison is content against a stored digest — not `git status` or a base
+   range — a stale fingerprint fails in a dirty worktree and in a clean CI
+   checkout alike. A leaf edit that does not review the affected claims and
+   refresh the fingerprint stays red; a reviewed no-text-change may refresh it.
+   Dormant until the manifest carries a `Seam verification` table (see
+   `governance.ts` for the reference digest).
 3. **New seam requires a doc.** A new module directory with no row in the
    index fails. This keeps the table complete without a gardener.
 4. **Decision status parse.** Every ADR has a parseable `Status:` line on an
@@ -82,9 +91,10 @@ the conventions policy to avoid infinite regress.
 ## Scorecard
 
 A re-runnable health statement produced by the harness: docs count, coverage
-%, stale/overdue count, ADR status counts, last-generation timestamps for
-generated docs, declared orientation routes with their resolved bytes and
-caps, and the manifest's tier inventory. Per seam it also lists the seam's
+%, stale/overdue count, the declared documentation tier and each documented
+seam's coherence (verified / stale / missing), ADR status counts,
+last-generation timestamps for generated docs, declared orientation routes with
+their resolved bytes and caps, and the manifest's tier inventory. Per seam it also lists the seam's
 invariants (`INV-1..INV-N`)
 and marks each: **test-encoded** when the identifier appears literally in a
 file under the test location the seam table declares; otherwise **prose**, and
@@ -99,11 +109,12 @@ turn "is our documentation lying?" into a query with an answer.
 
 - Directory names are conventional, not sacred: whatever the project calls its
   docs tree, the harness points at it. What must not change are the *checks*:
-  coverage, same-diff, new-seam, seam-table, generated, policy, debt, status,
-  expiry, invariant, orientation budget.
+  coverage, seam coherence, new-seam, seam-table, generated, policy, debt,
+  status, expiry, invariant, orientation budget.
 - If the project has no ADRs yet, check 4 is dormant until the first decision
-  is recorded — do not pre-create rules for empty categories. The same
-  dormancy applies to check 7 (generated freshness) until a generated doc
+  is recorded — do not pre-create rules for empty categories. The same dormancy
+  applies to check 2 (seam coherence) until the manifest carries a `Seam
+  verification` table, to check 7 (generated freshness) until a generated doc
   exists, to check 8 (policy coverage) until the first policy doc lands, to
   check 9 (debt register) until the first debt entry is recorded, to
   check 10 (invariant integrity) until the first leaf doc with invariants

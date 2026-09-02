@@ -108,8 +108,7 @@ headers; regenerated on source change, never hand-edited against code.
 _Avoid_: generated doc (reserved for code-derived artifacts)
 
 **Decision journal**:
-The append-only plain-language digest of ADRs — the stakeholder intervention
-surface.
+The append-only plain-language digest of ADRs; the stakeholder view.
 _Avoid_: changelog
 
 **Bridge link**:
@@ -198,7 +197,7 @@ The leaf-doc line that routes misrouted work to its owning seam by stable respon
 _Avoid_: routing table, see-also
 
 **Skill diagnostics**:
-The opt-in private record of confirmed agent mistakes that `document-for-agents` keeps only with explicit owner consent to create and maintain it: one append-only local file outside the doc cache and version control, excluded from every normal agent read set, sanitized, and evidence for optional user-reviewed submission to the skill developer — never policy, debt, an invariant, or task guidance (ADR-0018).
+The opt-in private record of confirmed agent mistakes that `document-for-agents` keeps only with explicit owner consent, offered at an unavoidable first-run checkpoint and remembered in a private local consent-state record outside version control and every orientation set: one append-only local file outside the doc cache, excluded from every normal agent read set, sanitized, and evidence for optional user-reviewed submission to the skill developer — never policy, debt, an invariant, or task guidance (ADR-0018, ADR-0028).
 _Avoid_: telemetry, error log, mistake tracker
 **Management marker**:
 The protected HTML comment placed directly after the five commands in generated
@@ -234,5 +233,21 @@ The eleventh docs-check (`Orientation budget`), introduced through ADR-0024: it 
 _Avoid_: token budget, scorecard entry
 
 **Improve**:
-`document-for-agents` Branch D, the existing-cache repair path: diagnose, show one complete migration preview, wait for one explicit approval, apply the complete approved delta, then pass the prose audit and harness. Audit stays read-only (ADR-0024).
+`document-for-agents` Branch D, the existing-cache repair path: diagnose, show one complete migration preview, wait for one explicit approval, apply the complete approved delta, then pass the prose audit and harness. Audit stays read-only. The approval gates destructive change — trims, moves, deletions, demotion; additive tier promotion runs automatically in the preflight and needs no approval (ADR-0024, ADR-0028).
 _Avoid_: migration wizard, cache repair (when the branch is meant)
+
+**Tier governor**:
+The preflight step that re-evaluates the documentation tier on every lifecycle branch and promotes it automatically and additively when evidence crosses a threshold — first durable decision or multiple seams raises minimal to standard, confirmed drift or coordination or a generated-doc need raises standard to full — and never demotes automatically (ADR-0028).
+_Avoid_: tier migration, re-tiering (when the automatic step is meant)
+
+**Seam fingerprint**:
+The canonical SHA-256 of a documented seam's VCS-visible code root (tracked plus non-ignored untracked files, sorted by path, each contributing path, type, byte length, and content hash), stored in the coverage manifest's Seam verification table and never part of an orientation set (ADR-0028).
+_Avoid_: checksum (when the seam digest is meant), hash
+
+**Seam coherence**:
+Harness check 2, the fingerprint stay-true mechanism at the seam level: a stale or missing seam fingerprint fails in a dirty worktree and a clean CI checkout alike, and a leaf edit that does not review the affected claims and refresh the fingerprint stays red (ADR-0028).
+_Avoid_: same-diff freshness (the superseded touch-only check), drift check
+
+**Clarification record**:
+A separate accepted decision record that recovers a legacy ADR's lost rationale from cited repository or tracker evidence and leaves the original verbatim; unproven rationale is a cache gap marked `unknown`, never invented (ADR-0028).
+_Avoid_: ADR rewrite, amendment

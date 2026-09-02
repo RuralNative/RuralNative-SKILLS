@@ -49,6 +49,31 @@ independently bounded; every seam fits every band at its strict cap.
 | re-orientation | review-this |
 | re-orientation | release-skills |
 
+## Governance
+
+Declared tier (mirrored in `ARCHITECTURE.md`): `full`. Tier evidence: durable
+decisions recorded through ADR-0028; multi-agent coordination across managed
+worktrees; a harness-generated scorecard; and per-seam coherence fingerprints
+armed at the standard tier. Promotion is monotonic and additive (ADR-0028).
+
+## Seam verification
+
+Harness check 2 recomputes each documented seam's code fingerprint (a canonical
+SHA-256 over the seam's VCS-visible code root) and fails while the stored digest
+is stale, in a dirty worktree or a clean CI checkout alike. A refresh is valid
+only after Maintain reviews the seam's affected claims against current code
+(ADR-0028). The code root resolves from the compact index seam table.
+
+| Seam | Code root | Fingerprint | Verified | Claims |
+|---|---|---|---|---|
+| document-for-agents | skills/document-for-agents/ | sha256:a393482395845784239715b2df0d8032da738c3866b33790bfd0c07feee2204f | 2026-09-02 | lifecycle prose, reference shapes, harness contract reviewed against code; ADR-0028 adopted |
+| document-for-humans | skills/document-for-humans/ | sha256:46b55e33e718abae3a440b243771779108b68a80a735479f0867a5b353281e48 | 2026-09-02 | derived-doc prose and reference reviewed against code |
+| unslopify | skills/unslopify/ | sha256:6fbcf7c9fd7e301b85f7adb890c503981f90073fdde8e78d342f51f5ee435b4f | 2026-09-02 | output-contract prose and scanner reviewed against code |
+| plan-this | skills/plan-this/ | sha256:2837d48d7aa0fabbf2838ab113350a72afca87f2d6e8d7dd8367ae3e431e2a29 | 2026-09-02 | planning workflow prose reviewed against code |
+| implement-this | skills/implement-this/ | sha256:3273c334a488747c0290f5717c24321c7d871ac54b3b9f9a66c050f564c12122 | 2026-09-02 | implementation workflow prose reviewed against code |
+| review-this | skills/review-this/ | sha256:4523721f8e2c6512f72a771c501dc8af0d623621142d98bc229644c4e99e314c | 2026-09-02 | review workflow prose reviewed against code |
+| release-skills | skills/release-skills/ | sha256:2d89e68b76ac58448a26c1c9b1cd09bb91259380595b8a1790a38607861665c0 | 2026-09-02 | release workflow prose reviewed against code |
+
 ## Coverage
 
 | File | Tier |
@@ -87,6 +112,7 @@ independently bounded; every seam fits every band at its strict cap.
 | docs/adr/0025-required-orientation-sources.md | decision |
 | docs/adr/0026-unslopify-silent-publication.md | decision |
 | docs/adr/0027-plan-this-ask-when-a-human-must-decide.md | decision |
+| docs/adr/0028-adaptive-doc-cache-governance.md | decision |
 | docs/leaves/document-for-agents.md | leaf |
 | docs/leaves/document-for-humans.md | leaf |
 | docs/leaves/unslopify.md | leaf |

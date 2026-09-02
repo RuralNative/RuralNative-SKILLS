@@ -82,7 +82,7 @@ Agents start every conversation from zero. Without help they re-read the whole c
 3. **Place claims by decay rate.** Vocabulary and invariants decay slowly; pointers are checkable; restatements decay fastest and are avoided.
 4. **Two hops.** Every needed fact is at most two links from the index.
 5. **Keep it short.** Index under 150 lines; leaf docs a 1–2 minute read. Orientation sets resolve at runtime and are hard-capped in bytes — ordinary 6,000, API/route 9,000, schema/data 12,000, re-orientation 7,000, absolute 12,000 — never raised by new material.
-6. **Size to the codebase.** Start smaller than you think; grow the tree only as history and sessions multiply.
+6. **Size to the codebase, then keep it sized.** Start smaller than you think; the preflight promotes the tier automatically and additively when evidence crosses a threshold — more seams, the first durable decision, coordination, or a generated-doc need — and never demotes on its own.
 
 Shortcuts are tracked openly in one debt registry, and history is append-only via short decision records.
 
@@ -138,13 +138,14 @@ Planning asks only when repository facts and the confirmed task cannot decide a 
 ## AI-First Workflow Integration
 
 - **Agent-loaded.** Descriptions route work automatically; no manual setup per task.
-- **Three modes matched to repo state.** Establish builds the tree, Audit labels every file and hands back a plan, Maintain updates docs in the same diff as code.
-- **Docs change with code.** Same-diff updates keep the cache honest.
-- **Gate enforces it.** `scripts/docs-check.sh` checks coverage, same-diff freshness, leaf and ADR validity, and derived-doc freshness. Wire it into CI or a pre-commit hook.
+- **Three modes matched to repo state.** Establish builds the tree, Audit labels every file and hands back a plan, Maintain updates docs in the same diff as code and refreshes the seam fingerprint. Every branch runs a preflight that adapts the tier to the project's growth.
+- **Docs change with code, and the fingerprint proves it.** Same-diff updates plus a reviewed seam code fingerprint keep the cache honest; a stale fingerprint fails in a dirty worktree and a clean CI checkout alike (ADR-0028).
+- **Gate enforces it.** `scripts/docs-check.sh` checks coverage, seam coherence, leaf and ADR validity, and derived-doc freshness. Wire it into CI or a pre-commit hook.
 - **Review policy ships as a file.** `REVIEW.md` at the repository root states review scope, severity, trust, verification, and subagent rules; Kilo cloud Code Review reads it from the pull-request base branch. Configuring the cloud side (app installation, repository selection, model) stays an external setup prerequisite; the shelf ships the policy file, not the platform wiring.
 - **Built for context loss.** The two-hop index lets an agent re-orient after compaction with one small read whose byte budget the harness enforces; orientation sets resolve at runtime from affected seams and deduplicate shared sources, so unrelated documentation growth never changes a task's cost. A missing fact becomes a named cache gap that requires owner approval before the read set widens (approval substitutes or narrows sources, never waives the cap).
 - **Improve repairs bloated caches.** Audit stays read-only; the Improve path shows one complete migration preview, waits for one explicit approval, then applies the approved trims, additions, moves, deletions, manifest changes, and generated-doc actions before the prose audit and harness pass (ADR-0024).
-- **Diagnostics stay yours.** An optional private record of confirmed agent mistakes exists only with your consent to create and maintain it. Every write announces itself in advance, revocation stops all writes before a separate keep, export, or delete choice, and the file stays outside the doc cache, version control, and every agent read set. Entries are sanitized summaries with no prompts, code, secrets, personal data, absolute paths, or repository remotes, and nothing uploads — submission to the skill developer is manual after your review (ADR-0018).
+- **Diagnostics stay yours.** An optional private record of confirmed agent mistakes exists only with your consent, offered at an unavoidable first-run checkpoint and remembered in a private local state file outside version control, so later runs honor the choice without re-asking. Every write announces itself in advance, revocation stops all writes before a separate keep, export, or delete choice, and the file stays outside the doc cache, version control, and every agent read set. Entries are sanitized summaries with no prompts, code, secrets, personal data, absolute paths, or repository remotes, and nothing uploads — submission to the skill developer is manual after your review (ADR-0018, ADR-0028).
+- **Growth and decisions are captured while they are cheap.** The preflight promotes the documentation tier automatically and additively when the project outgrows it, and the decision gate records each choice's rationale and rejected alternatives before the reasoning is lost; a legacy ADR's missing rationale is recovered only from cited evidence, else marked unknown (ADR-0028).
 - **Provenance stays honest.** Generated `AGENTS.md` files carry one protected comment after the five commands naming `document-for-agents` as manager plus available revision evidence; a document counts as managed only when that marker plus supporting evidence backs it, and unclear cases stay `likely` or `unknown`.
 
 ## Comparative Analysis

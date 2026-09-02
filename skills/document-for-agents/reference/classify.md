@@ -57,13 +57,37 @@ code?"**
   read this file from the pull-request base branch; configuring the tool
   itself is platform setup, not part of the doc cache.
 
-- **Sizing controls artifact set.** Minimal fits a repo one session can hold:
-  index, glossary, one conventions policy. No per-seam leaf doc, ADR directory,
-  generated-doc directory, or harness yet. Standard adds a leaf doc per seam and
-  ADRs as decisions land. Full adds the harness, generated artifacts, and
+- **Sizing controls artifact set, and the governor keeps it sized.** Minimal
+  fits a repo one session can hold: index, glossary, one conventions policy. No
+  per-seam leaf doc, ADR directory, generated-doc directory, or harness yet.
+  Standard adds a leaf doc per seam, ADRs as decisions land, the applicable
+  policy docs, the coverage manifest, an active seam fingerprint per documented
+  seam, and the harness wired into the normal check path. Full adds generated
+  artifacts, package-local indexes, declared orientation routes, and the
   scorecard. A dormant category creates no file and its harness checks stay
-  dormant. Cross the threshold only on verified need: more seams, durable
-  decisions, or a coordination cost that the check would have caught.
+  dormant. The tier is not a one-time guess: the preflight re-evaluates evidence
+  on every branch and promotes automatically and additively when it crosses the
+  threshold, and never demotes automatically (ADR-0028).
+- **The tier governor promotes on evidence, not counts.** minimal→standard fires
+  on the first ADR-worthy durable decision or more than one independently
+  editable seam; standard→full fires on a review-confirmed code/doc
+  contradiction, multi-agent or multi-package coordination, or a code-derived
+  artifact that would replace high-decay restatement. A fingerprint mismatch is
+  drift evidence only after a review proves a false claim. The `governance.ts`
+  reference implementation resolves the required tier and the monotonic
+  promotion deterministically.
+- **Seam coherence is the invariant tier's stay-true mechanism at the seam
+  level.** Harness check 2 stores a canonical code fingerprint of each
+  documented seam's code root in the coverage manifest's `Seam verification`
+  table and fails while it is stale, in a dirty worktree or a clean checkout
+  alike. It replaces touch-only same-diff freshness: a leaf edit that does not
+  review the claims and refresh the fingerprint stays red, and a reviewed
+  no-text-change may refresh (ADR-0028).
+- **A clarification record recovers lost rationale from evidence only.** A
+  legacy ADR missing trustworthy reasons gets a separate accepted `Clarifies:`
+  record citing repository or tracker evidence; the original stays verbatim.
+  With insufficient evidence the rationale is a cache gap marked `unknown`, never
+  invented (ADR-0028).
 - **Coverage inventory is manifest-owned.** When a repository runs the
   harness, the exhaustive tier and coverage inventory lives in the
   harness-owned coverage manifest, excluded from every orientation set; the
@@ -87,9 +111,10 @@ code?"**
 - **Seam splits need independent life.** Propose a split only when code
   ownership, invariants, entry points, and change cadence are independently
   meaningful for each half — never only because a leaf is long.
-- **Skill diagnostics are outside every tier.** The private mistake record is
-  not a doc-cache tier artifact: no routing row classifies it, it never enters
-  a read set, and it never becomes policy, debt, an invariant, or guidance.
-  Its shape lives in `reference/templates.md` under the skill diagnostics
-  entry; its consent contract lives in `SKILL.md`.
+- **Skill diagnostics are outside every tier.** The private mistake record and
+  its private consent-state record are not doc-cache tier artifacts: no routing
+  row classifies them, they never enter a read set or an orientation set, and
+  they never become policy, debt, an invariant, or guidance. Their shape lives in
+  `reference/templates.md` under the skill diagnostics entry and the
+  consent-state record; their consent checkpoint lives in `SKILL.md`.
 
