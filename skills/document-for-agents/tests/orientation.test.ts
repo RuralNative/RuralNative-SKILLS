@@ -437,14 +437,14 @@ describe("orientation resolver: resolved set (document-for-agents:INV-17)", () =
 });
 
 describe("orientation resolver: caps and boundary behavior (document-for-agents:INV-17)", () => {
-  test("the published cap table is ordinary 6000, api-route 9000, schema-data 12000, re-orientation 7000, absolute 12000", () => {
+  test("the published cap table is ordinary 9000, api-route 13500, schema-data 18000, re-orientation 10500, absolute 18000", () => {
     assert.deepEqual(CAPS, {
-      ordinary: 6000,
-      "api-route": 9000,
-      "schema-data": 12000,
-      "re-orientation": 7000,
+      ordinary: 9000,
+      "api-route": 13500,
+      "schema-data": 18000,
+      "re-orientation": 10500,
     });
-    assert.equal(ABSOLUTE_CAP, 12000);
+    assert.equal(ABSOLUTE_CAP, 18000);
     for (const band of BANDS) assert.ok(CAPS[band] <= ABSOLUTE_CAP);
   });
 
@@ -470,6 +470,27 @@ describe("orientation resolver: caps and boundary behavior (document-for-agents:
     });
   }
 
+  test("an essential rule that only fits under the relaxed cap now resolves within budget (ADR-0030)", () => {
+    const fixture = spec("unrelated-additions");
+    const dir = build(fixture);
+    try {
+      const initial = resolveOrientation({ root: dir, band: "ordinary", seams: ["alpha"] });
+      const oldCap = 6000;
+      assert.ok(initial.bytes < oldCap, "fixture base must sit under the old cap too");
+      // Grow the leaf past the old cap but below the new one: content that
+      // failed before ADR-0030 must pass now without any source-selection
+      // change.
+      padFile(dir, leafFor(fixture, "alpha"), oldCap + 500 - initial.bytes);
+      const grown = resolveOrientation({ root: dir, band: "ordinary", seams: ["alpha"] });
+      assert.ok(grown.bytes > oldCap, "the route must exceed the old cap");
+      assert.ok(grown.bytes <= CAPS.ordinary, "the route must fit the new cap");
+      assert.equal(grown.over, false, "essential content between the caps must not fail");
+      assert.deepEqual(grown.sources, initial.sources, "relaxed caps authorize no broader source selection");
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   test("an oversized single leaf fails and reports band, bytes, cap, source count, and exact sources", () => {
     const fixture = spec("oversized-single-leaf");
     const dir = build(fixture);
@@ -478,7 +499,7 @@ describe("orientation resolver: caps and boundary behavior (document-for-agents:
       const r = resolveOrientation({ root: dir, band: "ordinary", seams: ["alpha"] });
       assert.equal(r.over, true);
       assert.equal(r.band, "ordinary");
-      assert.equal(r.cap, 6000);
+      assert.equal(r.cap, CAPS.ordinary);
       assert.equal(r.bytes > r.cap, true);
       assert.equal(r.sourceCount, 4);
       assert.deepEqual(r.sources, [
@@ -558,7 +579,7 @@ describe("orientation resolver: caps and boundary behavior (document-for-agents:
         include: ["docs/leaves/beta.md"],
       });
       assert.equal(substituted.over, true);
-      assert.equal(substituted.cap, 6000);
+      assert.equal(substituted.cap, CAPS.ordinary);
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }

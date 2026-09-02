@@ -17,13 +17,13 @@ export type OrientationBand =
   | "re-orientation";
 
 export const ORIENTATION_CAPS: Record<OrientationBand, number> = {
-  ordinary: 6000,
-  "api-route": 9000,
-  "schema-data": 12000,
-  "re-orientation": 7000,
+  ordinary: 9000,
+  "api-route": 13500,
+  "schema-data": 18000,
+  "re-orientation": 10500,
 };
 
-export const ORIENTATION_ABSOLUTE_CAP = 12000;
+export const ORIENTATION_ABSOLUTE_CAP = 18000;
 
 export function orientationCap(band: OrientationBand): number {
   return Math.min(ORIENTATION_CAPS[band], ORIENTATION_ABSOLUTE_CAP);

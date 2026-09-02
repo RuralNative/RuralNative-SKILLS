@@ -69,15 +69,15 @@ describe("review policy classification (document-for-agents #136)", () => {
     // Cloud-side configuration stays outside the doc cache
     assert.ok(n.includes("platform setup") || n.includes("external setup"), "cloud configuration must stay outside the cache");
     // The policy tier row in the routing table still governs
-    assert.ok(classify.includes("| What are the cross-cutting rules? | policy | policy doc ≤ 1 page | linked from index; never restated in leaves |"));
+    assert.ok(classify.includes("| What are the cross-cutting rules? | policy | policy doc ≤ 105 lines | linked from index; never restated in leaves |"));
   });
 
-  test("REVIEW.md exists at the root, is indexed, and fits the one-page budget", () => {
+  test("REVIEW.md exists at the root, is indexed, and fits the 105-line policy budget", () => {
     const review = read("REVIEW.md");
     const arch = read("ARCHITECTURE.md");
     const manifest = read("docs/manifest.md");
     const lines = review.split("\n").length;
-    assert.ok(lines <= 70, `policy must stay within a one-page budget, got ${lines} lines`);
+    assert.ok(lines <= 105, `policy must stay within the 105-line budget, got ${lines} lines`);
     assert.ok(manifest.includes("| REVIEW.md | policy |"), "coverage manifest must list REVIEW.md as policy");
     assert.ok(arch.includes("- REVIEW.md"), "non-seam list must carry REVIEW.md");
     // The marker line the freshness mechanism parses must exist
@@ -140,7 +140,7 @@ describe("review policy template and index guidance (document-for-agents #136)",
       n.includes("external setup"),
       "adopter guidance must keep cloud configuration an external setup prerequisite"
     );
-    assert.ok(n.includes("one-page budget") || n.includes("≤ 1 page"), "review policy follows the page budget");
+    assert.ok(n.includes("105-line policy budget") || n.includes("≤ 105 lines"), "review policy follows the line budget");
   });
 
   test("leaf docs point to the review policy instead of restating it", () => {

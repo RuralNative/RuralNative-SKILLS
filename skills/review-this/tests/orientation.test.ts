@@ -30,7 +30,7 @@ describe("review orientation resolution (review-this:INV-15)", () => {
       resolved: resolved(),
       sources: SOURCES,
     });
-    assert.equal(resolution.evidence.cap, 6000);
+    assert.equal(resolution.evidence.cap, 9000);
     assert.equal(resolution.evidence.sourceCount, 4);
     assert.equal(resolution.omitSourceList, true);
     assert.equal(resolution.stop, false);
@@ -54,26 +54,26 @@ describe("review orientation resolution (review-this:INV-15)", () => {
   test("an over-budget pair stops before broad loading with its exact sources", () => {
     const resolution = resolveReviewOrientation({
       pair: { headSha: "head-a", baseSha: "base-a" },
-      resolved: resolved({ bytes: 6100, sourceCount: 5 }),
+      resolved: resolved({ bytes: 9100, sourceCount: 5 }),
       sources: SOURCES,
     });
     assert.equal(resolution.stop, true);
     assert.equal(resolution.omitSourceList, false);
     assert.deepEqual(resolution.sources, SOURCES);
     assert.match(resolution.reason, /stop before broad loading/);
-    assert.match(resolution.reason, /6100 > 6000/);
+    assert.match(resolution.reason, /9100 > 9000/);
   });
 
   test("a cache-gap substitution publishes the source list, never the cap waiver", () => {
     const resolution = resolveReviewOrientation({
       pair: { headSha: "head-a", baseSha: "base-a" },
-      resolved: resolved({ bytes: 6000, sourceCount: 4, cacheGap: true }),
+      resolved: resolved({ bytes: 9000, sourceCount: 4, cacheGap: true }),
       sources: SOURCES,
     });
     assert.equal(resolution.omitSourceList, false);
     assert.equal(resolution.stop, false);
     assert.deepEqual(resolution.sources, SOURCES);
-    assert.equal(resolution.evidence.cap, 6000);
+    assert.equal(resolution.evidence.cap, 9000);
   });
 
   test("head and base pin the pair; a different base is a distinct resolution", () => {
@@ -90,6 +90,6 @@ describe("review orientation resolution (review-this:INV-15)", () => {
     assert.deepEqual(a.pair, { headSha: "head-a", baseSha: "base-a" });
     assert.deepEqual(b.pair, { headSha: "head-a", baseSha: "base-b" });
     assert.notDeepEqual(b, a);
-    assert.equal(orientationCap("re-orientation"), 7000);
+    assert.equal(orientationCap("re-orientation"), 10500);
   });
 });

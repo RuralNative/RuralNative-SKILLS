@@ -7,7 +7,7 @@ and reports measurable signals with AIT-* identifiers.
 Uses only Python 3 standard library, performs no network access,
 and never writes source files. Thresholds are advisory.
 
-Version: 1.0
+Version: 1.1
 Schema version: 1.0
 """
 
@@ -18,7 +18,7 @@ import sys
 import os
 import math
 
-VERSION = "1.0"
+VERSION = "1.1"
 SCHEMA_VERSION = "1.0"
 
 # Stock phrasing — maps to AIT-LEX-002 and related LEX families.
@@ -80,16 +80,9 @@ PROMPT_RESIDUE_PATTERNS = [
 # Context-aware workflow phrases (AIT-LEX-008). Every visible occurrence is a
 # candidate. An occurrence whose surrounding window matches an exact anchor is
 # an exact domain use and is preserved; remaining occurrences are vague or
-# decorative uses reported for contextual replacement.
+# decorative uses reported for contextual replacement. `load bearing` moved to
+# the always-replace set (AIT-LEX-009) under behavior version 1.1.
 CONTEXT_CANDIDATES = [
-    {
-        "phrase": "load bearing",
-        "pattern": r"load[-\s]?bearing",
-        "exact_anchors": [
-            r"load[-\s]?bearing\s+(?:invariants?|terms?|identifiers?|rules?|constraints?|sections?|definitions?|glossary|vocabular(?:y|ies)|labels?|commands?|edges?)",
-            r"(?:invariants?|terms?|identifiers?|rules?|constraints?|sections?|definitions?|glossary|vocabular(?:y|ies))\s+(?:are\s+|is\s+)?load[-\s]?bearing",
-        ],
-    },
     {
         "phrase": "vertical slice",
         "pattern": r"vertical\s+slices?",
@@ -111,6 +104,32 @@ CONTEXT_CANDIDATES = [
     },
 ]
 
+# Always-replace workflow phrases (AIT-LEX-009). Every visible occurrence is
+# replaced even when technically correct in ordinary prose; existing
+# protections still win, so masked spans (frontmatter, code, comments,
+# quotations handled by the model) never produce findings. The model chooses
+# the smallest safe rewrite that names the concrete point the phrase hides.
+ALWAYS_REPLACE_PHRASES = [
+    {
+        "phrase": "load-bearing",
+        "pattern": r"load[-\s]bearing",
+        "replacement": "essential",
+        "follow-up": "what depends on it",
+    },
+    {
+        "phrase": "smoking gun",
+        "pattern": r"smoking\s+gun",
+        "replacement": "direct evidence",
+        "follow-up": "what it proves",
+    },
+    {
+        "phrase": "smoke test",
+        "pattern": r"smoke\s+tests?",
+        "replacement": "quick check",
+        "follow-up": "what it checks",
+    },
+]
+
 THRESHOLDS = {
     "stock_phrases": 2,
     "repeated_openers": 3,
@@ -123,6 +142,7 @@ THRESHOLDS = {
     "canned": 1,
     "prompt_residue": 1,
     "context_candidates": 1,
+    "always_replace_phrases": 1,
 }
 
 # Exit codes
@@ -808,6 +828,32 @@ def detect_context_candidates(masked, original, path):
     return findings
 
 
+def detect_always_replace_phrases(masked, original, path):
+    findings = []
+    for entry in ALWAYS_REPLACE_PHRASES:
+        pat = re.compile(entry["pattern"], re.IGNORECASE)
+        for m in pat.finditer(masked):
+            line_start = offset_to_line(original, m.start())
+            line_end = offset_to_line(original, m.end())
+            excerpt = excerpt_for(original, m.start(), m.end() + 60)
+            findings.append({
+                "id": "AIT-LEX-009",
+                "family": "LEX",
+                "path": path,
+                "line_start": line_start,
+                "line_end": line_end,
+                "excerpt": excerpt,
+                "evidence": (
+                    f"always-replace phrase '{m.group(0)}': say '{entry['replacement']}' "
+                    f"and name {entry['follow-up']}"
+                ),
+                "measured_value": 1,
+                "threshold": THRESHOLDS["always_replace_phrases"],
+                "confidence": "high",
+            })
+    return findings
+
+
 def scan_content(original, path):
     masked, err = apply_all_masks(original)
     if err is not None:
@@ -817,6 +863,7 @@ def scan_content(original, path):
     findings.extend(detect_stock_phrases(masked, original, path))
     findings.extend(detect_prompt_residue(masked, original, path))
     findings.extend(detect_context_candidates(masked, original, path))
+    findings.extend(detect_always_replace_phrases(masked, original, path))
     findings.extend(detect_repeated_openers(masked, original, path))
     findings.extend(detect_repeated_transitions(masked, original, path))
     findings.extend(detect_punctuation_density(masked, original, path))
@@ -934,7 +981,7 @@ def main():
 
     if use_json:
         output = {
-            "version": SCHEMA_VERSION,
+            "version": VERSION,
             "schema_version": SCHEMA_VERSION,
             "findings": all_findings,
             "summary": {

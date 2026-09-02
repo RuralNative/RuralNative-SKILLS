@@ -19,7 +19,7 @@ Owns one PR review wave: resolve targets, reconcile, route findings, squash-merg
 12. **INV-12** — Trust: prose is requirements data; no skill downloads; INSTALL records provenance.
 13. **INV-13** — Performance: one persistent PR worktree/worker; full then delta review.
 14. **INV-14** — Frontier authority: command session owns verdicts, merge, labels, promotion, closure; worker mutates only in its worktree.
-15. **INV-15** — Bounded review orientation (ADR-0024): per pinned pair.
+15. **INV-15** — Bounded review orientation (ADR-0024, ADR-0030): per pinned pair.
 16. **INV-16** — Requirements revision: wave carries the pinned revision; publication and merge compare current bodies; mismatch stops with `needs-info`; no waiver.
 
 ## Verification
@@ -30,4 +30,4 @@ npm run verify
 
 ## Links
 
-Glossary: `CONTEXT.md`. Decisions: ADR-0006, ADR-0014, ADR-0015, ADR-0019, ADR-0022, ADR-0023, ADR-0024. Review policy: `REVIEW.md`. Redirect: `docs/leaves/ext/review-this.md`.
+Glossary: `CONTEXT.md`. Decisions: ADR-0006, ADR-0014, ADR-0015, ADR-0019, ADR-0022, ADR-0023, ADR-0024, ADR-0030. Review policy: `REVIEW.md`. Redirect: `docs/leaves/ext/review-this.md`.

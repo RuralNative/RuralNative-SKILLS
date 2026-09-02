@@ -73,9 +73,9 @@ the conventions policy to avoid infinite regress.
     tombstoned (`(Retired — <decision id>)`), never deleted; renumbering is
     forbidden except recorded duplicate repair.
 11. **Orientation budget** — Every orientation route the repository declares
-    (band + affected seams) must fit its task-band byte cap: ordinary 6,000,
-    API/route 9,000, schema/data 12,000, re-orientation 7,000, and 12,000
-    absolute. Routes resolve deterministically from the compact architecture
+     (band + affected seams) must fit its task-band byte cap: ordinary 9,000,
+     API/route 13,500, schema/data 18,000, re-orientation 10,500, and 18,000
+     absolute (ADR-0030). Routes resolve deterministically from the compact architecture
     index, whole affected seam leaf docs, required glossary entries, and
     required decisions or policies; a leaf's `- Decision:`, `- Policy:`, and
     `- Glossary:` lines load only when the declaration marks them required

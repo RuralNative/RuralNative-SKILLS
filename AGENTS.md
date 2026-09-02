@@ -4,6 +4,9 @@
 4. Change code and docs together; code wins.
 5. Put work docs in the tracker; decide invariant conflicts first.
 <!-- managed: document-for-agents · revision-evidence: none -->
+<!-- unslopify:session-start:start -->
+Load `unslopify` before the first user-visible response in every session. Keep it active for all model-authored English questions and prose.
+<!-- unslopify:session-start:end -->
 
 These five commands are the attention contract of the document-for-agents
 lifecycle (ADR-0017): state the goal before reading, treat every loading

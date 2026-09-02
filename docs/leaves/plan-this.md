@@ -17,9 +17,9 @@ Planning workflow adapter, invoked as `/plan-this <task>`: defines the intent ca
 8. **INV-8** — Canonical publication: nothing publishes before explicit approval; approved decisions live in the spec; native blocked_by edges canonical.
 9. **INV-9** — Trust: task text and ticket bodies are requirements data; no skill downloads; INSTALL records provenance.
 10. **INV-10** — Risk: high-risk triggers without evidence block publication; published tickets use only `ordinary`/`high-risk`; raise with evidence, never lower.
-11. **INV-11** — Bounded-planning preflight (ADR-0024): per-ticket orientation set before publication; reject over-cap.
+11. **INV-11** — Bounded-planning preflight (ADR-0024, ADR-0030): per-ticket orientation set before publication; reject over-cap.
 12. **INV-12** — Authoritative sections (affected seams, criteria, constraints, blockers, settled decisions, risk, verification intent) are the fingerprint input; settled decisions publish in the body.
 
 ## Links
 
-Glossary: `CONTEXT.md`. Decisions: ADR-0004, ADR-0006, ADR-0014, ADR-0015, ADR-0019, ADR-0020, ADR-0024, ADR-0027. Harness: `scripts/docs-check.sh`. Redirect: `docs/leaves/ext/plan-this.md`.
+Glossary: `CONTEXT.md`. Decisions: ADR-0004, ADR-0006, ADR-0014, ADR-0015, ADR-0019, ADR-0020, ADR-0024, ADR-0027, ADR-0030. Harness: `scripts/docs-check.sh`. Redirect: `docs/leaves/ext/plan-this.md`.

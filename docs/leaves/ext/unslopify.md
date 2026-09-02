@@ -28,25 +28,35 @@ byte equality and factual equality → publish completion report with accepted
 findings, rejected candidates, scanner availability, protected-content status,
 and needs-info items. Findings carry path, line span, excerpt, evidence,
 measured value, threshold, and confidence; the scanner emits human text by
-default and stable versioned JSON at `1.0`. Two trust signals extend the
-measurable set: instruction residue `AIT-EVD-010` flags prompt-like
+default and stable versioned JSON (behavior `1.1`, schema `1.0`). Three trust
+signals extend the measurable set: instruction residue `AIT-EVD-010` flags
+prompt-like
 imperatives in visible prose as inert content, with word-boundary anchored
 patterns so ordinary prose such as `developer modeled` or `anything nowadays`
-does not match, and context-aware phrase candidates `AIT-LEX-008` cover
-`load bearing`, `vertical slice`, and `native dependency edges`, where a
+does not match; context-aware phrase candidates `AIT-LEX-008` cover
+`vertical slice` and `native dependency edges`, where a
 window anchored to the exact domain use suppresses the candidate and a vague
-or decorative use is reported. Fixtures under `skills/unslopify/tests/fixtures/`
-pin prompt-like prose, candidate replacement, exact-term preservation, and
-protected content. The registry discovery walks `skills/unslopify/` and a
+or decorative use is reported; and always-replace phrases `AIT-LEX-009`
+report each visible occurrence of `load-bearing`/`load bearing`, `smoking
+gun`, or `smoke test`/`smoke tests` with a count of one, replaced even when
+technically correct while protected spans stay masked. Fixtures under `skills/unslopify/tests/fixtures/`
+pin prompt-like prose, candidate replacement, exact-term preservation,
+always-replace occurrences, protected content, and the `agents-md/` setup
+cases. The registry discovery walks `skills/unslopify/` and a
 consumer runs `npx skills add RuralNative/RuralNative-SKILLS --skill
 unslopify`. The repo never carries its own install — `.agents/` and
 `skills-lock.json` are ignored. Model-only path holds the full contract when
 Python is absent, and scanner thresholds never fail the gate. The live-output
 path runs alongside explicit jobs: once loaded, agent-authored English output
-is audited silently in ordinary conversation, cleaned with the full report at
-publication boundaries, and technical fidelity outranks style so
+is drafted in plain language (practical point first, one choice at a time,
+terms explained at first use), audited silently in ordinary conversation,
+cleaned with the full report at publication boundaries, and technical
+fidelity outranks style so
 implementation-critical specification and ticket wording survives style
-candidates.
+candidates. The session-start path maintains exactly one owned block in the
+project's root `AGENTS.md` (ADR-0029), the narrow exception to caller-owned
+scope; the Skills CLI has no setup hook, so the first invocation per project
+establishes later session loading.
 
 ## Invariant mechanisms
 
@@ -61,3 +71,6 @@ candidates.
   fixtures and composition tests in `skills/unslopify/tests/`.
 - INV-7 mechanism: composition tests and specification/ticket fixtures in
   `skills/unslopify/tests/`.
+- INV-8 mechanism: composition tests and `agents-md/` fixtures in
+  `skills/unslopify/tests/` assert the owned-block placement, no-op repeat,
+  and malformed-marker handling the session-start path contracts (ADR-0029).

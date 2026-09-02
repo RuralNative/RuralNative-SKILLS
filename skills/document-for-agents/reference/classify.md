@@ -10,10 +10,10 @@ code?"**
 |---|---|---|---|
 | Why is the system shaped this way? | decision | ADR | append-only; supersession; parseable `Status:` |
 | What does this term mean; what's forbidden? | vocabulary | glossary | frozen; changes require a decision |
-| What must not change? (limits, exclusions, contracts) | invariant | seam leaf doc, numbered, 3–5 at establishment, grows with decisions; audit past ~15 | test where encodable — the identifier appears literally under the seam's declared test location, so the drift test becomes a deletion; otherwise prose, with a justification naming its mechanism |
+| What must not change? (limits, exclusions, contracts) | invariant | seam leaf doc, numbered, 3–8 at establishment, grows with decisions; audit past ~23 | test where encodable — the identifier appears literally under the seam's declared test location, so the drift test becomes a deletion; otherwise prose, with a justification naming its mechanism |
 | Where does X live? | pointer | index table / conventions | harness: table ↔ disk ↔ directories |
 | What does the code say? (schema, endpoints, structure) | restatement | generated artifact, or absent | regeneration + timestamp gate |
-| What are the cross-cutting rules? | policy | policy doc ≤ 1 page | linked from index; never restated in leaves |
+| What are the cross-cutting rules? | policy | policy doc ≤ 105 lines | linked from index; never restated in leaves |
 | What is knowingly unfinished or a shortcut? | debt | debt registry | `DEBT-N` ids, `Status:`, `Revisit-when:` triggers, reviewable in diffs |
 | What are we doing right now? | work | issue tracker | deleted on completion; never cited |
 
@@ -100,7 +100,8 @@ code?"**
   navigation and never loads source content (ADR-0025). Byte caps are hard,
   duplicate sources count once, rejected decisions never enter the set even
   when declared required, superseded ADRs load only when a leaf explicitly
-  requires them, and no set exceeds 12,000 bytes (ADR-0024, ADR-0025).
+  requires them, and no set exceeds 18,000 bytes (ADR-0024, ADR-0025,
+  ADR-0030).
 - **Improve repairs existing caches.** Audit stays read-only. Improve
   diagnoses an existing cache, shows one complete migration preview, waits for
   one explicit approval, and only then applies trims, additions, moves,

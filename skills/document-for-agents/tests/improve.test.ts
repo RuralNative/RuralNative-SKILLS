@@ -9,6 +9,7 @@ import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { read, norm } from "../../../scripts/test-helpers.ts";
+import { CAPS } from "../orientation.ts";
 
 const ROOT = path.resolve(import.meta.dirname ?? ".", "..", "..", "..");
 
@@ -247,7 +248,7 @@ describe("docs-check.sh check 11: Orientation budget fixtures", () => {
   });
 
   test("an over-cap declared route fails before any broad load and reports band, bytes, cap, source count, and sources", () => {
-    const oversized = 6000;
+    const oversized = CAPS.ordinary;
     const f = makeCheckFixture({ routes: "| ordinary | alpha |", padLeafBytes: oversized });
     try {
       const r = f.run();
@@ -288,7 +289,7 @@ describe("docs-check.sh check 11: Orientation budget fixtures", () => {
   });
 
   test("a declared route over the re-orientation cap fails under that band's cap", () => {
-    const f = makeCheckFixture({ routes: "| re-orientation | alpha |", padLeafBytes: 7000 });
+    const f = makeCheckFixture({ routes: "| re-orientation | alpha |", padLeafBytes: CAPS["re-orientation"] });
     try {
       const r = f.run();
       assert.equal(r.status, 1, `expected re-orientation over-budget failure:\n${r.out}`);
@@ -299,8 +300,8 @@ describe("docs-check.sh check 11: Orientation budget fixtures", () => {
   });
 
   test("check 11 processes every `- Glossary:` declaration, not just the first", () => {
-    // The second declaration's block alone pushes the route past the 6,000
-    // ordinary cap; with only the first declaration the same route fits.
+    // The second declaration's block alone pushes the route past the ordinary
+    // cap; with only the first declaration the same route fits.
     const glossary = `## Language
 
 **Alpha term**:
@@ -308,7 +309,7 @@ the alpha vocabulary entry.
 _Avoid_: alpha alias
 
 **Beta term**:
-${"x".repeat(6000)}
+${"x".repeat(CAPS.ordinary)}
 `;
     const twoDeclarations = LEAF.replace(
       "- Glossary: `CONTEXT.md` — Alpha term.\n",
@@ -351,7 +352,7 @@ ${"x".repeat(6000)}
 ${status}
 Date: 2026-08-29
 
-Decision: ${"x".repeat(6000)}.
+Decision: ${"x".repeat(CAPS.ordinary)}.
 `;
   }
 

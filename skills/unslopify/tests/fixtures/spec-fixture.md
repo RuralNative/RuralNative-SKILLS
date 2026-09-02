@@ -10,7 +10,8 @@ invocation.
 ## Constraints
 
 - Sink stays `s3://rn-exports`; do not rename the bucket.
-- The quota `maxConcurrentUploads=4` is load bearing for the rate limiter.
+- The rate limiter reads the quota `maxConcurrentUploads=4`; the job must not
+  change that value.
 - Rollback re-runs `rural-import --reverse` from the previous manifest.
 
 It is important to note that the migration is expected to significantly

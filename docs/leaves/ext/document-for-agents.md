@@ -81,3 +81,9 @@ the rule requires a new decision.
   a clean checkout fails, a leaf-only touch fails, and a reviewed refresh passes.
   A root outside a git work tree cannot produce a trustworthy digest and fails
   closed — never skipped, never the empty preimage (ADR-0028).
+- INV-21 mechanism detail: marker-shape test on `reference/templates.md`, a
+  placement test on this repository's own `AGENTS.md`, and composition tests
+  in `skills/document-for-agents/tests/` prove the generated `AGENTS.md` keeps
+  the five-command prefix, the management marker, and exactly one unslopify
+  session-start block after it; Establish, Maintain, and Improve preserve the
+  block byte for byte (ADR-0029).

@@ -319,3 +319,61 @@ describe("attention boundary contract (document-for-agents:INV-7..INV-13)", () =
     assert.ok(boundaries < dependency, "dependency block must sit below boundaries");
   });
 });
+
+// document-for-agents:INV-21 — generated AGENTS.md keeps the five commands,
+// the management marker, and exactly one unslopify session-start block in
+// order, and Establish, Maintain, and Improve preserve it byte for byte
+// (ADR-0029).
+describe("generated AGENTS.md block preservation (document-for-agents:INV-21)", () => {
+  const SESSION_BODY =
+    "Load `unslopify` before the first user-visible response in every session. Keep it active for all model-authored English questions and prose.";
+
+  test("root AGENTS.md keeps the five-command prefix, marker, and one session-start block in order", () => {
+    const commands = JSON.parse(read("skills/document-for-agents/tests/fixtures/five-commands.json")).commands as string[];
+    const agents = read("AGENTS.md");
+    const lines = agents.split("\n");
+    assert.ok(agents.startsWith(`1. ${commands[0]}\n`), "command 1 opens the file");
+    const fifthIdx = lines.findIndex((l) => l.startsWith("5. Put work docs in the tracker"));
+    const markerIdx = lines.findIndex((l) => l.startsWith("<!-- managed: document-for-agents"));
+    assert.notEqual(fifthIdx, -1, "command 5 present");
+    assert.equal(markerIdx, fifthIdx + 1, "the marker stays directly after command 5");
+    const starts = lines
+      .map((l, i) => ({ l, i }))
+      .filter(({ l }) => l === "<!-- unslopify:session-start:start -->");
+    const ends = lines
+      .map((l, i) => ({ l, i }))
+      .filter(({ l }) => l === "<!-- unslopify:session-start:end -->");
+    assert.equal(starts.length, 1, "exactly one session-start marker");
+    assert.equal(ends.length, 1, "exactly one session-end marker");
+    assert.equal(starts[0].i, markerIdx + 1, "the block sits directly after the management marker");
+    assert.equal(lines[starts[0].i + 1], SESSION_BODY, "the block body is the exact owned sentence");
+    assert.equal(ends[0].i, starts[0].i + 2, "the block is the three owned lines");
+    const firstSection = lines.findIndex((l) => l.startsWith("## "));
+    assert.ok(ends[0].i < firstSection, "the block precedes every later section");
+  });
+
+  test("templates place the block after the marker and the lifecycle preserves it", () => {
+    const templates = read("skills/document-for-agents/reference/templates.md");
+    const markerLinePos = templates.indexOf(
+      "<!-- managed: document-for-agents · revision-evidence: <available revision evidence> -->",
+    );
+    const blockPos = templates.indexOf("<!-- unslopify:session-start:start -->");
+    assert.ok(markerLinePos !== -1 && blockPos > markerLinePos, "templates must place the block after the marker");
+    const blockBodyStart = blockPos + "<!-- unslopify:session-start:start -->\n".length;
+    const blockBodyEnd = templates.indexOf("<!-- unslopify:session-start:end -->", blockBodyStart);
+    const embeddedBody = templates.slice(blockBodyStart, blockBodyEnd).replace(/\n$/, "");
+    assert.equal(embeddedBody, SESSION_BODY, "templates must carry the exact owned block body byte for byte");
+    assert.ok(norm(templates).includes("establish creates the block"), "templates must name the Establish duty");
+    assert.ok(norm(templates).includes("improve and maintain preserve"), "templates must name the Improve and Maintain duty");
+    const n = norm(read("skills/document-for-agents/SKILL.md"));
+    assert.ok(n.includes("session-start block"), "SKILL.md must name the session-start block");
+    assert.ok(n.includes("byte for byte"), "preservation must be byte for byte");
+  });
+
+  test("the owning leaf declares INV-21 and ADR-0029 records the contract", () => {
+    const leaf = read("docs/leaves/document-for-agents.md");
+    assert.ok(leaf.includes("INV-21"), "leaf must declare INV-21");
+    assert.ok(norm(leaf).includes("session-start"), "INV-21 must name the session-start block");
+    assert.ok(leaf.includes("ADR-0029"), "the leaf must cite ADR-0029");
+  });
+});

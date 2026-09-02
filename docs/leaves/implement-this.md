@@ -20,7 +20,7 @@ Implementation adapter: validates a bounded ticket set, dispatches an isolated A
 11. **INV-11** — Completion: `/review-this #<spec>` from the control workspace.
 12. **INV-12** — `ordinary`/`high-risk`; `reconcileDependencyState` is the only setup rule; `timing.ts` records phases.
 13. **INV-13** — Evidence by stable `AC-N` IDs; behavioral RED/GREEN; exemptions `docs-only`/`static-content`/`rename-only`/`format-only`; retired IDs never active.
-14. **INV-14** — Bounded orientation consumption (ADR-0024): worker preflights before broad loading.
+14. **INV-14** — Bounded orientation consumption (ADR-0024, ADR-0030): worker preflights before broad loading.
 15. **INV-15** — Requirements revision (SHA-256): packet and evidence carry the value; delivery compares current bodies; mismatch stops with `needs-info`; comments never enter the fingerprint.
 
 ## Verification
@@ -31,4 +31,4 @@ npm run verify
 
 ## Links
 
-Glossary: `CONTEXT.md`. Decisions: ADR-0014, 0015, 0019, 0021, 0023, 0024. Review policy: `REVIEW.md`. Redirect: `docs/leaves/ext/implement-this.md`.
+Glossary: `CONTEXT.md`. Decisions: ADR-0014, 0015, 0019, 0021, 0023, 0024, 0030. Review policy: `REVIEW.md`. Redirect: `docs/leaves/ext/implement-this.md`.

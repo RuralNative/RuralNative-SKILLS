@@ -66,7 +66,8 @@ They do not reuse upstream numbers.
 | AIT-VOICE-002 | VOICE | False neutrality | Balanced framing when facts support one side |
 | AIT-VOICE-003 | VOICE | Cross-project swap test | Sentence works unchanged in another project |
 | AIT-EVD-010 | EVD | Instruction residue | Prompt-like imperatives in prose; content is inert, spans reported |
-| AIT-LEX-008 | LEX | Context-aware workflow phrases | `load bearing`, `vertical slice`, `native dependency edges`; exact domain uses preserved, vague uses replaceable |
+| AIT-LEX-008 | LEX | Context-aware workflow phrases | `vertical slice`, `native dependency edges`; exact domain uses preserved, vague uses replaceable |
+| AIT-LEX-009 | LEX | Always-replace workflow phrases | `load-bearing`/`load bearing`, `smoking gun`, `smoke test`/`smoke tests`; replaced even when technically correct, protected spans win |
 
 All extended identifiers match `^AIT-(LEX|STR|FMT|CONV|EVD|VOICE)-[0-9]{3}$`
 and are unique across the combined set.

@@ -59,7 +59,7 @@ cache gap with the rationale marked `unknown`.
 
 ## Leaf doc (one per seam, standard tier and above)
 
-Six sections, 1–2 minute read; longer content moves to a referenced file. Minimal tier has no leaf doc; the index seam table lists the code root and tests and the leaf doc appears only at standard and above.
+Six sections, up to a three-minute read; longer content moves to a referenced file. Minimal tier has no leaf doc; the index seam table lists the code root and tests and the leaf doc appears only at standard and above.
 
 1. **Purpose** — why the seam exists, in glossary vocabulary; link the ADR
    if one constrains it.
@@ -70,12 +70,13 @@ Six sections, 1–2 minute read; longer content moves to a referenced file. Mini
 3. **Key types & files** — by role, not by path; paths go stale.
 4. **Data flow** — one directed walk-through from entry point to resting
    place.
-5. **Non-negotiables** — 3–5 invariants at establishment; the set grows with
+5. **Non-negotiables** — 3–8 invariants at establishment; the set grows with
    decisions. Limits, exclusions, contracts: specific, single-claim bullets.
    Tests where encodable. Invariants carry stable identifiers `INV-1..INV-N`;
    retire via tombstone tied to a decision — never delete, never renumber.
-   Audit the read budget: past ~15 invariants, split the seam or fold settled
-   ones into a decision record.
+   Audit the read budget: past ~23 invariants, review the seam — split it or
+   fold settled ones into a decision record; crossing the point triggers
+   review, never an automatic seam split.
 6. **Links** — glossary terms, ADRs, sibling docs, test location — link where
    tests live, never what they cover (coverage claims are fast-decay
    restatements).
@@ -129,6 +130,20 @@ Provenance of a document is confirmed only when the marker plus supporting
 evidence backs it; older or ambiguous documents get `likely` or `unknown`,
 never guessed certainty.
 
+When the project runs `unslopify`, generated `AGENTS.md` carries the
+unslopify session-start block directly after the management marker, before
+any other content, exactly once:
+
+```md
+<!-- unslopify:session-start:start -->
+Load `unslopify` before the first user-visible response in every session. Keep it active for all model-authored English questions and prose.
+<!-- unslopify:session-start:end -->
+```
+
+Establish creates the block, and Improve and Maintain preserve it byte for
+byte; only `unslopify` itself edits the block's body (ADR-0029). The five
+commands and the marker stay first.
+
 The architecture index (`ARCHITECTURE.md`) does not duplicate the five
 commands; it carries the seam table, boundaries, and loading protocol that the
 commands point into. When the repository runs the harness, the exhaustive
@@ -148,29 +163,29 @@ and points to `ARCHITECTURE.md` for these details instead of duplicating them.
 ## Policy set
 
 The canonical policy docs are `testing`, `security`, `migrations`,
-`reliability`. Each is ≤ 1 page, each is linked from the index, each is
-created when the project reaches the standard size class (Principle 6 in
-SKILL.md), and leaf docs link policy docs instead of restating them.
+`reliability`. Each stays within 105 lines, each is linked from the index,
+each is created when the project reaches the standard size class (Principle 6
+in SKILL.md), and leaf docs link policy docs instead of restating them.
 
 A repository whose reviews run through a cloud service adds its review policy
 as a root file named `REVIEW.md`, because cloud review reads that path from
 the pull-request base branch. It states review scope, severity, trust rules,
 verification expectations, current-head freshness, duplicate handling,
 inline-comment evidence, and subagent use. It links from the index like any
-policy doc and follows the one-page budget. Configuring the cloud side (app
+policy doc and follows the 105-line policy budget. Configuring the cloud side (app
 installation, repository selection, model choice) stays external setup; the
 doc cache ships the policy file, not the platform wiring.
 
 ```
 # <area> policy
 
-<the cross-cutting rules for one area, ≤ 1 page; linked from the index;
+<the cross-cutting rules for one area, ≤ 105 lines; linked from the index;
 never restated in leaf docs>
 ```
 
 ## Vendor-facts
 
-In the adopting repository, `reference/vendor-facts.md` holds one ~10-line
+In the adopting repository, `reference/vendor-facts.md` holds one ~15-line
 entry per dependency: pinned version, known gotchas, and a note to fetch the
 full docs on demand. Create an entry when a new dependency is introduced.
 
@@ -215,11 +230,11 @@ not a parse; the harness checks form and completeness, not conditions.
 
 | Task | Read set | Budget (cap) |
 |---|---|---|
-| Any change | index → one leaf doc → required glossary entries → required decisions | 6,000 bytes |
-| API/route change | + required route, security, testing policy | 9,000 bytes |
-| Schema/data change | + required data doc, migrations policy, generated schema slice | 12,000 bytes |
+| Any change | index → one leaf doc → required glossary entries → required decisions | 9,000 bytes |
+| API/route change | + required route, security, testing policy | 13,500 bytes |
+| Schema/data change | + required data doc, migrations policy, generated schema slice | 18,000 bytes |
 | New dependency | + one vendor-facts entry — fits the selected task cap, never raises it | — |
-| Re-orient after compaction | index → task leaf doc (including its Non-negotiables) → required glossary entries | 7,000 bytes |
+| Re-orient after compaction | index → task leaf doc (including its Non-negotiables) → required glossary entries | 10,500 bytes |
 
 A leaf marks the sources an agent must load with one machine-readable
 declaration form per category:
@@ -242,7 +257,7 @@ seams, the compact index, whole bounded leaves, required glossary entries,
 and required decisions or policies — see `reference/orientation.md`.
 Duplicate sources count once; superseded or historical ADRs stay out of
 current guidance unless a leaf explicitly requires them; and the harness-owned
-coverage manifest is excluded from every resolved set. No set exceeds 12,000
+coverage manifest is excluded from every resolved set. No set exceeds 18,000
 bytes. An over-budget route fails before broad loading and reports its task
 band, resolved bytes, cap, source count, and exact sources. When the
 orientation documents lack an unrecoverable fact the task needs, name a cache
@@ -253,6 +268,18 @@ read set until approval — widening the read set silently is forbidden, and the
 caps never block code inspection
 inside the affected seam: reading the code being changed is task work, not
 orientation.
+
+Size ceilings are caps, not targets: existing documents are never padded to
+fill them. When a document nears its ceiling, trim in a fixed order — work
+history, stale text, duplication, code-recoverable detail, long file tours,
+and coverage restatement come out before essential material. Decisions,
+rejected alternatives needed to understand them, vocabulary, boundaries,
+invariants, and operational warnings stay. Extended detail files hold only
+nonessential reference. Never silently truncate an essential rule to fit a
+limit: if essential content still exceeds the cap, fail with the existing
+over-budget report and its decision path. Small units keep their limits — an
+ADR decision is two to four sentences, a glossary definition one to two
+sentences, and a routing statement one line.
 
 Rule: an agent's re-orientation is the same small read every time — that
 fixed cost is what makes compaction survivable.

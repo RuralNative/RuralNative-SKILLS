@@ -30,14 +30,14 @@ import path from "node:path";
 export type Band = "ordinary" | "api-route" | "schema-data" | "re-orientation";
 
 export const CAPS: Record<Band, number> = {
-  ordinary: 6000,
-  "api-route": 9000,
-  "schema-data": 12000,
-  "re-orientation": 7000,
+  ordinary: 9000,
+  "api-route": 13500,
+  "schema-data": 18000,
+  "re-orientation": 10500,
 };
 
 // No orientation set exceeds this absolute cap.
-export const ABSOLUTE_CAP = 12000;
+export const ABSOLUTE_CAP = 18000;
 
 export type ResolveOptions = Readonly<{
   root: string;

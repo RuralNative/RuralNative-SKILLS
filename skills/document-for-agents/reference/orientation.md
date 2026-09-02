@@ -20,15 +20,16 @@ node orientation.ts --root <repo> --band <band> --seams <seam1,seam2> [--include
 
 | Task band | Cap (UTF-8 bytes) |
 |---|---|
-| Ordinary change | 6,000 |
-| API or route change | 9,000 |
-| Schema or data change | 12,000 |
-| Re-orientation after compaction | 7,000 |
+| Ordinary change | 9,000 |
+| API or route change | 13,500 |
+| Schema or data change | 18,000 |
+| Re-orientation after compaction | 10,500 |
 | New-dependency material | fits the selected task band's cap |
-| Absolute maximum | 12,000 |
+| Absolute maximum | 18,000 |
 
-No orientation set may exceed 12,000 bytes. New-dependency material fits the
-selected task cap rather than raising it.
+No orientation set may exceed 18,000 bytes. New-dependency material fits the
+selected task cap rather than raising it. The ceilings are strict caps, not
+targets (ADR-0030).
 
 ## Resolution inputs
 

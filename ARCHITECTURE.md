@@ -21,18 +21,18 @@ New `skills/<identity>/` needs a row, leaf doc, matching `SKILL.md` name (check 
 - docs/agents/*, docs/manifest.md, docs/human/*
 ## Decisions
 
-Accepted decisions in `docs/adr/` (incl. `docs/adr/0016-unslopify-always-on-output-contract.md`, `docs/adr/0018-opt-in-skill-diagnostics.md`, `docs/adr/0028-adaptive-doc-cache-governance.md`); superseded set and tiers in `docs/manifest.md`.## Cross-cutting boundaries
+Accepted decisions in `docs/adr/` (incl. `docs/adr/0016-unslopify-always-on-output-contract.md`, `docs/adr/0018-opt-in-skill-diagnostics.md`, `docs/adr/0028-adaptive-doc-cache-governance.md`, `docs/adr/0029-unslopify-session-start-and-plain-language-live-output.md`, `docs/adr/0030-larger-orientation-ceilings.md`); superseded set and tiers in `docs/manifest.md`.## Cross-cutting boundaries
 
-- Orientation: ordinary 6,000, API/route 9,000, schema/data 12,000, re-orientation 7,000, absolute 12,000; hard caps on orientation documents; never block code inspection inside the affected seam; a missing fact is a cache gap — ask the owner for approval before widening the read set (ADR-0017, ADR-0024).
+- Orientation: ordinary 9,000, API/route 13,500, schema/data 18,000, re-orientation 10,500, absolute 18,000; hard caps on orientation documents; ceilings are caps, not targets; never block code inspection inside the affected seam; a missing fact is a cache gap — ask the owner for approval before widening the read set (ADR-0017, ADR-0024, ADR-0030).
 - Tier promotes automatically and additively, never auto-demote; seam coherence fails a stale fingerprint, dirty or clean; manifest, fingerprints, and private consent state stay out of every orientation set (ADR-0024, ADR-0028).
 - Frontier session owns verdicts, merge, labels, promotion, closure (ADR-0022); workers retained until durable (ADR-0023).## Loading protocol
 
 | Task | Read set | Budget (cap) |
 |---|---|---|
-| Any change | index → one leaf → required glossary → required decisions | 6,000 |
-| API/route change | + required route, security, testing policy | 9,000 |
-| Schema/data change | + required data doc, migrations policy, generated slice | 12,000 |
-| Re-orient after compaction | index → task leaf (Non-negotiables) → required glossary | 7,000 |
+| Any change | index → one leaf → required glossary → required decisions | 9,000 |
+| API/route change | + required route, security, testing policy | 13,500 |
+| Schema/data change | + required data doc, migrations policy, generated slice | 18,000 |
+| Re-orient after compaction | index → task leaf (Non-negotiables) → required glossary | 10,500 |
 
 ## Checks
 

@@ -66,12 +66,12 @@ only after Maintain reviews the seam's affected claims against current code
 
 | Seam | Code root | Fingerprint | Verified | Claims |
 |---|---|---|---|---|
-| document-for-agents | skills/document-for-agents/ | sha256:afb9f3bb82e45d76772e95c4954d1b77b1fd0e582d2c2ab96accd73401f16d07 | 2026-09-02 | lifecycle prose, reference shapes, harness contract reviewed against code; ADR-0028 adopted |
+| document-for-agents | skills/document-for-agents/ | sha256:cb3458acaf508cdc7c7cd432029d179a873bfde42e838787e42254b61f88461b | 2026-09-02 | lifecycle prose, reference shapes, harness contract, and ADR-0030 size ceilings reviewed against code; INV-21 block preservation added, list-nesting/continuation indentation corrected, and templates session-start block byte-identity asserted |
 | document-for-humans | skills/document-for-humans/ | sha256:46b55e33e718abae3a440b243771779108b68a80a735479f0867a5b353281e48 | 2026-09-02 | derived-doc prose and reference reviewed against code |
-| unslopify | skills/unslopify/ | sha256:6fbcf7c9fd7e301b85f7adb890c503981f90073fdde8e78d342f51f5ee435b4f | 2026-09-02 | output-contract prose and scanner reviewed against code |
-| plan-this | skills/plan-this/ | sha256:2837d48d7aa0fabbf2838ab113350a72afca87f2d6e8d7dd8367ae3e431e2a29 | 2026-09-02 | planning workflow prose reviewed against code |
-| implement-this | skills/implement-this/ | sha256:3273c334a488747c0290f5717c24321c7d871ac54b3b9f9a66c050f564c12122 | 2026-09-02 | implementation workflow prose reviewed against code |
-| review-this | skills/review-this/ | sha256:4523721f8e2c6512f72a771c501dc8af0d623621142d98bc229644c4e99e314c | 2026-09-02 | review workflow prose reviewed against code |
+| unslopify | skills/unslopify/ | sha256:7eabd8687aaa12d4f7197ea3be6f7efdfd80e5cbb24478e9b42a993b22216e80 | 2026-09-02 | output-contract, session-start setup, plain-language, and scanner 1.1 prose reviewed against code; ADR-0029 adopted; setup rules encoded as a byte-level reference model with hash-proof tests, spec-fixture critical wording reworded, and unused test constants removed |
+| plan-this | skills/plan-this/ | sha256:8cb0db70956b6e37a06fd9300ecfc56bdf1db596c4bf38db7b248436541de120 | 2026-09-02 | planning workflow prose and ADR-0030 caps reviewed against code |
+| implement-this | skills/implement-this/ | sha256:60826b0aaa701eb3876cec904157f8eae59010ecaac82144af783ebfea2ec56f | 2026-09-02 | implementation workflow prose and ADR-0030 caps reviewed against code |
+| review-this | skills/review-this/ | sha256:90a80e559f84a3a68c5913a3839587045e7f0d0246b298529b01f1c083bb8025 | 2026-09-02 | review workflow prose and ADR-0030 caps reviewed against code |
 | release-skills | skills/release-skills/ | sha256:2d89e68b76ac58448a26c1c9b1cd09bb91259380595b8a1790a38607861665c0 | 2026-09-02 | release workflow prose reviewed against code |
 
 ## Coverage
@@ -113,6 +113,8 @@ only after Maintain reviews the seam's affected claims against current code
 | docs/adr/0026-unslopify-silent-publication.md | decision |
 | docs/adr/0027-plan-this-ask-when-a-human-must-decide.md | decision |
 | docs/adr/0028-adaptive-doc-cache-governance.md | decision |
+| docs/adr/0029-unslopify-session-start-and-plain-language-live-output.md | decision |
+| docs/adr/0030-larger-orientation-ceilings.md | decision |
 | docs/leaves/document-for-agents.md | leaf |
 | docs/leaves/document-for-humans.md | leaf |
 | docs/leaves/unslopify.md | leaf |

@@ -59,6 +59,8 @@ into `docs/leaves/ext/` redirect files that the resolver never follows.
 Every seam now resolves under every band cap (ordinary 6,000, api-route
 9,000, schema-data 12,000, re-orientation 7,000), all routes are declared in
 `docs/manifest.md`, and check 11 passes.
+Superseded by ADR-0030: these band caps are now 9,000, 13,500, 18,000, and
+10,500 bytes; the verdict's claim that routes fit holds under the raised caps.
 
 ### DEBT-4 — Re-orientation unverified
 
@@ -94,6 +96,9 @@ present in the permitted set, and every seam's re-orientation route resolves
 within its 7,000-byte cap. The drill is reproducible via the resolver
 (`node skills/document-for-agents/orientation.ts --band re-orientation
 --seams <seam>`).
+Superseded by ADR-0030: the re-orientation cap is now 10,500 bytes; the
+drill's conclusion that the permitted set carries every needed fact is
+unaffected.
 
 ### DEBT-5 — Layout-agnostic gaps in seam discovery
 

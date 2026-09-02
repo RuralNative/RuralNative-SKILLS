@@ -22,11 +22,12 @@ Doc-cache lifecycle: establish, audit, improve, maintain. Outputs: cache accurac
 14. **INV-14** — Opt-in private diagnostics (ADR-0018/0028): first-run consent in private state; notice, revocation; sanitized; outside cache/read sets; confirmed/likely/unknown.
 15. **INV-15** — Generated `AGENTS.md` carries one protected marker after the five commands; evidence backs provenance, else likely/unknown.
 16. **INV-16** — Audit read-only; additive tier promotion automatic; destructive Improve gated by one preview and approval.
-17. **INV-17** — Deterministic; dedupes; exact `— requires.` and `- Glossary:` load; exact-token status; citations navigate; 12,000 cap; manifest out.
+17. **INV-17** — Deterministic; dedupes; exact `— requires.` and `- Glossary:` load; exact-token status; citations navigate; 18,000 absolute cap (ADR-0030); manifest out.
 18. **INV-18** — Preflight re-evaluates tier each branch; promotion monotonic and additive; never auto-demote.
 19. **INV-19** — Decision gate captures rationale prospectively; legacy rationale from evidence only, else `unknown`.
 20. **INV-20** — Seam coherence fingerprint per seam; stale fails dirty and clean; refresh only after claim review.
+21. **INV-21** — Generated `AGENTS.md` keeps the five commands, the management marker, and exactly one unslopify session-start block after the marker; Establish, Maintain, and Improve preserve it byte for byte (ADR-0029).
 ## Links
 
-Decisions: ADR-0001..0028. Review policy: `REVIEW.md` (check 8). Harness: `scripts/docs-check.sh`. Redirect: `docs/leaves/ext/document-for-agents.md`.
+Decisions: ADR-0001..0030. Review policy: `REVIEW.md` (check 8). Harness: `scripts/docs-check.sh`. Redirect: `docs/leaves/ext/document-for-agents.md`.
 - Glossary: `CONTEXT.md` — Decision journal.

@@ -34,7 +34,7 @@ describe("planning orientation preflight (plan-this:INV-11)", () => {
       resolved: resolved(),
     });
     assert.equal(preflight.withinBudget, true);
-    assert.equal(preflight.evidence.cap, 6000);
+    assert.equal(preflight.evidence.cap, 9000);
     assert.equal(preflight.reason, "the resolved orientation set fits the selected task-band cap");
   });
 
@@ -42,33 +42,33 @@ describe("planning orientation preflight (plan-this:INV-11)", () => {
     const preflight = preflightTicketOrientation({
       ticket: 179,
       affectedSeams: ["plan-this", "implement-this"],
-      resolved: resolved({ bytes: 6200, sourceCount: 7 }),
+      resolved: resolved({ bytes: 9200, sourceCount: 7 }),
     });
     assert.equal(preflight.withinBudget, false);
-    assert.equal(preflight.evidence.cap, 6000);
+    assert.equal(preflight.evidence.cap, 9000);
     assert.match(preflight.reason, /exceeds the selected cap/);
   });
 
   test("the cap is the band cap and never the absolute cap when the band is smaller", () => {
-    assert.equal(orientationCap("ordinary"), 6000);
-    assert.equal(orientationCap("api-route"), 9000);
-    assert.equal(orientationCap("schema-data"), 12000);
-    assert.equal(orientationCap("re-orientation"), 7000);
-    assert.equal(ORIENTATION_ABSOLUTE_CAP, 12000);
+    assert.equal(orientationCap("ordinary"), 9000);
+    assert.equal(orientationCap("api-route"), 13500);
+    assert.equal(orientationCap("schema-data"), 18000);
+    assert.equal(orientationCap("re-orientation"), 10500);
+    assert.equal(ORIENTATION_ABSOLUTE_CAP, 18000);
     assert.equal(compactOrientationEvidence({
       band: "api-route",
       bytes: 8000,
       sourceCount: 5,
       cacheGap: false,
-    }).cap, 9000);
+    }).cap, 13500);
   });
 
-  test("the cap table is the ADR-0024 table", () => {
+  test("the cap table is the ADR-0030 table", () => {
     assert.deepEqual(ORIENTATION_CAPS, {
-      ordinary: 6000,
-      "api-route": 9000,
-      "schema-data": 12000,
-      "re-orientation": 7000,
+      ordinary: 9000,
+      "api-route": 13500,
+      "schema-data": 18000,
+      "re-orientation": 10500,
     });
   });
 
@@ -94,14 +94,14 @@ describe("compact planning budget evidence (plan-this:INV-11)", () => {
     const evidence: CompactOrientationEvidence = {
       band: "ordinary",
       bytes: 4000,
-      cap: 6000,
+      cap: 9000,
       sourceCount: 4,
       cacheGap: false,
     };
     const rendered = renderCompactOrientationEvidence(evidence);
     assert.ok(rendered.includes("task band: ordinary"));
     assert.ok(rendered.includes("resolved bytes: 4000"));
-    assert.ok(rendered.includes("cap: 6000"));
+    assert.ok(rendered.includes("cap: 9000"));
     assert.ok(rendered.includes("source count: 4"));
     assert.ok(rendered.includes("cache-gap state: none"));
     // Exact source lists never appear in the compact summary.
@@ -111,12 +111,12 @@ describe("compact planning budget evidence (plan-this:INV-11)", () => {
   test("a cache-gap approval is recorded but never waives the cap", () => {
     const evidence = compactOrientationEvidence({
       band: "ordinary",
-      bytes: 6000,
+      bytes: 9000,
       sourceCount: 4,
       cacheGap: true,
     });
     assert.equal(evidence.cacheGap, true);
-    assert.equal(evidence.cap, 6000);
+    assert.equal(evidence.cap, 9000);
     const rendered = renderCompactOrientationEvidence(evidence);
     assert.ok(rendered.includes("cache-gap state: approved"));
   });

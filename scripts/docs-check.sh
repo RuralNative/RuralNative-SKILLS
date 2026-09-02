@@ -399,10 +399,10 @@ if [[ -f "$MANIFEST" ]]; then
     for route in "${ROUTES[@]}"; do
       band="${route%%|*}"; seams="${route#*|}"
       case "$band" in
-        ordinary) cap=6000 ;;
-        api-route) cap=9000 ;;
-        schema-data) cap=12000 ;;
-        re-orientation) cap=7000 ;;
+        ordinary) cap=9000 ;;
+        api-route) cap=13500 ;;
+        schema-data) cap=18000 ;;
+        re-orientation) cap=10500 ;;
       esac
       route_err=0
       # Byte accounting is per resolved file, so a source shared by several

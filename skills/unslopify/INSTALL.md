@@ -5,6 +5,18 @@ automatically when documentation or prose cleanup work appears — removing AI
 tells, plain-language revision, or a final audit before publishing. You can
 also invoke it by name at any time.
 
+## Session loading: one invocation per project
+
+The Skills CLI has no skill-defined setup hook: `npx skills add` only clones,
+discovers, and copies or links skill files. Installation therefore cannot
+establish persistent session loading. After installing, invoke `unslopify`
+once in each project: on that first load the skill creates or updates one
+owned block in the project's root `AGENTS.md` (see the Session-start setup
+section in `SKILL.md`), and later sessions in that project load the skill
+before the first user-visible response. Existing installs updated to this
+version gain persistence only after the skill is loaded once; do not imply
+installation performed setup.
+
 ## Requirements
 
 - A codebase or document set with prose you want to clean.

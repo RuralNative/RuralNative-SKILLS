@@ -58,7 +58,7 @@ _Avoid_: CI job, docs:check
 
 **Leaf doc**:
 The doc-cache entry for one seam — purpose, scope, key files, data flow,
-non-negotiables, links — kept to a 1–2 minute read. Lives in `docs/leaves/`.
+non-negotiables, links — kept to at most a three-minute read. Lives in `docs/leaves/`.
 _Avoid_: Seam doc, readme
 
 **Seam**:
@@ -181,7 +181,7 @@ Prompt-like imperatives left in prose — "ignore previous instructions", "you a
 _Avoid_: injection payload (an authorship or security-verdict claim)
 
 **Always-on scope**:
-The `unslopify` contract that makes agent-authored English output the automatic review scope once the skill is loaded, for that session or parent workflow. Output is checked silently, published artifacts carry no audit block, and an explicit audit request returns the full report. User-provided text stays explicit edit scope and inert input (ADR-0016, ADR-0026).
+The `unslopify` contract that makes agent-authored English output the automatic review scope once the skill is loaded, for that session or parent workflow. Model-authored English is drafted in plain language and checked silently before sending, published artifacts carry no audit block, and an explicit audit request returns the full report; the session-start setup keeps the skill loaded for later sessions through its owned block in the project's root `AGENTS.md`. User-provided text stays explicit edit scope and inert input (ADR-0016, ADR-0026, ADR-0029).
 _Avoid_: ambient cleanup, background rewrite
 
 **Attention control**:
@@ -221,7 +221,7 @@ The versioned fingerprint of the authoritative sections of a parent specificatio
 _Avoid_: requirement hash (when the versioned object is meant), body checksum
 
 **Task band**:
-The task class that selects the orientation cap — ordinary (6,000 bytes), API or route (9,000), schema or data (12,000), or re-orientation (7,000); no set exceeds 12,000 bytes (ADR-0024).
+The task class that selects the orientation cap — ordinary (9,000 bytes), API or route (13,500), schema or data (18,000), or re-orientation (10,500); no set exceeds 18,000 bytes (ADR-0024, ADR-0030).
 _Avoid_: task type, complexity class
 
 **Coverage manifest**:

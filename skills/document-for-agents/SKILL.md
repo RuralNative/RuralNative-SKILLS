@@ -54,9 +54,10 @@ established, its own leaf doc.
    index, whole bounded leaves, leaf-named glossary entries, and only the
    decisions and policies a leaf marks with an explicit `— requires.`
    declaration; compact citations — bare links or prose mentions — stay
-   navigation and never load (ADR-0024, ADR-0025). Index under 150 lines;
-   leaf docs 1 to 2 minute reads; policy docs under a page. The context window
-   is priced, not free.
+   navigation and never load (ADR-0024, ADR-0025, ADR-0030). Index under 225
+   lines; leaf docs up to a three-minute read; policy docs within 105 lines.
+   Ceilings are caps, not targets: never pad existing docs to fill them. The
+   context window is priced, not free.
 6. **Size to the codebase, then keep it sized.** The cache earns its coherence
    cost only past a threshold, and the threshold is crossed by evidence, not by
    a one-time guess. Start smaller than you think; when the preflight evidence
@@ -200,7 +201,9 @@ Entry: the repository lacks a coherent agent-facing doc tree.
    directories, or the harness unless a later verified need crosses the
    threshold documented in `reference/classify.md`. Standard and full add
    only their assigned artifacts. See `reference/templates.md` for the shape
-   of each artifact.
+   of each artifact. When the project runs `unslopify`, the generated
+   `AGENTS.md` carries the unslopify session-start block directly after the
+   management marker; the five commands and the marker stay first (ADR-0029).
    *Done when: the coverage inventory matches the docs on disk for the selected
    tier — the compact index's coverage table for minimal, the harness-owned
    coverage manifest (`docs/manifest.md`) for standard and full; the compact
@@ -284,7 +287,9 @@ as a manual rebuild.
    states updates that policy doc, including the root review policy, in the
    same commit. Mid-work discoveries land on their tier in the same change, and
    a rule the skill is silent on is born in the repo's official structures,
-   policy, decision record, or glossary, never a side channel. After the docs
+   policy, decision record, or glossary, never a side channel. Maintenance edits
+   to `AGENTS.md` preserve the five commands, the management marker, and the
+   unslopify session-start block in place, byte for byte (ADR-0029). After the docs
    match the code, review every claim the seam's code change could have
    invalidated, correct any the code now contradicts, and refresh the seam's
    `Seam verification` fingerprint in the coverage manifest — recording whether
@@ -343,7 +348,9 @@ through one approved Improve run, while additive tier promotion is automatic
    proposed only when code ownership, invariants, entry points, and change
    cadence are independently meaningful. Additive tier promotion needs no
    approval and runs automatically; destructive change and demotion do, so show
-   the preview and wait for one explicit approval.
+   the preview and wait for one explicit approval. A preview that moves or
+   rewrites the management marker or the unslopify session-start block is
+   invalid; both stay byte for byte (ADR-0029).
    *Done when: one complete preview sits in front of the owner with an approval
    gate for the destructive half.*
 3. **Apply.** Additive promotion already ran in the preflight; for the

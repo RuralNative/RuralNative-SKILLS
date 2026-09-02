@@ -29,14 +29,14 @@ describe("worker orientation preflight (implement-this:INV-14)", () => {
       resolved: resolved(),
     });
     assert.equal(preflight.withinBudget, true);
-    assert.equal(preflight.evidence.cap, 6000);
+    assert.equal(preflight.evidence.cap, 9000);
     assert.match(preflight.reason, /fits the selected task-band cap/);
   });
 
   test("an over-budget set stops before broad loading", () => {
     const preflight = preflightWorkerOrientation({
       affectedSeams: ["implement-this", "review-this"],
-      resolved: resolved({ bytes: 9000, sourceCount: 8 }),
+      resolved: resolved({ bytes: 9100, sourceCount: 8 }),
     });
     assert.equal(preflight.withinBudget, false);
     assert.match(preflight.reason, /stop before broad loading/);
@@ -45,10 +45,10 @@ describe("worker orientation preflight (implement-this:INV-14)", () => {
   test("the cap is the band cap, never waived by cache-gap approval", () => {
     const preflight = preflightWorkerOrientation({
       affectedSeams: ["implement-this"],
-      resolved: resolved({ bytes: 6500, cacheGap: true }),
+      resolved: resolved({ bytes: 9100, cacheGap: true }),
     });
     assert.equal(preflight.withinBudget, false);
-    assert.equal(preflight.evidence.cap, 6000);
+    assert.equal(preflight.evidence.cap, 9000);
   });
 });
 
@@ -58,7 +58,7 @@ describe("compact worker evidence (implement-this:INV-14)", () => {
     const rendered = renderCompactOrientationEvidence(evidence);
     assert.ok(rendered.includes("task band: ordinary"));
     assert.ok(rendered.includes("resolved bytes: 5000"));
-    assert.ok(rendered.includes("cap: 6000"));
+    assert.ok(rendered.includes("cap: 9000"));
     assert.ok(rendered.includes("source count: 4"));
     assert.ok(rendered.includes("cache-gap state: none"));
     assert.equal(rendered.includes("source: "), false);
