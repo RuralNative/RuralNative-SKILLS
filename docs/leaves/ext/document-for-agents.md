@@ -79,3 +79,5 @@ the rule requires a new decision.
   manifest's `Seam verification` table; `governance.test.ts` and the
   seam-coherence harness fixtures prove a code change fails without a refresh,
   a clean checkout fails, a leaf-only touch fails, and a reviewed refresh passes.
+  A root outside a git work tree cannot produce a trustworthy digest and fails
+  closed — never skipped, never the empty preimage (ADR-0028).

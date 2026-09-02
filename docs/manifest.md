@@ -66,7 +66,7 @@ only after Maintain reviews the seam's affected claims against current code
 
 | Seam | Code root | Fingerprint | Verified | Claims |
 |---|---|---|---|---|
-| document-for-agents | skills/document-for-agents/ | sha256:a393482395845784239715b2df0d8032da738c3866b33790bfd0c07feee2204f | 2026-09-02 | lifecycle prose, reference shapes, harness contract reviewed against code; ADR-0028 adopted |
+| document-for-agents | skills/document-for-agents/ | sha256:afb9f3bb82e45d76772e95c4954d1b77b1fd0e582d2c2ab96accd73401f16d07 | 2026-09-02 | lifecycle prose, reference shapes, harness contract reviewed against code; ADR-0028 adopted |
 | document-for-humans | skills/document-for-humans/ | sha256:46b55e33e718abae3a440b243771779108b68a80a735479f0867a5b353281e48 | 2026-09-02 | derived-doc prose and reference reviewed against code |
 | unslopify | skills/unslopify/ | sha256:6fbcf7c9fd7e301b85f7adb890c503981f90073fdde8e78d342f51f5ee435b4f | 2026-09-02 | output-contract prose and scanner reviewed against code |
 | plan-this | skills/plan-this/ | sha256:2837d48d7aa0fabbf2838ab113350a72afca87f2d6e8d7dd8367ae3e431e2a29 | 2026-09-02 | planning workflow prose reviewed against code |

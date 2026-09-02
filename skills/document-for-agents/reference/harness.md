@@ -23,9 +23,12 @@ the conventions policy to avoid infinite regress.
    comparison is content against a stored digest — not `git status` or a base
    range — a stale fingerprint fails in a dirty worktree and in a clean CI
    checkout alike. A leaf edit that does not review the affected claims and
-   refresh the fingerprint stays red; a reviewed no-text-change may refresh it.
-   Dormant until the manifest carries a `Seam verification` table (see
-   `governance.ts` for the reference digest).
+    refresh the fingerprint stays red; a reviewed no-text-change may refresh it.
+    Dormant until the manifest carries a `Seam verification` table (see
+    `governance.ts` for the reference digest). A root that is not inside a git
+    work tree cannot produce a trustworthy digest: the adopter must provide a
+    configured VCS/file-enumeration adapter, and the check fails closed — never
+    skips and never trusts the empty preimage — until one is present (ADR-0028).
 3. **New seam requires a doc.** A new module directory with no row in the
    index fails. This keeps the table complete without a gardener.
 4. **Decision status parse.** Every ADR has a parseable `Status:` line on an

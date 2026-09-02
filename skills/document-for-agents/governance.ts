@@ -18,6 +18,10 @@
 // algorithm is byte-for-byte the one `scripts/docs-check.sh` check 2 recomputes,
 // so the stored manifest digest and the live digest agree. Fingerprints are
 // manifest metadata, never orientation-set inputs (ADR-0024, ADR-0025).
+// A root outside a git work tree fails closed: enumeration reports
+// `notAGitRepo` and `fingerprintSeam` returns `null` rather than the empty
+// preimage, so an untrustworthy digest is never mistaken for an empty seam
+// (ADR-0028).
 //
 // Consent model: absent or corrupt state asks again and creates nothing; only
 // `enabled` may write the private log; `declined` stays silent. No network, no
@@ -75,11 +79,6 @@ export function resolvePromotion(current: Tier, e: TierEvidence): Promotion {
   };
 }
 
-export function parseDeclaredTier(indexContent: string): Tier | null {
-  const m = /^Documentation tier:[ \t]*(minimal|standard|full)[ \t]*$/m.exec(indexContent);
-  return m ? (m[1] as Tier) : null;
-}
-
 export type EntryType = "f" | "l" | "g" | "d";
 
 export type Entry = Readonly<{
@@ -109,26 +108,43 @@ export function seamFingerprint(entries: readonly Entry[]): string {
   return "sha256:" + sha256(Buffer.from(preimage, "utf8"));
 }
 
-function gitLines(root: string, args: string[]): string[] {
+// Fail-closed enumation for the seam fingerprint (ADR-0028): a fingerprint is
+// trustworthy only when it enumerates a real git work tree. `notAGitRepo`
+// distinguishes "enumerated and empty" from "could not enumerate", so a caller
+// can refuse to trust the empty preimage instead of silently matching it.
+export type EnumerationResult = Readonly<{
+  notAGitRepo: boolean;
+  entries: Entry[];
+}>;
+
+function gitLines(root: string, args: string[]): string[] | null {
   try {
     const out = execFileSync("git", ["-C", root, ...args], {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
     });
-    return out.split("\n").map((l) => l.trim()).filter(Boolean);
+    // Strip only the line terminator; a tracked name may legitimately start or
+    // end with whitespace, and trimming it would corrupt the path (INV-20).
+    // Drop only the single trailing empty field from the final newline.
+    const lines = out.split("\n");
+    if (lines.length > 0 && lines[lines.length - 1] === "") lines.pop();
+    return lines;
   } catch {
-    return [];
+    return null;
   }
 }
 
 // Enumerate a seam code root's VCS-visible files (tracked plus non-ignored
 // untracked), matching check 2's `git ls-files -c` and `-o --exclude-standard`
-// pair. Paths are relative to the repository root.
-export function enumerateSeamEntries(root: string, codeRootRel: string): Entry[] {
+// pair. Paths are relative to the repository root. When the root is not inside
+// a git work tree the result is `{ notAGitRepo: true, entries: [] }` so callers
+// fail closed instead of trusting the empty preimage.
+export function enumerateSeamEntries(root: string, codeRootRel: string): EnumerationResult {
   const tracked = gitLines(root, ["ls-files", "-c", "--", codeRootRel]);
   const untracked = gitLines(root, ["ls-files", "-o", "--exclude-standard", "--", codeRootRel]);
+  if (tracked === null || untracked === null) return { notAGitRepo: true, entries: [] };
   const paths = [...new Set([...tracked, ...untracked])].sort(comparePath);
-  return paths.map((rel): Entry => {
+  const entries = paths.map((rel): Entry => {
     const abs = path.join(root, rel);
     let st: fs.Stats | null = null;
     try {
@@ -149,10 +165,13 @@ export function enumerateSeamEntries(root: string, codeRootRel: string): Entry[]
     }
     return { path: rel, type: "d", size: 0, hash: sha256("") };
   });
+  return { notAGitRepo: false, entries };
 }
 
-export function fingerprintSeam(root: string, codeRootRel: string): string {
-  return seamFingerprint(enumerateSeamEntries(root, codeRootRel));
+// A trustworthy seam digest, or `null` when the root is not enumerable.
+export function fingerprintSeam(root: string, codeRootRel: string): string | null {
+  const r = enumerateSeamEntries(root, codeRootRel);
+  return r.notAGitRepo ? null : seamFingerprint(r.entries);
 }
 
 export type ConsentState = "absent" | "enabled" | "declined" | "corrupt";
@@ -194,7 +213,12 @@ export function main(argv: string[]): number {
       console.error("error: fingerprint requires --seam-root <code-root-rel>");
       return 2;
     }
-    console.log(fingerprintSeam(root, codeRoot));
+    const fp = fingerprintSeam(root, codeRoot);
+    if (fp === null) {
+      console.error("error: cannot compute a trustworthy seam fingerprint — not a git work tree (ADR-0028 fail-closed)");
+      return 1;
+    }
+    console.log(fp);
     return 0;
   }
   if (command === "tier") {

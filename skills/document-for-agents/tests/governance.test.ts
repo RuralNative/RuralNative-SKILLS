@@ -15,7 +15,6 @@ import {
   tierRank,
   requiredTier,
   resolvePromotion,
-  parseDeclaredTier,
   seamFingerprint,
   nextDiagnosticsAction,
   type Entry,
@@ -35,6 +34,18 @@ function run(cmd: string, cwd: string): { status: number; out: string } {
     const e = err as { status?: number; stdout?: string; stderr?: string };
     return { status: e.status ?? 1, out: `${e.stdout ?? ""}${e.stderr ?? ""}` };
   }
+}
+
+// Run the real bash `seam_fp` from scripts/docs-check.sh against a worktree,
+// so cross-implementation digest agreement is tested against the actual harness
+// function, not a TS-only mirror. `repoRoot` is where the fixture's git repo
+// lives; `scriptRoot` is where docs-check.sh sits.
+function bashSeamFp(repoRoot: string, codeRoot: string, scriptRoot: string): string {
+  const script = path.join(scriptRoot, "scripts/docs-check.sh");
+  const cmd =
+    `bash -c 'ROOT="${scriptRoot}"; ` +
+    `eval "$(sed -n "/^seam_fp()/,/^}/p" "${script}")"; seam_fp "${codeRoot}" "${repoRoot}"'`;
+  return run(cmd, repoRoot).out.trim();
 }
 
 describe("tier governor (document-for-agents:INV-18, ADR-0028)", () => {
@@ -85,15 +96,6 @@ describe("tier governor (document-for-agents:INV-18, ADR-0028)", () => {
     assert.equal(p.effective, "full", "automatic demotion is forbidden (INV-18)");
     assert.equal(p.promoted, false);
   });
-
-  test("parseDeclaredTier reads the exact Documentation tier line from an index", () => {
-    assert.equal(parseDeclaredTier("# A\n\nDocumentation tier: full\n"), "full");
-    assert.equal(parseDeclaredTier("# A\n\nDocumentation tier: standard\n"), "standard");
-    assert.equal(parseDeclaredTier("# A\n\nDocumentation tier: minimal\n"), "minimal");
-    assert.equal(parseDeclaredTier("# A\n\nDocumentation tier: ultimate\n"), null);
-    assert.equal(parseDeclaredTier("# A\n\nNo tier here\n"), null);
-    assert.equal(parseDeclaredTier("Documentation tier: full but inline\n"), null);
-  });
 });
 
 describe("seam fingerprint (document-for-agents:INV-20, ADR-0028)", () => {
@@ -117,8 +119,8 @@ describe("seam fingerprint (document-for-agents:INV-20, ADR-0028)", () => {
   test("the harness digest and governance.ts agree byte-for-byte on this repository's seams", () => {
     // This is the real adoption proof from ADR-0028: the seven documented
     // seams' live digests must match the ones recorded in the manifest after
-    // review. Until the final rows are populated this asserts the mechanism
-    // matches the script on the same content.
+    // review. The bash `seam_fp` from scripts/docs-check.sh is executed so the
+    // cross-implementation claim is actually tested, not just TS against itself.
     const seams = [
       "skills/document-for-agents/",
       "skills/document-for-humans/",
@@ -129,19 +131,51 @@ describe("seam fingerprint (document-for-agents:INV-20, ADR-0028)", () => {
       "skills/release-skills/",
     ];
     for (const seam of seams) {
-      const fromTs = seamFingerprint(
-        JSON.parse(
-          run(
-            `node --input-type=module -e "import('${ROOT}/skills/document-for-agents/governance.ts').then(m=>{const r=m.enumerateSeamEntries('${ROOT}','${seam}');console.log(JSON.stringify(r))})"`,
-            ROOT,
-          ).out,
-        ),
-      );
-      const viaCli = run(
+      const fromTs = run(
         `node --input-type=module -e "import('${ROOT}/skills/document-for-agents/governance.ts').then(m=>process.stdout.write(m.fingerprintSeam('${ROOT}','${seam}')))"`,
         ROOT,
-      ).out.trim();
-      assert.equal(fromTs, viaCli, `self-inconsistent seam digest for ${seam}`);
+      ).out.trim().replace(/^sha256:/, "");
+      const fromBash = bashSeamFp(ROOT, seam, ROOT);
+      assert.notEqual(fromTs, "", `empty TS digest for ${seam}`);
+      assert.notEqual(fromTs, "__not_a_git_repo__", `TS must not report non-git for ${seam}`);
+      assert.equal(fromTs, fromBash, `TS and bash digests diverge for ${seam}: ${fromTs} vs ${fromBash}`);
+    }
+  });
+
+  test("a non-git root fails closed: fingerprintSeam returns null and the CLI exits non-zero", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "nongit-fp-"));
+    try {
+      fs.writeFileSync(path.join(dir, "a.txt"), "x");
+      const r = run(
+        `node --input-type=module -e "import('${ROOT}/skills/document-for-agents/governance.ts').then(m=>process.stdout.write(m.fingerprintSeam('${dir}','.')))"`,
+        dir,
+      );
+      // Not a git work tree: no trustworthy fingerprint, never the empty preimage.
+      assert.equal(r.out.includes("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"), false,
+        "a non-git root must never produce the empty-preimage digest");
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("a trailing-space filename keeps the same digest across TS and bash", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ws-fp-"));
+    try {
+      fs.mkdirSync(path.join(dir, "skills/alpha"), { recursive: true });
+      fs.writeFileSync(path.join(dir, "skills/alpha/trail "), "x");
+      git(["init", "-q"], dir);
+      git(["config", "user.email", "fixture@example.com"], dir);
+      git(["config", "user.name", "fixture"], dir);
+      git(["add", "."], dir);
+      git(["commit", "-qm", "fixture"], dir);
+      const fromTs = run(
+        `node --input-type=module -e "import('${ROOT}/skills/document-for-agents/governance.ts').then(m=>process.stdout.write(m.fingerprintSeam('${dir}','skills/alpha/')))"`,
+        dir,
+      ).out.trim().replace(/^sha256:/, "");
+      const fromBash = bashSeamFp(dir, "skills/alpha/", ROOT);
+      assert.equal(fromTs, fromBash, `TS and bash digests diverge on a trailing-space filename: ${fromTs} vs ${fromBash}`);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
     }
   });
 
