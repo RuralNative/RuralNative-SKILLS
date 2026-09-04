@@ -54,7 +54,7 @@ the rule requires a new decision.
   import the shared file reader and normalizer from `scripts/test-helpers.ts`.
 - INV-14 mechanism detail: composition tests in
   `skills/document-for-agents/tests/` pin the approved sanitized fields
-  against `reference/templates.md`, plus the hostile
+  against `reference/templates.md`, plus the inert category-sentinel
   `diagnostics-entry.json` fixture.
 - INV-15 mechanism detail: marker-shape test on `reference/templates.md` and a
   placement test on this repository's own `AGENTS.md`.

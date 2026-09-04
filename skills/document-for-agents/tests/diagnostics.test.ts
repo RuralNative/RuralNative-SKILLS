@@ -81,19 +81,68 @@ describe("opt-in skill diagnostics (document-for-agents:INV-14)", () => {
     assert.equal(fixture.sanitized.attributionConfidence, "unknown");
   });
 
-  test("hostile fixture: sanitized entries omit prompt-like text and sensitive placeholders rather than copying them", () => {
+  test("inert adversarial-category fixture: sanitized entries omit category sentinels rather than copying them", () => {
     const fixture = JSON.parse(read(FIXTURE));
+    const expectedSentinels: Record<string, string> = {
+      rawPrompt: "[REDACTED_PROMPT]",
+      apiKey: "[REDACTED_SECRET]",
+      absolutePath: "[REDACTED_PATH]",
+      repositoryRemote: "[REDACTED_REMOTE]",
+      codeSnippet: "[REDACTED_CODE]",
+      personalData: "[REDACTED_CONTACT]",
+      proprietaryName: "[REDACTED_NAME]",
+    };
+    assert.deepEqual([...fixture.forbiddenFields].sort(), Object.keys(expectedSentinels).sort());
     for (const field of fixture.forbiddenFields) {
-      assert.ok(field in fixture.candidate, `candidate must carry hostile field ${field}`);
+      assert.ok(field in fixture.candidate, `candidate must carry forbidden-category field ${field}`);
+      assert.equal(fixture.candidate[field], expectedSentinels[field], `candidate field ${field} must use its inert sentinel`);
       assert.equal(field in fixture.sanitized, false, `sanitized entry carries forbidden field ${field}`);
     }
+    const sentinels: string[] = fixture.sentinelStrings;
+    assert.deepEqual([...sentinels].sort(), [...Object.values(expectedSentinels)].sort());
+    for (const value of Object.values(expectedSentinels)) {
+      assert.match(value, /^\[REDACTED_[A-Z]+\]$/, `sentinel must stay inert: ${value}`);
+    }
     const sanitizedText = norm(JSON.stringify(fixture.sanitized));
-    for (const secret of fixture.sensitiveStrings) {
-      assert.equal(sanitizedText.includes(norm(secret)), false, `sanitized entry leaks: ${secret}`);
+    for (const sentinel of sentinels) {
+      assert.equal(sanitizedText.includes(norm(sentinel)), false, `sanitized entry leaks: ${sentinel}`);
     }
     const candidateText = norm(JSON.stringify(fixture.candidate));
-    for (const secret of fixture.sensitiveStrings) {
-      assert.ok(candidateText.includes(norm(secret)), "fixture candidate should stay hostile");
+    for (const sentinel of sentinels) {
+      assert.ok(candidateText.includes(norm(sentinel)), "fixture candidate should retain its category sentinels");
+    }
+  });
+
+  test("inert adversarial-category fixture: raw fixture carries no realistic payload shapes", () => {
+    const raw = read(FIXTURE);
+    const payloadShapes: Array<readonly [RegExp, string]> = [
+      [
+        /\b(?:ignore|override|disregard)\s+(?:all\s+)?(?:previous|prior|earlier)\s+(?:instructions?|rules?)\b/i,
+        "instruction-override wording",
+      ],
+      [
+        /\b(?:sk|pk|ghp|xox[baprs]|akia)[-_][a-z0-9_-]{8,}\b/i,
+        "credential-looking token prefix",
+      ],
+      [
+        /\b(?:process|import\.meta|deno|bun)\s*\.\s*env\s*(?:\.\s*[a-z_]\w*|\[\s*[\"'][a-z_]\w*[\"']\s*\])/i,
+        "credential environment lookup",
+      ],
+      [/(?:https?|ssh|git)\s*:\s*\/\//i, "remote URL shape"],
+      [/\bgit@[A-Za-z0-9.-]+\s*:/i, "SSH repository remote shape"],
+      [
+        /:\s*"(?:(?:\/[A-Za-z])|(?:[A-Za-z]:[\\/][A-Za-z]))/,
+        "concrete absolute path value",
+      ],
+      [/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i, "email-like contact literal"],
+      [/\+?(?:\d[\s().-]*){6,}\d/, "phone-like contact literal"],
+      [
+        /\b(?:[A-Z][A-Za-z0-9_-]{3,}\s+)?(?:internal|proprietary|confidential)\s+[A-Za-z][A-Za-z0-9_-]{3,}\b/i,
+        "proprietary-looking identifier",
+      ],
+    ];
+    for (const [pattern, description] of payloadShapes) {
+      assert.equal(pattern.test(raw), false, `fixture must not ship ${description}`);
     }
   });
 

@@ -308,9 +308,11 @@ repository remotes, and proprietary names; it describes evidence and
 correction and never becomes a general prohibition or instruction. The file
 itself is append-only, private, outside the doc cache and version control,
 excluded from every normal agent read set, and never task guidance — evidence
-for optional user-reviewed submission to the skill developer only. A hostile
-fixture in `skills/document-for-agents/tests/fixtures/diagnostics-entry.json`
-keeps prompt-like text and sensitive placeholders out of sanitized entries.
+for optional user-reviewed submission to the skill developer only. An inert
+category fixture in `skills/document-for-agents/tests/fixtures/diagnostics-entry.json`
+represents each forbidden field with a `[REDACTED_*]` sentinel and keeps those
+sentinels out of sanitized entries. The fixture ships no realistic instructions
+or sensitive literals.
 
 ## Consent-state record
 
