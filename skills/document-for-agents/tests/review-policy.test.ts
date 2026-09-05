@@ -92,30 +92,32 @@ describe("review policy classification (document-for-agents #136)", () => {
       "trust rules",
       "verification expectations",
       "current-head freshness",
-      "duplicate handling",
       "inline-comment evidence",
       "subagent use",
+      "ci equivalence",
     ]) {
       assert.ok(n.includes(area), `policy must define ${area}`);
     }
   });
 
-  test("subagents are read-only and the main reviewer verifies findings before publication", () => {
+  test("the fix agent edits and tests only while the frontier reviewer verifies findings before publication", () => {
     const n = norm(read("REVIEW.md"));
-    assert.ok(n.includes("read-only"), "subagents must be declared read-only");
+    assert.ok(n.includes("focused tests only"), "the fix agent must be limited to editing and focused tests");
     assert.ok(
       n.includes("verifies every finding") && n.includes("before publishing"),
-      "the main reviewer verifies every finding before publication"
+      "the frontier reviewer verifies every finding before publication"
     );
+    for (const forbidden of ["may not commit", "may not", "merge"]) {
+      assert.ok(n.includes(forbidden), `policy must forbid fix-agent ${forbidden}`);
+    }
   });
 
-  test("cloud review aligns with the Standards and Spec axes without merge or closure authority", () => {
+  test("no cloud review: one frontier pass owns the verdict with no cross-host authority", () => {
     const n = norm(read("REVIEW.md"));
-    assert.ok(n.includes("standards") && n.includes("spec"), "local axes must be named");
-    assert.ok(n.includes("two axes"), "the two local axes frame the alignment");
-    assert.ok(n.includes("base branch"), "cloud reads the policy from the base branch");
-    assert.ok(n.includes("cannot merge or close"), "cloud review has no merge or closure authority");
-    assert.ok(n.includes("adds evidence"), "cloud review is additional evidence under one policy");
+    assert.ok(n.includes("standards") && n.includes("spec"), "both review checklists must be named");
+    assert.ok(n.includes("frontier pass"), "one in-session frontier pass owns the review");
+    assert.equal(n.includes("cloudadapter"), false, "policy must not name cloud adapters");
+    assert.equal(n.includes("cloud collection"), false, "policy must not describe cloud collection");
   });
 });
 

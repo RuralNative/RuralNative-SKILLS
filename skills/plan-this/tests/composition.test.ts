@@ -214,7 +214,7 @@ describe("plan-this bounded specification and ticket graph (INV-7, INV-10)", () 
     assert.ok(content.includes("Derive parallelism from settled boundaries"));
   });
 
-  test("distinguishes blockers from scheduling collisions", () => {
+  test("distinguishes blockers from scheduling notes for user-managed checkouts", () => {
     const content = body(read(SKILL));
     assert.ok(
       content.includes(
@@ -222,8 +222,8 @@ describe("plan-this bounded specification and ticket graph (INV-7, INV-10)", () 
       ),
     );
     assert.ok(content.includes("file overlap without semantic dependency"));
-    assert.ok(content.includes("scheduling collision on both sibling tickets"));
-    assert.ok(content.includes("show each split boundary"));
+    assert.ok(content.includes("scheduling note on both sibling tickets"));
+    assert.ok(content.includes("Show the reason for every split"));
   });
 
   test("requires the smallest sufficient tests and risk classification", () => {
@@ -235,8 +235,8 @@ describe("plan-this bounded specification and ticket graph (INV-7, INV-10)", () 
       ),
     );
     assert.ok(content.includes("`ordinary` or `high-risk`"));
-    assert.ok(content.includes("three workers per stage"));
-    assert.ok(content.includes("four active managed workers across the workspace"));
+    assert.ok(content.includes("promises no automatic workers"));
+    assert.ok(content.includes("enforces no worker cap"));
   });
 });
 

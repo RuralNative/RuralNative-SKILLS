@@ -1,16 +1,14 @@
-// Finding reconciliation for the review wave (#135, parent #130; stable
-// criterion identity #188).
+// Local finding validation for the single pull-request review (ADR-0031).
 //
 // Pure: facts in, decisions out. No network, GitHub, git, or worker calls.
-// Reconciles Kilo cloud findings with the local Standards and Spec findings
-// against one current head per pull request, keeping the two local axes
-// separate as required by verification. Spec findings and whole-spec
-// verification name the same stable criterion key `(authority issue number,
-// local ID)` that planning, dispatch, and implementation evidence uses.
+// Validates local Standards and Spec findings against one current head and
+// base pair for scope, evidence, severity, category, and exact revisions.
+// The frontier reviewer reconciles both axes in-session; identical defects
+// reported twice count once with the clearest evidence kept.
 
 import { criterionKey } from "./workflow-state.ts";
 
-export type FindingSource = "cloud" | "standards" | "spec";
+export type FindingSource = "standards" | "spec";
 export type FindingCategory =
   | "security"
   | "performance"
@@ -19,18 +17,20 @@ export type FindingCategory =
   | "tests-and-test-bloat"
   | "documentation";
 export type FindingSeverity = "advisory" | "blocking";
+export type FindingEvidence =
+  | { kind: "inline"; quote: string }
+  | { kind: "failure"; command: string; output: string };
 
 /**
- * The stable key one review finding or whole-spec verification uses to name an
- * acceptance criterion: the authority issue number plus the local criterion
- * ID. Review references `#188:AC-1` exactly where dispatch and evidence did.
+ * The stable key one review finding uses to name an acceptance criterion:
+ * the authority issue number plus the local criterion ID.
  */
 export function criterionReference(issue: number, id: string): string {
   return criterionKey(issue, id);
 }
 
 export interface Finding {
-  /** Stable across cloud and local reports when supplied by the reviewer. */
+  /** Stable identifier supplied by the reviewer. */
   id?: string;
   source: FindingSource;
   category?: FindingCategory;
@@ -38,7 +38,7 @@ export interface Finding {
   file: string;
   line: number;
   message: string;
-  evidence?: string;
+  evidence?: FindingEvidence;
   headSha: string;
   baseSha?: string;
   governingRule?: string;
@@ -55,7 +55,7 @@ export interface ReconciledFinding {
   file: string;
   line: number;
   message: string;
-  evidence?: string;
+  evidence: FindingEvidence;
   headSha: string;
   baseSha: string;
   governingRule: string;
@@ -64,7 +64,6 @@ export interface ReconciledFinding {
 
 export interface ReconciliationResult {
   retained: ReconciledFinding[];
-  retainedByAxis: Record<FindingSource, ReconciledFinding[]>;
   rejected: {
     duplicate: Finding[];
     stale: Finding[];
@@ -74,129 +73,95 @@ export interface ReconciliationResult {
   };
 }
 
+function validEvidence(evidence: FindingEvidence | undefined): evidence is FindingEvidence {
+  if (evidence === undefined) return false;
+  if (evidence.kind === "inline") return evidence.quote.trim() !== "";
+  return evidence.command.trim() !== "" && evidence.output.trim() !== "";
+}
+
 /**
- * Reconcile findings for one pull-request head.
+ * Validate findings for one pull-request head and base pair.
  *
- * - Stale: headSha or baseSha does not match the current revision pair
- *   -> rejected with evidence
- * - Out-of-scope: !inDiff -> rejected
- * - Unverified: !verified or no evidence/ invariant citation -> rejected
- * - Incomplete: missing category or severity -> rejected, never defaulted to
- *   a blocking correctness finding
- * - Duplicate: same source+file+line+normalized message already retained -> rejected,
- *   first wins. Standards and Spec keep axis identity during deduplication; a
- *   cloud/local duplicate collapses only when revisions and evidence identify
- *   one defect.
- *
- * The first retained finding keeps the clearest evidence; restatements are
- * counted once. Standards and Spec are kept separate in the retainedByAxis
- * map, and the retained list becomes the single fix batch for this PR.
+ * - Stale: headSha or baseSha does not match the current revision pair, or
+ *   the candidate omits its baseSha so exactness cannot be checked.
+ * - Out-of-scope: outside the pull-request diff.
+ * - Unverified: claims broken behavior without a governing rule, criterion,
+ *   observed output with the failing command, or quoted evidence of the
+ *   offending span.
+ * - Incomplete: missing category or severity; never defaults to blocking.
+ * - Duplicate: the same file, line, and message already retained; keep the
+ *   clearest evidence and drop restatements across both axes.
  */
 export function reconcileFindings(
-  findings: readonly Finding[],
+  candidates: readonly Finding[],
   currentHeadSha: string,
-  currentBaseSha?: string,
+  currentBaseSha: string,
 ): ReconciliationResult {
   const retained: ReconciledFinding[] = [];
-  const retainedByAxis: Record<FindingSource, ReconciledFinding[]> = {
-    cloud: [],
-    standards: [],
-    spec: [],
-  };
-  const rejected = {
-    duplicate: [] as Finding[],
-    stale: [] as Finding[],
-    outOfScope: [] as Finding[],
-    unverified: [] as Finding[],
-    incomplete: [] as Finding[],
+  const rejected: ReconciliationResult["rejected"] = {
+    duplicate: [],
+    stale: [],
+    outOfScope: [],
+    unverified: [],
+    incomplete: [],
   };
   const seen = new Set<string>();
+  let counter = 0;
 
-  // Process local axes before cloud so a cloud finding can collapse against an
-  // already-retained Standards or Spec candidate when evidence identifies one
-  // defect, independent of the caller's input order.
-  const ordered = [...findings].sort((a, b) => {
-    const rank = (source: FindingSource) => (source === "cloud" ? 1 : 0);
-    return rank(a.source) - rank(b.source);
-  });
-
-  for (const f of ordered) {
+  for (const candidate of candidates) {
     if (
-      f.headSha !== currentHeadSha ||
-      (currentBaseSha !== undefined && f.baseSha !== currentBaseSha)
+      candidate.headSha.trim() === "" ||
+      currentHeadSha.trim() === "" ||
+      candidate.headSha !== currentHeadSha ||
+      candidate.baseSha === undefined ||
+      candidate.baseSha !== currentBaseSha
     ) {
-      rejected.stale.push(f);
+      rejected.stale.push(candidate);
       continue;
     }
-    if (!f.inDiff) {
-      rejected.outOfScope.push(f);
+    if (!candidate.inDiff) {
+      rejected.outOfScope.push(candidate);
       continue;
     }
-    if (!f.verified || !f.evidence) {
-      rejected.unverified.push(f);
+    if (candidate.category === undefined || candidate.severity === undefined) {
+      rejected.incomplete.push(candidate);
       continue;
     }
-    // A candidate with missing category or severity is rejected or reported as
-    // incomplete; it never defaults to a blocking correctness finding (#173).
-    if (!f.category || !f.severity) {
-      rejected.incomplete.push(f);
+    if (
+      !candidate.verified ||
+      candidate.governingRule === undefined ||
+      candidate.governingRule.trim() === "" ||
+      !validEvidence(candidate.evidence)
+    ) {
+      rejected.unverified.push(candidate);
       continue;
     }
-    const id = f.id ?? stableFindingId(f);
-    // Deduplication preserves axis identity. Standards and Spec findings stay
-    // separate: the same location and message on different axes are both
-    // retained because one review axis cannot discard the other. A cloud
-    // finding collapses against a local axis only when the locator, the
-    // revisions, and the evidence identify one defect; otherwise it is
-    // retained as its own candidate.
-    const locator = `${f.file}:${f.line}:${normalizeMessage(f.message)}`;
-    const axisKey = `${f.source}:${locator}`;
-    let duplicate = false;
-    if (f.source === "cloud") {
-      duplicate = retained.some(
-        (r) =>
-          r.source !== "cloud" &&
-          `${r.file}:${r.line}:${normalizeMessage(r.message)}` === locator &&
-          r.baseSha === (f.baseSha ?? currentBaseSha ?? "") &&
-          r.evidence === f.evidence,
-      );
-    } else {
-      duplicate = seen.has(axisKey);
-    }
-    if (duplicate) {
-      rejected.duplicate.push(f);
+    const key = `${candidate.file}:${candidate.line}:${candidate.message.trim()}`;
+    if (seen.has(key)) {
+      rejected.duplicate.push(candidate);
       continue;
     }
-    seen.add(axisKey);
-    const r: ReconciledFinding = {
-      id,
-      source: f.source,
-      category: f.category,
-      severity: f.severity,
-      file: f.file,
-      line: f.line,
-      message: f.message,
-      evidence: f.evidence,
-      headSha: f.headSha,
-      baseSha: f.baseSha ?? currentBaseSha ?? "",
-      governingRule: f.governingRule ?? "evidence-backed review rule",
-      ticket: f.ticket,
-    };
-    retained.push(r);
-    retainedByAxis[f.source].push(r);
+    seen.add(key);
+    counter += 1;
+    retained.push({
+      id: candidate.id ?? `F-${counter}`,
+      source: candidate.source,
+      category: candidate.category,
+      severity: candidate.severity,
+      file: candidate.file,
+      line: candidate.line,
+      message: candidate.message,
+      evidence: candidate.evidence,
+      headSha: currentHeadSha,
+      baseSha: currentBaseSha,
+      governingRule: candidate.governingRule,
+      ticket: candidate.ticket,
+    });
   }
-
-  return { retained, retainedByAxis, rejected };
+  return { retained, rejected };
 }
 
-function normalizeMessage(message: string): string {
-  return message.trim().toLowerCase().replace(/\s+/g, " ");
-}
-
-function stableFindingId(finding: Finding): string {
-  return `finding-${finding.source}-${finding.file}-${finding.line}-${normalizeMessage(finding.message).replace(/[^a-z0-9]+/g, "-")}`;
-}
-
-export function hasUnresolvedConfirmedFindings(result: ReconciliationResult): boolean {
-  return result.retained.length > 0;
+/** Blocking findings still unresolved. */
+export function unresolvedBlocking(findings: readonly ReconciledFinding[]): ReconciledFinding[] {
+  return findings.filter((f) => f.severity === "blocking");
 }

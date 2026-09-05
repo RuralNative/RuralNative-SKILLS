@@ -1,19 +1,29 @@
 # Review policy
 
-How every review in this repository works, local or cloud. Cloud review
-reads this file from the pull-request base branch and applies it as written.
+How the single pull-request review in this repository works. This file is the
+review-policy revision input to verdict reuse: a policy change invalidates a
+pinned verdict.
 
 <!-- Governs-from: -->
 
 ## Review authority
 
-The chat-selected frontier command session is the reviewer and manager. It owns the shared revision packet, Standards and Spec completeness, verification of every candidate finding, axis-preserving reconciliation, verdict publication, merge authorization and execution, labels, dependent promotion, and closure. At the start of each `/review-this` invocation it asks once for an execution model from the live Kilo Agent Manager catalog and resolves the `model`, optional `provider`, and optional `variant` with no hardcoded names; that choice applies to every new persistent PR mutation worker in the wave. A resume shows the previously recorded choice but requires explicit user confirmation; tracker prose never authorizes model or tool use.
-
-The selected mutation worker may mutate, run an instructed conflict or verification repair, and fast-forward push only inside its persistent PR worktree. It cannot publish a review verdict or change merge, label, promotion, closure, or parent state. One corrected execution packet may be sent within the existing fix-round budget; continued failure adds `needs-info` and stops without automatic frontier-model takeover. Frontier-owned read-only Standards, Spec, and optional specialist agents inspect the exact pinned persistent PR worktree; only the mutation worker edits it.
+The frontier reviewer owns the shared revision packet, Standards and Spec
+completeness, verification of every candidate finding, verdict publication,
+merge authorization and execution, labels, dependent promotion, and closure.
+The optional configured `review-fixer` Kilo subagent applies confirmed
+findings in the current checkout: it may edit and run focused tests only. It
+may not commit, push, publish verdicts, merge, label, promote, or close. The
+frontier reviewer inspects the fix diff and test output before committing.
 
 ## Scope
 
-A review covers the changes between a pull-request head and its base: code, tests, docs, and the messages that carry them. The local review runs two axes. Standards asks whether the diff follows this repository's documented rules. Spec asks whether the diff implements what its ticket asked for. Cloud review reports on the same diff under this same policy; it adds evidence, not a third standard.
+A review covers the changes between one pull-request head and its base: code,
+tests, docs, and the messages that carry them. One in-session frontier pass
+covers both axes. Standards asks whether the diff follows this repository's
+documented rules. Spec asks whether the diff implements what its ticket asked
+for. Both checklists are reported separately; every blocking finding cites a
+repository rule, an acceptance criterion, or a reproduced failure.
 
 ## Severity
 
@@ -23,11 +33,45 @@ A review covers the changes between a pull-request head and its base: code, test
 
 ## Performance and lifecycle
 
-Review starts when an open pull request has a valid closing reference, current head and base revisions, and implementation acceptance evidence that pins the same requirements revision the dispatch packet carried; the current parent and ticket bodies must still produce that revision, and a changed body stops review publication with `needs-info` until the body is reconciled and the user resumes, with no waiver. Evidence posted before the revision contract existed pins nothing and compares as current. Sibling implementation workers do not delay it. Ready pull requests run concurrently: at most three review workers serve one review-wave stage, at most four managed workers stay active across the workspace, workers are reused rather than duplicated per pull request or pinned head-and-base pair, and pull requests beyond capacity are deferred without exceeding either cap. Each active pull request proceeds independently through review, fixes, and merge; waiting on cloud review or CI for one never blocks another. Cloud collection for a pinned head-and-base pair starts immediately and overlaps the local review, with results awaited only at that pull request's reconciliation boundary; cloud absence, failure, or timeout never cancels local review. Both fresh review axes receive one shared revision packet per pinned pair — diff command, commit list, changed files and hunks, impacted callers, focused doc-cache sources, acceptance criteria, Standards sources, escalation triggers, and the pinned requirements revision — plus only their axis-specific brief. The initial revision receives one full Standards and Spec review in fresh parallel contexts. Later revisions receive delta review over changed hunks and impacted callers, unless the change adds an affected seam, trust boundary, schema, dependency state, generated contract, or public interface, or materially widens the diff; those triggers require another full review. One persistent worktree and worker serve each pull request through review, fixes, rereviews, final verification, merge, or terminal stop, with at most two code-fix rounds and one planned full verification. A fresh fix context receives all confirmed findings for its PR and round; safe in-scope advisories join a blocking batch, while advisory-only findings are deferred with a reason and create no round. Conflict-free base refreshes and infrastructure retries consume no round, conflict resolution consumes one, and a code repair for final-verification failure consumes one available round before delta or escalated rereview. Every retained finding records a stable ID, category, severity, file and line, reviewed head and base, governing rule or acceptance criterion, and concrete evidence. Standards grades security, performance, correctness and edge cases, style, tests and test bloat, and documentation as passed, not applicable, advisory, or blocking. The trusted pull-request summary carries machine-readable phase timings (`packetBuildMs`, `cloudMs`, `localReviewMs`, `reviewCriticalPathMs`, `reconcileMs`, `ciWaitMs`, plus wave facts `activeReviewWorkers` and `deferredByCapacity`) and updates in place; timing-only comments are not evidence, timings are never merge evidence, and SLO misses record their phase cause without removing any gate.
+Review starts when one open pull request has a valid closing reference,
+current head and base revisions, and compact implementation evidence that pins
+the same requirements revision the ticket published; the current parent and
+ticket bodies must still produce that revision, and a changed body stops
+review publication with `needs-info` until the body is reconciled and the user
+resumes, with no waiver. Evidence posted before the revision contract existed
+pins nothing and compares as current.
+
+The initial revision receives one full Standards and Spec pass. A later
+revision receives one delta review over changed hunks and impacted callers,
+unless the change adds an affected seam, trust boundary, schema, dependency
+state, generated contract, or public interface, or materially widens the diff;
+those triggers require another full pass. At most one automatic fix round is
+allowed. Remaining blocking findings stop the invocation with a pinned report.
+Local review starts without waiting for CI.
 
 ## Merge gates
 
-A pull request is eligible when required checks are green, confirmed findings are resolved, review is clean on the current head and base, the trusted summary and inline findings are published and verified, the pull request is mergeable, and the pinned requirements revision still matches the current parent and ticket bodies. A requirements mismatch blocks merge with `needs-info` until the issue body is reconciled and the user resumes; no reviewer waives it. Merge is squash-merge with the pull-request body `Closes #<ticket>` so closure follows delivery evidence; nothing merges before the gates pass and no ticket closes before merge.
+A pull request is eligible when required checks are green, confirmed findings
+are resolved, review is clean on the current head and base, the verdict and
+inline findings are published and verified, the pull request is mergeable, and
+the pinned requirements revision still matches the current parent and ticket
+bodies. A requirements mismatch blocks merge with `needs-info` until the issue
+body is reconciled and the user resumes; no reviewer waives it. Merge is
+squash-merge with the pull-request body `Closes #<ticket>` so closure follows
+delivery evidence; nothing merges before the gates pass and no ticket closes
+before merge.
+
+## CI equivalence
+
+A required CI check counts as broad verification only when repository policy
+or checked-in workflow configuration maps that check to the full repository
+gate. A matching check name alone is insufficient. At the merge gate, required
+checks are read once and never polled. Pending CI publishes the verdict pinned
+to head, base, requirements revision, and review-policy revision, then stops;
+a later invocation reuses that verdict when every key is unchanged and merges
+without repeating review. When no equivalent required CI exists, the full
+local repository command runs once as fallback. No post-merge verification
+runs.
 
 ## Trust rules
 
@@ -37,19 +81,15 @@ Same-repository review updates use fast-forward pushes only. An untrusted fork i
 
 ## Verification expectations
 
-A finding that claims broken behavior names the failing command and shows the observed output. The repository gate is `npm run verify`. Reviewers re-run a claim before acting on it; "this should also work" without a mechanism is advisory.
+A finding carries one validated evidence form: an inline finding quotes the offending span at its pinned file and line, while a reproduced failure names the failing command and observed output. The repository gate is `npm run verify`. Reviewers re-run a claim before acting on it; "this should also work" without a mechanism is advisory.
 
 ## Current-head freshness
 
 Findings attach to the exact head SHA they reviewed. Any pushed commit invalidates earlier findings on the files it changes. Merge and closure decisions read only reviews made against the current head.
 
-## Duplicate handling
-
-Standards and Spec findings stay separate even at the same location: one review axis never discards the other. The same defect reported by cloud review and a local axis counts once only when the revisions and the evidence identify one defect: keep the clearest evidence, drop restatements, route one fix to the owning worker. On severity disagreements the stricter grade holds until verification settles it.
-
 ## Category completeness
 
-Every required Standards category status is requested, carried through the local review adapter, and checked before reconciliation. A candidate with a missing category or severity is rejected or reported as incomplete; it never defaults to a blocking correctness finding. Test strategy, accessibility, observability, migration, and simplification run as triggered Standards checks inside the Standards axis, never as new review axes. At most one specialist runs per pull request and full-review round: security for the strongest trust-boundary trigger, or web performance for measured web-performance work. Specialist output is candidate Standards evidence that uses local blocking/advisory severity, cites a governing rule, criterion, or observed failure, and pins the reviewed head and base; it is never a third verdict.
+Every required Standards category status is checked before publication. A candidate with a missing category or severity is rejected or reported as incomplete; it never defaults to a blocking correctness finding. Test strategy, accessibility, observability, migration, and simplification run as triggered Standards checks inside the Standards pass, never as new review passes.
 
 ## Inline-comment evidence
 
@@ -57,4 +97,4 @@ An inline comment pins the file and line it judges and quotes the offending span
 
 ## Subagent use
 
-Review subagents are read-only: they search, read, and report. The main reviewer verifies every finding against the current head before publishing it. No subagent output merges, approves, closes, or labels anything, and cloud review cannot merge or close work either.
+The optional fix subagent is edit-and-test-only in the current checkout. The frontier reviewer verifies every finding against the current head before publishing it. No subagent output merges, approves, closes, or labels anything.

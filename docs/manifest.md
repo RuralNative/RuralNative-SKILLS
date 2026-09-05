@@ -66,12 +66,12 @@ only after Maintain reviews the seam's affected claims against current code
 
 | Seam | Code root | Fingerprint | Verified | Claims |
 |---|---|---|---|---|
-| document-for-agents | skills/document-for-agents/ | sha256:74fb028750d0665f3a766fe490b29b12da099a71434e0685b04aef90238997ee | 2026-09-04 | lifecycle prose, reference shapes, harness contract, and ADR-0030 size ceilings reviewed against code; INV-21 block preservation added, list-nesting/continuation indentation corrected, templates session-start block byte-identity asserted, and INV-14 fixture hardened to inert category sentinels with payload-shape regression and mechanism docs updated |
+| document-for-agents | skills/document-for-agents/ | sha256:381d73f7528c6619dfb0c275df4ff78c0e8f8ae57e5c2916d182ddf204ed6358 | 2026-09-05 | review-policy tests updated for ADR-0031: required areas name CI equivalence instead of duplicate handling, fix-agent edit-and-test limits replace read-only subagents, and no-cloud single-pass review replaces cloud alignment |
 | document-for-humans | skills/document-for-humans/ | sha256:46b55e33e718abae3a440b243771779108b68a80a735479f0867a5b353281e48 | 2026-09-02 | derived-doc prose and reference reviewed against code |
 | unslopify | skills/unslopify/ | sha256:7eabd8687aaa12d4f7197ea3be6f7efdfd80e5cbb24478e9b42a993b22216e80 | 2026-09-02 | output-contract, session-start setup, plain-language, and scanner 1.1 prose reviewed against code; ADR-0029 adopted; setup rules encoded as a byte-level reference model with hash-proof tests, spec-fixture critical wording reworded, and unused test constants removed |
-| plan-this | skills/plan-this/ | sha256:8cb0db70956b6e37a06fd9300ecfc56bdf1db596c4bf38db7b248436541de120 | 2026-09-02 | planning workflow prose and ADR-0030 caps reviewed against code |
-| implement-this | skills/implement-this/ | sha256:60826b0aaa701eb3876cec904157f8eae59010ecaac82144af783ebfea2ec56f | 2026-09-02 | implementation workflow prose and ADR-0030 caps reviewed against code |
-| review-this | skills/review-this/ | sha256:90a80e559f84a3a68c5913a3839587045e7f0d0246b298529b01f1c083bb8025 | 2026-09-02 | review workflow prose and ADR-0030 caps reviewed against code |
+| plan-this | skills/plan-this/ | sha256:b01bbaddcbf9378fa8e166bbed27b6a0e5b610ad864e92fa8a8f83dbda1b088d | 2026-09-05 | generated workflow-state copy only: merge requires green checks always plus fallback only without equivalent CI |
+| implement-this | skills/implement-this/ | sha256:10917a97e7416d9adb3c8655462143c529cabe2223671fe76a7118fa3f9f591a | 2026-09-05 | compact evidence lives only in the PR body; comments carry legacy only |
+| review-this | skills/review-this/ | sha256:c478341ddd7555cec93e5c1db733c07893fd5b2a86e87dda98d0a40f6b09236c | 2026-09-05 | single-PR fixes: explicit URL precedence with PR-first bare numbers, fail-closed case-insensitive repository check, legacy pins compare as current, green checks always plus fallback only without equivalence |
 | release-skills | skills/release-skills/ | sha256:2d89e68b76ac58448a26c1c9b1cd09bb91259380595b8a1790a38607861665c0 | 2026-09-02 | release workflow prose reviewed against code |
 
 ## Coverage
@@ -115,6 +115,7 @@ only after Maintain reviews the seam's affected claims against current code
 | docs/adr/0028-adaptive-doc-cache-governance.md | decision |
 | docs/adr/0029-unslopify-session-start-and-plain-language-live-output.md | decision |
 | docs/adr/0030-larger-orientation-ceilings.md | decision |
+| docs/adr/0031-single-target-production-workflows.md | decision |
 | docs/leaves/document-for-agents.md | leaf |
 | docs/leaves/document-for-humans.md | leaf |
 | docs/leaves/unslopify.md | leaf |

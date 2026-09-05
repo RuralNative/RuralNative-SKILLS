@@ -121,31 +121,31 @@ Retired by #134: the former rule that chose between direct-main delivery and man
 _Avoid_: direct-main delivery, mode selection
 
 **Manager worktree**:
-A git worktree whose root sits under the Kilo Agent Manager worktree location. Worker sessions dispatched by `implement-this` run in such worktrees; the location carries no delivery-mode choice.
+Retired by ADR-0031: the former git worktree under the Kilo Agent Manager worktree location. Both production commands now run in the current checkout and never create worker worktrees.
 _Avoid_: agent worktree, AO worktree
 
 **Command session**:
-The user-created session running one workflow command such as `/implement-this` or `/review-this`. It validates, reserves, dispatches, monitors, and reports; it never edits ticket code. Per ADR-0019 the user starts these sessions independently and nothing supervises them.
+Retired by ADR-0031: the former user-created session that validated, reserved, dispatched, monitored, and reported worker runs without editing ticket code.
 _Avoid_: supervisor, coordinator, orchestrator
 
 **Worker session**:
-A targeted session inside an isolated git worktree that claims exactly its own ticket and never touches sibling state. A command session creates it through the `agent_manager` tool in worktree mode, one independent task and one initial prompt per ticket (ADR-0019). A worker session never stops itself and never closes its own worktree; it remains live through unfinished, interrupted, failed, dirty, unpushed, and `needs-info` states until the command session proves delivery is durable (ADR-0023).
+Retired by ADR-0031: the former targeted session inside an isolated git worktree. Production commands run directly in the current checkout; the only delegated editor is the optional configured `review-fixer` subagent.
 _Avoid_: agent (when the session is meant), subagent
 
 **Cleanup-pending**:
-The visible state recorded when completed managed-worktree closure is unavailable on the host: the session stops, the worktree stays, and deletion behind Agent Manager is forbidden (ADR-0019). Under ADR-0023 the session stops only after the exact recovery gate — terminal success, a clean worktree, and one matching local/remote/PR head SHA.
+Retired by ADR-0031: the former visible state for completed managed-worktree closure unavailable on the host.
 _Avoid_: orphaned worktree, manual cleanup
 
 **Preserved-for-resume**:
-The lifecycle state of a worker whose code is not yet provably durable on GitHub but is resumable: running, interrupted, dirty, unpushed, SHA-mismatched, or missing delivery evidence. The session and worktree stay live; only the command session may later clean up after exact recovery (ADR-0023).
+Retired by ADR-0031: the former lifecycle state of a worker whose code was not yet provably durable on GitHub.
 _Avoid_: paused worker, idle worker
 
 **Preserved-for-diagnosis**:
-The lifecycle state of a failed or `needs-info` worker kept for diagnosis. The session and worktree stay live and are never stopped or removed automatically (ADR-0023).
+Retired by ADR-0031: the former lifecycle state of a failed or `needs-info` worker kept for diagnosis.
 _Avoid_: dead worker, stopped worker
 
 **Recovery-required**:
-The lifecycle state when a managed worktree exists but its worker session is missing. The command session reports the worktree path and branch, never creates a replacement worktree or deletes the existing one, and reuses the existing session when the host exposes it (ADR-0023).
+Retired by ADR-0031: the former lifecycle state when a managed worktree existed but its worker session was missing.
 _Avoid_: duplicate worktree, recreate worker
 
 **Workflow command**:
@@ -164,12 +164,20 @@ _Avoid_: acceptance requirement (when the stable ID is meant)
 The open, unassigned child tickets of a parent specification that have no open native blockers and carry `ready-for-agent`.
 _Avoid_: Ready queue, batch
 
+**Current checkout**:
+The user's invoking working tree where `/implement-this` and `/review-this` run. Neither command creates, polls, or removes another worktree.
+_Avoid_: worktree (when the invoking checkout is meant)
+
+**Configured fix agent**:
+The optional Kilo subagent named `review-fixer` that applies confirmed review findings in the current checkout. It edits and runs focused tests only.
+_Avoid_: mutation worker, fix worker
+
 **Implementation wave**:
-At most three ticket-frontier items running concurrently, each in its own worktree, branch, worker session, and pull request.
+Retired by ADR-0031: at most three ticket-frontier items running concurrently, each in its own worktree, branch, worker session, and pull request.
 _Avoid_: Worker batch, sprint
 
 **Review wave**:
-The pull requests produced by one implementation wave and reconciled against one current head per pull request before merge.
+Retired by ADR-0031: the former pull-request set reconciled against one current head per pull request before merge. `/review-this` now owns exactly one pull request.
 _Avoid_: Review batch, merge queue
 
 **Requirements data**:

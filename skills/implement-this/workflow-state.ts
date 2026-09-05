@@ -1,20 +1,22 @@
-// Authored source of the pure workflow state core (#132, parent #130).
+// Authored source of the pure workflow state core (single-target production
+// workflows, ADR-0031).
 // scripts/generate-workflow-state.ts copies this file byte-identical into
 // skills/plan-this/, skills/implement-this/, and skills/review-this/ so each
 // registry install is self-contained. Edit this file, run the generator, and
 // commit both; repository verification fails when a copy drifts.
 //
 // Purity contract: facts in, decisions out. No imports and no network,
-// GitHub, git, filesystem-mutation, or worker-management calls, so a later
-// persistent coordinator can reuse the same decisions on any host.
+// GitHub, git, filesystem-mutation, or worker-management calls. No Agent
+// Manager, worktree, worker-cap, polling, cloud, or wave concepts live here:
+// both production commands run one target in the current checkout.
 
-export const MAX_ACTIVE_WORKERS = 3;
-export const MAX_FIX_ROUNDS = 2;
+export const MAX_FIX_ROUNDS = 1;
 
 export const LABEL_READY_FOR_AGENT = "ready-for-agent";
 export const LABEL_BLOCKED = "blocked";
 export const LABEL_UNBLOCKED = "unblocked";
 export const LABEL_NEEDS_INFO = "needs-info";
+export const LABEL_READY_FOR_HUMAN = "ready-for-human";
 
 export interface TicketFact {
   number: number;
@@ -122,10 +124,9 @@ export function activeCriteria(
  * structural constraints, blockers, settled decisions, risk, and verification
  * intent. SHA-256 comes from the standard library; this core stays
  * import-free, so callers pass the hasher. Comments, acceptance evidence,
- * timing summaries, paths, branches, commit SHAs, and runtime output never
- * enter the fingerprint. Section lists keep body order, so an ordering
- * change is never hidden; line endings and insignificant trailing whitespace
- * normalize.
+ * timings, paths, branches, commit SHAs, and runtime output never enter the
+ * fingerprint. Section lists keep body order, so an ordering change is never
+ * hidden; line endings and insignificant trailing whitespace normalize.
  */
 export const REQUIREMENTS_REVISION_VERSION = "requirements-v1";
 
@@ -213,9 +214,9 @@ function bulletLines(lines: readonly string[], header: string): string[] {
 /**
  * Extract the authoritative sections of one issue body. Only the seven
  * named categories enter the fingerprint; every other section (behavior
- * prose, sibling scheduling collisions, parallel safety, evidence, timings)
- * is excluded, so requirement text and ordering changes inside the named
- * sections always change the revision and everything else never does.
+ * prose, evidence, paths, branches) is excluded, so requirement text and
+ * ordering changes inside the named sections always change the revision and
+ * everything else never does.
  */
 export function parseAuthoritativeSections(body: string): AuthoritativeSections {
   const lines = normalizedBodyLines(body);
@@ -293,10 +294,8 @@ export interface RequirementsGateDecision {
 }
 
 /**
- * The requirements gate (AC-8, AC-9). A mismatch stops and records
- * `needs-info`; there is no waiver path, so a worker or reviewer can never
- * override a mismatch. Only reconciling the issue bodies changes the input;
- * the resumed run compares the reconciled bodies against a fresh dispatch.
+ * The requirements gate. A mismatch stops and records `needs-info`; there is
+ * no waiver path. Only reconciling the issue bodies changes the input.
  */
 export function requirementsGate(
   dispatched: string,
@@ -306,72 +305,21 @@ export function requirementsGate(
     return {
       action: "continue",
       addLabels: [],
-      reason: "the issue bodies still match the dispatched requirements revision",
+      reason: "the issue bodies still match the pinned requirements revision",
     };
   }
   return {
     action: "stop",
     addLabels: [LABEL_NEEDS_INFO],
     reason:
-      "the parent or ticket body changed after dispatch; reconcile the issue bodies and resume explicitly",
+      "the parent or ticket body changed after the pin; reconcile the issue bodies and resume explicitly",
   };
-}
-
-export interface WorkerFact {
-  id: string;
-  ticket: number;
-  status: "running" | "failed" | "offline" | "stopped";
-}
-
-export interface PullRequestFact {
-  headSha: string;
-  /** The base revision pinned by the current pull-request facts. */
-  baseSha?: string;
-  mergeable: boolean;
-  requiredChecksGreen: boolean;
-}
-
-export interface ReviewFact {
-  reviewedHeadSha: string;
-  /** The base revision examined by the current verdict. */
-  reviewedBaseSha?: string;
-  unresolvedConfirmedFindings: number;
-  localReviewClean: boolean;
-  cloudReviewAvailable: boolean;
-  trustedSummaryUpdated: boolean;
-  inlineFindingsVerified: boolean;
-  /**
-   * The current issue bodies still match the requirements revision the
-   * review pinned (ticket #190). A body edit invalidates the verdict.
-   */
-  requirementsCurrent: boolean;
-}
-
-export interface FinalVerificationFact {
-  finalVerificationPassed: boolean;
-  wholeSpecReviewPassed: boolean;
 }
 
 export interface LabelTransition {
   number: number;
   add: string[];
   remove: string[];
-}
-
-export interface DispatchPlan {
-  dispatch: number[];
-  violations: string[];
-}
-
-export interface RetryDecision {
-  action: "retry" | "stop-ticket";
-  addLabels: string[];
-}
-
-export interface MergeDecision {
-  eligible: boolean;
-  blockers: string[];
-  cloudReview: "available" | "unavailable";
 }
 
 function isOpen(ticket: TicketFact): boolean {
@@ -384,23 +332,6 @@ function hasLabel(ticket: TicketFact, label: string): boolean {
 
 function isStopped(ticket: TicketFact): boolean {
   return hasLabel(ticket, LABEL_NEEDS_INFO);
-}
-
-export function selectFrontier(
-  tickets: readonly TicketFact[],
-  spec: number,
-): number[] {
-  return tickets
-    .filter(
-      (t) =>
-        isOpen(t) &&
-        t.parent === spec &&
-        t.openBlockers.length === 0 &&
-        t.assignees.length === 0 &&
-        !isStopped(t) &&
-        hasLabel(t, LABEL_READY_FOR_AGENT),
-    )
-    .map((t) => t.number);
 }
 
 export function labelTransitions(
@@ -442,81 +373,64 @@ export function labelTransitions(
   return transitions;
 }
 
-export function validateDispatch(
-  requested: readonly number[],
+/**
+ * User-managed parallel safety for `plan-this` publication: the open,
+ * unassigned, unblocked, ready children of one specification in native child
+ * order. No worker cap lives here; the user chooses the checkout strategy.
+ */
+export function selectFrontier(
   tickets: readonly TicketFact[],
-  workers: readonly WorkerFact[],
   spec: number,
-): DispatchPlan {
-  const byNumber = new Map(tickets.map((t) => [t.number, t]));
-  const activeWorkers = workers.filter((w) => w.status !== "stopped");
-  const ownedTickets = new Map(
-    activeWorkers.map((w) => [w.ticket, w.id]),
-  );
-  const capacity = MAX_ACTIVE_WORKERS - activeWorkers.length;
-  const seen = new Set<number>();
-  const dispatch: number[] = [];
-  const violations: string[] = [];
-
-  for (const n of requested) {
-    const ticket = byNumber.get(n);
-    if (!ticket) {
-      violations.push(`#${n} is not among the observed ticket facts`);
-      continue;
-    }
-    if (seen.has(n)) {
-      violations.push(`duplicate ownership: #${n} requested twice`);
-      continue;
-    }
-    seen.add(n);
-    if (!isOpen(ticket)) {
-      violations.push(`#${n} is closed`);
-      continue;
-    }
-    if (isStopped(ticket)) {
-      violations.push(`#${n} is stopped with ${LABEL_NEEDS_INFO}`);
-      continue;
-    }
-    if (ticket.parent !== spec) {
-      violations.push(`#${n} does not belong to specification #${spec}`);
-      continue;
-    }
-    if (ticket.openBlockers.length > 0) {
-      violations.push(`#${n} has open native blockers`);
-      continue;
-    }
-    if (ticket.assignees.length > 0) {
-      violations.push(`#${n} already has an assignee`);
-      continue;
-    }
-    if (!hasLabel(ticket, LABEL_READY_FOR_AGENT)) {
-      violations.push(`#${n} does not carry ${LABEL_READY_FOR_AGENT}`);
-      continue;
-    }
-    const ownerId = ownedTickets.get(n);
-    if (ownerId !== undefined) {
-      violations.push(
-        `duplicate ownership: #${n} is already owned by worker ${ownerId}`,
-      );
-      continue;
-    }
-    if (dispatch.length >= capacity) {
-      violations.push(
-        `worker cap: at most ${MAX_ACTIVE_WORKERS} active implementation workers`,
-      );
-      continue;
-    }
-    dispatch.push(n);
-  }
-
-  return { dispatch, violations };
+): number[] {
+  return tickets
+    .filter(
+      (t) =>
+        isOpen(t) &&
+        t.parent === spec &&
+        t.openBlockers.length === 0 &&
+        t.assignees.length === 0 &&
+        !isStopped(t) &&
+        hasLabel(t, LABEL_READY_FOR_AGENT),
+    )
+    .map((t) => t.number);
 }
 
-export function retryDecision(failuresSoFar: number): RetryDecision {
-  if (failuresSoFar <= 1) {
-    return { action: "retry", addLabels: [] };
+export interface SingleTicketValidation {
+  ok: boolean;
+  violations: string[];
+}
+
+/**
+ * Single-target validation for `/implement-this`: exactly one open,
+ * unblocked, unassigned implementation ticket carrying `ready-for-agent`.
+ * Parent specifications are rejected here; the caller reports the diagnostic.
+ */
+export function validateSingleTicket(
+  ticket: TicketFact | undefined,
+  ticketNumber: number,
+  linkedParent?: TicketFact,
+): SingleTicketValidation {
+  const violations: string[] = [];
+  if (!ticket) {
+    return { ok: false, violations: [`#${ticketNumber} was not found`] };
   }
-  return { action: "stop-ticket", addLabels: [LABEL_NEEDS_INFO] };
+  if (ticket.parent === null) {
+    violations.push(`#${ticketNumber} has no linked parent specification`);
+  } else if (!linkedParent || linkedParent.number !== ticket.parent) {
+    violations.push(`#${ticketNumber}'s linked parent specification was not observed`);
+  }
+  if (!isOpen(ticket)) violations.push(`#${ticketNumber} is closed`);
+  if (isStopped(ticket)) violations.push(`#${ticketNumber} is stopped with ${LABEL_NEEDS_INFO}`);
+  if (ticket.openBlockers.length > 0) {
+    violations.push(`#${ticketNumber} has open native blockers`);
+  }
+  if (ticket.assignees.length > 0) {
+    violations.push(`#${ticketNumber} already has an assignee`);
+  }
+  if (!hasLabel(ticket, LABEL_READY_FOR_AGENT)) {
+    violations.push(`#${ticketNumber} does not carry ${LABEL_READY_FOR_AGENT}`);
+  }
+  return { ok: violations.length === 0, violations };
 }
 
 export function reviewIsFresh(
@@ -525,16 +439,15 @@ export function reviewIsFresh(
   currentBaseSha?: string,
   reviewedBaseSha?: string,
 ): boolean {
-  if (currentHeadSha !== reviewedHeadSha) return false;
-  if (currentBaseSha === undefined && reviewedBaseSha === undefined) return true;
-  return currentBaseSha !== undefined && currentBaseSha === reviewedBaseSha;
+  if (currentHeadSha.trim() === "" || currentHeadSha !== reviewedHeadSha) return false;
+  if (
+    currentBaseSha === undefined ||
+    reviewedBaseSha === undefined ||
+    currentBaseSha.trim() === "" ||
+    reviewedBaseSha.trim() === ""
+  ) return false;
+  return currentBaseSha === reviewedBaseSha;
 }
-
-export type FixRoundKind =
-  | "code-fix"
-  | "conflict-resolution"
-  | "infrastructure-retry"
-  | "conflict-free-base-refresh";
 
 export interface FixRoundDecision {
   allowed: boolean;
@@ -543,34 +456,59 @@ export interface FixRoundDecision {
 }
 
 /**
- * Infrastructure retries and conflict-free base refreshes do not consume a
- * code-fix round. A code fix or conflict resolution does, with two rounds
- * remaining the hard maximum.
+ * At most one automatic code-fix round per pull request. A conflict-free base
+ * refresh or infrastructure retry never consumes the round; anything else
+ * does, and a second code change is a stop with a pinned report.
  */
-export function fixRoundDecision(
-  roundsUsed: number,
-  kind: FixRoundKind,
-): FixRoundDecision {
-  const consumesRound = kind === "code-fix" || kind === "conflict-resolution";
-  if (!consumesRound) {
-    return {
-      allowed: true,
-      consumesRound: false,
-      reason: "infrastructure retry or conflict-free base refresh does not consume a fix round",
-    };
-  }
+export function fixRoundDecision(roundsUsed: number): FixRoundDecision {
   if (roundsUsed >= MAX_FIX_ROUNDS) {
     return {
       allowed: false,
       consumesRound: true,
-      reason: `at most ${MAX_FIX_ROUNDS} code-fix rounds are allowed per pull request`,
+      reason: `at most ${MAX_FIX_ROUNDS} automatic code-fix round is allowed per pull request`,
     };
   }
   return {
     allowed: true,
     consumesRound: true,
-    reason: "code changes consume one bounded fix round",
+    reason: "one bounded automatic fix round",
   };
+}
+
+export interface PullRequestFact {
+  headSha: string;
+  /** The base revision pinned by the current pull-request facts. */
+  baseSha?: string;
+  mergeable: boolean;
+  requiredChecksGreen: boolean;
+}
+
+export interface ReviewFact {
+  reviewedHeadSha: string;
+  /** The base revision examined by the current verdict. */
+  reviewedBaseSha?: string;
+  unresolvedConfirmedFindings: number;
+  localReviewClean: boolean;
+  trustedSummaryUpdated: boolean;
+  inlineFindingsVerified: boolean;
+  /**
+   * The current issue bodies still match the requirements revision the
+   * review pinned. A body edit invalidates the verdict.
+   */
+  requirementsCurrent: boolean;
+  /**
+   * Full local gate result when run once as the approved broad-verification
+   * fallback. Required checks must still be green; the fallback never excuses
+   * failed required checks and applies only when no equivalent CI exists.
+   */
+  localFallbackPassed?: boolean | null;
+  /** False when repository policy maps no required check to the full gate. */
+  equivalentCiEstablished?: boolean;
+}
+
+export interface MergeDecision {
+  eligible: boolean;
+  blockers: string[];
 }
 
 export function isMergeEligible(
@@ -578,7 +516,11 @@ export function isMergeEligible(
   review: ReviewFact,
 ): MergeDecision {
   const blockers: string[] = [];
-  if (!pullRequest.requiredChecksGreen) {
+  const checksOk =
+    pullRequest.requiredChecksGreen &&
+    (review.equivalentCiEstablished === true ||
+      (review.equivalentCiEstablished === false && review.localFallbackPassed === true));
+  if (!checksOk) {
     blockers.push("required checks are not green");
   }
   if (review.unresolvedConfirmedFindings > 0) {
@@ -602,8 +544,8 @@ export function isMergeEligible(
     blockers.push("reviewed head SHA does not match the current head SHA");
   }
   if (
-    (pullRequest.baseSha !== undefined ||
-      review.reviewedBaseSha !== undefined) &&
+    pullRequest.baseSha === undefined ||
+    review.reviewedBaseSha === undefined ||
     !reviewIsFresh(
       pullRequest.headSha,
       review.reviewedHeadSha,
@@ -619,29 +561,83 @@ export function isMergeEligible(
   return {
     eligible: blockers.length === 0,
     blockers,
-    cloudReview: review.cloudReviewAvailable ? "available" : "unavailable",
   };
+}
+
+/**
+ * Direct dependent promotion only: after one ticket closes, update exactly
+ * the children of the specification whose final open native blocker closed.
+ * Tickets parented elsewhere are never promoted here. No wave, no next
+ * review launch.
+ */
+export interface NativeDependencyEdge {
+  blocked: number;
+  blockedBy: number;
 }
 
 export function promotionAfterClosure(
   tickets: readonly TicketFact[],
   spec: number,
+  closedTicket: number,
+  dependencies: readonly NativeDependencyEdge[],
 ): LabelTransition[] {
-  return labelTransitions(tickets, spec).filter((t) =>
-    t.remove.includes(LABEL_BLOCKED),
+  const parents = new Map(tickets.map((t) => [t.number, t.parent] as const));
+  const directDependents = new Set(
+    dependencies
+      .filter((edge) => edge.blockedBy === closedTicket)
+      .map((edge) => edge.blocked),
+  );
+  return labelTransitions(tickets, spec).filter(
+    (t) =>
+      t.remove.includes(LABEL_BLOCKED) &&
+      parents.get(t.number) === spec &&
+      directDependents.has(t.number),
   );
 }
 
-export function followUpRequired(verification: FinalVerificationFact): boolean {
-  return !verification.finalVerificationPassed || !verification.wholeSpecReviewPassed;
+/**
+ * The linked parent closes only when a confirmed non-empty child set is
+ * fully closed. An empty or partial enumeration never closes. No
+ * verification run lives here.
+ */
+export interface ParentClosureFact {
+  children: readonly TicketFact[];
+  enumerationComplete: boolean;
 }
 
-export function parentClosureReady(
-  children: readonly TicketFact[],
-  verification: FinalVerificationFact,
-): boolean {
+export function parentClosureReady(fact: ParentClosureFact): boolean {
   return (
-    children.every((child) => child.state === "closed") &&
-    !followUpRequired(verification)
+    fact.enumerationComplete &&
+    fact.children.length > 0 &&
+    fact.children.every((child) => child.state === "closed")
   );
+}
+
+export interface TrustedVerdictKey {
+  prNumber: number;
+  headSha: string;
+  baseSha: string;
+  requirementsRevision: string;
+  reviewPolicyRevision: string;
+}
+
+/** One stable carrier string for the reusable review verdict. */
+export function verdictKeyValue(key: TrustedVerdictKey): string {
+  return `pr=${key.prNumber};head=${key.headSha};base=${key.baseSha};requirements=${key.requirementsRevision};policy=${key.reviewPolicyRevision}`;
+}
+
+/** Reuse a pinned verdict only when every key is unchanged. */
+export function verdictReusable(
+  pinned: TrustedVerdictKey,
+  current: TrustedVerdictKey,
+): boolean {
+  const complete = (key: TrustedVerdictKey): boolean =>
+    Number.isInteger(key.prNumber) &&
+    key.prNumber > 0 &&
+    key.headSha.trim() !== "" &&
+    key.baseSha.trim() !== "" &&
+    key.requirementsRevision.trim() !== "" &&
+    key.reviewPolicyRevision.trim() !== "";
+  if (!complete(pinned) || !complete(current)) return false;
+  return verdictKeyValue(pinned) === verdictKeyValue(current);
 }

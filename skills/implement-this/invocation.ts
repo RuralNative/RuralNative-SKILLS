@@ -1,93 +1,133 @@
-// Invocation parsing and bounded-set planning (#134, parent #130).
+// Single-target invocation parsing for /implement-this (ADR-0031).
 //
-// Turns the requested references into one validated ticket set using only
-// the pure workflow state core: a parent specification selects up to three
-// current frontier tickets in native child order; explicit ticket inputs are
-// validated before any claim or edit. Facts in, decisions out.
+// Pure: facts in, decisions out. No network, GitHub, git, filesystem,
+// or Agent Manager calls. Exactly one `#<n>` issue reference is accepted;
+// everything else stops before mutation with a named diagnostic.
 
 import {
-  MAX_ACTIVE_WORKERS,
-  selectFrontier,
-  validateDispatch,
+  validateSingleTicket,
   type TicketFact,
-  type WorkerFact,
 } from "./workflow-state.ts";
 
-const PARENTLESS_VALIDATION_SPEC = -1;
+export type InvocationDiagnostic =
+  | "malformed-reference"
+  | "multiple-targets"
+  | "parent-specification"
+  | "pull-request-target"
+  | "cross-repository-target"
+  | "ticket-not-found";
 
-/** The requested references, parsed from `#<n>` forms. */
-export function parseInvocation(
+export type InvocationResolution =
+  | { ok: true; ticket: number }
+  | { ok: false; diagnostic: InvocationDiagnostic; detail: string };
+
+const SINGLE_REF = /^#?(\d+)$/;
+const GITHUB_URL_REF =
+  /^https?:\/\/github\.com\/[^/\s]+\/[^/\s]+\/(issues|pull)\/(\d+)(?:[/?#].*)?$/i;
+
+/** Parse exactly one `#<n>`, bare number, or same-shape GitHub issue URL. */
+export function parseSingleReference(
   refs: readonly string[],
-): number[] {
-  return refs.map((ref) => Number(ref.replace(/^#/, "")));
+  currentRepository?: string,
+): InvocationResolution {
+  if (refs.length !== 1) {
+    return {
+      ok: false,
+      diagnostic: "multiple-targets",
+      detail: `expected exactly one ticket reference, got ${refs.length}`,
+    };
+  }
+  const raw = refs[0].trim();
+  const urlMatch = GITHUB_URL_REF.exec(raw);
+  if (urlMatch) {
+    const parsedUrl = new URL(raw);
+    const [, owner, repository, kindPart, numberPart] = parsedUrl.pathname.split("/");
+    const repositoryIdentity = `${owner}/${repository}`;
+    if (
+      currentRepository === undefined ||
+      repositoryIdentity.toLowerCase() !== currentRepository.toLowerCase()
+    ) {
+      return {
+        ok: false,
+        diagnostic: "cross-repository-target",
+        detail: `\`${refs[0]}\` does not name an issue in ${currentRepository ?? "the current repository"}`,
+      };
+    }
+    const kind = kindPart.toLowerCase();
+    const n = Number(numberPart);
+    if (kind === "pull") {
+      return {
+        ok: false,
+        diagnostic: "pull-request-target",
+        detail: `\`${refs[0]}\` names a pull request; /implement-this accepts only an implementation issue`,
+      };
+    }
+    return { ok: true, ticket: n };
+  }
+  const match = SINGLE_REF.exec(raw);
+  if (!match) {
+    return {
+      ok: false,
+      diagnostic: "malformed-reference",
+      detail: `\`${refs[0]}\` is not a ticket reference`,
+    };
+  }
+  return { ok: true, ticket: Number(match[1]) };
+}
+
+export interface SingleTicketPlan {
+  ticket: number;
+  isParentSpecification: boolean;
 }
 
 /**
- * Plan one bounded ticket set. A single reference that is the parent of
- * observed children is a specification input: it selects up to
- * `MAX_ACTIVE_WORKERS` frontier tickets in native child order. Anything else
- * is an explicit set validated against the same gates as the frontier.
- *
- * The specification selector always comes from the request, never from fact
- * order: `numbers[0]` on the specification branch, the common observed
- * parent of the requested tickets, or no parent for one standalone ticket.
+ * Resolve the single reference against observed facts. A reference whose
+ * number is the parent of observed children is a parent specification and is
+ * rejected; pull-request numbers are rejected by the caller handing over the
+ * object's type. Validation of open state, blockers, assignment, and labels
+ * stays in `validateSingleTicket`.
  */
-export function planBoundedSet(
+export function planSingleTicket(
   refs: readonly string[],
   tickets: readonly TicketFact[],
-  workers: readonly WorkerFact[],
-): { ok: true; dispatch: number[] } | { ok: false; violations: string[] } {
-  const malformed = refs.filter((ref) => !/^#?\d+$/.test(ref));
-  if (malformed.length > 0) {
+  isPullRequestNumber: (n: number) => boolean = () => false,
+  currentRepository?: string,
+): InvocationResolution {
+  const parsed = parseSingleReference(refs, currentRepository);
+  if (!parsed.ok) return parsed;
+  const n = parsed.ticket;
+  if (isPullRequestNumber(n)) {
     return {
       ok: false,
-      violations: malformed.map((ref) => `\`${ref}\` is not a ticket reference`),
+      diagnostic: "pull-request-target",
+      detail: `#${n} names a pull request; /implement-this accepts only an implementation issue`,
     };
   }
-
-  const numbers = parseInvocation(refs);
-
-  let requested: number[];
-  let spec: number | null;
-  if (numbers.length === 1 && tickets.some((t) => t.parent === numbers[0])) {
-    // Parent-specification input: native child order comes from fact order.
-    spec = numbers[0];
-    const frontier = selectFrontier(tickets, spec);
-    requested = frontier.slice(0, MAX_ACTIVE_WORKERS);
-  } else {
-    requested = numbers;
-    const parents = new Set(
-      tickets
-        .filter((t) => requested.includes(t.number))
-        .map((t) => t.parent),
-    );
-    if (parents.size === 1 && !parents.has(null)) {
-      spec = [...parents][0] as number;
-    } else if (requested.length === 1 && parents.size === 1 && parents.has(null)) {
-      spec = null;
-    } else {
-      // No common observed parent, or multiple parentless tickets: reject the set.
-      spec = 0;
-    }
+  if (tickets.some((t) => t.parent === n)) {
+    return {
+      ok: false,
+      diagnostic: "parent-specification",
+      detail: `#${n} is a parent specification; /implement-this accepts only one implementation ticket`,
+    };
   }
-
-  // Keep every gate in validateDispatch while adapting the one parentless
-  // fact to its numeric specification selector without changing the shared core.
-  const validationTickets = spec === null
-    ? tickets.map((ticket) =>
-        ticket.number === requested[0]
-          ? { ...ticket, parent: PARENTLESS_VALIDATION_SPEC }
-          : ticket,
-      )
-    : tickets;
-  const plan = validateDispatch(
-    requested,
-    validationTickets,
-    workers,
-    spec ?? PARENTLESS_VALIDATION_SPEC,
-  );
-  if (plan.violations.length > 0) {
-    return { ok: false, violations: plan.violations };
+  const ticket = tickets.find((t) => t.number === n);
+  if (!ticket) {
+    return {
+      ok: false,
+      diagnostic: "ticket-not-found",
+      detail: `#${n} was not found among the observed ticket facts`,
+    };
   }
-  return { ok: true, dispatch: plan.dispatch };
+  const parent = ticket.parent === null
+    ? undefined
+    : tickets.find((candidate) => candidate.number === ticket.parent);
+  const validation = validateSingleTicket(ticket, n, parent);
+  if (!validation.ok) {
+    return {
+      ok: false,
+      diagnostic: "ticket-not-found",
+      detail: validation.violations.join("; "),
+    };
+  }
+  return { ok: true, ticket: n };
 }

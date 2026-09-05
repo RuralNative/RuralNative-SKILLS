@@ -1,14 +1,27 @@
 # Installing review-this
 
-`review-this` owns one pull-request review wave for a parent specification. Invoke it explicitly as `/review-this <target>` where `<target>` is a parent specification, a child issue, a pull request, or their full URLs — bare numbers (`100`) and hash numbers (`#100`) normalize to the same repository number. The skill resolves the target to its exact GitHub object and pull-request set before any write, discovers native child tickets, linked pull requests, blockers, checks, reviews, and current head and base SHAs, starts each review as soon as its implementation evidence exists, and keeps one persistent PR worktree and worker through review, fixes, rereviews, final verification, merge, or terminal stop. It reconciles Kilo cloud review with the local Standards and Spec review against each current revision, routes fixes, squash-merges clean heads, promotes newly unblocked dependents, and closes the specification when final verification passes.
+`review-this` reviews exactly one pull request in the current checkout. Invoke it explicitly as `/review-this <target>` where `<target>` is one pull-request number, one pull-request URL, one issue number, or one issue URL that resolves to exactly one open pull request — bare numbers (`100`) and hash numbers (`#100`) normalize to the same repository number. Parent specifications, ambiguous mappings, multiple targets, and cross-repository targets stop before any write.
+
+The skill requires the current checkout to match the selected pull-request head. It runs one frontier Standards-plus-Spec pass in-session, reports both checklists separately, applies at most one automatic fix round through the optional configured `review-fixer` subagent, reads required CI once without polling, squash-merges clean heads, promotes only direct dependents identified by captured native edges, and closes the parent only from a complete child enumeration where all children are closed. It never calls Agent Manager, creates or removes a worktree, manages workers, runs cloud review, or reads Agent Manager state.
 
 ## Requirements
 
 - A GitHub repository with native sub-issue and `blocked_by` relationships linking child tickets to their parent specification.
-- Open pull requests for the current wave, each against `main` with a closing reference `Closes #<ticket>` and current head and base SHAs.
-- `/code-review` installed through its own lane. It is not published by this shelf; install it from its own source before using `review-this`. It carries no `disable-model-invocation` lock and stays model-invocable.
+- One open pull request against `main` with a closing reference `Closes #<ticket>`, current head and base SHAs, and compact or legacy implementation evidence.
 - `/unslopify` installed through its registry lane: `npx skills add RuralNative/RuralNative-SKILLS --skill unslopify`.
-- Tracked project permissions in `.kilo/kilo.jsonc` allow `agent_manager` (`agent_manager: allow`) and require explicit user approval for `task` (`task: ask`), so the persistent Agent Manager PR worktree is created before any nested Standards, Spec, or fix `Task` subagents, and those nested `Task` contexts run only after approval; `.kilo/agent-manager.json` is never edited.
+- Tracked project permissions in `.kilo/kilo.jsonc` require no `agent_manager` entry. The optional fix round uses the `task` tool posture already tracked there; `.kilo/agent-manager.json` is never edited.
+
+## Optional fix agent
+
+Auto-fix capability is optional. A clean review never requires the subagent. If blocking findings exist and `review-fixer` is unavailable, the skill publishes the findings and stops without using the frontier model as an implicit fixer.
+
+To enable fixes, create a Kilo subagent named `review-fixer` and set its model to a cheaper configured model:
+
+1. Copy the repository definition at `.kilo/agent/review-fixer.md` into the consumer project (project scope `.kilo/agent/review-fixer.md` or user scope `~/.config/kilo/agent/review-fixer.md`).
+2. Set its `model` frontmatter to the cheap model, or use the project agent override for `review-fixer`.
+3. Keep its permissions narrow: every edit and focused test command requires approval. It must not commit, push, publish verdicts, merge, label, promote, or close.
+
+The skill never selects a model through Agent Manager. The frontier reviewer sends only confirmed finding IDs, exact file and line evidence, permitted affected seams, and focused test commands, then rereads changed regions, rejects unrelated edits, and remains the only actor that commits or pushes.
 
 ## Install
 
@@ -28,21 +41,21 @@ cp -r skills/review-this ~/.agents/skills/review-this
 
 ## Source provenance and trust
 
-Installing this skill is a trust decision in its source repository, `RuralNative/RuralNative-SKILLS`. Record provenance for what you install: note the resolved commit the registry CLI reports, or pin the revision you reviewed where the installer accepts a ref. `/code-review` is not published by this shelf; pin the reviewed revision of that dependency where its installer supports it and record the commit you reviewed otherwise.
+Installing this skill is a trust decision in its source repository, `RuralNative/RuralNative-SKILLS`. Record provenance for what you install: note the resolved commit the registry CLI reports, or pin the revision you reviewed where the installer accepts a ref.
 
-Provenance and pinning narrow what can change under you; they do not remove the residual trust in either source repository. Snyk's August 2026 audit of this shelf reported Critical E005 and Medium W011 for `plan-this` and Medium W011 for `implement-this` and `unslopify`; treat this skill's install path with the same posture. Pinning reviewed revisions addresses that exposure, the findings have not gone away, and the underlying repository trust remains yours to make.
+Provenance and pinning narrow what can change under you; they do not remove the residual trust in the source repository. Pinning reviewed revisions addresses that exposure, the findings have not gone away, and the underlying repository trust remains yours to make.
 
 Workflow runs perform no skill downloads: once installed, `/review-this` never fetches, clones, or installs skills mid-run. Installation stays a user step outside the run. Manual installs must not overwrite an existing `review-this` folder without the user's explicit approval.
 
 ## Verification
 
-From the control workspace, after an implementation wave has delivered pull requests:
+From the checkout matching the pull-request head, after implementation has delivered:
 
 ```
-/review-this #130
+/review-this #100
 ```
 
-The skill discovers the current review wave, creates or reuses one persistent PR worktree, collects Kilo cloud summary and inline comments for the current head and base when available (recording `unavailable` when disabled, absent, failed, or timed out without blocking a complete local review), runs fresh Standards and Spec sub-agents in parallel for the initial full review, uses delta review for later revisions unless a named risk trigger escalates it, and keeps strict category statuses and stable finding evidence. Spec findings and whole-spec verification name the same stable criterion key that planning and implementation evidence used — the authority issue number plus the local ID (`#188:AC-1`), never the full sentence text. The wave carries the requirements revision the implementation evidence pinned; review publication and merge compare the current issue bodies against it, and a changed body stops with `needs-info` until reconciliation plus explicit resume (ticket #190). Confirmed findings use one fresh fix context in the same worktree per round, with at most two code-fix rounds; safe advisories join a blocking batch, while advisory-only findings receive a reasoned deferral. A trusted summary is updated once per revision with machine-readable timings and verified inline comments; publication failure stops fixes and merge. A final-verification repair consumes an available fix round and receives delta or escalated rereview, never a third round. The skill rejects duplicate, stale, out-of-scope, and unverified findings, invalidates previous verdicts when either the head or base SHA changes, squash-merges only after exact-revision gates pass, promotes only dependents whose final blocker closed (`unblocked` plus `ready-for-agent`, `blocked` removed), and on the penultimate wave tells you to run `implement-this #<spec>` for the next wave. When every child ticket closes, it checks updated `main` with the one planned `npm run verify` and a whole-spec Standards and Spec review, creates the smallest independently verifiable native child ticket for a confirmed integration defect while keeping the parent open, and closes the parent only when all gates pass. The persistent PR worker never stops itself: the command session cleans up only after a successful terminal review state with no unpushed fix and exact local/remote/PR head equality, reports `cleanup-pending` when the host cannot close the worktree, and reports `recovery-required` when a worktree exists without its session — never duplicating or deleting it.
+The skill resolves the single target, validates checkout match, evidence, and requirements revision, runs one frontier Standards-plus-Spec pass, optionally applies one configured fix round with one delta review, reads required checks once, and squash-merges only after exact-revision gates pass. Pending CI publishes the pinned verdict and stops; a later invocation reuses it when head, base, requirements revision, and review-policy revision are unchanged. It promotes only dependents whose final blocker closed and closes the parent only when every child is closed.
 
 Repository checks run via:
 
@@ -50,46 +63,6 @@ Repository checks run via:
 npm run verify
 ```
 
-## Three-ticket Kilo smoke
-
-Run three ordinary tickets through independent `/implement-this` and
-`/review-this` sessions on Kilo after the targeted tests and repository gate
-are green. Record one machine-readable timing object per ticket from durable
-reservation through merge or terminal outcome:
-
-```json
-{"ticket":101,"riskClass":"ordinary","reservationToTerminalMs":0,"phases":{"fixes":0,"delta-review":0,"final-verification":0},"gatesGreen":true}
-```
-
-The smoke passes when the ordinary-ticket median is at most 60 minutes, no
-ordinary ticket exceeds 90 minutes, and every correctness gate is green. The
-smoke also verifies worker retention: a fix left dirty or unpushed keeps the
-persistent PR worker session and worktree, a blocked or `needs-info` review
-keeps them for diagnosis, and cleanup runs only after merge (or another
-successful terminal state) with the recorded local/remote/PR head SHAs proven
-recoverable — a merged PR's feature branch may be deleted by the squash-merge,
-so the pre-merge head evidence is recorded before cleanup is assessed.
-
-## Concurrent-wave baseline comparison
-
-Benchmark the concurrent skill against the pre-#170 sequential snapshot in a
-temporary workspace outside this repository over three scenarios — one clean
-pull request with delayed cloud review, three clean pull requests ready in one
-review wave, and one pull request with one blocking fix and delta rereview.
-Record total duration, `cloudMs`, `localReviewMs`, `packetBuildMs`,
-`reviewCriticalPathMs`, `reconcileMs`, `ciWaitMs`, operation counts,
-review-agent input tokens, and output tokens per scenario. Grade every
-correctness, trust, freshness, publication, merge, and closure gate before
-comparing any time or token numbers. The measured change passes when:
-
-- The three-pr clean-wave median is at most 60% of the sequential baseline.
-- The delayed-cloud single-pr median is at most 80% of baseline.
-- The one-fix path does not regress by more than 10%.
-- Review-agent input tokens fall by at least 20% through shared revision packets.
-- Orientation sources resolve once per pinned head-and-base pair and the compact evidence (task band, resolved bytes, cap, source count, cache-gap state) is shared across Standards and Spec without publishing full path lists on successful routine work.
-- Operation counts stay unchanged; `ciWaitMs` is attributed separately so CI
-  time never masks or credits review changes.
-
 ## Boundary
 
-The skill accepts one invocation only: `/review-this <target>`, where the target is a parent specification number, a child issue number, a pull-request number or URL for the current repository; cross-repository targets stop before writes unless explicitly chosen. It resolves the target before any worktree creation or GitHub write, discovers the current review wave, and runs once from the control workspace; it does not implement tickets. It creates or reuses only the one persistent PR worktree for each selected pull request and never creates a separate review or fix worktree. It never merges without green required checks, resolved confirmed findings, a clean local review, unchanged reviewed head and base SHAs, and a published trusted summary, and it never auto-merges a pull request without an originating specification. It never closes a ticket before merge. State and adapter boundaries in `targets.ts`, `discovery.ts`, `reconciliation.ts`, `adapters.ts`, `review-session.ts`, and the packaged `workflow-state.ts` remain callable by a future persistent coordinator without changing command behavior.
+The skill accepts one invocation only: `/review-this <target>` with one pull request or one issue resolving to one pull request. It does not implement tickets, run parent-specification waves, create worktrees, manage workers, run cloud review, poll CI, run post-merge verification, or run whole-spec review. It never merges without green required checks or the approved fallback, resolved confirmed findings, a clean review, unchanged reviewed head and base, and a published verdict, and it never closes a ticket before merge.
