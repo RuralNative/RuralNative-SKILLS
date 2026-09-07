@@ -1,10 +1,8 @@
-// document-for-agents:INV-8 — size ceilings are caps, not targets (ADR-0030):
-// the 225-line index, three-minute leaf read, 105-line policy budget, ~15-line
-// dependency entry, 3–8 initial invariants, ~23-invariant review trigger, the
-// unchanged trimming order, the never-silently-truncate rule, and the small
-// unit limits (ADR decision 2–4 sentences, glossary definition 1–2 sentences,
-// routing statement one line) are stated consistently in the guidance, and the
-// relaxed byte caps appear in every published table.
+// document-for-agents:INV-8 — relevance without size quotas (ADR-0032):
+// documents stay complete and direct, repetition and irrelevant material are
+// removed, and length alone never decides validity. The trimming order, the
+// never-silently-truncate rule, and complete explanation shapes are stated
+// consistently in the guidance.
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -13,44 +11,42 @@ import { read, norm } from "../../../scripts/test-helpers.ts";
 
 const ROOT = path.resolve(import.meta.dirname ?? ".", "..", "..", "..");
 
-describe("size ceilings after ADR-0030 (document-for-agents:INV-8)", () => {
-  test("the compact index ceiling is 225 lines", () => {
-    assert.ok(norm(read("skills/document-for-agents/SKILL.md")).includes("under 225 lines"), "SKILL.md must raise the index ceiling");
-    assert.ok(norm(read("README.md")).includes("under 225 lines"), "README must raise the index ceiling");
+describe("relevance without size quotas (document-for-agents:INV-8, ADR-0032)", () => {
+  test("no current guidance imposes a fixed prose length", () => {
+    for (const file of [
+      "skills/document-for-agents/SKILL.md",
+      "skills/document-for-agents/reference/templates.md",
+      "skills/document-for-agents/reference/classify.md",
+      "ARCHITECTURE.md",
+      "CONTEXT.md",
+      "README.md",
+    ]) {
+      const content = read(file);
+      assert.equal(content.includes("under 225 lines"), false, `${file} must not impose an index line quota`);
+      assert.equal(content.includes("three-minute read"), false, `${file} must not impose a leaf reading-time quota`);
+      assert.equal(content.includes("105 lines") || content.includes("105-line"), false, `${file} must not impose a policy line quota`);
+      assert.equal(content.includes("2–4 sentences"), false, `${file} must not impose an ADR sentence quota`);
+      assert.equal(content.includes("1–2 sentences"), false, `${file} must not impose a glossary sentence quota`);
+    }
+    const templates = read("skills/document-for-agents/reference/templates.md");
+    assert.equal(templates.includes("~15-line"), false, "templates must not impose a dependency-entry quota");
+    assert.equal(templates.includes("3–8 invariants at establishment"), false, "templates must not impose an invariant establishment quota");
   });
 
-  test("a leaf doc is at most a three-minute read", () => {
-    assert.ok(norm(read("skills/document-for-agents/reference/templates.md")).includes("three-minute read"), "templates must raise the leaf read ceiling");
-    assert.ok(norm(read("skills/document-for-agents/SKILL.md")).includes("three-minute read"), "SKILL.md must raise the leaf read ceiling");
-    assert.ok(norm(read("CONTEXT.md")).includes("three-minute read"), "the glossary must raise the leaf read ceiling");
-    assert.ok(norm(read("README.md")).includes("three-minute read"), "README must raise the leaf read ceiling");
-  });
-
-  test("a policy doc including REVIEW.md carries a 105-line budget", () => {
-    const t = norm(read("skills/document-for-agents/reference/templates.md"));
-    assert.ok(t.includes("105 lines") || t.includes("105-line"), "templates must state the 105-line policy budget");
-    assert.ok(norm(read("skills/document-for-agents/reference/classify.md")).includes("105 lines"), "classify must state the 105-line policy budget");
-    assert.ok(norm(read("skills/document-for-agents/SKILL.md")).includes("105 lines"), "SKILL.md must state the 105-line policy budget");
-  });
-
-  test("a dependency reference entry is about 15 lines", () => {
-    assert.ok(read("skills/document-for-agents/reference/templates.md").includes("~15-line"), "templates must raise the vendor-facts entry size");
-  });
-
-  test("a leaf establishes 3–8 invariants and the complexity review triggers past ~23", () => {
-    const t = norm(read("skills/document-for-agents/reference/templates.md"));
-    const c = norm(read("skills/document-for-agents/reference/classify.md"));
-    assert.ok(t.includes("3–8 invariants at establishment"), "templates must raise the establishment range");
-    assert.ok(c.includes("3–8 at establishment"), "classify must raise the establishment range");
-    assert.ok(t.includes("~23 invariants"), "templates must move the review trigger to ~23");
-    assert.ok(c.includes("~23"), "classify must move the review trigger to ~23");
-    assert.ok(t.includes("never an automatic seam split") || t.includes("review, not an automatic"), "crossing the trigger reviews the seam, never auto-splits");
-  });
-
-  test("ceilings are caps, not targets, and nothing is padded to fill them", () => {
-    const t = norm(read("skills/document-for-agents/reference/templates.md"));
-    assert.ok(t.includes("caps, not targets"), "templates must state caps-are-not-targets");
-    assert.ok(t.includes("never padded"), "templates must forbid padding existing docs");
+  test("length alone never decides validity", () => {
+    const templates = norm(read("skills/document-for-agents/reference/templates.md"));
+    assert.ok(templates.includes("length alone never fails a route") || templates.includes("length alone never"), "templates must state the replacement");
+    assert.ok(templates.includes("never padded"), "templates must forbid padding existing docs");
+    for (const file of [
+      "skills/document-for-agents/orientation.ts",
+      "skills/plan-this/orientation.ts",
+      "skills/implement-this/orientation.ts",
+      "skills/review-this/orientation.ts",
+      "scripts/docs-check.sh",
+    ]) {
+      const code = read(file);
+      assert.equal(code.includes("over budget"), false, `${file} must not fail on size`);
+    }
   });
 
   test("trimming still removes recoverable repetition before essential rules", () => {
@@ -72,57 +68,40 @@ describe("size ceilings after ADR-0030 (document-for-agents:INV-8)", () => {
     assert.ok(t.includes("nonessential reference"), "extended detail files hold only nonessential reference");
   });
 
-  test("an essential rule is never silently truncated to fit a limit", () => {
+  test("an essential rule is never silently truncated", () => {
     const t = norm(read("skills/document-for-agents/reference/templates.md"));
     assert.ok(t.includes("never silently truncate an essential rule"), "the no-silent-truncation rule must be stated");
-    assert.ok(t.includes("over-budget report") || t.includes("over-limit report"), "over-cap essential content fails with the existing report");
-    assert.ok(t.includes("decision path"), "the failure routes through the decision path");
+    assert.ok(t.includes("staged reading") || t.includes("continuity handoff"), "exhausted context must use staged reading or handoff");
+    assert.ok(t.includes("disclose"), "incomplete inspection must be disclosed");
   });
 
-  test("small units keep their limits", () => {
+  test("explanations stay complete without sentence quotas", () => {
     const t = read("skills/document-for-agents/reference/templates.md");
-    assert.ok(t.includes("2–4 sentences"), "an ADR decision stays two to four sentences");
-    assert.ok(t.includes("1–2 sentences"), "a glossary definition stays one to two sentences");
-    assert.ok(t.includes("one line naming"), "a routing statement stays one line");
+    assert.ok(t.includes("Keep it complete"), "an ADR decision stays complete without a quota");
+    assert.ok(t.includes("definition in the domain vocabulary"), "a glossary definition stays complete without a quota");
   });
 
-  test("every published cap table states the relaxed byte ceilings", () => {
-    const arch = norm(read("ARCHITECTURE.md"));
-    for (const value of ["9,000", "13,500", "18,000", "10,500"]) {
-      assert.ok(arch.includes(value), `ARCHITECTURE.md must carry the ${value} cap`);
-    }
+  test("task bands select source categories without caps", () => {
     const orientation = norm(read("skills/document-for-agents/reference/orientation.md"));
-    for (const value of ["9,000", "13,500", "18,000", "10,500"]) {
-      assert.ok(orientation.includes(value), `reference/orientation.md must carry the ${value} cap`);
-    }
-    const templates = norm(read("skills/document-for-agents/reference/templates.md"));
-    assert.ok(templates.includes("no set exceeds 18,000"), "templates must raise the absolute cap");
+    assert.ok(orientation.includes("never limit length"), "orientation bands must not limit length");
     const harness = norm(read("skills/document-for-agents/reference/harness.md"));
-    assert.ok(harness.includes("13,500") && harness.includes("18,000") && harness.includes("10,500"), "harness check 11 must state the new caps");
-    const classify = norm(read("skills/document-for-agents/reference/classify.md"));
-    assert.ok(classify.includes("18,000 bytes"), "classify must raise the absolute cap");
-    const context = norm(read("CONTEXT.md"));
-    assert.ok(context.includes("13,500") && context.includes("10,500"), "the glossary must carry the new task-band caps");
-    const readme = norm(read("README.md"));
-    assert.ok(readme.includes("13,500") && readme.includes("10,500"), "README must carry the new task-band caps");
+    assert.ok(harness.includes("orientation routes"), "harness check 11 must validate orientation routes");
+    assert.equal(harness.includes("over-budget route"), false, "harness check 11 must not fail on size");
   });
 
-  test("ADR-0030 records the relaxation, narrows ADR-0024, and is cited by every affected leaf", () => {
-    const adr = "docs/adr/0030-larger-orientation-ceilings.md";
-    assert.ok(fs.existsSync(path.join(ROOT, adr)), "ADR-0030 must exist");
+  test("ADR-0032 records the replacement, narrows prior cap decisions, and is cited by every affected leaf", () => {
+    const adr = "docs/adr/0032-remove-document-size-gates.md";
+    assert.ok(fs.existsSync(path.join(ROOT, adr)), "ADR-0032 must exist");
     const n = norm(read(adr));
-    assert.ok(/status:\s*accepted/.test(n), "ADR-0030 must be accepted");
-    assert.ok(n.includes("narrows: 0024"), "ADR-0030 must narrow ADR-0024");
-    assert.ok(n.includes("caps, not targets"), "ADR-0030 must keep ceilings strict");
-    assert.ok(n.includes("trimming order"), "ADR-0030 must preserve the trimming order");
+    assert.ok(/status:\s*accepted/.test(n), "ADR-0032 must be accepted");
+    assert.ok(n.includes("narrows: 0017, 0024, 0030"), "ADR-0032 must narrow prior cap decisions");
+    assert.ok(n.includes("length alone never"), "ADR-0032 must state the replacement");
     assert.ok(
-      fs.readFileSync(path.join(ROOT, "docs/manifest.md"), "utf8").includes("0030-larger-orientation-ceilings.md"),
-      "manifest must list ADR-0030",
+      fs.readFileSync(path.join(ROOT, "docs/manifest.md"), "utf8").includes("0032-remove-document-size-gates.md"),
+      "manifest must list ADR-0032",
     );
     for (const leaf of ["document-for-agents", "plan-this", "implement-this", "review-this"]) {
-      assert.ok(read(`docs/leaves/${leaf}.md`).includes("ADR-0030"), `the ${leaf} leaf must cite ADR-0030`);
+      assert.ok(read(`docs/leaves/${leaf}.md`).includes("ADR-0032"), `the ${leaf} leaf must cite ADR-0032`);
     }
-    const dfaLeaf = read("docs/leaves/document-for-agents.md");
-    assert.ok(dfaLeaf.includes("18,000"), "the owning leaf must state the absolute cap");
   });
 });

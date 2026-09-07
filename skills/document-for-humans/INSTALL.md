@@ -87,7 +87,7 @@ For a repo that already has human docs, ask instead:
 > Audit our human docs.
 
 A healthy audit returns a numbered findings list — sources resolvable, stamps
-honest, tone within budget — with a fix for each finding, or a clean pass.
+honest, tone plain and explained — with a fix for each finding, or a clean pass.
 
 ## Integrate
 

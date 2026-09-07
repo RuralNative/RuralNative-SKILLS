@@ -1,6 +1,6 @@
 // document-for-agents:INV-17 — the orientation resolver is deterministic,
 // deduplicates shared sources, excludes superseded ADRs unless a leaf
-// explicitly requires them, resolves every cap boundary and one byte above,
+// explicitly requires them, resolves large required sets without a size veto,
 // stays read-only, and keeps the coverage manifest outside every resolved set.
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
@@ -9,8 +9,6 @@ import os from "node:os";
 import path from "node:path";
 import {
   resolveOrientation,
-  CAPS,
-  ABSOLUTE_CAP,
   OrientationResolutionError,
   type Band,
   type Resolved,
@@ -91,7 +89,6 @@ describe("orientation resolver: resolved set (document-for-agents:INV-17)", () =
         "docs/leaves/alpha.md",
       ]);
       assert.equal(r.sourceCount, 4);
-      assert.equal(r.over, false);
       // Glossary counts only the leaf-named entry, never the whole file.
       const context = statSize(dir, "CONTEXT.md");
       const wholeWithoutGlossary = ["ARCHITECTURE.md", "docs/leaves/alpha.md", "docs/adr/0001-current-decision.md"]
@@ -436,71 +433,15 @@ describe("orientation resolver: resolved set (document-for-agents:INV-17)", () =
   });
 });
 
-describe("orientation resolver: caps and boundary behavior (document-for-agents:INV-17)", () => {
-  test("the published cap table is ordinary 9000, api-route 13500, schema-data 18000, re-orientation 10500, absolute 18000", () => {
-    assert.deepEqual(CAPS, {
-      ordinary: 9000,
-      "api-route": 13500,
-      "schema-data": 18000,
-      "re-orientation": 10500,
-    });
-    assert.equal(ABSOLUTE_CAP, 18000);
-    for (const band of BANDS) assert.ok(CAPS[band] <= ABSOLUTE_CAP);
-  });
-
-  for (const band of BANDS) {
-    test(`every cap boundary: ${band} passes at exactly ${CAPS[band]} bytes and fails one byte above`, () => {
-      const fixture = spec("unrelated-additions");
-      const dir = build(fixture);
-      try {
-        const initial = resolveOrientation({ root: dir, band, seams: ["alpha"] });
-        const cap = Math.min(CAPS[band], ABSOLUTE_CAP);
-        assert.ok(initial.bytes < cap, "fixture base must sit under the cap");
-        padFile(dir, leafFor(fixture, "alpha"), cap - initial.bytes);
-        const exact = resolveOrientation({ root: dir, band, seams: ["alpha"] });
-        assert.equal(exact.bytes, cap);
-        assert.equal(exact.over, false, `${band} must fit exactly at the boundary`);
-        padFile(dir, leafFor(fixture, "alpha"), 1);
-        const over = resolveOrientation({ root: dir, band, seams: ["alpha"] });
-        assert.equal(over.bytes, cap + 1);
-        assert.equal(over.over, true, `${band} must fail one byte above the boundary`);
-      } finally {
-        fs.rmSync(dir, { recursive: true, force: true });
-      }
-    });
-  }
-
-  test("an essential rule that only fits under the relaxed cap now resolves within budget (ADR-0030)", () => {
-    const fixture = spec("unrelated-additions");
-    const dir = build(fixture);
-    try {
-      const initial = resolveOrientation({ root: dir, band: "ordinary", seams: ["alpha"] });
-      const oldCap = 6000;
-      assert.ok(initial.bytes < oldCap, "fixture base must sit under the old cap too");
-      // Grow the leaf past the old cap but below the new one: content that
-      // failed before ADR-0030 must pass now without any source-selection
-      // change.
-      padFile(dir, leafFor(fixture, "alpha"), oldCap + 500 - initial.bytes);
-      const grown = resolveOrientation({ root: dir, band: "ordinary", seams: ["alpha"] });
-      assert.ok(grown.bytes > oldCap, "the route must exceed the old cap");
-      assert.ok(grown.bytes <= CAPS.ordinary, "the route must fit the new cap");
-      assert.equal(grown.over, false, "essential content between the caps must not fail");
-      assert.deepEqual(grown.sources, initial.sources, "relaxed caps authorize no broader source selection");
-    } finally {
-      fs.rmSync(dir, { recursive: true, force: true });
-    }
-  });
-
-  test("an oversized single leaf fails and reports band, bytes, cap, source count, and exact sources", () => {
+describe("orientation resolver: large required sets resolve (document-for-agents:INV-17, ADR-0032)", () => {
+  test("a large single leaf reports band, bytes, source count, and exact sources without rejection", () => {
     const fixture = spec("oversized-single-leaf");
     const dir = build(fixture);
     try {
-      padFile(dir, leafFor(fixture, "alpha"), CAPS.ordinary + 1);
+      padFile(dir, leafFor(fixture, "alpha"), 20000);
       const r = resolveOrientation({ root: dir, band: "ordinary", seams: ["alpha"] });
-      assert.equal(r.over, true);
       assert.equal(r.band, "ordinary");
-      assert.equal(r.cap, CAPS.ordinary);
-      assert.equal(r.bytes > r.cap, true);
+      assert.ok(r.bytes > 20000);
       assert.equal(r.sourceCount, 4);
       assert.deepEqual(r.sources, [
         "ARCHITECTURE.md",
@@ -513,7 +454,7 @@ describe("orientation resolver: caps and boundary behavior (document-for-agents:
     }
   });
 
-  test("an aggregate route fails when two fit-but-sums-exceed leaves resolve together", () => {
+  test("an aggregate route reports its combined sources without rejection", () => {
     const fixture = spec("oversized-aggregate-route");
     const dir = build(fixture);
     try {
@@ -522,28 +463,23 @@ describe("orientation resolver: caps and boundary behavior (document-for-agents:
         band: "ordinary",
         seams: ["alpha", "beta"],
       });
-      const cap = CAPS.ordinary;
-      assert.ok(initial.bytes < cap);
-      // Each leaf alone must fit its whole-leaf contribution…
       const alphaOnly = resolveOrientation({ root: dir, band: "ordinary", seams: ["alpha"] });
       const betaOnly = resolveOrientation({ root: dir, band: "ordinary", seams: ["beta"] });
-      assert.ok(alphaOnly.bytes <= cap && betaOnly.bytes <= cap);
-      // …but the aggregate resolves over the cap.
-      padFile(dir, leafFor(fixture, "beta"), cap - initial.bytes + 1);
+      padFile(dir, leafFor(fixture, "beta"), 20000);
       const r = resolveOrientation({
         root: dir,
         band: "ordinary",
         seams: ["alpha", "beta"],
       });
-      assert.equal(r.over, true);
-      assert.equal(r.bytes, cap + 1);
+      assert.ok(r.bytes > initial.bytes);
+      assert.ok(r.bytes > alphaOnly.bytes && r.bytes > betaOnly.bytes);
       assert.equal(r.sourceCount, 5);
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }
   });
 
-  test("cache-gap approval may substitute or narrow sources but never waives the cap", () => {
+  test("cache-gap approval substitutes or narrows sources", () => {
     const fixture = spec("oversized-aggregate-route");
     const dir = build(fixture);
     try {
@@ -552,34 +488,32 @@ describe("orientation resolver: caps and boundary behavior (document-for-agents:
         band: "ordinary",
         seams: ["alpha", "beta"],
       });
-      padFile(dir, leafFor(fixture, "beta"), CAPS.ordinary - initial.bytes + 1);
-      const over = resolveOrientation({
+      padFile(dir, leafFor(fixture, "beta"), 20000);
+      const grown = resolveOrientation({
         root: dir,
         band: "ordinary",
         seams: ["alpha", "beta"],
       });
-      assert.equal(over.over, true);
-      assert.equal(over.cacheGap, false);
-      // Approved narrowing: drop the oversized beta leaf; cap still applies.
+      assert.equal(grown.cacheGap, false);
+      assert.ok(grown.bytes > initial.bytes);
+      // Approved narrowing: drop the grown beta leaf.
       const narrowed = resolveOrientation({
         root: dir,
         band: "ordinary",
         seams: ["alpha", "beta"],
         drop: ["docs/leaves/beta.md"],
       });
-      assert.equal(narrowed.over, false);
       assert.equal(narrowed.cacheGap, true);
       assert.equal(narrowed.sources.includes("docs/leaves/beta.md"), false);
-      // Approved substitution with new material still cannot waive the cap:
-      // include a large file and the route fails again.
+      // Approved substitution still resolves the included source.
       const substituted = resolveOrientation({
         root: dir,
         band: "ordinary",
         seams: ["alpha", "beta"],
         include: ["docs/leaves/beta.md"],
       });
-      assert.equal(substituted.over, true);
-      assert.equal(substituted.cap, CAPS.ordinary);
+      assert.equal(substituted.cacheGap, true);
+      assert.equal(substituted.sources.includes("docs/leaves/beta.md"), true);
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }
@@ -587,7 +521,7 @@ describe("orientation resolver: caps and boundary behavior (document-for-agents:
 });
 
 describe("orientation resolver: read-only guarantee (document-for-agents:INV-17)", () => {
-  test("resolving the orientation set never mutates the repository, even on an over-budget failure", () => {
+  test("resolving the orientation set never mutates the repository", () => {
     const fixture = spec("oversized-aggregate-route");
     const dir = build(fixture);
     try {
@@ -602,7 +536,7 @@ describe("orientation resolver: read-only guarantee (document-for-agents:INV-17)
         band: "schema-data",
         seams: ["alpha", "beta"],
       });
-      assert.equal(r.over, false);
+      assert.ok(r.sources.length > 0);
       assert.throws(() =>
         resolveOrientation({ root: dir, band: "ordinary", seams: ["missing"] }),
       );
@@ -614,7 +548,7 @@ describe("orientation resolver: read-only guarantee (document-for-agents:INV-17)
   });
 });
 
-describe("this repository's bounded doc migration (ticket #178)", () => {
+describe("this repository's doc migration (ticket #178, ADR-0032)", () => {
   const SEAMS = [
     "document-for-agents",
     "document-for-humans",
@@ -626,11 +560,11 @@ describe("this repository's bounded doc migration (ticket #178)", () => {
   ];
   const BANDS: Band[] = ["ordinary", "api-route", "schema-data", "re-orientation"];
 
-  test("every declared route resolves within its strict cap", () => {
+  test("every declared route resolves without a size veto", () => {
     for (const band of BANDS) {
       for (const seam of SEAMS) {
         const r = resolveOrientation({ root: ROOT, band, seams: [seam] });
-        assert.equal(r.over, false, `${seam} ${band} route over budget: ${r.bytes} > ${r.cap}`);
+        assert.ok(r.sources.length > 0, `${seam} ${band} must resolve sources`);
         assert.equal(r.sources.includes("docs/manifest.md"), false, "manifest must stay out of every resolved set");
       }
     }

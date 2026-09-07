@@ -47,7 +47,7 @@ Unexpected failures follow a bounded diagnostic loop: reproduce, isolate, test o
 Conflict handling uses the existing `document-for-agents` taxonomy:
 
 - Numbered-invariant collision: stop before code or docs, name the invariant, and require an approved decision that supersedes or narrows it.
-- Cache gap: record the missing unrecoverable fact in the issue tracker and wait for owner approval before widening the orientation-document read set.
+- Cache gap: read relevant authoritative sources incrementally without size approval; record the missing unrecoverable fact in the issue tracker without inventing it, and wait for owner approval before changing source authority, expanding scope, or taking substantive or protected actions.
 - Ticket ambiguity: state the competing interpretations in ELI18 language, recommend one, add `needs-info`, and stop without creating a pull request that claims completion.
 - Missing test capability: if a behavioral criterion has no executable test path and adding one is outside the approved ticket, use the ticket-ambiguity stop. Do not silently substitute manual confidence.
 

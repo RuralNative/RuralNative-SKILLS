@@ -13,7 +13,7 @@ Doc-cache lifecycle: establish, audit, improve, maintain. Outputs: cache accurac
 5. **INV-5** — `.agents/`, `skills-lock.json` never committed.
 6. **INV-6** — `unslopify` by skill identity before prose; missing stops; model-only without Python.
 7. **INV-7** — Generated `AGENTS.md` starts with the five commands in order.
-8. **INV-8** — Loading rows are hard caps; missing fact is a cache gap; widening needs owner approval.
+8. **INV-8** — Loading rows select relevant sources (ADR-0032); relevant incremental reading needs no size approval; missing fact is a recorded cache gap; authority, scope, and substantive or protected actions need owner approval.
 9. **INV-9** — Leaf closes with a `Not here` route by stable responsibility, never a path.
 10. **INV-10** — Work against a numbered invariant stops until an approved decision narrows it.
 11. **INV-11** — Adopting repos use the singular `reference/vendor-facts.md`.
@@ -22,12 +22,12 @@ Doc-cache lifecycle: establish, audit, improve, maintain. Outputs: cache accurac
 14. **INV-14** — Opt-in private diagnostics (ADR-0018/0028): first-run consent in private state; notice, revocation; sanitized; outside cache/read sets; confirmed/likely/unknown.
 15. **INV-15** — Generated `AGENTS.md` carries one protected marker after the five commands; evidence backs provenance, else likely/unknown.
 16. **INV-16** — Audit read-only; additive tier promotion automatic; destructive Improve gated by one preview and approval.
-17. **INV-17** — Deterministic; dedupes; exact `— requires.` and `- Glossary:` load; exact-token status; citations navigate; 18,000 absolute cap (ADR-0030); manifest out.
+17. **INV-17** — Deterministic; dedupes; exact `— requires.` and `- Glossary:` load; exact-token status; citations navigate; no size veto (ADR-0032); manifest out.
 18. **INV-18** — Preflight re-evaluates tier each branch; promotion monotonic and additive; never auto-demote.
 19. **INV-19** — Decision gate captures rationale prospectively; legacy rationale from evidence only, else `unknown`.
 20. **INV-20** — Seam coherence fingerprint per seam; stale fails dirty and clean; refresh only after claim review.
 21. **INV-21** — Generated `AGENTS.md` keeps the five commands, the management marker, and exactly one unslopify session-start block after the marker; Establish, Maintain, and Improve preserve it byte for byte (ADR-0029).
 ## Links
 
-Decisions: ADR-0001..0030. Review policy: `REVIEW.md` (check 8). Harness: `scripts/docs-check.sh`. Redirect: `docs/leaves/ext/document-for-agents.md`.
+Decisions: ADR-0001..0032. Review policy: `REVIEW.md` (check 8). Harness: `scripts/docs-check.sh`. Redirect: `docs/leaves/ext/document-for-agents.md`.
 - Glossary: `CONTEXT.md` — Decision journal.

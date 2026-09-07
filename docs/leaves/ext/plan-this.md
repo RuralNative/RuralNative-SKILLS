@@ -22,8 +22,8 @@ downloads during the run → defines and confirms an intent capsule (`Outcome`,
 only when repository facts and the confirmed task cannot decide a choice that
 changes product behavior, scope, cost, risk, or an action that is hard to undo;
 a settled capsule moves on without a question →
-when the solution form is unsettled, explores exactly three materially
-different directions including the simplest viable one and lets the user
+when the solution form is unsettled, explores the materially
+different directions the decision requires, including the simplest viable one, and lets the user
 select or combine a direction → runs `/grill-with-docs` as a decision tree one
 decision at a time until no branch remains silently assumed, resuming its
 recorded tree after interruption, with this command's one-decision rule
@@ -35,8 +35,7 @@ initial frontier, and smallest test-first verification plan, keeping user
 stories to the minimum needed to distinguish observable behavior → forms the
 fewest coherent behavior tickets before considering parallel execution,
 splitting only at separately verifiable behavior, true blocker, independent
-release or rollback boundary, distinct risk boundary, or fresh-context limit
-within the existing risk SLO → publishes the specification and tickets through
+release or rollback boundary, or distinct risk boundary → publishes the specification and tickets through
 `/to-spec` and `/to-tickets` with native blocked_by edges and the canonical
 label state from the pure workflow state core → finishes with the ELI18 Why /
 What / Where / How summary and returns control to the user.
@@ -76,7 +75,7 @@ at named boundaries stated in the approval preview.
 
 ADR-0020 revises `plan-this` from a byte-for-byte fixed-template adapter into a
 structured workflow adapter: the body now carries five numbered phases that
-add a confirmed intent capsule, conditional exploration of three directions,
+add a confirmed intent capsule, conditional exploration of directions,
 explicit delegation-conflict precedence, and a concise specification that
 keeps only the user stories needed to distinguish observable behavior, while
 preserving the single `## Task:` slot, dependency order, GitHub publication
@@ -89,18 +88,18 @@ or explicit product-performance obligation, the existing acceptance criteria,
 risk, constraints, and smallest test-first verification state the required
 proof. No quality-profile field and no blanket checklist is added.
 
-## Ticket #179 — bounded-planning preflight (parent spec #176)
+## Ticket #179 — planning orientation resolution (parent spec #176)
 
-Ticket #179 (parent spec #176) adds the bounded-planning preflight (INV-11,
-ADR-0024): each proposed ticket resolves its orientation set from affected
+Ticket #179 (parent spec #176) adds planning orientation resolution (INV-11,
+ADR-0024, ADR-0032): each proposed ticket resolves its orientation set from affected
 seams before publication approval — the compact architecture index, whole
 affected seam leaf docs, leaf-named glossary entries, and linked accepted ADRs
-or policies — counts UTF-8 bytes before broad loading, and rejects a ticket
-whose required set exceeds its selected cap. Cache-gap approval may substitute
-or narrow the set but can never waive the cap. Affected seam names stay the
+or policies — recorded before broad loading. Length alone never rejects a ticket.
+Cache-gap approval may substitute
+or narrow the set. Affected seam names stay the
 durable join key; the published ticket adds no field that transports paths,
 section anchors, invariant lists, glossary excerpts, or policies. The approval
 preview stays in plain language — what will be created, the main risks, and
-what happens next — and omits internal budgeting details, while the published
+what happens next — while the published
 ticket stays focused on behavior and sufficient verification. Adding unrelated
 seams, decisions, or documentation does not change a fixed task's resolved set.

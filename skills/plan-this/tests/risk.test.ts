@@ -1,17 +1,14 @@
-// plan-this:INV-10 — every published ticket gets an upward-only risk class and SLO.
+// plan-this:INV-10 — every published ticket gets an upward-only risk class.
 // A high-risk trigger without supporting evidence is an internal incomplete
 // result that blocks publication; published tickets carry only `ordinary` or
 // `high-risk` (#185, parent spec #183).
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  HIGH_RISK_SLO_MINUTES,
-  ORDINARY_SLO_MINUTES,
   classifyRisk,
   escalateRisk,
   isPublishableRisk,
   recordTicketRisk,
-  sloMinutesForRisk,
 } from "../risk.ts";
 
 describe("ticket risk assignment", () => {
@@ -20,8 +17,6 @@ describe("ticket risk assignment", () => {
     assert.equal(isPublishableRisk(result), true);
     if (!isPublishableRisk(result)) return;
     assert.equal(result.riskClass, "ordinary");
-    assert.equal(result.sloMinutes, ORDINARY_SLO_MINUTES);
-    assert.equal(sloMinutesForRisk("ordinary"), 60);
   });
 
   test("a supported high-risk trigger produces high-risk with its evidence", () => {
@@ -33,7 +28,6 @@ describe("ticket risk assignment", () => {
     assert.equal(isPublishableRisk(result), true);
     if (!isPublishableRisk(result)) return;
     assert.equal(result.riskClass, "high-risk");
-    assert.equal(result.sloMinutes, HIGH_RISK_SLO_MINUTES);
     assert.match(result.evidence.join(" "), /shared contract/);
     assert.match(result.evidence.join(" "), /dependency change/);
   });
@@ -76,6 +70,5 @@ describe("ticket risk assignment", () => {
     assert.equal(raised.riskClass, "high-risk");
     assert.equal(stillHigh.riskClass, "high-risk");
     assert.equal(neverDown.riskClass, "high-risk");
-    assert.equal(stillHigh.sloMinutes, HIGH_RISK_SLO_MINUTES);
   });
 });

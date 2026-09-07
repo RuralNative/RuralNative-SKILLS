@@ -9,9 +9,6 @@
 
 export type RiskClass = "ordinary" | "high-risk";
 
-export const ORDINARY_SLO_MINUTES = 60;
-export const HIGH_RISK_SLO_MINUTES = 90;
-
 export interface RiskSignals {
   securityBoundary?: boolean;
   migration?: boolean;
@@ -26,7 +23,6 @@ export interface RiskSignals {
 export interface RiskAssessment {
   riskClass: RiskClass;
   evidence: string[];
-  sloMinutes: number;
 }
 
 /**
@@ -54,12 +50,6 @@ function hasEvidence(signals: RiskSignals): boolean {
   return (signals.evidence ?? []).some((item) => item.trim().length > 0);
 }
 
-export function sloMinutesForRisk(riskClass: RiskClass): number {
-  return riskClass === "high-risk"
-    ? HIGH_RISK_SLO_MINUTES
-    : ORDINARY_SLO_MINUTES;
-}
-
 /**
  * Classify planning risk. A high-risk trigger without supporting evidence
  * returns an incomplete result that names the missing evidence; that result
@@ -74,7 +64,6 @@ export function classifyRisk(signals: RiskSignals): RiskOutcome {
     return {
       riskClass: "ordinary",
       evidence,
-      sloMinutes: sloMinutesForRisk("ordinary"),
     };
   }
   if (!hasEvidence(signals)) {
@@ -83,7 +72,6 @@ export function classifyRisk(signals: RiskSignals): RiskOutcome {
   return {
     riskClass: "high-risk",
     evidence: [...triggers, ...evidence],
-    sloMinutes: sloMinutesForRisk("high-risk"),
   };
 }
 
@@ -116,7 +104,6 @@ export function escalateRisk(
   return {
     riskClass: nextClass,
     evidence: [...current.evidence, ...triggers, ...evidence],
-    sloMinutes: sloMinutesForRisk(nextClass),
   };
 }
 

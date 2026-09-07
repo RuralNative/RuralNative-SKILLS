@@ -9,10 +9,11 @@ Status: accepted | superseded | rejected
 Supersedes: 00NN          # only when superseding
 Date: YYYY-MM-DD
 
-Decision: 2–4 sentences. What was decided, and where it lives in the code.
+Decision: what was decided, and where it lives in the code. Keep it complete
+and direct; length follows the decision, not a quota.
 
-Why: the context that makes the decision intelligible; one line per
-genuinely considered alternative, with the reason it was rejected.
+Why: the context that makes the decision intelligible; cover each
+genuinely considered alternative with the reason it was rejected.
 
 Consequences: bullets. What future agents must not undo, and what
 changed for other seams.
@@ -59,29 +60,30 @@ cache gap with the rationale marked `unknown`.
 
 ## Leaf doc (one per seam, standard tier and above)
 
-Six sections, up to a three-minute read; longer content moves to a referenced file. Minimal tier has no leaf doc; the index seam table lists the code root and tests and the leaf doc appears only at standard and above.
+Six sections, sized by what the reader needs; supporting reference detail
+moves to a referenced file. Minimal tier has no leaf doc; the index seam table lists the code root and tests and the leaf doc appears only at standard and above.
 
 1. **Purpose** — why the seam exists, in glossary vocabulary; link the ADR
    if one constrains it.
 2. **Scope & boundaries** — what it owns, what it delegates; name dependents
-   and dependencies. Close with a firm `Not here` route: one line naming the
+   and dependencies. Close with a firm `Not here` route naming the
    responsibility that takes misrouted work and its owning seam, in stable
    ownership language, never by file path.
 3. **Key types & files** — by role, not by path; paths go stale.
-4. **Data flow** — one directed walk-through from entry point to resting
+4. **Data flow** — a directed walk-through from entry point to resting
    place.
-5. **Non-negotiables** — 3–8 invariants at establishment; the set grows with
+5. **Non-negotiables** — the invariants the seam needs at establishment; the set grows with
    decisions. Limits, exclusions, contracts: specific, single-claim bullets.
    Tests where encodable. Invariants carry stable identifiers `INV-1..INV-N`;
    retire via tombstone tied to a decision — never delete, never renumber.
-   Audit the read budget: past ~23 invariants, review the seam — split it or
+   Past ~23 invariants, review the seam — split it or
    fold settled ones into a decision record; crossing the point triggers
    review, never an automatic seam split.
 6. **Links** — glossary terms, ADRs, sibling docs, test location — link where
    tests live, never what they cover (coverage claims are fast-decay
    restatements).
 
-A leaf that outgrows the read budget stays one seam with one leaf. Move
+A leaf that grows stays one seam with one leaf. Move
 restated detail — long key-file walk-throughs, history, and coverage prose
 that code, tests, or the manifest already name — to a leaf-adjacent extended
 detail file and point at it from a `## Redirect` line placed directly under
@@ -110,7 +112,7 @@ Generated `AGENTS.md` starts with the five commands of the attention
 contract, in this order, before any other content:
 
 1. Say the task goal.
-2. Read only the matching row; its budget is a cap.
+2. Read only the matching row and its relevant sources.
 3. Follow the owning seam and its `Not here` routes.
 4. Change code and docs together; code wins.
 5. Put work docs in the tracker; decide invariant conflicts first.
@@ -152,9 +154,9 @@ tier and coverage inventory lives in the harness-owned coverage manifest
 index. When `AGENTS.md` is also the architecture index, it continues after the
 commands with:
 
-- One paragraph: what the system is, as built.
+- What the system is, as built — complete and direct, sized by what the reader needs.
 - Seam table: doc | responsibility | code root | tests.
-- Cross-cutting boundaries: one line each, linking ADRs.
+- Cross-cutting boundaries with links to ADRs — complete entries, sized by what the reader needs.
 - Pointers to glossary, ADRs, policy, README. Link, never restate.
 
 When `AGENTS.md` is a routing index, it keeps its short orientation sections
@@ -163,29 +165,31 @@ and points to `ARCHITECTURE.md` for these details instead of duplicating them.
 ## Policy set
 
 The canonical policy docs are `testing`, `security`, `migrations`,
-`reliability`. Each stays within 105 lines, each is linked from the index,
+`reliability`. Each is linked from the index,
 each is created when the project reaches the standard size class (Principle 6
 in SKILL.md), and leaf docs link policy docs instead of restating them.
+Keep each policy complete and direct; remove repetition rather than
+optimizing length.
 
 A repository whose reviews run through a cloud service adds its review policy
 as a root file named `REVIEW.md`, because cloud review reads that path from
 the pull-request base branch. It states review scope, severity, trust rules,
 verification expectations, current-head freshness, duplicate handling,
 inline-comment evidence, and subagent use. It links from the index like any
-policy doc and follows the 105-line policy budget. Configuring the cloud side (app
+policy doc. Configuring the cloud side (app
 installation, repository selection, model choice) stays external setup; the
 doc cache ships the policy file, not the platform wiring.
 
 ```
 # <area> policy
 
-<the cross-cutting rules for one area, ≤ 105 lines; linked from the index;
+<the cross-cutting rules for one area; linked from the index;
 never restated in leaf docs>
 ```
 
 ## Vendor-facts
 
-In the adopting repository, `reference/vendor-facts.md` holds one ~15-line
+In the adopting repository, `reference/vendor-facts.md` holds one
 entry per dependency: pinned version, known gotchas, and a note to fetch the
 full docs on demand. Create an entry when a new dependency is introduced.
 
@@ -201,7 +205,7 @@ full docs on demand. Create an entry when a new dependency is introduced.
 
 ```
 **<Term>**:
-<definition in the domain vocabulary, 1–2 sentences>
+<definition in the domain vocabulary>
 _Avoid_: <forbidden synonyms>
 ```
 
@@ -228,13 +232,13 @@ not a parse; the harness checks form and completeness, not conditions.
 
 ## Loading protocol
 
-| Task | Read set | Budget (cap) |
-|---|---|---|
-| Any change | index → one leaf doc → required glossary entries → required decisions | 9,000 bytes |
-| API/route change | + required route, security, testing policy | 13,500 bytes |
-| Schema/data change | + required data doc, migrations policy, generated schema slice | 18,000 bytes |
-| New dependency | + one vendor-facts entry — fits the selected task cap, never raises it | — |
-| Re-orient after compaction | index → task leaf doc (including its Non-negotiables) → required glossary entries | 10,500 bytes |
+| Task | Read set |
+|---|---|
+| Any change | index → one leaf doc → required glossary entries → required decisions |
+| API/route change | + required route, security, testing policy |
+| Schema/data change | + required data doc, migrations policy, generated schema slice |
+| New dependency | + one vendor-facts entry |
+| Re-orient after compaction | index → task leaf doc (including its Non-negotiables) → required glossary entries |
 
 A leaf marks the sources an agent must load with one machine-readable
 declaration form per category:
@@ -250,39 +254,36 @@ mention without the `— requires.` clause — stays visible navigation and neve
 loads the linked source. Rejected decisions never load even when declared
 required.
 
-The budget column states hard caps on orientation documents — byte caps on the
-resolved orientation set, not guidance to trim later. A command resolves the
+A command resolves the
 set at runtime from affected
-seams, the compact index, whole bounded leaves, required glossary entries,
+seams, the compact index, whole leaves, required glossary entries,
 and required decisions or policies — see `reference/orientation.md`.
 Duplicate sources count once; superseded or historical ADRs stay out of
 current guidance unless a leaf explicitly requires them; and the harness-owned
-coverage manifest is excluded from every resolved set. No set exceeds 18,000
-bytes. An over-budget route fails before broad loading and reports its task
-band, resolved bytes, cap, source count, and exact sources. When the
-orientation documents lack an unrecoverable fact the task needs, name a cache
-gap, record it in the issue tracker, and ask the owner for approval before
-opening more documentation; approval
-may substitute or narrow sources but can never waive the cap. Do not widen the
-read set until approval — widening the read set silently is forbidden, and the
-caps never block code inspection
+coverage manifest is excluded from every resolved set. Length alone never
+fails a route and never requires approval by itself; the resolver reports its task
+band, resolved bytes, source count, and exact sources as description. When the
+orientation documents lack an unrecoverable fact the task needs, read relevant
+authoritative sources incrementally as the task requires. Name the missing fact
+as a cache gap, record it in the issue tracker, and do not invent it; ask the
+owner before changing source authority, expanding to unrelated seams, or taking
+substantive or protected actions; approval may substitute or narrow sources.
+Do not silently widen beyond relevant authoritative sources — silent widening is
+forbidden, and relevant-source selection never blocks code inspection
 inside the affected seam: reading the code being changed is task work, not
 orientation.
 
-Size ceilings are caps, not targets: existing documents are never padded to
-fill them. When a document nears its ceiling, trim in a fixed order — work
+Existing documents are never padded to fill room. Trim in a fixed order — work
 history, stale text, duplication, code-recoverable detail, long file tours,
 and coverage restatement come out before essential material. Decisions,
 rejected alternatives needed to understand them, vocabulary, boundaries,
 invariants, and operational warnings stay. Extended detail files hold only
-nonessential reference. Never silently truncate an essential rule to fit a
-limit: if essential content still exceeds the cap, fail with the existing
-over-budget report and its decision path. Small units keep their limits — an
-ADR decision is two to four sentences, a glossary definition one to two
-sentences, and a routing statement one line.
+nonessential reference. Never silently truncate an essential rule: if tool or
+model context is exhausted, use staged reading or a continuity handoff and
+disclose the gap.
 
-Rule: an agent's re-orientation is the same small read every time — that
-fixed cost is what makes compaction survivable.
+Rule: an agent's re-orientation is the same focused read every time — that
+stable cost is what makes compaction survivable.
 
 ## Skill diagnostics entry
 

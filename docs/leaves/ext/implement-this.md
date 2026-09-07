@@ -43,13 +43,12 @@ persistent worktrees, recovery and cleanup states, cloud-adjacent evidence,
 and generic conditional quality profiles. ADR-0031 supersedes those clauses
 and is the current contract; the older files stay verbatim as history.
 
-## Ticket #179 — bounded orientation consumption (parent spec #176)
+## Ticket #179 — orientation consumption (parent spec #176)
 
-Ticket #179 (parent spec #176) consumes the bounded orientation contract
-(INV-14, ADR-0024): the run resolves current orientation sources in the
+Ticket #179 (parent spec #176) consumes the orientation contract
+(INV-14, ADR-0024, ADR-0032): the run resolves current orientation sources in the
 current checkout before broad documentation loading and records the compact
-durable summary — task band, resolved bytes, cap, source count, cache-gap
+durable summary — task band, resolved bytes, source count, cache-gap
 state — with the acceptance evidence. Ambiguity adds `needs-info` and stops
 before edits. No fallback reads every leaf, ADR, policy, or the derived human
-documentation tree; cache-gap approval may substitute or narrow the set but
-cannot waive the selected cap.
+documentation tree; cache-gap approval may substitute or narrow the set.

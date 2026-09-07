@@ -1,5 +1,5 @@
 1. Say the task goal.
-2. Read only the matching row; its budget is a cap.
+2. Read only the matching row and its relevant sources.
 3. Follow the owning seam and its `Not here` routes.
 4. Change code and docs together; code wins.
 5. Put work docs in the tracker; decide invariant conflicts first.
@@ -9,8 +9,8 @@ Load `unslopify` before the first user-visible response in every session. Keep i
 <!-- unslopify:session-start:end -->
 
 These five commands are the attention contract of the document-for-agents
-lifecycle (ADR-0017): state the goal before reading, treat every loading
-budget as a cap on orientation documents, and stop for a decision when work
+lifecycle (ADR-0017, ADR-0032): state the goal before reading, read only
+relevant sources, and stop for a decision when work
 collides with a numbered invariant.
 
 Worktree execution (Kilo Code VS Code extension): when running on the Kilo Code VS Code IDE extension, generate all worktrees through Agent Manager. Record stays here for audit; no rerun is required for the current change.

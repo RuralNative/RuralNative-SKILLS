@@ -11,12 +11,11 @@ follows (ADR-0024, `## Redirect`).
 
 ## Orientation routes
 
-Declared canonical orientation routes the harness budget-checks (check 11). A
+Declared canonical orientation routes the harness validity-checks (check 11). A
 route row is `| band | affected seams |`; seams resolve through the compact
-index exactly as a ticket's affected seams do. A route is declared only when
-its whole-leaf, index, glossary, and linked-decision bytes fit the band's cap.
+index exactly as a ticket's affected seams do.
 Each seam is declared as its own route so a task's resolved set stays
-independently bounded; every seam fits every band at its strict cap.
+independently described; length alone never fails a route.
 
 | Band | Affected seams |
 |---|---|
@@ -66,12 +65,12 @@ only after Maintain reviews the seam's affected claims against current code
 
 | Seam | Code root | Fingerprint | Verified | Claims |
 |---|---|---|---|---|
-| document-for-agents | skills/document-for-agents/ | sha256:381d73f7528c6619dfb0c275df4ff78c0e8f8ae57e5c2916d182ddf204ed6358 | 2026-09-05 | review-policy tests updated for ADR-0031: required areas name CI equivalence instead of duplicate handling, fix-agent edit-and-test limits replace read-only subagents, and no-cloud single-pass review replaces cloud alignment |
-| document-for-humans | skills/document-for-humans/ | sha256:46b55e33e718abae3a440b243771779108b68a80a735479f0867a5b353281e48 | 2026-09-02 | derived-doc prose and reference reviewed against code |
-| unslopify | skills/unslopify/ | sha256:7eabd8687aaa12d4f7197ea3be6f7efdfd80e5cbb24478e9b42a993b22216e80 | 2026-09-02 | output-contract, session-start setup, plain-language, and scanner 1.1 prose reviewed against code; ADR-0029 adopted; setup rules encoded as a byte-level reference model with hash-proof tests, spec-fixture critical wording reworded, and unused test constants removed |
-| plan-this | skills/plan-this/ | sha256:b01bbaddcbf9378fa8e166bbed27b6a0e5b610ad864e92fa8a8f83dbda1b088d | 2026-09-05 | generated workflow-state copy only: merge requires green checks always plus fallback only without equivalent CI |
-| implement-this | skills/implement-this/ | sha256:10917a97e7416d9adb3c8655462143c529cabe2223671fe76a7118fa3f9f591a | 2026-09-05 | compact evidence lives only in the PR body; comments carry legacy only |
-| review-this | skills/review-this/ | sha256:c478341ddd7555cec93e5c1db733c07893fd5b2a86e87dda98d0a40f6b09236c | 2026-09-05 | single-PR fixes: explicit URL precedence with PR-first bare numbers, fail-closed case-insensitive repository check, legacy pins compare as current, green checks always plus fallback only without equivalence |
+| document-for-agents | skills/document-for-agents/ | sha256:94608ed640c58cc8250dac28f0746d5e0faac5c7f8170020dd877f2ede982ed3 | 2026-09-07 | ADR-0032: incremental relevant reading without size approval, completeness-shaped index, diagnostic ~23 review trigger, and per-declaration route coverage; claims reviewed against current code |
+| document-for-humans | skills/document-for-humans/ | sha256:e9dfe40378239f2c7abfea2af310324c94e9d3037883de2c7f8ed613f47b6441 | 2026-09-07 | ADR-0032: template quotas and jargon-per-paragraph quotas removed; explained terminology and completeness preserved; claims reviewed against current code |
+| unslopify | skills/unslopify/ | sha256:fbac22ce1a239117f675b9f7eda7c93981579782c35b08d570abf67e1f86523e | 2026-09-07 | ADR-0032: managed AGENTS.md fixture follows the relevant-sources command; claims reviewed against current code |
+| plan-this | skills/plan-this/ | sha256:7bdf01296eee8a2f3d1cdc63867bcd9f7c34bb007c2d900c883174af19929a92 | 2026-09-07 | ADR-0032: question quotas, cap-based preflight, and SLO sizing removed; one decision per question, source resolution, and risk evidence preserved; claims reviewed against current code |
+| implement-this | skills/implement-this/ | sha256:3b8bb19a158cff78fb3b42862cad1face35fc31310a145920669aa9dfb77e1d4 | 2026-09-07 | ADR-0032: orientation-size veto removed; incremental relevant reading without size approval; claims reviewed against current code |
+| review-this | skills/review-this/ | sha256:a06c9d82b247b87d37d0e68300c74b4ef5d5644a40417d8aff8952900cae5c2e | 2026-09-07 | ADR-0032: orientation-size veto removed; relevant-source resolution preserved; claims reviewed against current code |
 | release-skills | skills/release-skills/ | sha256:2d89e68b76ac58448a26c1c9b1cd09bb91259380595b8a1790a38607861665c0 | 2026-09-02 | release workflow prose reviewed against code |
 
 ## Coverage
@@ -116,6 +115,7 @@ only after Maintain reviews the seam's affected claims against current code
 | docs/adr/0029-unslopify-session-start-and-plain-language-live-output.md | decision |
 | docs/adr/0030-larger-orientation-ceilings.md | decision |
 | docs/adr/0031-single-target-production-workflows.md | decision |
+| docs/adr/0032-remove-document-size-gates.md | decision |
 | docs/leaves/document-for-agents.md | leaf |
 | docs/leaves/document-for-humans.md | leaf |
 | docs/leaves/unslopify.md | leaf |

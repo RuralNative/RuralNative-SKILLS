@@ -20,7 +20,7 @@ Implementation adapter: validates one open ticket, runs `/implement` in the curr
 11. **INV-11** — Completion: `/review-this` with the ticket's pull request from the current checkout.
 12. **INV-12** — Retired by ADR-0031: `ordinary`/`high-risk` timing phases with `reconcileDependencyState` and `timing.ts`. Current: no orchestration timing; dependency setup follows the repository's ordinary install path.
 13. **INV-13** — Evidence by stable `AC-N` IDs; active behavioral criteria carry a command, output, and explicit passing status; bug fixes add defect-specific RED; non-behavior criteria carry a narrow rationale; retired IDs never active. Generic conditional profiles are absent; extra proof is required only when the ticket names it.
-14. **INV-14** — Bounded orientation consumption (ADR-0024, ADR-0030): preflight before broad loading.
+14. **INV-14** — Orientation resolution (ADR-0024, ADR-0032): resolve before broad loading; length alone never stops the run.
 15. **INV-15** — Requirements revision (SHA-256): evidence carries the value; PR publication compares current bodies; mismatch stops with `needs-info`; comments never enter the fingerprint.
 16. **INV-16** — Current-checkout delivery: reuse the matching feature branch and single open PR; compact evidence is upserted into the PR body; no full repository gate runs here.
 
@@ -30,4 +30,4 @@ Focused checks named by the ticket's smallest sufficient verification.
 
 ## Links
 
-Glossary: `CONTEXT.md`. Decisions: ADR-0014, 0015, 0019, 0021, 0023, 0024, 0030, 0031. Review policy: `REVIEW.md`. Redirect: `docs/leaves/ext/implement-this.md`.
+Glossary: `CONTEXT.md`. Decisions: ADR-0014, 0015, 0019, 0021, 0023, 0024, 0031, 0032. Review policy: `REVIEW.md`. Redirect: `docs/leaves/ext/implement-this.md`.

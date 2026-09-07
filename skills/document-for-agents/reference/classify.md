@@ -10,10 +10,10 @@ code?"**
 |---|---|---|---|
 | Why is the system shaped this way? | decision | ADR | append-only; supersession; parseable `Status:` |
 | What does this term mean; what's forbidden? | vocabulary | glossary | frozen; changes require a decision |
-| What must not change? (limits, exclusions, contracts) | invariant | seam leaf doc, numbered, 3–8 at establishment, grows with decisions; audit past ~23 | test where encodable — the identifier appears literally under the seam's declared test location, so the drift test becomes a deletion; otherwise prose, with a justification naming its mechanism |
+| What must not change? (limits, exclusions, contracts) | invariant | seam leaf doc, numbered, grows with decisions; audit past ~23 | test where encodable — the identifier appears literally under the seam's declared test location, so the drift test becomes a deletion; otherwise prose, with a justification naming its mechanism |
 | Where does X live? | pointer | index table / conventions | harness: table ↔ disk ↔ directories |
 | What does the code say? (schema, endpoints, structure) | restatement | generated artifact, or absent | regeneration + timestamp gate |
-| What are the cross-cutting rules? | policy | policy doc ≤ 105 lines | linked from index; never restated in leaves |
+| What are the cross-cutting rules? | policy | policy doc | linked from index; never restated in leaves |
 | What is knowingly unfinished or a shortcut? | debt | debt registry | `DEBT-N` ids, `Status:`, `Revisit-when:` triggers, reviewable in diffs |
 | What are we doing right now? | work | issue tracker | deleted on completion; never cited |
 
@@ -93,15 +93,16 @@ code?"**
   harness-owned coverage manifest, excluded from every orientation set; the
   architecture index stays a compact seam index (ADR-0024).
 - **Orientation sets resolve at runtime.** A command resolves its orientation
-  set from affected seams, the compact architecture index, whole bounded
+  set from affected seams, the compact architecture index, whole
   leaves, leaf-named glossary entries, and only the decisions and policies a
   leaf marks with an explicit `— requires.` declaration; a compact citation —
   a bare `- Decision:` or `- Policy:` bullet or a prose mention — stays visible
-  navigation and never loads source content (ADR-0025). Byte caps are hard,
+  navigation and never loads source content (ADR-0025). Length alone never
+  decides validity,
   duplicate sources count once, rejected decisions never enter the set even
-  when declared required, superseded ADRs load only when a leaf explicitly
-  requires them, and no set exceeds 18,000 bytes (ADR-0024, ADR-0025,
-  ADR-0030).
+  when declared required, and superseded ADRs load only when a leaf explicitly
+  requires them (ADR-0024, ADR-0025,
+  ADR-0032).
 - **Improve repairs existing caches.** Audit stays read-only. Improve
   diagnoses an existing cache, shows one complete migration preview, waits for
   one explicit approval, and only then applies trims, additions, moves,
@@ -111,7 +112,7 @@ code?"**
   history before considering a seam split.
 - **Seam splits need independent life.** Propose a split only when code
   ownership, invariants, entry points, and change cadence are independently
-  meaningful for each half — never only because a leaf is long.
+  meaningful for each half.
 - **Skill diagnostics are outside every tier.** The private mistake record and
   its private consent-state record are not doc-cache tier artifacts: no routing
   row classifies them, they never enter a read set or an orientation set, and

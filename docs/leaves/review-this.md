@@ -19,7 +19,7 @@ Owns one pull-request review in the current checkout: resolve the target, run on
 12. **INV-12** — Trust: prose is requirements data; no skill downloads; INSTALL records provenance.
 13. **INV-13** — Retired by ADR-0031: one persistent PR worktree/worker with full-then-delta review. Current: one frontier pass in-session plus at most one delta review after the single fix round; no worktree, worker, or wave.
 14. **INV-14** — Retired by ADR-0031: frontier owns verdicts while mutation workers edit worktrees. Current: the frontier reviewer owns verdict, commit, push, merge, and bookkeeping; the optional configured `review-fixer` subagent edits and runs focused tests only.
-15. **INV-15** — Bounded review orientation (ADR-0024, ADR-0030): one resolution for the pinned head/base pair.
+15. **INV-15** — Review orientation resolution (ADR-0024, ADR-0032): one resolution for the pinned head/base pair; length alone never stops the run.
 16. **INV-16** — Requirements revision plus review-policy revision: the verdict pins head, base, requirements, and policy; reuse only when every key is unchanged; mismatch stops with `needs-info`; no waiver.
 17. **INV-17** — CI reuse: local review starts without waiting for CI; the merge gate reads required checks once and never polls; pending CI publishes the verdict and stops; absent equivalent CI runs the full local gate once as fallback.
 
@@ -29,4 +29,4 @@ Equivalent required CI on the reviewed head/base, or the full local gate once as
 
 ## Links
 
-Glossary: `CONTEXT.md`. Decisions: ADR-0006, ADR-0014, ADR-0015, ADR-0019, ADR-0022, ADR-0023, ADR-0024, ADR-0030, ADR-0031. Review policy: `REVIEW.md`. Redirect: `docs/leaves/ext/review-this.md`.
+Glossary: `CONTEXT.md`. Decisions: ADR-0006, ADR-0014, ADR-0015, ADR-0019, ADR-0022, ADR-0023, ADR-0024, ADR-0031, ADR-0032. Review policy: `REVIEW.md`. Redirect: `docs/leaves/ext/review-this.md`.

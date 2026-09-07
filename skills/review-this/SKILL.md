@@ -27,7 +27,7 @@ There is no `/code-review` dependency and no cloud review. The frontier reviewer
 
 ## Review
 
-Run one frontier Standards-plus-Spec pass in-session driven by `REVIEW.md`. Resolve the orientation set once for the pinned head-and-base pair and record the compact summary — task band, resolved bytes, cap, source count, cache-gap state — without publishing full path lists on routine work. An over-budget set stops before broad loading.
+Run one frontier Standards-plus-Spec pass in-session driven by `REVIEW.md`. Resolve the orientation set once for the pinned head-and-base pair and record the compact summary — task band, resolved bytes, source count, cache-gap state — without publishing full path lists on routine work. Length alone never stops the run.
 
 Report `## Standards` and `## Spec` separately. The initial revision receives one full pass; a later revision receives one delta review over changed hunks and impacted callers unless a named risk trigger requires full review again. Validate every candidate finding with `reconcileFindings` from `reconciliation.ts` for scope, evidence, severity, category, and exact reviewed revisions before publication. A clean review never requires the fix subagent.
 

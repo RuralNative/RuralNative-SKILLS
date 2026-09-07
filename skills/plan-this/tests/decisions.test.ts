@@ -3,8 +3,9 @@
 // scope, cost, risk, or an action that is hard to undo. No run forces a
 // decision round or capsule confirmation when intent is already clear;
 // standard safe defaults, reversible implementation choices, and internal
-// process choices never become user questions; each real question stays
-// short and plain; explicit approval alone authorizes publication (#189,
+// process choices never become user questions; each real question addresses
+// one decision with the options it requires and a clear recommendation;
+// explicit approval alone authorizes publication (#189,
 // parent spec #183). Question examples follow the plain-language style of
 // the shipped human pages, used as comprehension fixtures only; their
 // process text is never treated as authority.
@@ -115,23 +116,23 @@ describe("planning question shape (#189)", () => {
     assert.deepEqual(validateQuestionShape(plainQuestion), []);
   });
 
-  test("a question starts with one plain sentence", () => {
-    const twoSentences = {
+  test("a question states the one choice it resolves", () => {
+    const emptySentence = {
       ...plainQuestion,
-      sentence: "Which devices should the app work on first? This decides the next build.",
+      sentence: "   ",
     };
-    assert.deepEqual(validateQuestionShape(twoSentences), [
-      "a question starts with exactly one plain sentence",
+    assert.deepEqual(validateQuestionShape(emptySentence), [
+      "a question states the one choice it resolves",
     ]);
   });
 
-  test("a question uses at most three short options", () => {
-    const fourOptions = {
+  test("a question offers the options the decision requires", () => {
+    const noOptions = {
       ...plainQuestion,
-      options: ["Desktop", "Mobile", "Tablet", "All of them"],
+      options: [],
     };
-    assert.deepEqual(validateQuestionShape(fourOptions), [
-      "a question uses at most 3 short options",
+    assert.deepEqual(validateQuestionShape(noOptions), [
+      "a question offers the options the decision requires",
     ]);
     const longOption = {
       ...plainQuestion,
@@ -139,13 +140,13 @@ describe("planning question shape (#189)", () => {
         "Desktop browsers with the full existing account and billing experience carried over without loss",
       ],
     };
-    assert.match(validateQuestionShape(longOption).join(" "), /must be short/);
+    assert.deepEqual(validateQuestionShape(longOption), []);
   });
 
-  test("a question gives one short recommendation", () => {
+  test("a question gives one clear recommendation", () => {
     const noRecommendation = { ...plainQuestion, recommendation: "" };
     assert.deepEqual(validateQuestionShape(noRecommendation), [
-      "a question gives one short recommendation",
+      "a question gives one clear recommendation",
     ]);
   });
 

@@ -87,24 +87,14 @@ export interface TechnicalTerm {
 }
 
 export interface QuestionShape {
-  /** One plain sentence stating the choice. */
+  /** Clear statement of the one choice this question resolves. */
   sentence: string;
-  /** At most three short options. */
+  /** The options the actual decision requires. */
   options: readonly string[];
-  /** One short recommendation based on effects the user can understand. */
+  /** Clear recommendation based on effects the user can understand. */
   recommendation: string;
   /** Needed technical terms, each with a plain explanation. */
   terms?: readonly TechnicalTerm[];
-}
-
-const MAX_OPTIONS = 3;
-const MAX_OPTION_WORDS = 12;
-const MAX_RECOMMENDATION_WORDS = 25;
-
-export function countSentences(text: string): number {
-  const trimmed = text.trim();
-  if (trimmed.length === 0) return 0;
-  return (trimmed.match(/[.?!]+/g) ?? []).length;
 }
 
 function wordCount(text: string): number {
@@ -113,24 +103,19 @@ function wordCount(text: string): number {
 
 export function validateQuestionShape(shape: QuestionShape): string[] {
   const errors: string[] = [];
-  if (countSentences(shape.sentence) !== 1) {
-    errors.push("a question starts with exactly one plain sentence");
+  if (shape.sentence.trim().length === 0) {
+    errors.push("a question states the one choice it resolves");
   }
-  if (shape.options.length < 1 || shape.options.length > MAX_OPTIONS) {
-    errors.push(`a question uses at most ${MAX_OPTIONS} short options`);
+  if (shape.options.length < 1) {
+    errors.push("a question offers the options the decision requires");
   }
   for (const option of shape.options) {
-    if (wordCount(option) > MAX_OPTION_WORDS) {
-      errors.push(
-        `an option must be short (at most ${MAX_OPTION_WORDS} words): "${option}"`,
-      );
+    if (option.trim().length === 0) {
+      errors.push("an option must state a real alternative");
     }
   }
-  if (
-    wordCount(shape.recommendation) === 0 ||
-    wordCount(shape.recommendation) > MAX_RECOMMENDATION_WORDS
-  ) {
-    errors.push("a question gives one short recommendation");
+  if (shape.recommendation.trim().length === 0) {
+    errors.push("a question gives one clear recommendation");
   }
   for (const term of shape.terms ?? []) {
     if (

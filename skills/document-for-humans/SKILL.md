@@ -28,7 +28,7 @@ Parent scope governs: routine derived regeneration passes only prose whose
 sources changed, an audit may sweep the repository.
 Parent decisions outrank style findings: factual correctness, tier routing
 from `reference/routing.md`, derivation rules, tone and plain-language
-budgets, glossary terms and their forbidden synonyms, seam invariants,
+requirements, glossary terms and their forbidden synonyms, seam invariants,
 derivation sources, and approval gates stand and the finding is rejected with
 reason.
 If `unslopify` is absent, stop before any draft and direct the owner to this
@@ -54,7 +54,7 @@ not by a repository-relative path.
 4. **Plain language, one-way bridges.** Recent-graduate reading level; every
    term of art links the glossary or bridges to the AI-first doc for depth; no
    AI doc links back. See `reference/routing.md` and `reference/templates.md`
-   for bridge form and jargon budget.
+   for bridge form and terminology requirements.
 5. **Freshness is mechanical.** A `Derived:`/`Sources:` header per doc; a gate
    rule fails staleness; dormancy until the first human doc exists. See
    `reference/coherence.md` for the rule.
@@ -108,7 +108,7 @@ human-first view.
 
 Entry: an existing human-first tree needs diagnosis. It checks source
 resolution, claim traceability, freshness, bridge direction, artifact need, and
-plain-language limits separately, asks the owner to confirm each fix, and
+plain-language requirements separately, asks the owner to confirm each fix, and
 completes with a numbered findings list.
 
 1. **Check source resolution.** Confirm every `Sources:` header resolves to an
@@ -130,10 +130,10 @@ completes with a numbered findings list.
    question from `reference/routing.md`. Flag any artifact created without
    audience demand.
    *Done when: each artifact is marked needed or dormant-until-used.*
-6. **Check plain-language limits.** Check jargon budget, reading level, and
+6. **Check plain-language requirements.** Check explained terminology, reading level, and
    tone against `reference/routing.md`. Flag unexplained terms and
    non-bridged depth.
-   *Done when: each doc is marked within budget or over with fix.*
+   *Done when: each doc is marked pass or needs-fix with evidence.*
 7. **Route fixes and confirm.** For each finding across the six checks, assign
    a fix and ask the owner to confirm each fix before editing. Do not batch
    silent fixes.

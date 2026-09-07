@@ -9,7 +9,6 @@ import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { read, norm } from "../../../scripts/test-helpers.ts";
-import { CAPS } from "../orientation.ts";
 
 const ROOT = path.resolve(import.meta.dirname ?? ".", "..", "..", "..");
 
@@ -234,31 +233,26 @@ describe("Audit read-only and the Improve approval gate (document-for-agents:INV
   });
 });
 
-describe("docs-check.sh check 11: Orientation budget fixtures", () => {
-  test("a within-cap declared route passes with an orientation budget note", () => {
+describe("docs-check.sh check 11: Orientation routes fixtures", () => {
+  test("a declared route resolves with an orientation routes note", () => {
     const f = makeCheckFixture({ routes: "| ordinary | alpha |" });
     try {
       const r = f.run();
       assert.equal(r.status, 0, `expected green harness:\n${r.out}`);
-      assert.ok(r.out.includes("orientation budget"), r.out);
-      assert.ok(r.out.includes("within caps"), r.out);
+      assert.ok(r.out.includes("orientation routes"), r.out);
+      assert.ok(r.out.includes("declared route(s) resolve"), r.out);
     } finally {
       f.destroy();
     }
   });
 
-  test("an over-cap declared route fails before any broad load and reports band, bytes, cap, source count, and sources", () => {
-    const oversized = CAPS.ordinary;
-    const f = makeCheckFixture({ routes: "| ordinary | alpha |", padLeafBytes: oversized });
+  test("a large declared route still resolves without a size veto", () => {
+    const f = makeCheckFixture({ routes: "| ordinary | alpha |", padLeafBytes: 20000 });
     try {
       const r = f.run();
-      assert.equal(r.status, 1, `expected over-budget failure:\n${r.out}`);
-      assert.ok(r.out.includes("orientation budget"), r.out);
-      assert.ok(r.out.includes("over budget"), r.out);
-      assert.ok(r.out.includes("resolved bytes"), r.out);
-      assert.ok(r.out.includes("cap"), r.out);
-      assert.ok(r.out.includes("source count"), r.out);
-      assert.ok(r.out.includes("docs/leaves/alpha.md"), "exact sources must appear for diagnosis");
+      assert.equal(r.status, 0, `expected green harness for a large route:\n${r.out}`);
+      assert.ok(r.out.includes("orientation routes"), r.out);
+      assert.ok(r.out.includes("declared route(s) resolve"), r.out);
       assert.equal(r.out.includes("docs/manifest.md"), false, "the manifest must never appear in a resolved set");
     } finally {
       f.destroy();
@@ -288,20 +282,22 @@ describe("docs-check.sh check 11: Orientation budget fixtures", () => {
     }
   });
 
-  test("a declared route over the re-orientation cap fails under that band's cap", () => {
-    const f = makeCheckFixture({ routes: "| re-orientation | alpha |", padLeafBytes: CAPS["re-orientation"] });
+  test("a large declared route under the re-orientation band still resolves", () => {
+    const f = makeCheckFixture({ routes: "| re-orientation | alpha |", padLeafBytes: 20000 });
     try {
       const r = f.run();
-      assert.equal(r.status, 1, `expected re-orientation over-budget failure:\n${r.out}`);
-      assert.ok(r.out.includes("re-orientation"), r.out);
+      assert.equal(r.status, 0, `expected green harness for a large re-orientation route:\n${r.out}`);
+      assert.ok(r.out.includes("orientation routes"), r.out);
+      assert.ok(r.out.includes("declared route(s) resolve"), r.out);
     } finally {
       f.destroy();
     }
   });
 
   test("check 11 processes every `- Glossary:` declaration, not just the first", () => {
-    // The second declaration's block alone pushes the route past the ordinary
-    // cap; with only the first declaration the same route fits.
+    // Both declarations resolve; a second declaration pointing at a missing
+    // file fails, proving the loop reads past the first line. Removing the
+    // second declaration keeps the route green.
     const glossary = `## Language
 
 **Alpha term**:
@@ -309,7 +305,7 @@ the alpha vocabulary entry.
 _Avoid_: alpha alias
 
 **Beta term**:
-${"x".repeat(CAPS.ordinary)}
+${"x".repeat(20000)}
 `;
     const twoDeclarations = LEAF.replace(
       "- Glossary: `CONTEXT.md` — Alpha term.\n",
@@ -317,15 +313,21 @@ ${"x".repeat(CAPS.ordinary)}
     );
     const f = makeCheckFixture({ routes: "| ordinary | alpha |", leaf: twoDeclarations, glossary });
     try {
-      const over = f.run();
-      assert.equal(over.status, 1, `expected over-budget failure from the second declaration:\n${over.out}`);
-      assert.ok(over.out.includes("over budget"), over.out);
-      // Dropping the second declaration brings the identical route back
-      // under the cap, proving the failure came from its block bytes.
+      const both = f.run();
+      assert.equal(both.status, 0, `expected green harness with both declarations:\n${both.out}`);
+      assert.ok(both.out.includes("declared route(s) resolve"), both.out);
+      const missingSecond = twoDeclarations.replace(
+        "- Glossary: `CONTEXT.md` — Beta term.\n",
+        "- Glossary: `MISSING.md` — Beta term.\n",
+      );
+      fs.writeFileSync(path.join(f.dir, "docs/leaves/alpha.md"), missingSecond);
+      const missing = f.run();
+      assert.equal(missing.status, 1, `expected red harness when the second declaration is missing:\n${missing.out}`);
+      assert.ok(missing.out.includes("resolved source missing — MISSING.md"), missing.out);
       fs.writeFileSync(path.join(f.dir, "docs/leaves/alpha.md"), LEAF);
-      const within = f.run();
-      assert.equal(within.status, 0, `expected green harness without the second declaration:\n${within.out}`);
-      assert.ok(within.out.includes("within caps"), within.out);
+      const single = f.run();
+      assert.equal(single.status, 0, `expected green harness without the second declaration:\n${single.out}`);
+      assert.ok(single.out.includes("declared route(s) resolve"), single.out);
     } finally {
       f.destroy();
     }
@@ -340,7 +342,7 @@ ${"x".repeat(CAPS.ordinary)}
     try {
       const r = f.run();
       assert.equal(r.status, 0, `expected green harness with a double declaration:\n${r.out}`);
-      assert.ok(r.out.includes("within caps"), r.out);
+      assert.ok(r.out.includes("declared route(s) resolve"), r.out);
     } finally {
       f.destroy();
     }
@@ -352,16 +354,15 @@ ${"x".repeat(CAPS.ordinary)}
 ${status}
 Date: 2026-08-29
 
-Decision: ${"x".repeat(CAPS.ordinary)}.
+Decision: ${"x".repeat(20000)}.
 `;
   }
 
   // Exact-token, fail-closed status boundary: a required decision whose
   // `Status:` value is not exactly accepted | superseded (no prefix junk, no
-  // trailing text) never loads. The bulk body would blow the ordinary cap if
-  // parsed statuses loaded, so staying within caps proves exclusion. The
-  // malformed status also fails the check-4 parseable-Status gate, so the
-  // harness is red on the status, never on an orientation load.
+  // trailing text) never loads. The malformed status fails the check-4
+  // parseable-Status gate, so the harness is red on the status, never on an
+  // orientation load.
   for (const bad of [
     "Status: draft",
     "Status: accepted-ish",
@@ -375,22 +376,44 @@ Decision: ${"x".repeat(CAPS.ordinary)}.
         const r = f.run();
         assert.equal(r.status, 1, `expected check-4 status rejection:\n${r.out}`);
         assert.ok(r.out.includes("no parseable Status line"), r.out);
-        assert.ok(r.out.includes("within caps"), "the orientation budget must run green without the decision:\n" + r.out);
-        assert.equal(r.out.includes("over budget"), false, "a malformed status must never load into the budget:\n" + r.out);
       } finally {
         f.destroy();
       }
     });
   }
 
-  test("control: the same bulk with an exact 'Status: accepted' loads and pushes the route over budget", () => {
+  test("control: the same bulk with an exact 'Status: accepted' loads without a size veto", () => {
     const f = makeCheckFixture({ routes: "| ordinary | alpha |" });
     try {
       fs.writeFileSync(path.join(f.dir, "docs/adr/0001-current-decision.md"), bulkADR("Status: accepted"));
       const r = f.run();
-      assert.equal(r.status, 1, `expected over-budget failure:\n${r.out}`);
-      assert.ok(r.out.includes("over budget"), r.out);
-      assert.ok(r.out.includes("docs/adr/0001-current-decision.md"), "an exactly-accepted required decision must be a resolved source:\n" + r.out);
+      assert.equal(r.status, 0, `expected green harness with the large required decision:\n${r.out}`);
+      assert.ok(r.out.includes("declared route(s) resolve"), r.out);
+    } finally {
+      f.destroy();
+    }
+  });
+
+  test("check 11 processes every required `- Decision:` declaration, not just the first", () => {
+    // A second required declaration pointing at the coverage manifest fails the
+    // manifest-leak gate, proving the decision loop reads past the first line.
+    // A missing decision file stays fail-closed (skipped for lack of a parseable
+    // accepted status), matching orientation.ts, so the leak target is the
+    // observable negative. Removing the second declaration keeps the route green.
+    const twoDecisions = LEAF.replace(
+      "- Decision: `docs/adr/0001-current-decision.md` — requires.\n",
+      "- Decision: `docs/adr/0001-current-decision.md` — requires.\n- Decision: `docs/manifest.md` — requires.\n",
+    );
+    const f = makeCheckFixture({ routes: "| ordinary | alpha |", leaf: twoDecisions });
+    try {
+      fs.appendFileSync(path.join(f.dir, "docs/manifest.md"), "\nStatus: accepted\n");
+      const leaked = f.run();
+      assert.equal(leaked.status, 1, `expected red harness when the second decision leaks the manifest:\n${leaked.out}`);
+      assert.ok(leaked.out.includes("coverage manifest leaked"), leaked.out);
+      fs.writeFileSync(path.join(f.dir, "docs/leaves/alpha.md"), LEAF);
+      const single = f.run();
+      assert.equal(single.status, 0, `expected green harness without the second declaration:\n${single.out}`);
+      assert.ok(single.out.includes("declared route(s) resolve"), single.out);
     } finally {
       f.destroy();
     }

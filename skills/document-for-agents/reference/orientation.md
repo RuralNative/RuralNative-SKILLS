@@ -4,9 +4,8 @@ The **orientation set** is the unique, deduplicated set of authored
 documentation a workflow resolves before task-driven code inspection. A
 command derives it at runtime from durable data — affected seam names,
 repository-owned routing data — never from a transported path list in a
-ticket. The resolver counts UTF-8 bytes of every whole source and rejects a
-route that exceeds its task-band cap **before** the agent broadly loads the
-content. The resolver is metadata-only: it reads file sizes and field lines to
+ticket. The resolver counts UTF-8 bytes of every whole source as description;
+length alone never decides validity. The resolver is metadata-only: it reads file sizes and field lines to
 resolve and count; it never spills content into context.
 
 Reference implementation: `orientation.ts` next to this file, exported as
@@ -16,20 +15,18 @@ Reference implementation: `orientation.ts` next to this file, exported as
 node orientation.ts --root <repo> --band <band> --seams <seam1,seam2> [--include <path>] [--drop <path>] [--verbose]
 ```
 
-## Caps
+## Task bands
 
-| Task band | Cap (UTF-8 bytes) |
-|---|---|
-| Ordinary change | 9,000 |
-| API or route change | 13,500 |
-| Schema or data change | 18,000 |
-| Re-orientation after compaction | 10,500 |
-| New-dependency material | fits the selected task band's cap |
-| Absolute maximum | 18,000 |
+| Task band |
+|---|
+| Ordinary change |
+| API or route change |
+| Schema or data change |
+| Re-orientation after compaction |
+| New-dependency material |
 
-No orientation set may exceed 18,000 bytes. New-dependency material fits the
-selected task cap rather than raising it. The ceilings are strict caps, not
-targets (ADR-0030).
+Bands select which source categories resolve. They never limit length
+(ADR-0032).
 
 ## Resolution inputs
 
@@ -95,17 +92,16 @@ always resolve the same set. Sources deduplicate by resolved path — an ADR,
 leaf, or glossary entry shared by multiple seams contributes exactly once. The
 final source list is sorted, so byte counts and reports are stable.
 
-## Failure reporting
+## Validity reporting
 
-A route over its cap fails before broad loading and reports:
+A route fails on missing or invalid sources and reports:
 
 - the task band
 - the resolved bytes
-- the cap
 - the source count
 - the exact sources needed for diagnosis
 
-Under budget, only the task band, resolved bytes, cap, and source count are
+On routine work, only the task band, resolved bytes, and source count are
 published; the exact source list appears on failure, on cache-gap approval,
 or with `--verbose` — evidence stays compact.
 
@@ -114,8 +110,7 @@ or with `--verbose` — evidence stays compact.
 When the orientation documents lack an unrecoverable fact, the owner may
 approve a **substitution or narrowing** of sources (`--include` to add an
 approved source, `--drop` to approve dropping a source). These change the set
-and mark the resolution as cache-gap approved, but they can never waive the
-cap: the approved set must still fit.
+and mark the resolution as cache-gap approved.
 
 ## Improve and legacy caches
 

@@ -143,9 +143,9 @@ describe("plan-this intent and decision gates (INV-5)", () => {
 
   test("writes every question plainly for a general reader", () => {
     const content = body(read(SKILL));
-    assert.ok(content.includes("one plain sentence"));
-    assert.ok(content.includes("at most three short options"));
-    assert.ok(content.includes("one short recommendation"));
+    assert.ok(content.includes("state the one choice clearly"));
+    assert.ok(content.includes("offer the options the decision requires"));
+    assert.ok(content.includes("one clear recommendation"));
     assert.ok(content.includes("explain any needed technical term in plain words"));
   });
 
@@ -157,10 +157,10 @@ describe("plan-this intent and decision gates (INV-5)", () => {
     assert.ok(content.includes("never become user questions"));
   });
 
-  test("explores three directions only when the solution form is unsettled", () => {
+  test("explores directions only when the solution form is unsettled", () => {
     const content = body(read(SKILL));
     assert.ok(content.includes("solution form is unsettled"));
-    assert.ok(content.includes("three materially different directions"));
+    assert.ok(content.includes("materially different directions"));
     assert.ok(content.includes("simplest viable direction"));
     assert.ok(content.includes("user value, feasibility, and the risk or assumption"));
     assert.ok(content.includes("Skip this phase when the user has already settled"));
@@ -207,10 +207,10 @@ describe("plan-this bounded specification and ticket graph (INV-7, INV-10)", () 
       "true blocker",
       "independent release or rollback boundary",
       "distinct risk boundary",
-      "fresh-context limit",
     ]) {
       assert.ok(content.includes(boundary), `missing split boundary: ${boundary}`);
     }
+    assert.equal(content.includes("fresh-context limit"), false, "estimated-time sizing must not split tickets");
     assert.ok(content.includes("Derive parallelism from settled boundaries"));
   });
 
@@ -268,7 +268,7 @@ describe("plan-this trust, approval, and publication (INV-8, INV-9)", () => {
     assert.ok(content.includes("what happens next"));
     assert.ok(
       content.includes(
-        "omit internal audit notes, tool details, byte calculations, and implementation terms",
+        "omit internal audit notes, tool details, and implementation terms",
       ),
     );
   });
@@ -329,15 +329,15 @@ describe("plan-this documentation contract", () => {
   });
 });
 
-describe("plan-this bounded orientation preflight (plan-this:INV-11, #179)", () => {
-  test("SKILL.md resolves and preflights every proposed ticket's orientation set before publication approval", () => {
+describe("plan-this orientation resolution (plan-this:INV-11, #179)", () => {
+  test("SKILL.md resolves every proposed ticket's orientation set before publication approval", () => {
     const content = body(read(SKILL));
     const n = norm(content);
     assert.ok(n.includes("orientation set") || n.includes("preflightticketorientation"), "must resolve an orientation set per ticket");
-    assert.ok(n.includes("reject a ticket whose required set exceeds its selected cap") || n.includes("exceeds its selected cap"), "must reject over-budget tickets");
-    assert.ok(n.includes("count utf-8 bytes") || n.includes("utf-8 bytes"), "must count bytes before broad loading");
+    assert.ok(n.includes("length alone never rejects a ticket"), "length alone must not reject tickets");
+    assert.ok(n.includes("record the resolved sources") || n.includes("resolved sources"), "must record sources before broad loading");
     assert.ok(n.includes("cache-gap approval") && (n.includes("substitute") || n.includes("narrow")), "must allow cache-gap substitution");
-    assert.ok(n.includes("can never waive the cap") || n.includes("cannot waive the cap"), "must never waive the cap");
+    assert.equal(n.includes("can never waive the cap") || n.includes("cannot waive the cap"), false, "the retired cap waiver must not survive");
     assert.equal(content.includes("compact budget evidence"), false, "the approval preview omits budgeting details");
     assert.equal(content.includes("task band"), false, "the approval preview omits task-band jargon");
     assert.equal(content.includes("resolved bytes"), false, "the approval preview omits byte calculations");

@@ -58,7 +58,7 @@ _Avoid_: CI job, docs:check
 
 **Leaf doc**:
 The doc-cache entry for one seam — purpose, scope, key files, data flow,
-non-negotiables, links — kept to at most a three-minute read. Lives in `docs/leaves/`.
+non-negotiables, links — sized by what the reader needs. Lives in `docs/leaves/`.
 _Avoid_: Seam doc, readme
 
 **Seam**:
@@ -193,11 +193,11 @@ The `unslopify` contract that makes agent-authored English output the automatic 
 _Avoid_: ambient cleanup, background rewrite
 
 **Attention control**:
-The doc-cache purpose, equal to cache accuracy, that bounds what an agent reads: loading rows and token budgets are caps on orientation documents, and generated `AGENTS.md` opens with the five-command contract (ADR-0017).
+The doc-cache purpose, equal to cache accuracy, that selects the relevant sources an agent reads: loading rows resolve orientation documents from affected seams, and generated `AGENTS.md` opens with the five-command contract (ADR-0017, ADR-0032).
 _Avoid_: attention management, context limiting
 
 **Cache gap**:
-A named, recorded missing unrecoverable fact. The agent names it, records it in the issue tracker, and asks the owner before widening the documentation read set (ADR-0017).
+A named, recorded missing unrecoverable fact. The agent reads relevant authoritative sources incrementally without size approval, names the missing fact, records it in the issue tracker without inventing it, and asks the owner before changing source authority, expanding scope, or taking substantive or protected actions (ADR-0017, ADR-0032).
 _Avoid_: doc gap, missing docs (when the named record is meant)
 
 **Not here route**:
@@ -229,15 +229,15 @@ The versioned fingerprint of the authoritative sections of a parent specificatio
 _Avoid_: requirement hash (when the versioned object is meant), body checksum
 
 **Task band**:
-The task class that selects the orientation cap — ordinary (9,000 bytes), API or route (13,500), schema or data (18,000), or re-orientation (10,500); no set exceeds 18,000 bytes (ADR-0024, ADR-0030).
+The task class that selects which orientation source categories resolve — ordinary, API or route, schema or data, or re-orientation (ADR-0024, ADR-0032).
 _Avoid_: task type, complexity class
 
 **Coverage manifest**:
 The harness-owned exhaustive tier and coverage inventory (`docs/manifest.md`) that replaced the index's coverage table; excluded from every orientation set (ADR-0024).
 _Avoid_: coverage table (when the manifest is meant), index inventory
 
-**Orientation budget**:
-The eleventh docs-check (`Orientation budget`), introduced through ADR-0024: it rejects any declared orientation route over its task-band cap before broad loading, reporting band, resolved bytes, cap, source count, and exact sources.
+**Orientation routes**:
+The eleventh docs-check (`Orientation routes`), introduced through ADR-0024 and narrowed through ADR-0032: it verifies that every declared orientation route resolves to existing sources, reporting band, resolved bytes, source count, and exact sources. Length alone never fails a route.
 _Avoid_: token budget, scorecard entry
 
 **Improve**:

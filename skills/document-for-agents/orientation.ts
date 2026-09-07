@@ -1,10 +1,11 @@
-// Runtime orientation resolver — document-for-agents orientation budget
-// (ADR-0024, ADR-0025). Computes the unique, deduplicated orientation set a
-// task requires before code inspection: the compact architecture index, whole
-// affected seam leaf docs, leaf-named glossary entries, and explicitly
-// required decisions or policies. Machine-required declarations enter the
-// set; compact citations are visible navigation only and never load source
-// content. One machine-readable declaration form per category:
+// Runtime orientation resolver — document-for-agents relevant-source
+// resolution (ADR-0024, ADR-0025, ADR-0032). Computes the unique,
+// deduplicated orientation set a task requires before code inspection: the
+// compact architecture index, whole affected seam leaf docs, leaf-named
+// glossary entries, and explicitly required decisions or policies.
+// Machine-required declarations enter the set; compact citations are visible
+// navigation only and never load source content. One machine-readable
+// declaration form per category:
 //
 //   - Required glossary term: `- Glossary: CONTEXT.md — Alpha term.`
 //   - Required decision:      `- Decision: docs/adr/000N-....md — requires.`
@@ -15,29 +16,18 @@
 // `accepted` or `superseded` — the exact-token rule: no prefix junk before the
 // token and no trailing text after it ("Status: accepted-ish" or "Status:
 // accepted extra" never match). Missing, draft, malformed, and rejected
-// statuses never load, even when a leaf declares them required. Counts UTF-8
-// bytes before any broad loading;
-// over-budget routes fail and report band, resolved bytes, cap, source count,
-// and exact sources. Deterministic: resolution is a pure function of the
+// statuses never load, even when a leaf declares them required. Reports UTF-8
+// bytes, band, source count, and exact sources as description; length alone
+// never decides validity. Deterministic: resolution is a pure function of the
 // repository.
 //
 // The harness-owned coverage manifest (docs/manifest.md) is never part of a
 // resolved set. Cache-gap approval can substitute or narrow sources through
-// --include / --drop but can never waive the cap.
+// --include / --drop.
 import fs from "node:fs";
 import path from "node:path";
 
 export type Band = "ordinary" | "api-route" | "schema-data" | "re-orientation";
-
-export const CAPS: Record<Band, number> = {
-  ordinary: 9000,
-  "api-route": 13500,
-  "schema-data": 18000,
-  "re-orientation": 10500,
-};
-
-// No orientation set exceeds this absolute cap.
-export const ABSOLUTE_CAP = 18000;
 
 export type ResolveOptions = Readonly<{
   root: string;
@@ -50,12 +40,10 @@ export type ResolveOptions = Readonly<{
 
 export type Resolved = Readonly<{
   band: Band;
-  cap: number;
   bytes: number;
   sourceCount: number;
   sources: readonly string[];
   cacheGap: boolean;
-  over: boolean;
 }>;
 
 export class OrientationResolutionError extends Error {
@@ -260,15 +248,12 @@ export function resolveOrientation(opts: ResolveOptions): Resolved {
 
   const sources = [...files.keys()].sort();
   const bytes = sources.reduce((sum, f) => sum + (files.get(f) ?? 0), 0);
-  const cap = Math.min(CAPS[opts.band], ABSOLUTE_CAP);
   return {
     band: opts.band,
-    cap,
     bytes,
     sourceCount: sources.length,
     sources,
     cacheGap: includes.length > 0 || drops.length > 0,
-    over: bytes > cap,
   };
 }
 
@@ -288,7 +273,13 @@ export function main(argv: string[]): number {
   }
   const root = args.get("root") ?? process.cwd();
   const band = args.get("band") as Band | undefined;
-  if (!band || !(band in CAPS)) {
+  if (
+    !band ||
+    (band !== "ordinary" &&
+      band !== "api-route" &&
+      band !== "schema-data" &&
+      band !== "re-orientation")
+  ) {
     console.error("error: --band must be ordinary | api-route | schema-data | re-orientation");
     return 2;
   }
@@ -311,20 +302,15 @@ export function main(argv: string[]): number {
   }
 
   console.log(`band: ${resolved.band}`);
-  console.log(`cap: ${resolved.cap}`);
   console.log(`bytes: ${resolved.bytes}`);
   console.log(`sources: ${resolved.sourceCount}`);
-  if (resolved.over) {
-    console.log(`result: over budget`);
-    console.log(`task band: ${resolved.band}`);
-    console.log(`resolved bytes: ${resolved.bytes}`);
-    console.log(`cap: ${resolved.cap}`);
-    console.log(`source count: ${resolved.sourceCount}`);
-  }
-  if (resolved.sources.length > 0 && (resolved.over || resolved.cacheGap || verbose)) {
+  console.log(`task band: ${resolved.band}`);
+  console.log(`resolved bytes: ${resolved.bytes}`);
+  console.log(`source count: ${resolved.sourceCount}`);
+  if (resolved.sources.length > 0 && (resolved.cacheGap || verbose)) {
     for (const s of resolved.sources) console.log(`source: ${s}`);
   }
-  return resolved.over ? 1 : 0;
+  return 0;
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

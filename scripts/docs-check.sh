@@ -383,27 +383,21 @@ else
   [[ $human_fail -eq 0 ]] && note "human docs: ${#HUMAN[@]} docs fresh"
 fi
 
-# Orientation budget (check 11): every route the manifest declares must fit
-# its task-band byte cap. Routes resolve deterministically from the compact
-# index, whole affected seam leaf docs, leaf-named glossary entries, and
-# machine-required decisions or policies; a compact citation (a bare decision
-# or policy bullet) stays navigation and never loads source content. The
-# manifest itself is never part of a resolved set. Dormant until routes are
-# declared: un-migrated leaves fail loudly once declared, never silently.
+# Orientation routes (check 11): every route the manifest declares must
+# resolve to existing sources. Routes resolve deterministically from the
+# compact index, whole affected seam leaf docs, leaf-named glossary entries,
+# and machine-required decisions or policies; a compact citation (a bare
+# decision or policy bullet) stays navigation and never loads source content.
+# Length alone never fails a route. The manifest itself is never part of a
+# resolved set. Dormant until routes are declared.
 if [[ -f "$MANIFEST" ]]; then
   mapfile -t ROUTES < <(awk -F'|' '/^\| (ordinary|api-route|schema-data|re-orientation) \|/ {gsub(/ /,"",$2); gsub(/ /,"",$3); print $2 "|" $3}' "$MANIFEST")
   if [[ ${#ROUTES[@]} -eq 0 ]]; then
-    note "orientation budget: no declared routes (declared per seam as leaves come within budget)"
+    note "orientation routes: no declared routes"
   else
     route_ok=0
     for route in "${ROUTES[@]}"; do
       band="${route%%|*}"; seams="${route#*|}"
-      case "$band" in
-        ordinary) cap=9000 ;;
-        api-route) cap=13500 ;;
-        schema-data) cap=18000 ;;
-        re-orientation) cap=10500 ;;
-      esac
       route_err=0
       # Byte accounting is per resolved file, so a source shared by several
       # seams (index, glossary, linked ADR or policy) counts once, matching the
@@ -416,7 +410,7 @@ if [[ -f "$MANIFEST" ]]; then
       for seam in $(printf '%s' "$seams" | tr ',' ' '); do
         leaf=$(awk -F'|' -v n="$seam" '$0 ~ /^\|/ {gsub(/ /,"",$2); gsub(/ /,"",$6); if ($2==n && $6 ~ /\.md$/) print $6}' "$ARCH")
         if [[ -z "$leaf" ]]; then
-          bad "orientation budget: seam '$seam' has no leaf row in the index"; route_err=1; continue
+          bad "orientation routes: seam '$seam' has no leaf row in the index"; route_err=1; continue
         fi
         BYTES["$leaf"]=$(wc -c < "$leaf")
         # Every `- Glossary:` declaration in the leaf is processed, parsing
@@ -486,25 +480,20 @@ if [[ -f "$MANIFEST" ]]; then
       for f in "${!BYTES[@]}"; do bytes=$((bytes + ${BYTES[$f]})); done
       unset BYTES BLOCKSEEN
       for s in "${SRCDEDUP[@]}"; do
-        [[ -e "$s" ]] || { bad "orientation budget: resolved source missing — $s"; route_err=1; }
+        [[ -e "$s" ]] || { bad "orientation routes: resolved source missing — $s"; route_err=1; }
       done
       if printf '%s\n' "${SRCDEDUP[@]}" | grep -qxF "$MANIFEST"; then
-        bad "orientation budget: the coverage manifest leaked into a resolved set"
+        bad "orientation routes: the coverage manifest leaked into a resolved set"
         route_err=1
       fi
       if (( route_err == 0 )); then
-        if (( bytes > cap )); then
-          bad "orientation budget: route ($band [$seams]) over budget — task band $band, resolved bytes $bytes, cap $cap, source count ${#SRCDEDUP[@]}"
-          for s in "${SRCDEDUP[@]}"; do printf '       source: %s\n' "$s"; done
-        else
-          route_ok=$((route_ok+1))
-        fi
+        route_ok=$((route_ok+1))
       fi
     done
-    [[ $route_ok -eq ${#ROUTES[@]} ]] && note "orientation budget: ${#ROUTES[@]} declared route(s) within caps"
+    [[ $route_ok -eq ${#ROUTES[@]} ]] && note "orientation routes: ${#ROUTES[@]} declared route(s) resolve"
   fi
 else
-  note "orientation budget: dormant (no coverage manifest)"
+  note "orientation routes: dormant (no coverage manifest)"
 fi
 
 # Scorecard.

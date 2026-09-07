@@ -220,28 +220,30 @@ describe("attention boundary contract (document-for-agents:INV-7..INV-13)", () =
   });
 
   // document-for-agents:INV-8
-  test("loading budgets are hard caps on orientation documents and code reads inside the seam stay allowed", () => {
+  test("loading rows select relevant sources and code reads inside the seam stay allowed", () => {
     const templates = norm(read(TEMPLATES));
-    assert.ok(templates.includes("hard caps on orientation documents"));
-    assert.ok(templates.includes("never block code inspection inside the affected seam"));
+    assert.ok(templates.includes("length alone never fails a route") || templates.includes("length alone never"));
+    assert.ok(templates.includes("never blocks code inspection inside the affected seam") || templates.includes("never block code inspection inside the affected seam"));
     const arch = norm(read("ARCHITECTURE.md"));
-    assert.ok(arch.includes("caps on orientation documents"));
+    assert.ok(arch.includes("length alone never decides validity"));
     assert.ok(arch.includes("never block code inspection inside the affected seam"));
   });
 
   // document-for-agents:INV-8
-  test("missing unrecoverable facts become named cache gaps requiring approval before widening", () => {
+  test("missing unrecoverable facts become named cache gaps with incremental relevant reading", () => {
     const skill = norm(read(SKILL));
     assert.ok(skill.includes("cache gap"));
-    assert.ok(skill.includes("ask the owner for approval before widening the documentation read set"));
-    assert.ok(skill.includes("do not widen it until approval"));
+    assert.ok(skill.includes("read relevant authoritative sources incrementally"));
+    assert.ok(skill.includes("length alone never requires approval"));
+    assert.ok(skill.includes("do not invent it"));
+    assert.ok(skill.includes("changing source authority"));
     const templates = norm(read(TEMPLATES));
     assert.ok(templates.includes("cache gap"));
-    assert.ok(templates.includes("ask the owner for approval before opening more documentation"));
-    assert.ok(templates.includes("do not widen the read set until approval"));
+    assert.ok(templates.includes("read relevant authoritative sources incrementally"));
+    assert.ok(templates.includes("do not silently widen beyond relevant authoritative sources"));
     const architecture = norm(read("ARCHITECTURE.md"));
     assert.ok(architecture.includes("cache gap"));
-    assert.ok(architecture.includes("owner for approval"));
+    assert.ok(architecture.includes("read relevant authoritative sources incrementally"));
   });
 
   // document-for-agents:INV-9
@@ -277,16 +279,16 @@ describe("attention boundary contract (document-for-agents:INV-7..INV-13)", () =
   });
 
   // document-for-agents:INV-13
-  test("the harness has eleven checks and check 11 is the accepted Orientation budget", () => {
+  test("the harness has eleven checks and check 11 is the accepted Orientation routes", () => {
     const h = read(HARNESS);
     const section = h.slice(h.indexOf("## The eleven checks"), h.indexOf("## Scorecard"));
     const count = (section.match(/^\d+\. /gm) || []).length;
     assert.equal(count, 11);
-    assert.match(section, /11\. \*\*Orientation budget\*\*/,
-      "check 11 must be explicitly named Orientation budget");
+    assert.match(section, /11\. \*\*Orientation routes\*\*/,
+      "check 11 must be explicitly named Orientation routes");
     const adr = read("docs/adr/0024-bounded-orientation.md");
     assert.ok(/^Status: accepted$/m.test(adr), "the superseding decision must be accepted");
-    assert.ok(adr.includes("Orientation budget"), "the accepted decision must name check 11");
+    assert.ok(adr.includes("Orientation budget") || adr.includes("Orientation routes"), "the accepted decision must name check 11");
     assert.ok(adr.includes("supersedes") || adr.includes("Supersedes"), "the accepted decision must supersede the exact-ten-check clause");
     assert.match(adr, /ten checks/, "the superseded clause must be named");
     assert.ok(norm(adr).includes("narrows"), "the accepted decision must narrow INV-13");
@@ -301,11 +303,12 @@ describe("attention boundary contract (document-for-agents:INV-7..INV-13)", () =
       "orientation set",
       "task band",
       "coverage manifest",
-      "orientation budget",
+      "orientation routes",
       "improve",
     ]) {
-      assert.ok(glossary.includes(term), `glossary must freeze the ${term} term`);
+      assert.ok(glossary.includes(term.toLowerCase()), `glossary must freeze the ${term} term`);
     }
+    assert.equal(glossary.includes("orientation budget"), false, "the retired budget term must not survive as a glossary entry");
   });
 
   // document-for-agents:INV-12

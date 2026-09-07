@@ -1,11 +1,10 @@
-// Planning-time orientation preflight (ADR-0024, #179).
+// Planning-time orientation resolution (ADR-0024, ADR-0032, #179).
 //
-// Pure: captured ticket and repository facts in, compact budget decisions out.
+// Pure: captured ticket and repository facts in, compact source decisions out.
 // Planning resolves an orientation set for every proposed ticket from its
-// affected seams before publication approval, rejects a ticket whose set
-// exceeds its selected cap, and keeps affected seam names as the durable join
-// key. No network, GitHub, git, filesystem-mutation, clock, or Agent Manager
-// calls.
+// affected seams before publication approval and keeps affected seam names as
+// the durable join key. Length alone never rejects a ticket. No network,
+// GitHub, git, filesystem-mutation, clock, or Agent Manager calls.
 
 export type OrientationBand =
   | "ordinary"
@@ -13,24 +12,10 @@ export type OrientationBand =
   | "schema-data"
   | "re-orientation";
 
-export const ORIENTATION_CAPS: Record<OrientationBand, number> = {
-  ordinary: 9000,
-  "api-route": 13500,
-  "schema-data": 18000,
-  "re-orientation": 10500,
-};
-
-export const ORIENTATION_ABSOLUTE_CAP = 18000;
-
-export function orientationCap(band: OrientationBand): number {
-  return Math.min(ORIENTATION_CAPS[band], ORIENTATION_ABSOLUTE_CAP);
-}
-
-/** Compact durable orientation evidence (ADR-0024): band, bytes, cap, source count, cache-gap state. */
+/** Compact durable orientation evidence (ADR-0024, ADR-0032): band, bytes, source count, cache-gap state. */
 export interface CompactOrientationEvidence {
   band: OrientationBand;
   bytes: number;
-  cap: number;
   sourceCount: number;
   cacheGap: boolean;
 }
@@ -48,15 +33,14 @@ export function compactOrientationEvidence(
   return {
     band: resolved.band,
     bytes: resolved.bytes,
-    cap: orientationCap(resolved.band),
     sourceCount: resolved.sourceCount,
     cacheGap: resolved.cacheGap,
   };
 }
 
 /**
- * Render the compact evidence. The exact source list appears only on failure
- * or approved substitution; successful routine output omits it.
+ * Render the compact evidence. The exact source list appears only on
+ * approved substitution; successful routine output omits it.
  */
 export function renderCompactOrientationEvidence(
   evidence: CompactOrientationEvidence,
@@ -64,7 +48,6 @@ export function renderCompactOrientationEvidence(
   return [
     `task band: ${evidence.band}`,
     `resolved bytes: ${evidence.bytes}`,
-    `cap: ${evidence.cap}`,
     `source count: ${evidence.sourceCount}`,
     `cache-gap state: ${evidence.cacheGap ? "approved" : "none"}`,
   ].join("\n");
@@ -78,28 +61,24 @@ export interface TicketOrientationFact {
 
 export interface OrientationPreflight {
   ticket: number;
-  withinBudget: boolean;
   evidence: CompactOrientationEvidence;
   reason: string;
 }
 
 /**
- * Preflight one proposed ticket before publication approval. A ticket whose
- * resolved orientation set exceeds its selected cap is rejected; the run stops
- * before broad documentation loading.
+ * Resolve one proposed ticket's orientation set before publication approval.
+ * Length alone never rejects the ticket; record the resolved sources and read
+ * them incrementally as needed.
  */
 export function preflightTicketOrientation(
   fact: TicketOrientationFact,
 ): OrientationPreflight {
   const evidence = compactOrientationEvidence(fact.resolved);
-  const withinBudget = fact.resolved.bytes <= evidence.cap;
   return {
     ticket: fact.ticket,
-    withinBudget,
     evidence,
-    reason: withinBudget
-      ? "the resolved orientation set fits the selected task-band cap"
-      : `the resolved orientation set exceeds the selected cap (${fact.resolved.bytes} > ${evidence.cap}); reject the ticket before publication`,
+    reason:
+      "the resolved orientation set records the required sources for incremental reading",
   };
 }
 

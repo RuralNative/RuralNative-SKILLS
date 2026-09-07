@@ -1,15 +1,12 @@
 // plan-this:INV-11 — planning resolves an orientation set for every proposed
-// ticket before publication approval, rejects an over-budget ticket, keeps
-// affected seam names as the durable join key, and publishes compact budget
-// evidence without transporting paths, anchors, invariant lists, glossary
-// excerpts, or policies (#179, ADR-0024).
+// ticket before publication approval, keeps affected seam names as the durable
+// join key, and publishes compact source evidence without transporting paths,
+// anchors, invariant lists, glossary excerpts, or policies (#179, ADR-0024,
+// ADR-0032). Length alone never rejects a ticket.
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  ORIENTATION_ABSOLUTE_CAP,
-  ORIENTATION_CAPS,
   compactOrientationEvidence,
-  orientationCap,
   preflightTicketOrientation,
   renderCompactOrientationEvidence,
   validateTicketOrientationShape,
@@ -26,50 +23,36 @@ function resolved(overrides: Partial<Parameters<typeof preflightTicketOrientatio
   };
 }
 
-describe("planning orientation preflight (plan-this:INV-11)", () => {
-  test("a ticket whose resolved set fits its selected cap passes before publication", () => {
+describe("planning orientation resolution (plan-this:INV-11)", () => {
+  test("a required set records its sources for incremental reading", () => {
     const preflight = preflightTicketOrientation({
       ticket: 179,
       affectedSeams: ["plan-this"],
       resolved: resolved(),
     });
-    assert.equal(preflight.withinBudget, true);
-    assert.equal(preflight.evidence.cap, 9000);
-    assert.equal(preflight.reason, "the resolved orientation set fits the selected task-band cap");
+    assert.equal(
+      preflight.reason,
+      "the resolved orientation set records the required sources for incremental reading",
+    );
+    assert.deepEqual(preflight.evidence, {
+      band: "ordinary",
+      bytes: 4000,
+      sourceCount: 4,
+      cacheGap: false,
+    });
   });
 
-  test("a ticket whose resolved set exceeds its selected cap is rejected", () => {
+  test("a large required set still resolves without rejection", () => {
     const preflight = preflightTicketOrientation({
       ticket: 179,
       affectedSeams: ["plan-this", "implement-this"],
-      resolved: resolved({ bytes: 9200, sourceCount: 7 }),
+      resolved: resolved({ bytes: 25000, sourceCount: 7 }),
     });
-    assert.equal(preflight.withinBudget, false);
-    assert.equal(preflight.evidence.cap, 9000);
-    assert.match(preflight.reason, /exceeds the selected cap/);
-  });
-
-  test("the cap is the band cap and never the absolute cap when the band is smaller", () => {
-    assert.equal(orientationCap("ordinary"), 9000);
-    assert.equal(orientationCap("api-route"), 13500);
-    assert.equal(orientationCap("schema-data"), 18000);
-    assert.equal(orientationCap("re-orientation"), 10500);
-    assert.equal(ORIENTATION_ABSOLUTE_CAP, 18000);
-    assert.equal(compactOrientationEvidence({
-      band: "api-route",
-      bytes: 8000,
-      sourceCount: 5,
-      cacheGap: false,
-    }).cap, 13500);
-  });
-
-  test("the cap table is the ADR-0030 table", () => {
-    assert.deepEqual(ORIENTATION_CAPS, {
-      ordinary: 9000,
-      "api-route": 13500,
-      "schema-data": 18000,
-      "re-orientation": 10500,
-    });
+    assert.equal(
+      preflight.reason,
+      "the resolved orientation set records the required sources for incremental reading",
+    );
+    assert.equal(preflight.evidence.bytes, 25000);
   });
 
   test("unrelated seams, decisions, or documentation do not change a fixed task's resolved set or compact evidence", () => {
@@ -85,38 +68,35 @@ describe("planning orientation preflight (plan-this:INV-11)", () => {
       resolved: resolved({ bytes: 4000, sourceCount: 4, cacheGap: false }),
     });
     assert.deepEqual(unrelated.evidence, base.evidence);
-    assert.equal(unrelated.withinBudget, base.withinBudget);
   });
 });
 
-describe("compact planning budget evidence (plan-this:INV-11)", () => {
-  test("renders band, bytes, cap, source count, and cache-gap state only", () => {
+describe("compact planning source evidence (plan-this:INV-11)", () => {
+  test("renders band, bytes, source count, and cache-gap state only", () => {
     const evidence: CompactOrientationEvidence = {
       band: "ordinary",
       bytes: 4000,
-      cap: 9000,
       sourceCount: 4,
       cacheGap: false,
     };
     const rendered = renderCompactOrientationEvidence(evidence);
     assert.ok(rendered.includes("task band: ordinary"));
     assert.ok(rendered.includes("resolved bytes: 4000"));
-    assert.ok(rendered.includes("cap: 9000"));
     assert.ok(rendered.includes("source count: 4"));
     assert.ok(rendered.includes("cache-gap state: none"));
     // Exact source lists never appear in the compact summary.
     assert.equal(rendered.includes("source: "), false);
   });
 
-  test("a cache-gap approval is recorded but never waives the cap", () => {
+  test("a cache-gap approval is recorded as substitution context", () => {
     const evidence = compactOrientationEvidence({
       band: "ordinary",
-      bytes: 9000,
+      bytes: 25000,
       sourceCount: 4,
       cacheGap: true,
     });
     assert.equal(evidence.cacheGap, true);
-    assert.equal(evidence.cap, 9000);
+    assert.equal(evidence.bytes, 25000);
     const rendered = renderCompactOrientationEvidence(evidence);
     assert.ok(rendered.includes("cache-gap state: approved"));
   });

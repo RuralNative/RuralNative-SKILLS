@@ -1,11 +1,11 @@
-// Implementation orientation preflight and direct-ticket resolution (ADR-0024,
-// #179).
+// Implementation orientation resolution and direct-ticket resolution
+// (ADR-0024, ADR-0032, #179).
 //
 // Pure: captured ticket facts and a compact architecture-index summary in,
 // decisions out. The worker resolves current sources in its checkout before
 // broad documentation loading, records the compact durable summary with the
-// existing timing and acceptance evidence, and follows the same bounded path
-// for a direct ticket with valid affected seams. A ticket without valid seam
+// existing timing and acceptance evidence, and follows the same relevant-source
+// path for a direct ticket with valid affected seams. A ticket without valid seam
 // metadata receives one resolution attempt against the compact index and code
 // roots; one clear mapping proceeds, ambiguity adds `needs-info` and stops
 // before edits. No fallback reads every leaf, ADR, policy, or derived human
@@ -18,24 +18,10 @@ export type OrientationBand =
   | "schema-data"
   | "re-orientation";
 
-export const ORIENTATION_CAPS: Record<OrientationBand, number> = {
-  ordinary: 9000,
-  "api-route": 13500,
-  "schema-data": 18000,
-  "re-orientation": 10500,
-};
-
-export const ORIENTATION_ABSOLUTE_CAP = 18000;
-
-export function orientationCap(band: OrientationBand): number {
-  return Math.min(ORIENTATION_CAPS[band], ORIENTATION_ABSOLUTE_CAP);
-}
-
-/** Compact durable orientation evidence (ADR-0024): band, bytes, cap, source count, cache-gap state. */
+/** Compact durable orientation evidence (ADR-0024, ADR-0032): band, bytes, source count, cache-gap state. */
 export interface CompactOrientationEvidence {
   band: OrientationBand;
   bytes: number;
-  cap: number;
   sourceCount: number;
   cacheGap: boolean;
 }
@@ -53,7 +39,6 @@ export function compactOrientationEvidence(
   return {
     band: resolved.band,
     bytes: resolved.bytes,
-    cap: orientationCap(resolved.band),
     sourceCount: resolved.sourceCount,
     cacheGap: resolved.cacheGap,
   };
@@ -65,7 +50,6 @@ export function renderCompactOrientationEvidence(
   return [
     `task band: ${evidence.band}`,
     `resolved bytes: ${evidence.bytes}`,
-    `cap: ${evidence.cap}`,
     `source count: ${evidence.sourceCount}`,
     `cache-gap state: ${evidence.cacheGap ? "approved" : "none"}`,
   ].join("\n");
@@ -77,26 +61,23 @@ export interface WorkerOrientationFact {
 }
 
 export interface WorkerOrientationPreflight {
-  withinBudget: boolean;
   evidence: CompactOrientationEvidence;
   reason: string;
 }
 
 /**
- * Resolve and check the worker's orientation set before broad documentation
- * loading. An over-budget route stops before the broad read.
+ * Resolve the worker's orientation set before broad documentation loading.
+ * Length alone never stops the run; record the required sources and read them
+ * incrementally as needed.
  */
 export function preflightWorkerOrientation(
   fact: WorkerOrientationFact,
 ): WorkerOrientationPreflight {
   const evidence = compactOrientationEvidence(fact.resolved);
-  const withinBudget = fact.resolved.bytes <= evidence.cap;
   return {
-    withinBudget,
     evidence,
-    reason: withinBudget
-      ? "the resolved orientation set fits the selected task-band cap"
-      : `the resolved orientation set exceeds the selected cap (${fact.resolved.bytes} > ${evidence.cap}); stop before broad loading`,
+    reason:
+      "the resolved orientation set records the required sources for incremental reading",
   };
 }
 

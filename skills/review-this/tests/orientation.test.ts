@@ -1,12 +1,10 @@
 // review-this:INV-15 — review resolves orientation sources once for each
 // pinned head-and-base pair and shares the compact evidence across Standards
 // and Spec, recording the summary without publishing full path lists on
-// successful routine work and stopping before broad loading on an over-budget
-// set with its exact sources (#179, ADR-0024).
+// routine work (#179, ADR-0024, ADR-0032). Length alone never stops the run.
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  orientationCap,
   resolveReviewOrientation,
   type ResolvedOrientationFact,
 } from "../orientation.ts";
@@ -30,7 +28,6 @@ describe("review orientation resolution (review-this:INV-15)", () => {
       resolved: resolved(),
       sources: SOURCES,
     });
-    assert.equal(resolution.evidence.cap, 9000);
     assert.equal(resolution.evidence.sourceCount, 4);
     assert.equal(resolution.omitSourceList, true);
     assert.equal(resolution.stop, false);
@@ -51,29 +48,26 @@ describe("review orientation resolution (review-this:INV-15)", () => {
     assert.deepEqual(second, first);
   });
 
-  test("an over-budget pair stops before broad loading with its exact sources", () => {
+  test("a large required set still proceeds with its sources recorded", () => {
     const resolution = resolveReviewOrientation({
       pair: { headSha: "head-a", baseSha: "base-a" },
-      resolved: resolved({ bytes: 9100, sourceCount: 5 }),
+      resolved: resolved({ bytes: 25000, sourceCount: 5 }),
       sources: SOURCES,
     });
-    assert.equal(resolution.stop, true);
-    assert.equal(resolution.omitSourceList, false);
-    assert.deepEqual(resolution.sources, SOURCES);
-    assert.match(resolution.reason, /stop before broad loading/);
-    assert.match(resolution.reason, /9100 > 9000/);
+    assert.equal(resolution.stop, false);
+    assert.equal(resolution.omitSourceList, true);
+    assert.match(resolution.reason, /required sources/);
   });
 
-  test("a cache-gap substitution publishes the source list, never the cap waiver", () => {
+  test("a cache-gap substitution publishes the source list", () => {
     const resolution = resolveReviewOrientation({
       pair: { headSha: "head-a", baseSha: "base-a" },
-      resolved: resolved({ bytes: 9000, sourceCount: 4, cacheGap: true }),
+      resolved: resolved({ bytes: 25000, sourceCount: 4, cacheGap: true }),
       sources: SOURCES,
     });
     assert.equal(resolution.omitSourceList, false);
     assert.equal(resolution.stop, false);
     assert.deepEqual(resolution.sources, SOURCES);
-    assert.equal(resolution.evidence.cap, 9000);
   });
 
   test("head and base pin the pair; a different base is a distinct resolution", () => {
@@ -90,6 +84,5 @@ describe("review orientation resolution (review-this:INV-15)", () => {
     assert.deepEqual(a.pair, { headSha: "head-a", baseSha: "base-a" });
     assert.deepEqual(b.pair, { headSha: "head-a", baseSha: "base-b" });
     assert.notDeepEqual(b, a);
-    assert.equal(orientationCap("re-orientation"), 10500);
   });
 });

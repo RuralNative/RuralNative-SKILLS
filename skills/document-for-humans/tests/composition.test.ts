@@ -156,7 +156,7 @@ describe("document-for-humans hard dependency (document-for-humans:INV-6)", () =
     assert.ok(n.includes("freshness") && n.includes("check freshness"));
     assert.ok(n.includes("bridge direction") || n.includes("check bridge direction"));
     assert.ok(n.includes("artifact need") || n.includes("check artifact need"));
-    assert.ok(n.includes("plain-language limits") || n.includes("check plain-language limits"));
+    assert.ok(n.includes("plain-language requirements") || n.includes("check plain-language requirements"));
     assert.ok(n.includes("separately"));
     assert.ok(n.includes("ask the owner to confirm each fix"));
     assert.ok(n.includes("numbered findings list") || (n.includes("numbered") && n.includes("findings list")));

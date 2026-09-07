@@ -24,9 +24,9 @@ Documentation is a **cache** of the codebase: it stores what re-deriving from
 code would cost. Caches have a coherence problem: entries go **stale**, and a
 stale entry misleads with confidence where an empty cache would force a read of
 the source. The lifecycle has two equal outputs: **cache accuracy**, keeping
-the tree true to the code, and **attention control**, bounding what an agent
-reads through a runtime orientation resolver with strict byte caps on the
-resolved orientation set (ADR-0024). This skill runs both, and it keeps the
+the tree true to the code, and **attention control**, resolving only the
+relevant sources an agent needs through a runtime orientation resolver
+(ADR-0024, ADR-0032). This skill runs both, and it keeps the
 cache's **tier** matched to the project as the project grows (ADR-0028).
 
 A **seam** is a module with one distinct responsibility that an agent edits as
@@ -49,14 +49,14 @@ established, its own leaf doc.
    arrival, true once, false forever.
 4. **Two hops.** Every fact an agent needs is at most two links from the
    index, so re-orientation after context compaction is one small fixed read.
-5. **Budgets.** Resolved orientation sets are strict byte caps on whole
+5. **Relevant sources.** Resolved orientation sets select relevant whole
    sources, resolved at runtime from affected seams, the compact architecture
-   index, whole bounded leaves, leaf-named glossary entries, and only the
+   index, whole leaves, leaf-named glossary entries, and only the
    decisions and policies a leaf marks with an explicit `— requires.`
    declaration; compact citations — bare links or prose mentions — stay
-   navigation and never load (ADR-0024, ADR-0025, ADR-0030). Index under 225
-   lines; leaf docs up to a three-minute read; policy docs within 105 lines.
-   Ceilings are caps, not targets: never pad existing docs to fill them. The
+   navigation and never load (ADR-0024, ADR-0025, ADR-0032). Length alone
+   never decides validity: keep what the reader needs, remove repetition and
+   irrelevant material, and never pad a document to fill room. The
    context window is priced, not free.
 6. **Size to the codebase, then keep it sized.** The cache earns its coherence
    cost only past a threshold, and the threshold is crossed by evidence, not by
@@ -212,7 +212,7 @@ Entry: the repository lacks a coherent agent-facing doc tree.
 5. **Wire the harness when the tier requires it.** When the selected tier
    includes the harness — standard and full — install the gate from
    `reference/harness.md` — eleven checks including check 2 `Seam coherence` and
-   check 11 `Orientation budget` — create the harness-owned coverage manifest as
+   check 11 `Orientation routes` — create the harness-owned coverage manifest as
    the exhaustive tier and coverage inventory with a `Seam verification` row for
    every documented seam, and hook the gate into the project's standard check
    path so it runs without being remembered. The manifest is excluded from every
@@ -231,7 +231,7 @@ Entry: an existing doc system needs diagnosis.
 1. **Run mechanical checks.** Run the preflight, then the harness from
    `reference/harness.md` before manual review. It owns pointers, statuses,
    timestamps, expiry, debt form, seam-code coherence, and the declared
-   orientation budget routes. Audit is read-only: it computes the required tier
+   orientation routes. Audit is read-only: it computes the required tier
    and reports a promotion it would need, but applies no change.
    *Done when: harness output is captured and each mechanical finding has a
    tier and fix.*
@@ -276,10 +276,13 @@ as a manual rebuild.
    docs, name the collision, and resume only when an approved decision
    supersedes or narrows the invariant; working around it silently is
    forbidden. When the orientation documents lack an unrecoverable fact the
-   task needs, name a cache gap, record it in the issue tracker, and ask the
-   owner for approval before widening the documentation read set; do not widen
-   it until approval. The caps never block code inspection inside the affected
-   seam.
+   task needs, read relevant authoritative sources incrementally as the task
+   requires; length alone never requires approval. Name the missing fact as a
+   cache gap, record it in the issue tracker, and do not invent it; ask the
+   owner before changing source authority, expanding to unrelated seams, or
+   taking substantive or protected actions. Do not silently widen beyond
+   relevant authoritative sources. Relevant-source selection never blocks code
+   inspection inside the affected seam.
    See `reference/classify.md`
    for the invariant lifecycle and `reference/harness.md` for check detail.
 2. **Same diff, then refresh the fingerprint.** Code changes carry their doc
@@ -326,23 +329,23 @@ as a manual rebuild.
 
 ## Branch D: Improve, repair an existing doc cache
 
-Entry: an existing cache is over budget or needs repair beyond diagnosis.
+Entry: an existing cache needs repair beyond diagnosis.
 Audit stays read-only; destructive repository change in this branch lands only
 through one approved Improve run, while additive tier promotion is automatic
 (ADR-0028).
 
 1. **Diagnose.** Run the preflight, then the harness and resolve the current
    orientation sets (`reference/orientation.md`) for the affected seams and
-   routes. Name every over-budget route and its sources, and every stale or
+   routes. Name every invalid route and its sources, and every stale or
    missing seam fingerprint. A legacy cache without the coverage manifest
    remains diagnosable: the manifest is created inside the previewed delta, never
    claimed retroactively.
-   *Done when: every over-budget route, its contributing sources, and every
+   *Done when: every invalid route, its contributing sources, and every
    stale fingerprint are named.*
 2. **Preview.** Prepare one complete migration preview, showing the full tree
    delta: trims, additions, moves, deletions, coverage-manifest changes,
    fingerprint refreshes, and generated-doc actions, plus the resolved
-   orientation bytes after the change. Preserve unrecoverable facts by routing
+   orientation sources after the change. Preserve unrecoverable facts by routing
    durable decisions and vocabulary to their tiers, and remove code-recoverable
    restatement and work history before proposing a seam split; a seam split is
    proposed only when code ownership, invariants, entry points, and change
@@ -357,13 +360,12 @@ through one approved Improve run, while additive tier promotion is automatic
    destructive half, Improve makes no changes before that approval. After it,
    apply the complete approved delta, including manifest changes,
    fingerprint refreshes, and generated-doc actions, exactly as previewed.
-   Cache-gap approval may substitute or narrow sources of the resolved set but
-   can never waive a cap.
+   Cache-gap approval may substitute or narrow sources of the resolved set.
    *Done when: the complete approved delta is applied.*
 4. **Verify.** Run the prose audit and the harness and finish only after the
    prose audit and harness pass.
    *Done when: the prose audit and the harness both pass, and the resolved
-   orientation bytes match the preview.*
+   orientation sources match the preview.*
 
 ## Reference
 
@@ -371,9 +373,9 @@ through one approved Improve run, while additive tier promotion is automatic
   evidence, stay-true mechanisms, invariant lifecycle.
 - `reference/harness.md`: the eleven checks including check 2 `Seam coherence`,
   adaptation and dormancy rules, scorecard.
-- `reference/orientation.md`: the runtime orientation resolver contract — caps,
+- `reference/orientation.md`: the runtime orientation resolver contract —
   resolution inputs, deduplication, superseded-ADR exclusion, the coverage
-  manifest, failure reporting, and cache-gap approval.
+  manifest, validity reporting, and cache-gap approval.
 - `reference/templates.md`: mini-ADR, clarification record, leaf doc, index,
   policy set, vendor-facts, glossary, debt registry, loading protocol,
   decision gate, consent-state record.

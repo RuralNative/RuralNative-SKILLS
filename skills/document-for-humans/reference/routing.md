@@ -45,7 +45,7 @@ takes and `coherence.md` for how freshness and prevention are enforced.
 
 - Recent-graduate reading level: short sentences, concrete nouns, no word
   chosen to sound smart.
-- Jargon budget: at most one term of art per paragraph, and it must be bridged
+- Jargon stays explained: every term of art must be bridged
   or glossed on first use.
 - Tone is verifiable in review, not by script — the audit branch checks it by
   sampling.

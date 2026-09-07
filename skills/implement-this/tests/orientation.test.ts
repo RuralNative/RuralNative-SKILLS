@@ -1,7 +1,8 @@
 // implement-this:INV-14 — the worker resolves current orientation sources in
 // its checkout before broad documentation loading, records compact durable
 // evidence, and follows one bounded resolution attempt for a direct ticket
-// without valid seam metadata (#179, ADR-0024).
+// without valid seam metadata (#179, ADR-0024, ADR-0032). Length alone never
+// stops the run.
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import {
@@ -22,43 +23,49 @@ function resolved(overrides: Partial<ResolvedOrientationFact> = {}): ResolvedOri
   };
 }
 
-describe("worker orientation preflight (implement-this:INV-14)", () => {
-  test("a fit set proceeds to the focused doc-cache route", () => {
+describe("worker orientation resolution (implement-this:INV-14)", () => {
+  test("a required set proceeds to the focused doc-cache route", () => {
     const preflight = preflightWorkerOrientation({
       affectedSeams: ["implement-this"],
       resolved: resolved(),
     });
-    assert.equal(preflight.withinBudget, true);
-    assert.equal(preflight.evidence.cap, 9000);
-    assert.match(preflight.reason, /fits the selected task-band cap/);
+    assert.equal(
+      preflight.reason,
+      "the resolved orientation set records the required sources for incremental reading",
+    );
+    assert.deepEqual(preflight.evidence, {
+      band: "ordinary",
+      bytes: 5000,
+      sourceCount: 4,
+      cacheGap: false,
+    });
   });
 
-  test("an over-budget set stops before broad loading", () => {
+  test("a large required set still proceeds without a size veto", () => {
     const preflight = preflightWorkerOrientation({
       affectedSeams: ["implement-this", "review-this"],
-      resolved: resolved({ bytes: 9100, sourceCount: 8 }),
+      resolved: resolved({ bytes: 25000, sourceCount: 8 }),
     });
-    assert.equal(preflight.withinBudget, false);
-    assert.match(preflight.reason, /stop before broad loading/);
+    assert.equal(preflight.evidence.bytes, 25000);
+    assert.match(preflight.reason, /incremental reading/);
   });
 
-  test("the cap is the band cap, never waived by cache-gap approval", () => {
+  test("cache-gap approval records substitution context without a cap", () => {
     const preflight = preflightWorkerOrientation({
       affectedSeams: ["implement-this"],
-      resolved: resolved({ bytes: 9100, cacheGap: true }),
+      resolved: resolved({ bytes: 25000, cacheGap: true }),
     });
-    assert.equal(preflight.withinBudget, false);
-    assert.equal(preflight.evidence.cap, 9000);
+    assert.equal(preflight.evidence.cacheGap, true);
+    assert.equal(preflight.evidence.bytes, 25000);
   });
 });
 
 describe("compact worker evidence (implement-this:INV-14)", () => {
-  test("records band, bytes, cap, source count, and cache-gap state without source lists", () => {
+  test("records band, bytes, source count, and cache-gap state without source lists", () => {
     const evidence = compactOrientationEvidence(resolved());
     const rendered = renderCompactOrientationEvidence(evidence);
     assert.ok(rendered.includes("task band: ordinary"));
     assert.ok(rendered.includes("resolved bytes: 5000"));
-    assert.ok(rendered.includes("cap: 9000"));
     assert.ok(rendered.includes("source count: 4"));
     assert.ok(rendered.includes("cache-gap state: none"));
     assert.equal(rendered.includes("source: "), false);
@@ -66,7 +73,7 @@ describe("compact worker evidence (implement-this:INV-14)", () => {
 });
 
 describe("direct-ticket seam resolution (implement-this:INV-14)", () => {
-  test("a valid requested seam name follows the same bounded path as a planned ticket", () => {
+  test("a valid requested seam name follows the same relevant-source path as a planned ticket", () => {
     const result = resolveDirectTicketSeam({
       requestedSeam: "plan-this",
       candidates: [{ seam: "plan-this", codeRoot: "skills/plan-this" }],

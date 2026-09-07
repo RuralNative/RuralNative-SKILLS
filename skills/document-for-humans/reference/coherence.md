@@ -14,7 +14,7 @@
 
 ## Audit checks
 
-`Audit checks source resolution, claim traceability, freshness, bridge direction, artifact need, and plain-language limits separately. Each check has its own evidence and fix.`
+`Audit checks source resolution, claim traceability, freshness, bridge direction, artifact need, and plain-language requirements separately. Each check has its own evidence and fix.`
 
 ## Adaptation
 
