@@ -129,7 +129,7 @@ Retired by ADR-0031: the former user-created session that validated, reserved, d
 _Avoid_: supervisor, coordinator, orchestrator
 
 **Worker session**:
-Retired by ADR-0031: the former targeted session inside an isolated git worktree. Production commands run directly in the current checkout; the only delegated editor is the optional configured `review-fixer` subagent.
+Retired by ADR-0031: the former targeted session inside an isolated git worktree. Production commands run directly in the current checkout; review runs with no delegated editor.
 _Avoid_: agent (when the session is meant), subagent
 
 **Cleanup-pending**:
@@ -169,7 +169,7 @@ The user's invoking working tree where `/implement-this` and `/review-this` run.
 _Avoid_: worktree (when the invoking checkout is meant)
 
 **Configured fix agent**:
-The optional Kilo subagent named `review-fixer` that applies confirmed review findings in the current checkout. It edits and runs focused tests only.
+Retired by ADR-0033: the former optional Kilo subagent named `review-fixer` that applied confirmed review findings in the current checkout. Review now publishes findings and stops with no delegated editor.
 _Avoid_: mutation worker, fix worker
 
 **Implementation wave**:

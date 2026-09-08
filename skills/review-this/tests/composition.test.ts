@@ -1,4 +1,4 @@
-// review-this composition: one pull request in the current checkout (ADR-0031).
+// review-this composition: one pull request in the current checkout (review-only).
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -27,7 +27,7 @@ describe("review-this installation and target (INV-2)", () => {
 });
 
 describe("single checkout contract (INV-5, INV-6, INV-13, INV-14)", () => {
-  test("skill runs one frontier pass with no worker machinery", () => {
+  test("skill runs one frontier pass with no worker or delivery machinery", () => {
     const skill = read("skills/review-this/SKILL.md");
     assert.ok(skill.includes("Never call Agent Manager"), "skill must prohibit Agent Manager use");
     for (const banned of [
@@ -44,40 +44,41 @@ describe("single checkout contract (INV-5, INV-6, INV-13, INV-14)", () => {
       "Agent Manager catalog",
       "Requires /code-review",
       "delegation to `/code-review`",
+      "squash-merge",
+      "review-fixer",
     ]) {
       assert.equal(skill.includes(banned), false, `skill must not mention ${banned}`);
     }
     assert.ok(skill.includes("current checkout"));
     assert.ok(skill.includes("## Resolve"));
+    assert.ok(skill.includes("## Policy"));
     assert.ok(skill.includes("## Review"));
-    assert.ok(skill.includes("## Fix"));
-    assert.ok(skill.includes("## Merge"));
+    assert.ok(skill.includes("## Publish"));
     assert.ok(skill.includes("## Spec\n\nIssue #0"));
   });
-  test("review-fixer definition exists with narrow permissions", () => {
-    const agent = read(".kilo/agent/review-fixer.md");
-    assert.ok(agent.includes("review-fixer"));
-    assert.ok(agent.includes("mode: subagent"), "fixer must be Task-invocable");
-    assert.match(agent, /edit:\s+"\*": ask/, "every fixer edit requires approval");
-    assert.match(agent, /bash:\s+"\*": ask/, "every focused test command requires approval");
-    assert.equal(agent.includes("bash: allow"), false, "fixer must not have unrestricted shell access");
-    assert.ok(norm(agent).includes("do not commit"));
-    assert.ok(norm(agent).includes("focused test command"), "shell use limited to packet test commands");
+  test("review-only authority forbids delivery and the fixer is retired", () => {
+    const authority = read("skills/review-this/review-authority.ts");
+    assert.ok(authority.includes("REVIEWER_FORBIDDEN_ACTIONS"));
+    assert.ok(norm(authority).includes("never applies fixes"));
+    assert.equal(fs.existsSync(path.join(ROOT, ".kilo/agent/review-fixer.md")), false, "fixer definition must be removed");
   });
   test("config carries no Agent Manager permission", () => {
     assert.equal(read(".kilo/kilo.jsonc").includes("agent_manager"), false);
   });
-  test("leaf tombstones retired wave invariants without reuse", () => {
+  test("leaf tombstones retired wave and delivery invariants without reuse", () => {
     const leaf = read("docs/leaves/review-this.md");
     assert.ok(leaf.includes("Retired by ADR-0031"));
+    assert.ok(leaf.includes("Retired by ADR-0033"));
   });
 });
 
-describe("review policy (INV-16, INV-17)", () => {
-  test("REVIEW.md defines CI equivalence and verdict reuse without cloud", () => {
+describe("review policy (INV-16, INV-17, INV-18)", () => {
+  test("REVIEW.md defines publication, CI equivalence, and bootstrap without cloud", () => {
     const policy = read("REVIEW.md");
     assert.equal(policy.includes("cloud review"), false);
     assert.ok(policy.includes("CI equivalence"));
     assert.ok(policy.includes("review-policy revision"));
+    assert.ok(policy.includes("Review policy bootstrap"));
+    assert.ok(norm(policy).includes("no fix subagent"));
   });
 });

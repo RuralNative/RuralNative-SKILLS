@@ -60,11 +60,11 @@ describe("README contract (ADR-0031)",()=>{
     assert.ok(!/recovery-required/i.test(wfSec),"README must not promise recovery states");
   });
 
-  test("review cadence: one frontier pass, delta review, one fix round",()=>{
+  test("review cadence: one frontier pass, delta review, no fix round",()=>{
     const wfSec=wfSection();
     assert.ok(/one full Standards-plus-Spec/i.test(wfSec),"missing one frontier pass");
     assert.ok(/delta review/i.test(wfSec),"missing delta review");
-    assert.ok(/at most one automatic fix round/i.test(wfSec),"missing one-fix cap");
+    assert.ok(/no fix round runs/i.test(wfSec),"missing no-fix-round statement");
   });
 
   test("focused verification with CI reuse and no post-merge run",()=>{

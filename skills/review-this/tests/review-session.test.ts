@@ -1,12 +1,10 @@
-// Single-PR session: checkout match, delta scope, CI gate, verdict reuse (ADR-0031).
+// Single-PR session: checkout match, delta scope, CI gate, verdict reuse (review-only).
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import {
   checkoutMatchDecision,
   ciGateDecision,
   deltaReviewScope,
-  fixRoundDecision,
-  postFixReviewScope,
   shouldReuseVerdict,
 } from "../review-session.ts";
 
@@ -48,24 +46,17 @@ describe("deltaReviewScope", () => {
   });
 });
 
-describe("one fix round", () => {
-  test("first round allowed, second stopped", () => {
-    assert.equal(fixRoundDecision(0).allowed, true);
-    assert.equal(fixRoundDecision(1).allowed, false);
-  });
-});
-
 describe("ciGateDecision", () => {
-  test("pending CI publishes the verdict and stops without polling", () => {
+  test("pending CI publishes the review and stops without polling", () => {
     assert.deepEqual(
       ciGateDecision({ requiredChecksGreen: false, requiredChecksPending: true, equivalentCiEstablished: false, localFallbackPassed: null }).action,
       "publish-and-stop",
     );
   });
-  test("equivalent green CI is merge-eligible", () => {
+  test("equivalent green CI publishes without delivery", () => {
     assert.deepEqual(
       ciGateDecision({ requiredChecksGreen: true, requiredChecksPending: false, equivalentCiEstablished: true, localFallbackPassed: null }).action,
-      "merge-eligible",
+      "publish",
     );
   });
   test("absent equivalence runs the local fallback once", () => {
@@ -74,41 +65,35 @@ describe("ciGateDecision", () => {
       "run-fallback-once",
     );
   });
-  test("failed verification stops", () => {
+  test("failed verification publishes the failure and stops", () => {
     assert.deepEqual(
       ciGateDecision({ requiredChecksGreen: false, requiredChecksPending: false, equivalentCiEstablished: false, localFallbackPassed: false }).action,
-      "stop",
+      "publish-and-stop",
     );
   });
-  test("failed equivalent CI blocks even when the fallback passed", () => {
+  test("failed equivalent CI publishes the failure even when the fallback passed", () => {
     assert.deepEqual(
       ciGateDecision({ requiredChecksGreen: false, requiredChecksPending: false, equivalentCiEstablished: true, localFallbackPassed: true }).action,
-      "stop",
+      "publish-and-stop",
     );
   });
-  test("approved fallback satisfies the gate only with green checks and no equivalent CI", () => {
+  test("approved fallback publishes only with green checks and no equivalent CI", () => {
     assert.deepEqual(
       ciGateDecision({ requiredChecksGreen: true, requiredChecksPending: false, equivalentCiEstablished: false, localFallbackPassed: true }).action,
-      "merge-eligible",
+      "publish",
     );
   });
-  test("failed required checks stop even when the fallback passed", () => {
+  test("failed required checks publish the failure even when the fallback passed", () => {
     assert.deepEqual(
       ciGateDecision({ requiredChecksGreen: false, requiredChecksPending: false, equivalentCiEstablished: false, localFallbackPassed: true }).action,
-      "stop",
+      "publish-and-stop",
     );
   });
-  test("failed checks without equivalent CI stop without running the fallback", () => {
+  test("failed checks without equivalent CI publish the failure without running the fallback", () => {
     assert.deepEqual(
       ciGateDecision({ requiredChecksGreen: false, requiredChecksPending: false, equivalentCiEstablished: false, localFallbackPassed: null }).action,
-      "stop",
+      "publish-and-stop",
     );
-  });
-});
-
-describe("postFixReviewScope", () => {
-  test("the post-fix review is always one delta review", () => {
-    assert.deepEqual(postFixReviewScope().scope, "delta");
   });
 });
 

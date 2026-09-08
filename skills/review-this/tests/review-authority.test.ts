@@ -1,43 +1,28 @@
-// Fix-agent authority limits (ADR-0031).
+// Review-only authority limits (ADR-0033).
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  FIX_AGENT_FORBIDDEN_ACTIONS,
-  FIX_AGENT_NAME,
-  buildFixPacket,
-  isConfiguredFixAgent,
+  REVIEWER_ALLOWED_ACTIONS,
+  REVIEWER_FORBIDDEN_ACTIONS,
+  isForbiddenReviewerAction,
+  isMissingPolicyDraftAction,
 } from "../review-authority.ts";
 
-describe("fix agent authority", () => {
-  test("agent name is review-fixer", () => {
-    assert.equal(FIX_AGENT_NAME, "review-fixer");
-    assert.equal(isConfiguredFixAgent("review-fixer"), true);
-    assert.equal(isConfiguredFixAgent("frontier"), false);
-  });
-  test("forbidden actions cover commit, push, verdicts, merge, and tracker state", () => {
-    for (const action of ["commit", "push", "publish-verdict", "merge", "labels", "promotion", "closure"] as const) {
-      assert.ok((FIX_AGENT_FORBIDDEN_ACTIONS as readonly string[]).includes(action));
+describe("review-only authority", () => {
+  test("forbidden actions cover fixes, source edits, delivery, and tracker state", () => {
+    for (const action of ["apply-fix", "edit-source", "commit", "push", "merge", "labels", "promotion", "closure", "update-pull-request-body"] as const) {
+      assert.ok((REVIEWER_FORBIDDEN_ACTIONS as readonly string[]).includes(action));
+      assert.equal(isForbiddenReviewerAction(action), true);
     }
   });
-  test("builds a narrow packet with findings, seams, and focused tests", () => {
-    const r = buildFixPacket(
-      11,
-      [{ id: "F-1", file: "a.ts", line: 1, evidence: "rule + output" }],
-      ["review-this"],
-      ["node --test skills/review-this/tests/reconciliation.test.ts"],
-    );
-    assert.equal(r.decision.ok, true);
-    assert.equal(r.packet?.agent, "review-fixer");
+  test("allowed actions cover publication, checks, and the missing-policy draft only", () => {
+    for (const action of ["publish-review", "publish-inline-findings", "create-missing-review-policy-draft", "run-focused-checks", "run-local-fallback-once"] as const) {
+      assert.ok((REVIEWER_ALLOWED_ACTIONS as readonly string[]).includes(action));
+      assert.equal(isForbiddenReviewerAction(action), false);
+    }
   });
-  test("empty findings, seams, or tests stop the packet", () => {
-    assert.equal(buildFixPacket(11, [], ["s"], ["t"]).decision.ok, false);
-    assert.equal(
-      buildFixPacket(11, [{ id: "F-1", file: "a.ts", line: 1, evidence: "e" }], [], ["t"]).decision.ok,
-      false,
-    );
-    assert.equal(
-      buildFixPacket(11, [{ id: "F-1", file: "a.ts", line: 1, evidence: "e" }], ["s"], []).decision.ok,
-      false,
-    );
+  test("missing-policy draft is the only repository-file change", () => {
+    assert.equal(isMissingPolicyDraftAction("create-missing-review-policy-draft"), true);
+    assert.equal(isMissingPolicyDraftAction("publish-review"), false);
   });
 });

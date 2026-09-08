@@ -99,15 +99,15 @@ describe("review policy classification (document-for-agents #136)", () => {
     }
   });
 
-  test("the fix agent edits and tests only while the frontier reviewer verifies findings before publication", () => {
+  test("review-only authority publishes findings without fixes or delivery", () => {
     const n = norm(read("REVIEW.md"));
-    assert.ok(n.includes("focused tests only"), "the fix agent must be limited to editing and focused tests");
+    assert.ok(n.includes("no fix subagent"), "policy must state no fix subagent runs");
     assert.ok(
       n.includes("verifies every finding") && n.includes("before publishing"),
       "the frontier reviewer verifies every finding before publication"
     );
-    for (const forbidden of ["may not commit", "may not", "merge"]) {
-      assert.ok(n.includes(forbidden), `policy must forbid fix-agent ${forbidden}`);
+    for (const forbidden of ["never applies fixes", "never", "merge"]) {
+      assert.ok(n.includes(forbidden), `policy must forbid reviewer ${forbidden}`);
     }
   });
 

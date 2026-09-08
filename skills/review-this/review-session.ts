@@ -1,20 +1,18 @@
-// Single pull-request session decisions for /review-this (ADR-0031).
+// Single pull-request session decisions for /review-this (review-only).
 //
 // Pure: facts in, decisions out. No network, GitHub, git, filesystem, or
 // Agent Manager calls. Covers current-checkout match, delta-versus-full
 // review, one-check CI gating with local fallback, and verdict reuse.
+// Review-only: publication is terminal; no fix round, commit, push, merge,
+// label, promotion, or closure decisions live here.
 
 import {
-  fixRoundDecision,
-  isMergeEligible,
   reviewIsFresh,
   verdictReusable,
-  type PullRequestFact,
-  type ReviewFact,
   type TrustedVerdictKey,
 } from "./workflow-state.ts";
 
-export { fixRoundDecision, reviewIsFresh, verdictReusable, isMergeEligible };
+export { reviewIsFresh, verdictReusable };
 
 export interface CheckoutMatchFact {
   /** The worktree has no uncommitted changes. */
@@ -88,15 +86,6 @@ export function deltaReviewScope(fact: RevisionChangeFact): { scope: ReviewScope
     : { scope: "delta", reason: "changed hunks and impacted callers only" };
 }
 
-/**
- * The post-fix review is always exactly one delta review over the accepted
- * fix diff. Risk triggers apply only to later independently-pushed revisions,
- * never to this bounded fix round.
- */
-export function postFixReviewScope(): { scope: "delta"; reason: string } {
-  return { scope: "delta", reason: "one delta review over the accepted fix diff" };
-}
-
 export interface CiGateFact {
   requiredChecksGreen: boolean;
   requiredChecksPending: boolean;
@@ -107,33 +96,33 @@ export interface CiGateFact {
 }
 
 export type CiGateDecision =
-  | { action: "merge-eligible"; reason: string }
+  | { action: "publish"; reason: string }
   | { action: "publish-and-stop"; reason: string }
-  | { action: "run-fallback-once"; reason: string }
-  | { action: "stop"; reason: string };
+  | { action: "run-fallback-once"; reason: string };
 
 /**
- * One-check CI gating. Pending CI publishes the pinned verdict and stops
- * without polling. Required checks must be green in every path; the local
- * fallback supplies broad verification only and never excuses failed
- * required checks. Green equivalent CI is merge-eligible. Green checks with
- * no equivalent mapping run the full local gate once as fallback.
+ * One-check CI gating for review-only publication. Pending CI publishes the
+ * pinned review and stops without polling. Failed required checks or a failed
+ * local fallback publish that failure as review evidence and stop without
+ * delivery. Green equivalent CI publishes. Green checks with no equivalent
+ * mapping run the full local gate once as fallback, then publish. No decision
+ * here authorizes merge or delivery.
  */
 export function ciGateDecision(fact: CiGateFact): CiGateDecision {
   if (fact.requiredChecksPending) {
-    return { action: "publish-and-stop", reason: "required CI is pending; publish the pinned verdict and stop" };
+    return { action: "publish-and-stop", reason: "required CI is pending; publish the pinned review and stop" };
   }
   if (!fact.requiredChecksGreen) {
-    return { action: "stop", reason: "required CI failed; do not merge" };
+    return { action: "publish-and-stop", reason: "required CI failed; publish the failure without delivery" };
   }
   if (fact.equivalentCiEstablished) {
-    return { action: "merge-eligible", reason: "equivalent required CI is green on the reviewed head and base" };
+    return { action: "publish", reason: "equivalent required CI is green on the reviewed head and base" };
   }
   if (fact.localFallbackPassed === true) {
-    return { action: "merge-eligible", reason: "required checks are green and the approved local fallback passed once" };
+    return { action: "publish", reason: "required checks are green and the approved local fallback passed once" };
   }
   if (fact.localFallbackPassed === false) {
-    return { action: "stop", reason: "verification failed; do not merge" };
+    return { action: "publish-and-stop", reason: "verification failed; publish the failure without delivery" };
   }
   return { action: "run-fallback-once", reason: "no equivalent CI mapping; run the full local gate once" };
 }
@@ -151,4 +140,4 @@ export function shouldReuseVerdict(fact: VerdictReuseFact): { reuse: boolean; re
   return { reuse: false, reason: "a verdict key moved; review the current revision" };
 }
 
-export type { PullRequestFact, ReviewFact, TrustedVerdictKey };
+export type { TrustedVerdictKey };

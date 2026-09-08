@@ -65,12 +65,12 @@ only after Maintain reviews the seam's affected claims against current code
 
 | Seam | Code root | Fingerprint | Verified | Claims |
 |---|---|---|---|---|
-| document-for-agents | skills/document-for-agents/ | sha256:94608ed640c58cc8250dac28f0746d5e0faac5c7f8170020dd877f2ede982ed3 | 2026-09-07 | ADR-0032: incremental relevant reading without size approval, completeness-shaped index, diagnostic ~23 review trigger, and per-declaration route coverage; claims reviewed against current code |
+| document-for-agents | skills/document-for-agents/ | sha256:7b7fa5f82fe7cb8d4e2363e068b26cf170d92b647c9d671d748f1813bd7e890b | 2026-09-08 | ADR-0032: incremental relevant reading without size approval, completeness-shaped index, diagnostic ~23 review trigger, and per-declaration route coverage; ADR-0033: review-policy expectations are review-only with no fix agent; claims reviewed against current code |
 | document-for-humans | skills/document-for-humans/ | sha256:e9dfe40378239f2c7abfea2af310324c94e9d3037883de2c7f8ed613f47b6441 | 2026-09-07 | ADR-0032: template quotas and jargon-per-paragraph quotas removed; explained terminology and completeness preserved; claims reviewed against current code |
 | unslopify | skills/unslopify/ | sha256:fbac22ce1a239117f675b9f7eda7c93981579782c35b08d570abf67e1f86523e | 2026-09-07 | ADR-0032: managed AGENTS.md fixture follows the relevant-sources command; claims reviewed against current code |
 | plan-this | skills/plan-this/ | sha256:7bdf01296eee8a2f3d1cdc63867bcd9f7c34bb007c2d900c883174af19929a92 | 2026-09-07 | ADR-0032: question quotas, cap-based preflight, and SLO sizing removed; one decision per question, source resolution, and risk evidence preserved; claims reviewed against current code |
 | implement-this | skills/implement-this/ | sha256:3b8bb19a158cff78fb3b42862cad1face35fc31310a145920669aa9dfb77e1d4 | 2026-09-07 | ADR-0032: orientation-size veto removed; incremental relevant reading without size approval; claims reviewed against current code |
-| review-this | skills/review-this/ | sha256:a06c9d82b247b87d37d0e68300c74b4ef5d5644a40417d8aff8952900cae5c2e | 2026-09-07 | ADR-0032: orientation-size veto removed; relevant-source resolution preserved; claims reviewed against current code |
+| review-this | skills/review-this/ | sha256:ffcfa9b990cef860e67ab62b7f85a298932ffda83a6febbb583110fc425dd7f5 | 2026-09-08 | ADR-0033: review-only publication with missing REVIEW.md bootstrap; symlink/conflict guards precede creation, CI failures publish, blocking qualifies without blocking publication; claims reviewed against current code |
 | release-skills | skills/release-skills/ | sha256:2d89e68b76ac58448a26c1c9b1cd09bb91259380595b8a1790a38607861665c0 | 2026-09-02 | release workflow prose reviewed against code |
 
 ## Coverage
@@ -116,6 +116,7 @@ only after Maintain reviews the seam's affected claims against current code
 | docs/adr/0030-larger-orientation-ceilings.md | decision |
 | docs/adr/0031-single-target-production-workflows.md | decision |
 | docs/adr/0032-remove-document-size-gates.md | decision |
+| docs/adr/0033-review-only-with-policy-bootstrap.md | decision |
 | docs/leaves/document-for-agents.md | leaf |
 | docs/leaves/document-for-humans.md | leaf |
 | docs/leaves/unslopify.md | leaf |

@@ -1,6 +1,7 @@
-// Host contracts for the single pull-request review (ADR-0031).
+// Host contracts for the single pull-request review (review-only).
 //
-// Host-neutral interfaces for GitHub facts, required checks, and merge. No
+// Host-neutral interfaces for GitHub facts, required checks, and review
+// publication. No fixes, merge, label, promotion, or closure adapters. No
 // cloud review, no local-review adapter, no wave orchestration. Tests supply
 // fakes and never call live GitHub.
 
@@ -12,11 +13,10 @@ export interface GitHubAdapter {
   fetchRequiredChecks(prNumber: number): Promise<{ green: boolean; pending: boolean; headSha: string; baseSha: string }>;
 }
 
-export interface MergeAdapter {
+export interface ReviewPublishAdapter {
   readonly name: string;
-  squashMerge(prNumber: number, headSha: string): Promise<{ merged: boolean; headSha: string }>;
-  updatePullRequestBody(prNumber: number, body: string): Promise<void>;
-  updateLabels(ticket: number, add: string[], remove: string[]): Promise<void>;
+  publishReview(prNumber: number, body: string): Promise<void>;
+  publishInlineFindings(prNumber: number, findings: readonly string[]): Promise<void>;
 }
 
 /**

@@ -11,7 +11,7 @@ Documentation tier: full
 | unslopify | AI-tell detection, meaning-safe revision, always-on | skills/unslopify/ | `skills/unslopify/tests/` | docs/leaves/unslopify.md |
 | plan-this | planning workflow; publishes spec and tickets | skills/plan-this/ | `skills/plan-this/tests/` | docs/leaves/plan-this.md |
 | implement-this | implementation adapter; one ticket in the current checkout, PR-only delivery | skills/implement-this/ | `skills/implement-this/tests/` | docs/leaves/implement-this.md |
-| review-this | one pull-request review in the current checkout through merge, promotion, closure | skills/review-this/ | `skills/review-this/tests/` | docs/leaves/review-this.md |
+| review-this | one pull-request review in the current checkout with publication-only findings and missing-policy bootstrap | skills/review-this/ | `skills/review-this/tests/` | docs/leaves/review-this.md |
 | release-skills | universal release workflow; version-file detection | skills/release-skills/ | `skills/release-skills/tests/` | docs/leaves/release-skills.md |
 
 New `skills/<identity>/` needs a row, leaf doc, matching `SKILL.md` name (check 3).## Non-seam docs
@@ -21,11 +21,11 @@ New `skills/<identity>/` needs a row, leaf doc, matching `SKILL.md` name (check 
 - docs/agents/*, docs/manifest.md, docs/human/*
 ## Decisions
 
-Accepted decisions in `docs/adr/` (incl. `docs/adr/0016-unslopify-always-on-output-contract.md`, `docs/adr/0018-opt-in-skill-diagnostics.md`, `docs/adr/0028-adaptive-doc-cache-governance.md`, `docs/adr/0029-unslopify-session-start-and-plain-language-live-output.md`, `docs/adr/0031-single-target-production-workflows.md`, `docs/adr/0032-remove-document-size-gates.md`); superseded set and tiers in `docs/manifest.md`.## Cross-cutting boundaries
+Accepted decisions in `docs/adr/` (incl. `docs/adr/0016-unslopify-always-on-output-contract.md`, `docs/adr/0018-opt-in-skill-diagnostics.md`, `docs/adr/0028-adaptive-doc-cache-governance.md`, `docs/adr/0029-unslopify-session-start-and-plain-language-live-output.md`, `docs/adr/0031-single-target-production-workflows.md`, `docs/adr/0032-remove-document-size-gates.md`, `docs/adr/0033-review-only-with-policy-bootstrap.md`); superseded set and tiers in `docs/manifest.md`.## Cross-cutting boundaries
 
 - Orientation: task bands select relevant source categories; length alone never decides validity and never requires approval by itself; read relevant authoritative sources incrementally as the task requires; never block code inspection inside the affected seam; a missing fact is a cache gap — record it without inventing it, and ask the owner before changing source authority, expanding scope, or taking substantive or protected actions (ADR-0017, ADR-0024, ADR-0032).
 - Tier promotes automatically and additively, never auto-demote; seam coherence fails a stale fingerprint, dirty or clean; manifest, fingerprints, and private consent state stay out of every orientation set (ADR-0024, ADR-0028).
-- Frontier session owns verdicts, merge, labels, promotion, closure (ADR-0031); one ticket or pull request runs in the current checkout with no workers.## Loading protocol
+- Frontier session owns review publication (ADR-0033); implementation owns its ticket delivery and review never merges, labels, promotes, or closes; one ticket or pull request runs in the current checkout with no workers.## Loading protocol
 
 | Task | Read set |
 |---|---|
