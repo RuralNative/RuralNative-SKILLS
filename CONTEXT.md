@@ -168,6 +168,10 @@ _Avoid_: Ready queue, batch
 The user's invoking working tree where `/implement-this`, `/review-this`, and `/fix-this` run. No command creates, polls, or removes another worktree.
 _Avoid_: worktree (when the invoking checkout is meant)
 
+**Checkout alignment**:
+The `review-this` preparation that switches a clean current checkout at a different commit to the verified pull-request head commit in detached `HEAD`, moving no branch and creating no worktree. It changes which commit the worktree shows, never what the review publishes; dirty, unfinished-operation, and collision states stop with no checkout effect (ADR-0036).
+_Avoid_: manual realignment (what the stop clause required before ADR-0036)
+
 **Configured fix agent**:
 Retired by ADR-0033: the former optional Kilo subagent named `review-fixer` that applied confirmed review findings in the current checkout. Review now publishes findings and stops with no delegated editor.
 

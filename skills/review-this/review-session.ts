@@ -1,8 +1,9 @@
 // Single pull-request session decisions for /review-this (review-only).
 //
 // Pure: facts in, decisions out. No network, GitHub, git, filesystem, or
-// Agent Manager calls. Covers current-checkout match, delta-versus-full
-// review, one-check CI gating with local fallback, and verdict reuse.
+// Agent Manager calls. Covers current-checkout match, clean-checkout
+// alignment preparation, delta-versus-full review, one-check CI gating with
+// local fallback, and verdict reuse.
 // Review-only: publication is terminal; no fix round, commit, push, merge,
 // label, promotion, or closure decisions live here.
 
@@ -41,8 +42,9 @@ export type CheckoutMatchDecision =
 /**
  * The current checkout must be clean and at the selected pull-request head
  * commit. Local branch names are informational: the same commit checked out
- * under an alias, `main`, or detached `HEAD` still matches. A mismatch
- * stops instead of checking out or creating another worktree.
+ * under an alias, `main`, or detached `HEAD` still matches. This is the
+ * strict final gate: it runs after checkout preparation, so a failure here
+ * means alignment did not complete and review must stop.
  */
 export function checkoutMatchDecision(
   fact: CheckoutMatchFact,
@@ -56,10 +58,56 @@ export function checkoutMatchDecision(
   if (fact.localHeadSha !== fact.pullRequestHeadSha) {
     return {
       match: false,
-      reason: "local HEAD does not match the pull-request head; fetch and align outside this command",
+      reason: "local HEAD does not match the pull-request head after checkout preparation; stop without review",
     };
   }
   return { match: true, reason: "the clean checkout is at the pull-request head commit" };
+}
+
+export interface CheckoutPreparationFact {
+  /** The worktree has no uncommitted, staged, or untracked changes. */
+  worktreeClean: boolean;
+  /** A merge, rebase, cherry-pick, revert, or similar operation is in progress. */
+  gitOperationInProgress: boolean;
+  /** Local `HEAD` SHA in the invoking checkout. */
+  localHeadSha: string;
+  /** Pull-request head SHA. */
+  pullRequestHeadSha: string;
+}
+
+export type CheckoutPreparationAction = "proceed" | "align" | "stop";
+
+export interface CheckoutPreparationDecision {
+  action: CheckoutPreparationAction;
+  reason: string;
+}
+
+/**
+ * Decide how to prepare the checkout before review (ADR-0036). A clean
+ * checkout already at the pull-request head proceeds untouched, whatever
+ * branch name it is on. A clean checkout at a different commit aligns: the
+ * caller fetches the verified pull-request head and switches this checkout
+ * to that exact commit in detached `HEAD`, without moving local branches or
+ * creating a worktree. Alignment authorizes the switch only; the strict
+ * match check still has to pass afterwards. A dirty worktree, an unfinished
+ * git operation, or a missing revision stops with no checkout effect.
+ */
+export function checkoutPreparationDecision(
+  fact: CheckoutPreparationFact,
+): CheckoutPreparationDecision {
+  if (fact.gitOperationInProgress) {
+    return { action: "stop", reason: "a git operation is in progress; finish or abort it outside this command" };
+  }
+  if (!fact.worktreeClean) {
+    return { action: "stop", reason: "the current checkout is dirty; commit or stash outside this command" };
+  }
+  if (fact.localHeadSha.trim() === "" || fact.pullRequestHeadSha.trim() === "") {
+    return { action: "stop", reason: "no trustworthy pull-request head revision to align to" };
+  }
+  if (fact.localHeadSha === fact.pullRequestHeadSha) {
+    return { action: "proceed", reason: "the clean checkout is already at the pull-request head commit" };
+  }
+  return { action: "align", reason: "the clean checkout is at a different commit; align it to the pull-request head in detached HEAD" };
 }
 
 export interface RevisionChangeFact {

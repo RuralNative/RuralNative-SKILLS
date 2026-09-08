@@ -53,14 +53,28 @@ describe("single checkout contract (INV-5, INV-6, INV-13, INV-14)", () => {
     }
     assert.ok(skill.includes("current checkout"));
     assert.ok(skill.includes("## Resolve"));
+    assert.ok(skill.includes("## Prepare"));
     assert.ok(skill.includes("## Policy"));
     assert.ok(skill.includes("## Review"));
     assert.ok(skill.includes("## Publish"));
     assert.ok(skill.includes("## Spec\n\nIssue #0"));
   });
+  test("Prepare aligns a clean mismatching checkout and keeps every other stop", () => {
+    const skill = read("skills/review-this/SKILL.md");
+    assert.ok(skill.includes("checkoutPreparationDecision"), "skill must decide checkout preparation");
+    assert.ok(skill.includes("checkoutMatchDecision"), "skill must keep the strict final match gate");
+    assert.ok(skill.includes("git fetch origin refs/pull/<n>/head"), "skill must fetch the pull-request head ref");
+    assert.ok(skill.includes("git -c core.hooksPath= checkout --detach"), "skill must align without moving branches or running checkout hooks");
+    assert.ok(skill.includes("Never force the switch, stash, reset, clean"), "skill must forbid destructive recovery");
+    assert.ok(skill.includes("stays at the reviewed commit for `/fix-this`"), "skill must leave the aligned checkout for fix-this");
+    assert.ok(skill.includes("only working-tree effect"), "skill must scope the working-tree exception to alignment");
+    const install = read("skills/review-this/INSTALL.md");
+    assert.ok(norm(install).includes("automatically aligns"), "install must document automatic alignment");
+  });
   test("review-only authority forbids delivery and the fixer is retired", () => {
     const authority = read("skills/review-this/review-authority.ts");
     assert.ok(authority.includes("REVIEWER_FORBIDDEN_ACTIONS"));
+    assert.ok(authority.includes("align-clean-checkout"), "checkout alignment must be an allowed preparation action");
     assert.ok(norm(authority).includes("never applies fixes"));
     assert.equal(fs.existsSync(path.join(ROOT, ".kilo/agent/review-fixer.md")), false, "fixer definition must be removed");
   });

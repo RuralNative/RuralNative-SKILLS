@@ -74,7 +74,7 @@ only after Maintain reviews the seam's affected claims against current code
 | unslopify | skills/unslopify/ | sha256:fbac22ce1a239117f675b9f7eda7c93981579782c35b08d570abf67e1f86523e | 2026-09-07 | ADR-0032: managed AGENTS.md fixture follows the relevant-sources command; claims reviewed against current code |
 | plan-this | skills/plan-this/ | sha256:359f1ee3c5675ed2395b2ef56000a6a70f075f476d1a3c23749dfd20d7b70179 | 2026-09-08 | ADR-0035: shared core gains review-handoff-v1, fix eligibility, and fix progress; generated copies include fix-this; claims reviewed against current code |
 | implement-this | skills/implement-this/ | sha256:3c607d08e5eb46cc09898f9714ed35a18758cf951104e8e516ec59ff13d55630 | 2026-09-08 | ADR-0035: shared core gains review-handoff-v1, fix eligibility, and fix progress; generated copies include fix-this; implement-this completion routes to review-this then fix-this; claims reviewed against current code |
-| review-this | skills/review-this/ | sha256:e1265879672839df86d00b023ea826c2dfc62dedf4516efccae824f3f39c46e9 | 2026-09-08 | ADR-0035: commit-based checkout matching accepts aliases, main, and detached HEAD; publication carries validated review-handoff-v1 and directs to fix-this; claims reviewed against current code |
+| review-this | skills/review-this/ | sha256:9c8c0a86be3c2959fb2cad5ab60e16a1e579e97349816d47012b2f9eb29543b5 | 2026-09-08 | ADR-0036: clean-checkout alignment to the pinned PR head in detached HEAD with the strict match as final gate; commit-based matching accepts aliases, main, and detached HEAD; publication carries validated review-handoff-v1 and directs to fix-this; claims reviewed against current code |
 | fix-this | skills/fix-this/ | sha256:06ee3be5ec663a8746eb5dc01d5c6143bdcdfd797a4b41c2f398f2b9c8cdce80 | 2026-09-08 | ADR-0035: final stage for one reviewed PR with handoff consumption, conflict discipline, local verification, squash merge, and resumable bookkeeping; claims reviewed against current code |
 | release-skills | skills/release-skills/ | sha256:2d89e68b76ac58448a26c1c9b1cd09bb91259380595b8a1790a38607861665c0 | 2026-09-02 | release workflow prose reviewed against code |
 
@@ -124,6 +124,7 @@ only after Maintain reviews the seam's affected claims against current code
 | docs/adr/0033-review-only-with-policy-bootstrap.md | decision |
 | docs/adr/0034-self-contained-handoffs-and-optional-review-policy.md | decision |
 | docs/adr/0035-fix-this-final-stage.md | decision |
+| docs/adr/0036-review-checkout-auto-alignment.md | decision |
 | docs/leaves/document-for-agents.md | leaf |
 | docs/leaves/document-for-humans.md | leaf |
 | docs/leaves/unslopify.md | leaf |

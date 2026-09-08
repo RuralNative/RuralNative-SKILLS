@@ -10,15 +10,19 @@ that the compact leaf core points past.
 `SKILL.md` reviews one pull request in the current checkout: `targets.ts`
 normalizes one `#<n>` or URL reference and resolves it to exactly one open
 pull request (an issue must close through exactly one open pull request);
-`review-session.ts` validates a clean checkout at the PR head commit (branch
-aliases, `main`, and detached `HEAD` match), evidence, and requirements
-revision, records one frontier Standards-plus-Spec pass, and gates
-publication on one CI read. `review-policy.ts` decides the review-policy
+`review-session.ts` decides checkout preparation (ADR-0036: a clean checkout
+at a different commit aligns to the pinned head in detached `HEAD`; dirty,
+unfinished-operation, and collision states stop), validates the strict
+commit-equality match (branch aliases, `main`, and detached `HEAD` at the
+same commit match), evidence, and requirements revision, records one frontier
+Standards-plus-Spec pass, and gates publication on one CI read.
+`review-policy.ts` decides the review-policy
 path; a missing root `REVIEW.md` continues under skill-owned defaults and
 nothing is created. Publication carries one validated `review-handoff-v1`
 block for `fix-this`.
 `reconciliation.ts` validates local findings for scope, evidence, severity,
-category, and exact revisions. `review-authority.ts` forbids fixes, source
+category, and exact revisions. `review-authority.ts` allows publication,
+focused checks, and clean-checkout alignment, and forbids fixes, source
 edits, delivery, and tracker writes. `adapters.ts` carries only local GitHub,
 check, and review-publication contracts. No cloud adapter, wave planner,
 worktree, worker, fix subagent, execution-model catalog, or polling concept
@@ -39,4 +43,6 @@ and whole-spec review. ADR-0031 supersedes those clauses; ADR-0033 retires
 the fix, merge, promotion, and closure paths and removes missing-policy
 bootstrap; ADR-0034 keeps `REVIEW.md` optional with skill-owned defaults.
 ADR-0035 assigns finalization to `fix-this` through `review-handoff-v1`.
+ADR-0036 replaces the review-side stop on a clean checkout mismatch with
+automatic alignment to the pinned head in detached `HEAD`.
 The older files stay verbatim as history.

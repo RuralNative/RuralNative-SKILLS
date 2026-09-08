@@ -3,7 +3,10 @@
 // Pure: facts in, decisions out. No network, GitHub, git, filesystem, or
 // Agent Manager calls. The frontier reviewer publishes findings and stops.
 // It never applies fixes, edits PR source, commits, pushes, merges, labels,
-// promotes, closes, or rewrites the pull-request body.
+// promotes, closes, or rewrites the pull-request body. Aligning a clean
+// checkout to the verified pull-request head commit (ADR-0036) is checkout
+// preparation, not a source edit: it changes which commit the worktree
+// shows, never what the review publishes.
 
 export const REVIEWER_FORBIDDEN_ACTIONS = [
   "apply-fix",
@@ -25,6 +28,7 @@ export const REVIEWER_ALLOWED_ACTIONS = [
   "publish-inline-findings",
   "run-focused-checks",
   "run-local-fallback-once",
+  "align-clean-checkout",
 ] as const;
 
 export type ReviewerAllowedAction = (typeof REVIEWER_ALLOWED_ACTIONS)[number];
@@ -36,7 +40,7 @@ export function isForbiddenReviewerAction(action: string): boolean {
   return (REVIEWER_FORBIDDEN_ACTIONS as readonly string[]).includes(action);
 }
 
-/** No repository-file change is allowed in review-only mode. Retained for callers; always false. */
+/** No missing-policy draft is created in review-only mode. Retained for callers; always false. */
 export function isMissingPolicyDraftAction(_action: string): boolean {
   return false;
 }
