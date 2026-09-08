@@ -92,7 +92,7 @@ describe("planSingleTicket", () => {
     assert.equal(r.ok, false);
     if (!r.ok) assert.equal(r.diagnostic, "multiple-targets");
   });
-  test("rejects closed, blocked, assigned, and unready tickets", () => {
+  test("rejects closed, blocked, assigned, and unready tickets with eligibility diagnostics", () => {
     for (const bad of [
       ticket({ number: 200, state: "closed" }),
       ticket({ number: 201, openBlockers: [1] }),
@@ -101,6 +101,14 @@ describe("planSingleTicket", () => {
     ]) {
       const r = planSingleTicket([`#${bad.number}`], [bad]);
       assert.equal(r.ok, false, `#${bad.number} should stop`);
+      if (!r.ok) assert.equal(r.diagnostic, "ticket-not-eligible");
+    }
+  });
+  test("rejects #0 and bare 0 as malformed references", () => {
+    for (const ref of ["#0", "0", "#00"]) {
+      const r = parseSingleReference([ref]);
+      assert.equal(r.ok, false, `${ref} should stop`);
+      if (!r.ok) assert.equal(r.diagnostic, "malformed-reference");
     }
   });
   test("rejects unknown tickets", () => {

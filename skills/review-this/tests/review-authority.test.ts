@@ -15,14 +15,15 @@ describe("review-only authority", () => {
       assert.equal(isForbiddenReviewerAction(action), true);
     }
   });
-  test("allowed actions cover publication, checks, and the missing-policy draft only", () => {
-    for (const action of ["publish-review", "publish-inline-findings", "create-missing-review-policy-draft", "run-focused-checks", "run-local-fallback-once"] as const) {
+  test("allowed actions cover publication and checks only; no file change is allowed", () => {
+    for (const action of ["publish-review", "publish-inline-findings", "run-focused-checks", "run-local-fallback-once"] as const) {
       assert.ok((REVIEWER_ALLOWED_ACTIONS as readonly string[]).includes(action));
       assert.equal(isForbiddenReviewerAction(action), false);
     }
+    assert.equal((REVIEWER_ALLOWED_ACTIONS as readonly string[]).includes("create-missing-review-policy-draft"), false);
   });
-  test("missing-policy draft is the only repository-file change", () => {
-    assert.equal(isMissingPolicyDraftAction("create-missing-review-policy-draft"), true);
+  test("no repository-file change exists in review-only mode", () => {
+    assert.equal(isMissingPolicyDraftAction("create-missing-review-policy-draft"), false);
     assert.equal(isMissingPolicyDraftAction("publish-review"), false);
   });
 });

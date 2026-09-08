@@ -23,7 +23,6 @@ export type ReviewerForbiddenAction = (typeof REVIEWER_FORBIDDEN_ACTIONS)[number
 export const REVIEWER_ALLOWED_ACTIONS = [
   "publish-review",
   "publish-inline-findings",
-  "create-missing-review-policy-draft",
   "run-focused-checks",
   "run-local-fallback-once",
 ] as const;
@@ -37,7 +36,7 @@ export function isForbiddenReviewerAction(action: string): boolean {
   return (REVIEWER_FORBIDDEN_ACTIONS as readonly string[]).includes(action);
 }
 
-/** True when the named action is the only repository-file change allowed. */
-export function isMissingPolicyDraftAction(action: string): boolean {
-  return action === "create-missing-review-policy-draft";
+/** No repository-file change is allowed in review-only mode. Retained for callers; always false. */
+export function isMissingPolicyDraftAction(_action: string): boolean {
+  return false;
 }

@@ -29,6 +29,23 @@ export function selectFocusedChecks(
       reason: "focused mapping is incomplete; stop with needs-info instead of widening verification",
     };
   }
+  if (selection.behavioralCriteria < 0) {
+    return {
+      runFocusedChecks: false,
+      runFullRepositoryGate: false,
+      reason: "behavioral criterion count is invalid; stop with needs-info",
+    };
+  }
+  if (
+    selection.behavioralCriteria > 0 &&
+    selection.focusedCommands.some((command) => command.trim() === "")
+  ) {
+    return {
+      runFocusedChecks: false,
+      runFullRepositoryGate: false,
+      reason: "a focused command is blank; stop with needs-info instead of running an empty command",
+    };
+  }
   if (selection.focusedCommands.length === 0) {
     if (selection.behavioralCriteria === 0) {
       return {

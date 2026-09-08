@@ -11,9 +11,9 @@ The skill requires the current checkout to match the selected pull-request head.
 - `/unslopify` installed through its registry lane: `npx skills add RuralNative/RuralNative-SKILLS --skill unslopify`.
 - Tracked project permissions in `.kilo/kilo.jsonc` require no `agent_manager` entry. No fix subagent is used.
 
-## Review policy bootstrap
+## Review policy (optional)
 
-When the target repository has no root `REVIEW.md`, the skill drafts one repository-specific policy from observed standards and verified check commands, leaves it uncommitted, and stops before review publication. Resume after the owner inspects and commits it. An existing `REVIEW.md` is used unchanged and never rewritten by this run. A missing verification command, an empty rule set, an unreadable file, a symlink path, or conflicting sources stops with a diagnostic and creates nothing.
+`REVIEW.md` is optional project guidance. An existing readable root `REVIEW.md` supplies additional project rules without relaxing skill safety boundaries and is never rewritten by this run. When it is absent, skill-owned workflow defaults govern and review continues. An unreadable file, a symlink path, or conflicting sources stops with a diagnostic and creates nothing.
 
 ## Install
 
@@ -47,7 +47,7 @@ From the checkout matching the pull-request head, after implementation has deliv
 /review-this #100
 ```
 
-The skill resolves the single target, validates checkout match, evidence, and requirements revision, decides the review-policy path, runs one frontier Standards-plus-Spec pass, reads required checks once, publishes the pinned review and verified inline findings, and stops. A missing policy creates only the uncommitted draft and stops; pending CI publishes the pinned review and stops; a later invocation reuses it when head, base, requirements revision, and review-policy revision are unchanged.
+The skill resolves the single target, validates checkout match, evidence, and requirements revision, decides the review-policy path, runs one frontier Standards-plus-Spec pass, reads required checks once, publishes the pinned review and verified inline findings, and stops. A missing policy continues under skill-owned defaults; pending CI publishes the pinned review and stops; a later invocation reuses it when head, base, requirements revision, and review-policy revision are unchanged.
 
 Repository checks run via:
 
@@ -57,4 +57,4 @@ npm run verify
 
 ## Boundary
 
-The skill accepts one invocation only: `/review-this <target>` with one pull request or one issue resolving to one pull request. It does not implement tickets, apply fixes, run parent-specification waves, create worktrees, manage workers, run cloud review, poll CI, run post-merge verification, or run whole-spec review. It never edits pull-request source, commits, pushes, merges, updates the pull-request body, updates labels, promotes dependents, or closes tickets. The only repository-file change it may create is the missing root `REVIEW.md` draft, left uncommitted for owner inspection.
+The skill accepts one invocation only: `/review-this <target>` with one pull request or one issue resolving to one pull request. It does not implement tickets, apply fixes, run parent-specification waves, create worktrees, manage workers, run cloud review, poll CI, run post-merge verification, or run whole-spec review. It never edits pull-request source, commits, pushes, merges, updates the pull-request body, updates labels, promotes dependents, or closes tickets, and it creates no repository files.

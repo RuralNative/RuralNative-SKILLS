@@ -47,7 +47,16 @@ export interface CompactEvidenceInput {
    * Review reads the same value from the pull-request body.
    */
   requirementsRevision: string;
+  /**
+   * Final committed head SHA the evidence was verified against. New
+   * envelopes bind proof to this SHA outside the commit to avoid a circular
+   * hash. Required: unversioned output is never emitted for new work;
+   * pre-envelope evidence is read-only legacy.
+   */
+  headSha: string;
 }
+
+export const EVIDENCE_ENVELOPE_VERSION = "evidence-v2";
 
 export interface ValidationResult {
   ok: boolean;
@@ -177,6 +186,10 @@ export function validateCompactEvidence(
     );
   }
 
+  if (!isNonEmptyString(input.headSha)) {
+    errors.push("evidence head SHA must be a non-empty value");
+  }
+
   return { ok: errors.length === 0, errors };
 }
 
@@ -210,6 +223,8 @@ export function renderCompactEvidence(input: CompactEvidenceInput): string {
   lines.push("");
   lines.push(`- Criteria revision: ${escapeForMarkdown(criteriaRevision(input.criteria))}`);
   lines.push(`- Requirements revision: ${escapeForMarkdown(input.requirementsRevision)}`);
+  lines.push(`- Envelope version: ${EVIDENCE_ENVELOPE_VERSION}`);
+  lines.push(`- Head SHA: ${escapeForMarkdown(input.headSha)}`);
   lines.push(COMPACT_EVIDENCE_MARKER_END);
   return lines.join("\n");
 }
@@ -218,17 +233,22 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+function normalizeBodyNewlines(value: string): string {
+  return value.replace(/\r\n?/g, "\n");
+}
+
 /**
  * Upsert the compact evidence block into the pull-request body in the same
  * publication operation as the closing reference. Deterministic: exactly one
  * compact block exists afterwards; legacy comment blocks are never written.
+ * LF and CRLF bodies are equivalent; marker identity is never relaxed.
  */
 export function upsertCompactEvidenceBlock(
   existingBody: string,
   block: string,
 ): string {
   const markerPattern = new RegExp(
-    `${escapeRegExp(COMPACT_EVIDENCE_MARKER_START)}[\\s\\S]*?${escapeRegExp(COMPACT_EVIDENCE_MARKER_END)}`,
+    `${escapeRegExp(COMPACT_EVIDENCE_MARKER_START)}[ \\t]*\\r?\\n[\\s\\S]*?\\r?\\n[ \\t]*${escapeRegExp(COMPACT_EVIDENCE_MARKER_END)}`,
     "g",
   );
   const withoutOldBlocks = existingBody.replace(markerPattern, "").trimEnd();
@@ -239,9 +259,10 @@ export function upsertCompactEvidenceBlock(
 
 /** Read the compact block from a pull-request body, if present. */
 export function parseCompactEvidenceBlock(body: string): string | null {
-  const match = body.match(
+  const normalized = normalizeBodyNewlines(body);
+  const match = normalized.match(
     new RegExp(
-      `${escapeRegExp(COMPACT_EVIDENCE_MARKER_START)}\\n([\\s\\S]*?)\\n${escapeRegExp(COMPACT_EVIDENCE_MARKER_END)}`,
+      `${escapeRegExp(COMPACT_EVIDENCE_MARKER_START)}[ \\t]*\\n([\\s\\S]*?)\\n[ \\t]*${escapeRegExp(COMPACT_EVIDENCE_MARKER_END)}`,
     ),
   );
   return match ? match[1] : null;
@@ -259,19 +280,135 @@ export function readEvidenceForReview(
 ): string | null {
   const compact = parseCompactEvidenceBlock(body);
   if (compact !== null) return compact;
-  const legacy = body.match(
+  const normalized = normalizeBodyNewlines(body);
+  const legacy = normalized.match(
     new RegExp(
-      `${escapeRegExp(LEGACY_EVIDENCE_MARKER_START)}\\n([\\s\\S]*?)\\n${escapeRegExp(LEGACY_EVIDENCE_MARKER_END)}`,
+      `${escapeRegExp(LEGACY_EVIDENCE_MARKER_START)}[ \\t]*\\n([\\s\\S]*?)\\n[ \\t]*${escapeRegExp(LEGACY_EVIDENCE_MARKER_END)}`,
     ),
   );
   if (legacy) return legacy[1];
   for (const comment of comments) {
-    const legacyComment = comment.match(
+    const normalizedComment = normalizeBodyNewlines(comment);
+    const legacyComment = normalizedComment.match(
       new RegExp(
-        `${escapeRegExp(LEGACY_EVIDENCE_MARKER_START)}\\n([\\s\\S]*?)\\n${escapeRegExp(LEGACY_EVIDENCE_MARKER_END)}`,
+        `${escapeRegExp(LEGACY_EVIDENCE_MARKER_START)}[ \\t]*\\n([\\s\\S]*?)\\n[ \\t]*${escapeRegExp(LEGACY_EVIDENCE_MARKER_END)}`,
       ),
     );
     if (legacyComment) return legacyComment[1];
   }
   return null;
+}
+
+function splitFencedSegments(body: string): { text: string; fenced: boolean }[] {
+  const segments: { text: string; fenced: boolean }[] = [];
+  const fencePattern = /```[\s\S]*?(?:```|$)/g;
+  let last = 0;
+  let m: RegExpExecArray | null;
+  while ((m = fencePattern.exec(body)) !== null) {
+    if (m.index > last) segments.push({ text: body.slice(last, m.index), fenced: false });
+    segments.push({ text: m[0], fenced: true });
+    last = m.index + m[0].length;
+  }
+  if (last < body.length) segments.push({ text: body.slice(last), fenced: false });
+  if (segments.length === 0) segments.push({ text: body, fenced: false });
+  return segments;
+}
+
+function targetClosingAssociation(ticket: number): RegExp {
+  return new RegExp(
+    `(?:close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved)[ \\t]+(?:https?:\\/\\/[^\\s]+\\/issues\\/${ticket}(?!\\d)|#${ticket}(?!\\d))`,
+    "i",
+  );
+}
+
+function proseHasTargetClosing(body: string, ticket: number): boolean {
+  const pattern = targetClosingAssociation(ticket);
+  return splitFencedSegments(body).some((s) => !s.fenced && pattern.test(s.text));
+}
+
+function removeStandaloneTargetClosesInProse(body: string, ticket: number): string {
+  return splitFencedSegments(body)
+    .map((s) => {
+      if (s.fenced) return s.text;
+      return s.text.replace(/^[ \t]*[Cc]loses[ \t]+#\d+[ \t]*\r?$/gm, (line) => {
+        const n = Number(line.match(/#(\d+)/)?.[1] ?? NaN);
+        return n === ticket ? "" : line;
+      });
+    })
+    .join("");
+}
+
+function collapseProseBlankLines(body: string): string {
+  return splitFencedSegments(body)
+    .map((s) => (s.fenced ? s.text : s.text.replace(/\n{3,}/g, "\n\n")))
+    .join("");
+}
+
+/**
+ * Ensure exactly one `Closes #<ticket>` line for the target ticket.
+ * Preserves unrelated prose and fenced examples. Existing target lines are
+ * deduplicated; closes lines for other tickets are left untouched for the
+ * caller to reconcile as a conflicting association stop.
+ */
+export function ensureClosingReference(body: string, ticket: number): string {
+  const prose = splitFencedSegments(body)
+    .filter((s) => !s.fenced)
+    .map((s) => s.text)
+    .join("");
+  const targetPattern = new RegExp(`^[ \\t]*[Cc]loses[ \\t]+#${ticket}[ \\t]*\\r?$`, "gm");
+  if ((prose.match(targetPattern) ?? []).length === 1 && !proseHasTargetClosingOtherForm(body, ticket)) {
+    return body.endsWith("\n") ? body : `${body}\n`;
+  }
+  const withoutTargets = removeStandaloneTargetClosesInProse(body, ticket);
+  if (proseHasTargetClosing(withoutTargets, ticket)) {
+    const cleaned = collapseProseBlankLines(withoutTargets).trimEnd();
+    return cleaned.endsWith("\n") ? cleaned : `${cleaned}\n`;
+  }
+  const cleaned = collapseProseBlankLines(withoutTargets).trimEnd();
+  const line = `Closes #${ticket}`;
+  return cleaned.length > 0 ? `${cleaned}\n\n${line}\n` : `${line}\n`;
+}
+
+function proseHasTargetClosingOtherForm(body: string, ticket: number): boolean {
+  // True when prose carries the target association in a form other than the
+  // canonical standalone `Closes #N` line (e.g. `Fixes #N` or an issue URL).
+  const segments = splitFencedSegments(body);
+  const prose = segments
+    .filter((s) => !s.fenced)
+    .map((s) => s.text)
+    .join("");
+  const withoutCanonical = prose.replace(/^[ \t]*[Cc]loses[ \t]+#\d+[ \t]*\r?$/gm, "");
+  return targetClosingAssociation(ticket).test(withoutCanonical);
+}
+
+/**
+ * Compose the pull-request body in one publication operation: exactly one
+ * compact evidence block plus exactly one target closing reference,
+ * preserving unrelated prose and fenced examples. An existing valid target
+ * association (`Fixes #N`, `Closes #N`, issue URL) is preserved instead of
+ * duplicated. The caller must have stopped on conflicting ticket associations
+ * before calling. Fixed order is context, block, then closing reference, so
+ * repeated composition is idempotent.
+ */
+export function composePullRequestBody(
+  existingBody: string,
+  ticket: number,
+  block: string,
+): string {
+  const blockPattern = new RegExp(
+    `${escapeRegExp(COMPACT_EVIDENCE_MARKER_START)}[ \\t]*\\r?\\n[\\s\\S]*?\\r?\\n[ \\t]*${escapeRegExp(COMPACT_EVIDENCE_MARKER_END)}`,
+    "g",
+  );
+  const withoutBlocks = existingBody.replace(blockPattern, "");
+  const withoutTargets = removeStandaloneTargetClosesInProse(withoutBlocks, ticket);
+  const trimmedBlock = block.trim();
+  if (proseHasTargetClosing(withoutTargets, ticket)) {
+    const cleaned = collapseProseBlankLines(withoutTargets).trimEnd();
+    if (cleaned.length === 0) return `${trimmedBlock}\n`;
+    return `${cleaned}\n\n${trimmedBlock}\n`;
+  }
+  const cleaned = collapseProseBlankLines(withoutTargets).trimEnd();
+  const line = `Closes #${ticket}`;
+  if (cleaned.length === 0) return `${trimmedBlock}\n\n${line}\n`;
+  return `${cleaned}\n\n${trimmedBlock}\n\n${line}\n`;
 }

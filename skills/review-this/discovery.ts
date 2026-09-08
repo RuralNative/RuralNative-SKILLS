@@ -23,10 +23,24 @@ export interface PullRequestLink {
   requirementsRevision?: string;
 }
 
+export type EvidenceProvenance = "pre-contract" | "unknown";
+
 export interface ReviewReadinessFact {
   pullRequest: PullRequestLink;
   /** The current issue bodies still match the pinned requirements revision. */
   requirementsCurrent: boolean;
+  /**
+   * Validated evidence status from `validateEvidenceHandoff`. Required for
+   * normal readiness: callers must parse the actual PR body. Only unpinned
+   * pre-contract evidence may proceed without it via `evidenceProvenance`.
+   */
+  evidenceStatus?: string;
+  /**
+   * Positive provenance for evidence that predates the revision contract.
+   * Defaults to `unknown`: unpinned evidence without `pre-contract`
+   * provenance is not ready.
+   */
+  evidenceProvenance?: EvidenceProvenance;
 }
 
 export type ReadinessDecision =
@@ -35,9 +49,10 @@ export type ReadinessDecision =
 
 /**
  * A single pull request is ready when it is open, carries a valid closing
- * reference, has implementation evidence, and the current issue bodies still
- * match the pinned requirements revision. `ready-for-human` keeps its triage
- * meaning and is never readiness.
+ * reference, has validated current implementation evidence, and the current
+ * issue bodies still match the pinned requirements revision.
+ * `ready-for-human` keeps its triage meaning and is never readiness. Review
+ * never fabricates a pin or repairs the PR body.
  */
 export function isReviewReady(fact: ReviewReadinessFact): ReadinessDecision {
   const pr = fact.pullRequest;
@@ -52,6 +67,27 @@ export function isReviewReady(fact: ReviewReadinessFact): ReadinessDecision {
   }
   if (!pr.hasEvidence) {
     return { ready: false, reason: `pull request #${pr.prNumber} has no implementation evidence` };
+  }
+  if (fact.evidenceStatus !== undefined) {
+    if (fact.evidenceStatus !== "current") {
+      return {
+        ready: false,
+        reason: `pull request #${pr.prNumber} implementation evidence is ${fact.evidenceStatus}; reconcile it outside review`,
+      };
+    }
+  } else if ((pr.requirementsRevision ?? "").trim() === "" && fact.evidenceProvenance === "pre-contract") {
+    // Legacy compatibility: unpinned pre-contract evidence with established
+    // provenance proceeds to the requirements-current check below.
+  } else if ((pr.requirementsRevision ?? "").trim() === "") {
+    return {
+      ready: false,
+      reason: `pull request #${pr.prNumber} carries no requirements pin; reconcile implementation evidence outside review`,
+    };
+  } else {
+    return {
+      ready: false,
+      reason: `pull request #${pr.prNumber} implementation evidence was not validated with validateEvidenceHandoff; reconcile it outside review`,
+    };
   }
   if (!fact.requirementsCurrent) {
     return { ready: false, reason: "the issue bodies no longer match the pinned requirements revision" };

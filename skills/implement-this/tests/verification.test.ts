@@ -27,4 +27,16 @@ describe("selectFocusedChecks", () => {
     assert.equal(plan.runFullRepositoryGate, false);
     assert.match(plan.reason, /needs-info/);
   });
+  test("blank focused commands stop instead of running an empty command", () => {
+    for (const commands of [[""], ["  "], ["node --test a.test.ts", " "]]) {
+      const plan = selectFocusedChecks({ focusedCommands: commands, mappingComplete: true, behavioralCriteria: 1 });
+      assert.equal(plan.runFocusedChecks, false);
+      assert.match(plan.reason, /needs-info/);
+    }
+  });
+  test("negative behavioral counts stop with needs-info", () => {
+    const plan = selectFocusedChecks({ focusedCommands: ["cmd"], mappingComplete: true, behavioralCriteria: -1 });
+    assert.equal(plan.runFocusedChecks, false);
+    assert.match(plan.reason, /needs-info/);
+  });
 });

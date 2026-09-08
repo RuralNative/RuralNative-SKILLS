@@ -15,7 +15,8 @@ export type InvocationDiagnostic =
   | "parent-specification"
   | "pull-request-target"
   | "cross-repository-target"
-  | "ticket-not-found";
+  | "ticket-not-found"
+  | "ticket-not-eligible";
 
 export type InvocationResolution =
   | { ok: true; ticket: number }
@@ -55,6 +56,13 @@ export function parseSingleReference(
     }
     const kind = kindPart.toLowerCase();
     const n = Number(numberPart);
+    if (!Number.isInteger(n) || n <= 0) {
+      return {
+        ok: false,
+        diagnostic: "malformed-reference",
+        detail: `\`${refs[0]}\` is not a ticket reference`,
+      };
+    }
     if (kind === "pull") {
       return {
         ok: false,
@@ -72,7 +80,15 @@ export function parseSingleReference(
       detail: `\`${refs[0]}\` is not a ticket reference`,
     };
   }
-  return { ok: true, ticket: Number(match[1]) };
+  const n = Number(match[1]);
+  if (!Number.isInteger(n) || n <= 0) {
+    return {
+      ok: false,
+      diagnostic: "malformed-reference",
+      detail: `\`${refs[0]}\` is not a ticket reference`,
+    };
+  }
+  return { ok: true, ticket: n };
 }
 
 export interface SingleTicketPlan {
@@ -125,7 +141,7 @@ export function planSingleTicket(
   if (!validation.ok) {
     return {
       ok: false,
-      diagnostic: "ticket-not-found",
+      diagnostic: "ticket-not-eligible",
       detail: validation.violations.join("; "),
     };
   }

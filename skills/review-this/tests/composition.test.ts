@@ -73,12 +73,14 @@ describe("single checkout contract (INV-5, INV-6, INV-13, INV-14)", () => {
 });
 
 describe("review policy (INV-16, INV-17, INV-18)", () => {
-  test("REVIEW.md defines publication, CI equivalence, and bootstrap without cloud", () => {
+  test("REVIEW.md is optional project guidance without bootstrap or cloud", () => {
     const policy = read("REVIEW.md");
     assert.equal(policy.includes("cloud review"), false);
-    assert.ok(policy.includes("CI equivalence"));
-    assert.ok(policy.includes("review-policy revision"));
-    assert.ok(policy.includes("Review policy bootstrap"));
-    assert.ok(norm(policy).includes("no fix subagent"));
+    assert.equal(policy.includes("Review policy bootstrap"), false);
+    assert.ok(policy.includes("optional project guidance"));
+    assert.ok(policy.includes("npm run verify"));
+    const skill = read("skills/review-this/SKILL.md");
+    assert.ok(skill.includes("REVIEW.md` is optional"));
+    assert.ok(skill.includes("effectivePolicyRevision"));
   });
 });

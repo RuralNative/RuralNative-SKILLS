@@ -50,6 +50,7 @@ describe("stable criterion identity", () => {
       evidence: [{ criterionId: "AC-1", kind: "behavior", focusedCommand: "node --test x", result: "1 passed", passed: true } as const],
       isBugFix: false,
       requirementsRevision: VALID_REQUIREMENTS_REVISION,
+      headSha: "h1",
     };
     assert.equal(validateCompactEvidence(input).ok, true);
     assert.ok(renderCompactEvidence(input).includes("`AC-1`"));
@@ -64,6 +65,7 @@ describe("stable criterion identity", () => {
       ],
       isBugFix: false,
       requirementsRevision: VALID_REQUIREMENTS_REVISION,
+      headSha: "h1",
     };
     assert.equal(validateCompactEvidence(input).ok, false);
   });

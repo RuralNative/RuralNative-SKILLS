@@ -2,6 +2,8 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  composePullRequestBody,
+  ensureClosingReference,
   parseCompactEvidenceBlock,
   readEvidenceForReview,
   renderCompactEvidence,
@@ -25,6 +27,7 @@ function input(overrides: Partial<CompactEvidenceInput> = {}): CompactEvidenceIn
     ],
     isBugFix: false,
     requirementsRevision: `requirements-v1:parent=${HASH_A};ticket=${HASH_B}`,
+    headSha: "abc123",
     ...overrides,
   };
 }
@@ -100,5 +103,56 @@ describe("render and upsert", () => {
     assert.equal(readEvidenceForReview("no evidence", ["nothing"]), null);
     const compactComment = `prefix\n${compactBody}\n`;
     assert.equal(readEvidenceForReview("no evidence", [compactComment]), null);
+  });
+  test("CRLF bodies parse and upsert deterministically", () => {
+    const block = renderCompactEvidence(input());
+    const crlf = `Intro\r\n\r\n${block.replace(/\n/g, "\r\n")}\r\n`;
+    assert.ok(parseCompactEvidenceBlock(crlf)?.includes("AC-1"));
+    assert.ok(readEvidenceForReview(crlf)?.includes("AC-1"));
+    const once = upsertCompactEvidenceBlock(crlf, block);
+    assert.equal(once.split("<!-- ruralnative:compact-evidence:start -->").length - 1, 1);
+  });
+  test("v2 envelopes bind proof to the verified head SHA", () => {
+    const block = renderCompactEvidence(input({ headSha: "abc123" }));
+    assert.ok(block.includes("Envelope version: evidence-v2"));
+    assert.ok(block.includes("Head SHA: abc123"));
+    assert.ok(parseCompactEvidenceBlock(block)?.includes("Head SHA: abc123"));
+    assert.equal(validateCompactEvidence(input({ headSha: "  " })).ok, false);
+  });
+  test("compose publishes closes plus one evidence block atomically", () => {
+    const block = renderCompactEvidence(input());
+    const composed = composePullRequestBody("Some context\n", 100, block);
+    assert.ok(composed.includes("Closes #100"));
+    assert.ok(composed.includes("Some context"));
+    assert.equal(composed.split("<!-- ruralnative:compact-evidence:start -->").length - 1, 1);
+    const recomposed = composePullRequestBody(composed, 100, block);
+    assert.equal(recomposed, composed.endsWith("\n") ? composed : `${composed}\n`);
+    assert.equal((recomposed.match(/^ *closes *#100 *$/gim) ?? []).length, 1);
+  });
+  test("compose preserves unrelated closes lines for caller reconciliation", () => {
+    const block = renderCompactEvidence(input());
+    const composed = composePullRequestBody("Closes #999\n", 100, block);
+    assert.ok(composed.includes("Closes #999"));
+    assert.ok(composed.includes("Closes #100"));
+  });
+  test("closing reference helper deduplicates the target line", () => {
+    assert.equal((ensureClosingReference("a\n\nCloses #100\n", 100).match(/^ *closes *#100 *$/gim) ?? []).length, 1);
+    const duped = ensureClosingReference("Closes #100\n\nCloses #100\n", 100);
+    assert.equal((duped.match(/^ *closes *#100 *$/gim) ?? []).length, 1);
+  });
+  test("compose preserves fenced closing examples", () => {
+    const block = renderCompactEvidence(input());
+    const composed = composePullRequestBody("Example:\n```text\nCloses #100\n```", 100, block);
+    assert.ok(composed.includes("```text\nCloses #100\n```"));
+    assert.equal(composed.split("<!-- ruralnative:compact-evidence:start -->").length - 1, 1);
+  });
+  test("compose preserves an existing valid target association without duplication", () => {
+    const block = renderCompactEvidence(input());
+    for (const existing of ["Fixes #100", "Closes https://github.com/o/r/issues/100"]) {
+      const composed = composePullRequestBody(existing, 100, block);
+      assert.ok(composed.includes(existing));
+      assert.equal((composed.match(/Closes #100/g) ?? []).length, 0);
+      assert.equal(composePullRequestBody(composed, 100, block), composed);
+    }
   });
 });

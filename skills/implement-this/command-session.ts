@@ -11,6 +11,12 @@ export interface CheckoutFact {
   currentBranch: string;
   /** Expected feature branch for the ticket, e.g. `impl/100-short-name`. */
   expectedBranch: string;
+  /**
+   * True when the expected branch already exists locally or on the remote.
+   * When invoked from `main` against an existing branch, the run stops with
+   * a switch instruction instead of recreating it.
+   */
+  expectedBranchExists?: boolean;
 }
 
 export type CheckoutDecision =
@@ -31,7 +37,19 @@ export function checkoutDecision(fact: CheckoutFact): CheckoutDecision {
       reason: "the current checkout is dirty; commit or stash before implementing",
     };
   }
+  if (fact.expectedBranch.trim() === "" || fact.currentBranch.trim() === "") {
+    return {
+      action: "stop",
+      reason: "no trustworthy branch identity; resolve the expected feature branch outside this command",
+    };
+  }
   if (fact.currentBranch === "main") {
+    if (fact.expectedBranchExists === true) {
+      return {
+        action: "stop",
+        reason: `branch ${fact.expectedBranch} already exists; switch to it outside this command instead of recreating it`,
+      };
+    }
     return {
       action: "create-branch",
       branch: fact.expectedBranch,
@@ -75,4 +93,88 @@ export function isDelivered(fact: DeliveryFact): boolean {
     fact.evidenceInPullRequestBody &&
     fact.requirementsCurrent
   );
+}
+
+export interface DeliveryCompletionFact extends DeliveryFact {
+  /** Repository of the pull request, e.g. `owner/name`. */
+  repository?: string;
+  /** Expected repository of the ticket. */
+  expectedRepository?: string;
+  /** Pull-request base branch name. */
+  baseBranch?: string;
+  /** Pull-request head branch name. */
+  headBranch?: string;
+  /** Expected feature branch for the ticket. */
+  expectedBranch?: string;
+  /** Pull-request head SHA. */
+  headSha?: string;
+  /** Local pushed commit the evidence was verified against. */
+  expectedHeadSha?: string;
+  /** Evidence status from the shared handoff validator. */
+  evidenceStatus?: string;
+}
+
+export type DeliveryCompletion =
+  | { delivered: true; reason: string }
+  | { delivered: false; reason: string };
+
+/**
+ * Read-back completion: the observed pull request must be open in the
+ * expected repository, against `main`, on the expected head branch and SHA,
+ * with a valid closing reference and current validated evidence. Never infer
+ * success from a write response. Evidence must carry the shared-validator
+ * `current` status and the head SHA must equal the pushed commit.
+ */
+export function decideDeliveryCompletion(fact: DeliveryCompletionFact): DeliveryCompletion {
+  if (!fact.pullRequestOpen) return { delivered: false, reason: "the pull request is not open" };
+  if (!fact.closingReferenceValid) {
+    return { delivered: false, reason: "the pull request has no valid closing reference for this ticket" };
+  }
+  if (!fact.evidenceInPullRequestBody) {
+    return { delivered: false, reason: "the pull-request body carries no validated implementation evidence" };
+  }
+  if (!fact.requirementsCurrent) {
+    return { delivered: false, reason: "the issue bodies no longer match the pinned requirements revision" };
+  }
+  if (fact.evidenceStatus !== "current") {
+    return { delivered: false, reason: `implementation evidence is ${fact.evidenceStatus ?? "unvalidated"}; reconcile it outside review` };
+  }
+  if (!fact.repository?.trim() || !fact.expectedRepository?.trim()) {
+    return { delivered: false, reason: "no trustworthy repository identity for the pull request" };
+  }
+  if (fact.repository!.toLowerCase() !== fact.expectedRepository!.toLowerCase()) {
+    return { delivered: false, reason: "the pull request lives in another repository" };
+  }
+  if (!fact.baseBranch || fact.baseBranch !== "main") {
+    return { delivered: false, reason: "the pull request does not target main" };
+  }
+  if (!fact.headBranch?.trim() || !fact.expectedBranch?.trim()) {
+    return { delivered: false, reason: "no trustworthy head branch identity for the pull request" };
+  }
+  if (fact.headBranch !== fact.expectedBranch) {
+    return { delivered: false, reason: "the pull-request head branch does not match the ticket branch" };
+  }
+  if (!fact.headSha?.trim() || !fact.expectedHeadSha?.trim()) {
+    return { delivered: false, reason: "no trustworthy head SHA binding for the implementation evidence" };
+  }
+  if (fact.headSha !== fact.expectedHeadSha) {
+    return { delivered: false, reason: "the pull-request head SHA does not match the pushed implementation commit" };
+  }
+  return { delivered: true, reason: "open pull request with valid closing reference and current evidence on the pushed head" };
+}
+
+export type TicketPath = "fresh" | "repair";
+
+export interface TicketPathFact {
+  labels: readonly string[];
+  /** Exactly one verified matching open PR exists. */
+  hasSingleMatchingPr: boolean;
+}
+
+/** Fresh work carries `ready-for-agent`; repair continues `ready-for-human`. */
+export function decideTicketPath(fact: TicketPathFact): TicketPath | null {
+  const labels = new Set(fact.labels);
+  if (labels.has("ready-for-agent")) return "fresh";
+  if (labels.has("ready-for-human") && fact.hasSingleMatchingPr) return "repair";
+  return null;
 }

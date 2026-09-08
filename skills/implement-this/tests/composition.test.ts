@@ -59,6 +59,15 @@ describe("evidence and verification (INV-13, INV-15, INV-16)", () => {
     assert.ok(n.includes("pull request body"), "PR-body evidence");
     assert.ok(n.includes("never") && n.includes("full repository gate"), "no full gate");
   });
+  test("self-contained delivery with no /implement delegation (INV-3, INV-4)", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    assert.equal(skill.includes("Run `/implement`"), false, "no delegated /implement run");
+    assert.equal(skill.includes("`/implement` requires"), false, "no /implement dependency");
+    assert.equal(skill.includes("/code-review"), false, "no mandatory code review");
+    assert.ok(skill.includes("Implement directly"), "inline implementation guidance");
+    assert.ok(skill.includes("composePullRequestBody"), "atomic PR body composition");
+    assert.ok(skill.includes("decideDeliveryCompletion"), "read-back completion");
+  });
   test("leaf tombstones retired worker invariants without reuse", () => {
     const leaf = read("docs/leaves/implement-this.md");
     assert.ok(leaf.includes("Retired by ADR-0031"));

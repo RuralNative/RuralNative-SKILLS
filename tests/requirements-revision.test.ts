@@ -128,6 +128,7 @@ describe("delivery, review, and merge freshness", () => {
       evidence: [{ criterionId: "AC-1", kind: "behavior", focusedCommand: "node --test x", result: "1 passed", passed: true }],
       isBugFix: false,
       requirementsRevision: revision(),
+      headSha: "h",
     });
     assert.ok(block.includes(revision()));
     assert.ok(readEvidenceForReview(`Body\n\nCloses #10\n\n${block}\n`)?.includes("AC-1"));

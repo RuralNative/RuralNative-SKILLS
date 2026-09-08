@@ -1,8 +1,8 @@
-// Review-policy bootstrap: use existing policy or draft the missing root file once (ADR-0033).
+// Review-policy resolution: optional REVIEW.md with skill-owned defaults (ADR-0034).
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  buildReviewPolicyDraft,
+  effectivePolicyRevision,
   reviewPolicyDecision,
 } from "../review-policy.ts";
 
@@ -19,7 +19,7 @@ describe("reviewPolicyDecision", () => {
     });
     assert.equal(d.action, "use-existing");
   });
-  test("missing policy creates one draft and stops", () => {
+  test("missing policy continues under skill-owned defaults", () => {
     const d = reviewPolicyDecision({
       policyExists: false,
       policyReadable: false,
@@ -29,7 +29,15 @@ describe("reviewPolicyDecision", () => {
       checkoutMatches: true,
       worktreeClean: true,
     });
-    assert.equal(d.action, "create-and-stop");
+    assert.equal(d.action, "use-defaults");
+  });
+  test("effective-policy revision invalidates on source changes", () => {
+    const a = effectivePolicyRevision([{ path: "REVIEW.md", hash: "h1" }]);
+    const b = effectivePolicyRevision([{ path: "REVIEW.md", hash: "h2" }]);
+    const absent = effectivePolicyRevision([]);
+    assert.notEqual(a, b);
+    assert.notEqual(a, absent);
+    assert.equal(effectivePolicyRevision([{ path: "b", hash: "1" }, { path: "a", hash: "1" }]), effectivePolicyRevision([{ path: "a", hash: "1" }, { path: "b", hash: "1" }]));
   });
   test("invalid target stops before policy", () => {
     const d = reviewPolicyDecision({
@@ -101,27 +109,4 @@ describe("reviewPolicyDecision", () => {
   });
 });
 
-describe("buildReviewPolicyDraft", () => {
-  test("draft carries observed rules, verification, and governing sources", () => {
-    const r = buildReviewPolicyDraft({
-      repository: "o/r",
-      verificationCommand: "npm run verify",
-      documentedRules: ["Blocking findings cite a rule or reproduced failure."],
-      governingSources: ["AGENTS.md"],
-    });
-    assert.ok(r.draft?.includes("npm run verify"));
-    assert.ok(r.draft?.includes("Blocking findings cite a rule"));
-    assert.ok(r.draft?.includes("<!-- Governs-from: AGENTS.md -->"));
-    assert.ok(r.draft?.includes("Qualifying as blocking does not block publication"));
-  });
-  test("missing verification command or rules stops the draft", () => {
-    assert.equal(
-      buildReviewPolicyDraft({ repository: "o/r", verificationCommand: "  ", documentedRules: ["rule"], governingSources: [] }).draft,
-      null,
-    );
-    assert.equal(
-      buildReviewPolicyDraft({ repository: "o/r", verificationCommand: "npm test", documentedRules: [], governingSources: [] }).draft,
-      null,
-    );
-  });
-});
+// Retired by ADR-0034: no missing-policy draft is built; absence uses defaults.

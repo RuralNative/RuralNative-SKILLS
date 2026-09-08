@@ -1,7 +1,7 @@
-// Current-checkout decisions for /implement-this (ADR-0031).
+// Current-checkout decisions for /implement-this (ADR-0031, ADR-0034).
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { checkoutDecision, isDelivered } from "../command-session.ts";
+import { checkoutDecision, decideDeliveryCompletion, decideTicketPath, isDelivered } from "../command-session.ts";
 
 describe("checkoutDecision", () => {
   test("creates the feature branch when invoked from main", () => {
@@ -21,6 +21,57 @@ describe("checkoutDecision", () => {
     const d = checkoutDecision({ worktreeClean: true, currentBranch: "impl/999-other", expectedBranch: "impl/100-x" });
     assert.equal(d.action, "stop");
     if (d.action === "stop") assert.match(d.reason, /not impl\/100-x/);
+  });
+  test("existing expected branch from main stops with a switch instruction", () => {
+    const d = checkoutDecision({ worktreeClean: true, currentBranch: "main", expectedBranch: "impl/100-x", expectedBranchExists: true });
+    assert.equal(d.action, "stop");
+    if (d.action === "stop") assert.match(d.reason, /already exists/);
+  });
+  test("blank branch identity stops", () => {
+    assert.equal(checkoutDecision({ worktreeClean: true, currentBranch: "", expectedBranch: "impl/100-x" }).action, "stop");
+    assert.equal(checkoutDecision({ worktreeClean: true, currentBranch: "main", expectedBranch: "  " }).action, "stop");
+  });
+});
+
+describe("decideDeliveryCompletion", () => {
+  const base = {
+    pullRequestOpen: true,
+    closingReferenceValid: true,
+    evidenceInPullRequestBody: true,
+    requirementsCurrent: true,
+  };
+  test("delivered on the verified read-back PR", () => {
+    const d = decideDeliveryCompletion({
+      ...base,
+      repository: "o/r",
+      expectedRepository: "o/r",
+      baseBranch: "main",
+      headBranch: "impl/100-x",
+      expectedBranch: "impl/100-x",
+      headSha: "abc",
+      expectedHeadSha: "abc",
+      evidenceStatus: "current",
+    });
+    assert.equal(d.delivered, true);
+  });
+  test("wrong repository, base, branch, head, or evidence stops", () => {
+    assert.equal(decideDeliveryCompletion({ ...base, repository: "o/other", expectedRepository: "o/r" }).delivered, false);
+    assert.equal(decideDeliveryCompletion({ ...base, baseBranch: "dev" }).delivered, false);
+    assert.equal(
+      decideDeliveryCompletion({ ...base, headBranch: "impl/999-y", expectedBranch: "impl/100-x" }).delivered,
+      false,
+    );
+    assert.equal(decideDeliveryCompletion({ ...base, headSha: "x", expectedHeadSha: "y" }).delivered, false);
+    assert.equal(decideDeliveryCompletion({ ...base, evidenceStatus: "stale" }).delivered, false);
+  });
+});
+
+describe("decideTicketPath", () => {
+  test("ready-for-agent is fresh work and ready-for-human with a match is repair", () => {
+    assert.equal(decideTicketPath({ labels: ["ready-for-agent"], hasSingleMatchingPr: false }), "fresh");
+    assert.equal(decideTicketPath({ labels: ["ready-for-human"], hasSingleMatchingPr: true }), "repair");
+    assert.equal(decideTicketPath({ labels: ["ready-for-human"], hasSingleMatchingPr: false }), null);
+    assert.equal(decideTicketPath({ labels: [], hasSingleMatchingPr: false }), null);
   });
 });
 
