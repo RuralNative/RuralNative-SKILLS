@@ -1,6 +1,6 @@
 # RuralNative-SKILLS
 
-A focused shelf of six installable skills in two groups — additional skills in this repository, such as release-skills, ship under their own seams and are outside this README's scope. Three cover documentation and prose: `document-for-agents` keeps the agent-facing doc tree honest, `document-for-humans` derives plain-language pages from that tree for stakeholders, and `unslopify` cleans model-generated phrasing on explicit scope before anything ships, staying active over the agent's own English output once loaded. The other three — `plan-this`, `implement-this`, and `review-this` — are an opinionated development workflow that adapts Matt Pocock's planning, implementation, and review skills; see [Development Workflow](#development-workflow). The docs work as a cache for decisions, vocabulary, and invariants that code alone cannot recover. Agents use it as a codebase cache for the unrecoverable where-and-why context, with focused loading instead of reading all docs before acting.
+A focused shelf of seven installable skills in two groups — additional skills in this repository, such as release-skills, ship under their own seams and are outside this README's scope. Three cover documentation and prose: `document-for-agents` keeps the agent-facing doc tree honest, `document-for-humans` derives plain-language pages from that tree for stakeholders, and `unslopify` cleans model-generated phrasing on explicit scope before anything ships, staying active over the agent's own English output once loaded. The other four — `plan-this`, `implement-this`, `review-this`, and `fix-this` — are an opinionated development workflow that adapts Matt Pocock's planning, implementation, and review skills; see [Development Workflow](#development-workflow). The docs work as a cache for decisions, vocabulary, and invariants that code alone cannot recover. Agents use it as a codebase cache for the unrecoverable where-and-why context, with focused loading instead of reading all docs before acting.
 
 ## Installation
 
@@ -42,15 +42,16 @@ Each dependency ships at a verified source under `skills/engineering/` in the up
 - [`to-tickets`](https://github.com/mattpocock/skills/tree/main/skills/engineering/to-tickets) — breaks the spec into tracer-bullet tickets with blocking edges.
 - [`implement`](https://github.com/mattpocock/skills/tree/main/skills/engineering/implement) — implements one ticket in the current checkout.
 
-Then install the three local workflow adapters:
+Then install the four local workflow adapters:
 
 ```bash
 npx skills add RuralNative/RuralNative-SKILLS --skill plan-this
 npx skills add RuralNative/RuralNative-SKILLS --skill implement-this
 npx skills add RuralNative/RuralNative-SKILLS --skill review-this
+npx skills add RuralNative/RuralNative-SKILLS --skill fix-this
 ```
 
-Their sources live in this repository under [`skills/plan-this`](https://github.com/RuralNative/RuralNative-SKILLS/tree/main/skills/plan-this), [`skills/implement-this`](https://github.com/RuralNative/RuralNative-SKILLS/tree/main/skills/implement-this), and [`skills/review-this`](https://github.com/RuralNative/RuralNative-SKILLS/tree/main/skills/review-this).
+Their sources live in this repository under [`skills/plan-this`](https://github.com/RuralNative/RuralNative-SKILLS/tree/main/skills/plan-this), [`skills/implement-this`](https://github.com/RuralNative/RuralNative-SKILLS/tree/main/skills/implement-this), [`skills/review-this`](https://github.com/RuralNative/RuralNative-SKILLS/tree/main/skills/review-this), and [`skills/fix-this`](https://github.com/RuralNative/RuralNative-SKILLS/tree/main/skills/fix-this).
 
 ## Technical Requirements
 
@@ -103,27 +104,28 @@ Shortcuts are tracked openly in one debt registry, and history is append-only vi
 
 ## Development Workflow
 
-`plan-this`, `implement-this`, and `review-this` form one opinionated pipeline over Matt Pocock's planning, implementation, and review skills:
+`plan-this`, `implement-this`, `review-this`, and `fix-this` form one opinionated pipeline over Matt Pocock's planning and implementation skills:
 
 ```
-/grill-with-docs -> /to-spec -> /to-tickets -> /implement
+ /grill-with-docs -> /to-spec -> /to-tickets
 ```
 
 | Workflow command | Role | Invocation example |
 |---|---|---|
 | **plan-this** | Grills a task into decisions, then publishes a parent specification with child tickets | `/plan-this <task>` |
 | **implement-this** | Implements one ticket in the current checkout and delivers one pull request | `/implement-this #<ticket>` |
-| **review-this** | Publishes one pull-request review in the current checkout and stops, creating a missing review policy first | `/review-this #<pr>` |
+| **review-this** | Publishes one pull-request review plus a validated handoff in the current checkout and stops | `/review-this #<pr>` |
+| **fix-this** | Applies the published findings, resolves conflicts, verifies locally, squash-merges, and completes bookkeeping | `/fix-this #<pr>` |
 
 Planning asks only when repository facts and the confirmed task cannot decide a choice that changes product behavior, scope, cost, risk, or an action that is hard to undo; a complete settled task reaches the publication preview without a forced question. Publication waits for explicit approval after the shared understanding and the proposed ticket graph are shown; one invocation authorizes the interactive chain, but approval stays separate. Ticket sizing is coherence-first: planning forms the fewest coherent tickets first — tests, documentation, refactors, and plumbing stay inside the ticket whose behavior they support, and a small task ships as one complete ticket. Splits happen only at a separately verifiable behavior, a true blocker, an independent release or rollback boundary, a distinct risk boundary, or work that no longer fits one fresh context; when several tickets result, the approval preview shows the boundary behind every split. Parallel execution follows natural ticket boundaries for user-managed checkouts rather than creating them. Planning classifies every ticket as **ordinary** or **high-risk** before delivery. High risk covers security boundaries, migrations, shared contracts, broad public interfaces, dependency changes, or similarly evidenced blast radius.
 
-**Current checkout, no workers.** You run each workflow command yourself in the checkout you chose. `/implement-this` validates one ticket, works there, and delivers one pull request. `/review-this` validates one pull request, reviews there, publishes there, and stops. Neither command creates or removes a worktree, polls a worker, manages capacity, or reads Agent Manager state. Concurrent checkouts remain user-managed outside these commands. Nothing sits above the stages and no daemon runs between turns: implementation never merges, and review never builds a missing implementation from scratch.
+**Current checkout, no workers.** You run each workflow command yourself in the checkout you chose. `/implement-this` validates one ticket, works there, and delivers one pull request. `/review-this` validates one pull request, reviews there, publishes there, and stops. `/fix-this` finalizes that reviewed pull request there. No command creates or removes a worktree, polls a worker, manages capacity, or reads Agent Manager state. Concurrent checkouts remain user-managed outside these commands. Nothing sits above the stages and no daemon runs between turns: implementation never merges, and review never fixes or merges.
 
-**Review cadence.** The initial PR revision receives one full Standards-plus-Spec frontier pass. A later revision receives one **delta review** over changed hunks and impacted callers. **Escalation to full review** occurs for a new affected seam, trust boundary, schema, dependency state, generated contract, public interface, or materially widened diff. No fix round runs: blocking and advisory findings publish with evidence and stop for the owner to act on.
+**Review cadence.** The initial PR revision receives one full Standards-plus-Spec frontier pass. A later revision receives one **delta review** over changed hunks and impacted callers. **Escalation to full review** occurs for a new affected seam, trust boundary, schema, dependency state, generated contract, public interface, or materially widened diff. Checkout matching is commit-based: a clean checkout at the PR head commit matches under a branch alias, `main`, or detached `HEAD`. The completed review publishes readable findings plus one validated `review-handoff-v1` block for `fix-this`.
 
-**Verification.** Implementation runs the ticket's smallest sufficient **focused checks**; it never runs the full repository gate. Equivalent required CI on the unchanged reviewed head and base is the broad verification gate; the full local gate runs once only as fallback. The publication gate reads required checks once and never polls. Pending CI publishes the pinned review and stops; a later invocation reuses it when head, base, requirements revision, and review-policy revision are unchanged. No post-merge verification and no whole-spec review run.
+**Verification.** Implementation runs the ticket's smallest sufficient **focused checks**; it never runs the full repository gate. Equivalent required CI on the unchanged reviewed head and base is the broad verification gate; the full local gate runs once only as fallback. The publication gate reads required checks once and never polls. Pending CI publishes the pinned review and stops; a later invocation reuses it when head, base, requirements revision, and review-policy revision are unchanged. No post-merge verification and no whole-spec review run. `fix-this` runs mandatory local verification on its resulting head, adds no CI wait or CI merge gate, and reports GitHub-enforced restrictions without overriding them.
 
-**Local review.** One frontier pass reviews every pull-request head against `REVIEW.md`. When the repository has no root policy, the run creates that one draft from observed rules and verification commands, leaves it uncommitted, and stops before publication. There is no cloud review and no fix subagent. Blocking findings cite a rule, criterion, or reproduced failure.
+**Local review.** One frontier pass reviews every pull-request head against `REVIEW.md`. When the repository has no root policy, skill-owned defaults govern and nothing is created. There is no cloud review and no fix subagent. Blocking findings cite a rule, criterion, or reproduced failure.
 
 **Hosts.** Any host that can run `/implement`, run focused tests, and push a branch works. No worktree manager, cloud review, or nested-agent platform is required.
 

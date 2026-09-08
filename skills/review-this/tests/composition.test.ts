@@ -30,6 +30,8 @@ describe("single checkout contract (INV-5, INV-6, INV-13, INV-14)", () => {
   test("skill runs one frontier pass with no worker or delivery machinery", () => {
     const skill = read("skills/review-this/SKILL.md");
     assert.ok(skill.includes("Never call Agent Manager"), "skill must prohibit Agent Manager use");
+    assert.ok(skill.includes("review-handoff-v1"), "skill must publish the fix-this handoff");
+    assert.ok(skill.includes("detached `HEAD`"), "skill must document commit-based checkout matching");
     for (const banned of [
       "worktree mode",
       "isolated worktree",

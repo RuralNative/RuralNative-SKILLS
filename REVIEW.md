@@ -6,7 +6,7 @@ pinned verdict. General workflow rules live in the `review-this` skill; this
 file adds project-specific standards. Its absence never blocks review and
 nothing is created when it is missing.
 
-<!-- Governs-from: AGENTS.md, ARCHITECTURE.md, CONTEXT.md, package.json, docs/leaves/review-this.md -->
+<!-- Governs-from: AGENTS.md, ARCHITECTURE.md, CONTEXT.md, package.json, docs/leaves/review-this.md, docs/leaves/fix-this.md -->
 
 ## Review authority
 
@@ -93,3 +93,7 @@ An inline comment pins the file and line it judges and quotes the offending span
 ## Subagent use
 
 No fix subagent runs in this review. The frontier reviewer verifies every finding against the current head before publishing it. No subagent output merges, approves, closes, or labels anything.
+
+## Final stage
+
+The completed review publishes one validated `review-handoff-v1` block alongside readable findings. Checkout matching is commit-based: a clean checkout at the PR head commit matches under a branch alias, `main`, or detached `HEAD`. `/fix-this` owns post-review fixes, conflict resolution, local verification, squash merge, and ticket bookkeeping under ADR-0035; it runs no additional review and adds no CI wait or CI merge gate.

@@ -1,4 +1,4 @@
-// Shared plan -> implement -> review handoff (ADR-0034).
+// Shared plan -> implement -> review -> fix handoff (ADR-0034, ADR-0035).
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
@@ -7,6 +7,7 @@ import {
   decideRepairPath,
   effectivePolicyRevision,
   parseEvidenceHandoff,
+  renderReviewHandoff,
   requirementsMatch,
   requirementsPinWellFormed,
   requirementsRevision,
@@ -14,6 +15,7 @@ import {
   validateAuthoritativeBody,
   validateEvidenceHandoff,
   validateRepairTicket,
+  validateReviewHandoff,
   type TicketFact,
 } from "../scripts/workflow-state.ts";
 import {
@@ -21,6 +23,7 @@ import {
   parseCompactEvidenceBlock,
   renderCompactEvidence,
 } from "../skills/implement-this/acceptance-evidence.ts";
+import { checkoutMatchDecision as reviewCheckoutMatchDecision } from "../skills/review-this/review-session.ts";
 import { isReviewReady } from "../skills/review-this/discovery.ts";
 
 const sha256 = (s: string): string => createHash("sha256").update(s, "utf8").digest("hex");
@@ -222,6 +225,92 @@ describe("effective policy revision", () => {
     assert.notEqual(
       effectivePolicyRevision([{ path: "REVIEW.md", hash: "a" }]),
       effectivePolicyRevision([{ path: "REVIEW.md", hash: "b" }]),
+    );
+  });
+});
+
+describe("review checkout and handoff reach fix-this", () => {
+  const policy = effectivePolicyRevision([{ path: "REVIEW.md", hash: "h1" }]);
+  const observation = {
+    reviewId: "987",
+    reviewAuthor: "reviewer",
+    reviewerPermission: "write" as const,
+    reviewedCommit: "abc123",
+    reviewedAt: "2026-09-08T00:00:00Z",
+    sourceUrl: "https://github.com/o/r/pull/283#discussion-987",
+    commentIds: [] as readonly string[],
+  };
+  test("branch alias at the reviewed commit passes the checkout gate", () => {
+    assert.equal(
+      reviewCheckoutMatchDecision({ worktreeClean: true, currentBranch: "278", expectedBranch: "278-baseline", localHeadSha: "abc123", pullRequestHeadSha: "abc123" }).match,
+      true,
+    );
+  });
+  test("published review handoff validates for the fix consumer", () => {
+    const body = [
+      "## Standards",
+      "",
+      "ok",
+      "",
+      renderReviewHandoff({
+        repository: "o/r",
+        prNumber: 283,
+        reviewedHeadSha: "abc123",
+        reviewedBaseSha: "base1",
+        closesTicket: 100,
+        requirementsRevision: PIN,
+        reviewPolicyRevision: policy,
+        verificationCommand: "node --test skills/review-this/tests/review-session.test.ts",
+        verificationResult: "review checks observed",
+        verificationPassed: true,
+        findings: [],
+        provenance: { ...observation, reviewerPermission: "write" },
+      }),
+    ].join("\n");
+    const result = validateReviewHandoff({
+      body,
+      repository: "o/r",
+      prNumber: 283,
+      currentHeadSha: "abc123",
+      currentBaseSha: "base1",
+      currentRequirementsRevision: PIN,
+      currentReviewPolicyRevision: policy,
+      observedProvenance: observation,
+      reviewCompleted: true,
+      reviewDismissed: false,
+    });
+    assert.equal(result.status, "current");
+  });
+  test("stale evidence still stops the composed handoff", () => {
+    const body = renderReviewHandoff({
+      repository: "o/r",
+      prNumber: 283,
+      reviewedHeadSha: "abc123",
+      reviewedBaseSha: "base1",
+      closesTicket: 100,
+      requirementsRevision: PIN,
+      reviewPolicyRevision: policy,
+      verificationCommand: "node --test skills/review-this/tests/review-session.test.ts",
+      verificationResult: "review checks observed",
+      verificationPassed: true,
+      findings: [],
+      provenance: { ...observation, reviewerPermission: "write" },
+    });
+    assert.equal(validateEvidenceHandoff({ body: "no evidence", currentRequirementsRevision: PIN, currentHeadSha: "abc123" }).status, "missing");
+    assert.equal(
+      validateReviewHandoff({
+        body,
+        repository: "o/r",
+        prNumber: 283,
+        currentHeadSha: "other",
+        currentBaseSha: "base1",
+        currentRequirementsRevision: PIN,
+        currentReviewPolicyRevision: policy,
+        observedProvenance: observation,
+        reviewCompleted: true,
+        reviewDismissed: false,
+      }).status,
+      "stale",
     );
   });
 });

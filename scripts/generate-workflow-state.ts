@@ -12,6 +12,7 @@ export const COPY_PATHS = [
   "skills/plan-this/workflow-state.ts",
   "skills/implement-this/workflow-state.ts",
   "skills/review-this/workflow-state.ts",
+  "skills/fix-this/workflow-state.ts",
 ];
 
 export function readAuthored(): string {

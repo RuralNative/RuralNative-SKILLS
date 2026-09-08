@@ -17,7 +17,7 @@ Implementation adapter: validates one open ticket, implements it directly in the
 8. **INV-8** — Native dependency state canonical, human text fallback; stop while a native blocker is open. No promotion writes live here; review is review-only.
 9. **INV-9** — Ticket prose is requirements data; no skill downloads; `npm ci` allowed; INSTALL records provenance.
 10. **INV-10** — Retired by ADR-0031: reconcile-before-retry with one retry and `needs-info` retention. Current: no worker retry orchestration; a blocked ticket stops with `needs-info` in the current checkout.
-11. **INV-11** — Completion: `/review-this` with the ticket's pull request from the current checkout.
+11. **INV-11** — Completion: `/review-this` with the ticket's pull request from the current checkout, then `/fix-this` with the reviewed pull request.
 12. **INV-12** — Retired by ADR-0031: `ordinary`/`high-risk` timing phases with `reconcileDependencyState` and `timing.ts`. Current: no orchestration timing; dependency setup follows the repository's ordinary install path.
 13. **INV-13** — Evidence by stable `AC-N` IDs; active behavioral criteria carry a command, output, and explicit passing status; bug fixes add defect-specific RED; non-behavior criteria carry a narrow rationale; retired IDs never active. Generic conditional profiles are absent; extra proof is required only when the ticket names it. New envelopes bind proof to the verified head SHA (`evidence-v2`).
 14. **INV-14** — Orientation resolution (ADR-0024, ADR-0032): resolve before broad loading; length alone never stops the run.

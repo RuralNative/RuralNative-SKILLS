@@ -10,10 +10,13 @@ that the compact leaf core points past.
 `SKILL.md` reviews one pull request in the current checkout: `targets.ts`
 normalizes one `#<n>` or URL reference and resolves it to exactly one open
 pull request (an issue must close through exactly one open pull request);
-`review-session.ts` validates checkout match, evidence, and requirements
+`review-session.ts` validates a clean checkout at the PR head commit (branch
+aliases, `main`, and detached `HEAD` match), evidence, and requirements
 revision, records one frontier Standards-plus-Spec pass, and gates
 publication on one CI read. `review-policy.ts` decides the review-policy
-path and drafts a missing root `REVIEW.md` once before publication.
+path; a missing root `REVIEW.md` continues under skill-owned defaults and
+nothing is created. Publication carries one validated `review-handoff-v1`
+block for `fix-this`.
 `reconciliation.ts` validates local findings for scope, evidence, severity,
 category, and exact revisions. `review-authority.ts` forbids fixes, source
 edits, delivery, and tracker writes. `adapters.ts` carries only local GitHub,
@@ -33,5 +36,7 @@ ADR-0014 through ADR-0023 record the retired wave contract: review waves,
 persistent PR worktrees, cloud review, parallel Standards and Spec subagents,
 mutation workers, execution-model selection, capacity caps, final verification,
 and whole-spec review. ADR-0031 supersedes those clauses; ADR-0033 retires
-the fix, merge, promotion, and closure paths and adds missing-policy
-bootstrap. The older files stay verbatim as history.
+the fix, merge, promotion, and closure paths and removes missing-policy
+bootstrap; ADR-0034 keeps `REVIEW.md` optional with skill-owned defaults.
+ADR-0035 assigns finalization to `fix-this` through `review-handoff-v1`.
+The older files stay verbatim as history.

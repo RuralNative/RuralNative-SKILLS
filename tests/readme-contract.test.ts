@@ -9,7 +9,7 @@ function section(startIdx:number){ const next=readme.indexOf("\n## ",startIdx+10
 function bashCmds(sec:string, re:RegExp){ return [...sec.matchAll(/```bash([\s\S]*?)```/g)].map(m=>m[1]).join("\n").matchAll(re); }
 function wfSection(){ return section(readme.indexOf("\n## Development Workflow")); }
 
-describe("README contract (ADR-0031)",()=>{
+describe("README contract (ADR-0031, ADR-0035)",()=>{
   test("required heading order after title",()=>{
     const hs=headings(readme);
     const required=["Installation","Technical Requirements","Our Shelf","Motivation and Purpose","Philosophy","Which skill and when","Development Workflow","AI-First Workflow Integration","Comparative Analysis","Critical Evaluation","Future Roadmap"];
@@ -22,12 +22,12 @@ describe("README contract (ADR-0031)",()=>{
     assert.ok(hs[0].toLowerCase().includes("ruralnative"));
   });
 
-  test("workflow section lists exactly three workflow commands",()=>{
+  test("workflow section lists exactly four workflow commands",()=>{
     const wfSec=wfSection();
-    const rows=[...wfSec.matchAll(/^\|\s*\*\*(plan-this|implement-this|review-this)\*\*/gm)];
-    assert.equal(rows.length,3,`expected 3 workflow command rows, got ${rows.length}`);
+    const rows=[...wfSec.matchAll(/^\|\s*\*\*(plan-this|implement-this|review-this|fix-this)\*\*/gm)];
+    assert.equal(rows.length,4,`expected 4 workflow command rows, got ${rows.length}`);
     assert.ok(
-      wfSec.includes("/grill-with-docs -> /to-spec -> /to-tickets -> /implement"),
+      wfSec.includes("/grill-with-docs -> /to-spec -> /to-tickets"),
       "workflow section missing the opinionated chain",
     );
     assert.ok(/opinionated/i.test(wfSec),"workflow must be called opinionated");
@@ -40,7 +40,7 @@ describe("README contract (ADR-0031)",()=>{
     const mp=[...bashCmds(sec,/npx skills add mattpocock\/skills --skill ([a-z-]+)/g)].map(m=>m[1]);
     assert.deepEqual(mp,["grill-with-docs","to-spec","to-tickets","implement"]);
     const local=[...bashCmds(sec,/npx skills add RuralNative\/RuralNative-SKILLS --skill ([a-z-]+)/g)].map(m=>m[1]);
-    assert.deepEqual(local,["plan-this","implement-this","review-this"]);
+    assert.deepEqual(local,["plan-this","implement-this","review-this","fix-this"]);
   });
 
   test("each Matt Pocock dependency links its verified source under skills/engineering",()=>{
@@ -60,11 +60,12 @@ describe("README contract (ADR-0031)",()=>{
     assert.ok(!/recovery-required/i.test(wfSec),"README must not promise recovery states");
   });
 
-  test("review cadence: one frontier pass, delta review, no fix round",()=>{
+  test("review cadence: one frontier pass, delta review, final fix stage",()=>{
     const wfSec=wfSection();
     assert.ok(/one full Standards-plus-Spec/i.test(wfSec),"missing one frontier pass");
     assert.ok(/delta review/i.test(wfSec),"missing delta review");
-    assert.ok(/no fix round runs/i.test(wfSec),"missing no-fix-round statement");
+    assert.ok(/review-handoff-v1/i.test(wfSec),"missing review handoff statement");
+    assert.ok(/\/fix-this/i.test(wfSec),"missing final fix stage");
   });
 
   test("focused verification with CI reuse and no post-merge run",()=>{

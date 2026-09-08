@@ -15,17 +15,32 @@ describe("checkoutMatchDecision", () => {
       true,
     );
   });
+  test("reported branch alias at the same commit proceeds without repair", () => {
+    const sha = "9240da36037cf1ea6f078edf7129d733c209563e";
+    assert.equal(
+      checkoutMatchDecision({ worktreeClean: true, currentBranch: "278", expectedBranch: "278-baseline", localHeadSha: sha, pullRequestHeadSha: sha }).match,
+      true,
+    );
+  });
+  test("branch aliases, main, and detached HEAD match the same commit", () => {
+    for (const currentBranch of ["feature-alias", "main", "", "HEAD"]) {
+      assert.equal(
+        checkoutMatchDecision({ worktreeClean: true, currentBranch, expectedBranch: "impl/10-x", localHeadSha: "h1", pullRequestHeadSha: "h1" }).match,
+        true,
+      );
+    }
+  });
   test("dirty checkout stops", () => {
     assert.equal(
       checkoutMatchDecision({ worktreeClean: false, currentBranch: "impl/10-x", expectedBranch: "impl/10-x", localHeadSha: "h1", pullRequestHeadSha: "h1" }).match,
       false,
     );
   });
-  test("branch or HEAD mismatch stops with no new worktree", () => {
-    const branch = checkoutMatchDecision({ worktreeClean: true, currentBranch: "main", expectedBranch: "impl/10-x", localHeadSha: "h1", pullRequestHeadSha: "h1" });
-    assert.equal(branch.match, false);
+  test("HEAD mismatch stops with no new worktree", () => {
     const head = checkoutMatchDecision({ worktreeClean: true, currentBranch: "impl/10-x", expectedBranch: "impl/10-x", localHeadSha: "old", pullRequestHeadSha: "h1" });
     assert.equal(head.match, false);
+    const aliasHead = checkoutMatchDecision({ worktreeClean: true, currentBranch: "main", expectedBranch: "impl/10-x", localHeadSha: "old", pullRequestHeadSha: "h1" });
+    assert.equal(aliasHead.match, false);
   });
   test("empty revisions never match", () => {
     assert.equal(

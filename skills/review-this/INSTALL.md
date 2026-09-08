@@ -2,7 +2,7 @@
 
 `review-this` reviews exactly one pull request in the current checkout and publishes the findings. Invoke it explicitly as `/review-this <target>` where `<target>` is one pull-request number, one pull-request URL, one issue number, or one issue URL that resolves to exactly one open pull request — bare numbers (`100`) and hash numbers (`#100`) normalize to the same repository number. Parent specifications, ambiguous mappings, multiple targets, and cross-repository targets stop before any write.
 
-The skill requires the current checkout to match the selected pull-request head. It runs one frontier Standards-plus-Spec pass in-session, reports both checklists separately, publishes the review and verified inline findings to the pull request, and stops. It never applies fixes, commits, pushes, merges, updates the pull-request body, updates labels, promotes dependents, or closes tickets. It never calls Agent Manager, creates or removes a worktree, manages workers, runs cloud review, or reads Agent Manager state.
+The skill requires a clean current checkout at the selected pull-request head commit. Local branch names are informational: a branch alias, `main`, or detached `HEAD` at the same commit matches; only a dirty worktree or a different head commit stops checkout validation. It runs one frontier Standards-plus-Spec pass in-session, reports both checklists separately, publishes the review and verified inline findings to the pull request, and stops. It never applies fixes, commits, pushes, merges, updates the pull-request body, updates labels, promotes dependents, or closes tickets. It never calls Agent Manager, creates or removes a worktree, manages workers, runs cloud review, or reads Agent Manager state.
 
 ## Requirements
 

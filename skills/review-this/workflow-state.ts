@@ -1,14 +1,15 @@
 // Authored source of the pure workflow state core (single-target production
-// workflows, ADR-0031).
+// workflows, ADR-0031, finalization in ADR-0035).
 // scripts/generate-workflow-state.ts copies this file byte-identical into
-// skills/plan-this/, skills/implement-this/, and skills/review-this/ so each
-// registry install is self-contained. Edit this file, run the generator, and
-// commit both; repository verification fails when a copy drifts.
+// skills/plan-this/, skills/implement-this/, skills/review-this/, and
+// skills/fix-this/ so each registry install is self-contained. Edit this
+// file, run the generator, and commit both; repository verification fails
+// when a copy drifts.
 //
 // Purity contract: facts in, decisions out. No imports and no network,
 // GitHub, git, filesystem-mutation, or worker-management calls. No Agent
 // Manager, worktree, worker-cap, polling, cloud, or wave concepts live here:
-// both production commands run one target in the current checkout.
+// the production commands run one target in the current checkout.
 
 export const MAX_FIX_ROUNDS = 1;
 
@@ -1121,4 +1122,758 @@ export function effectivePolicyRevision(
     .sort()
     .join("\n");
   return `${REVIEW_CONTRACT_VERSION}:${canonical === "" ? "no-sources" : canonical}`;
+}
+
+// --- Review handoff for fix-this (ADR-0035) ----------------------------------
+//
+// `review-this` publishes readable Standards/Spec prose plus exactly one
+// machine-readable `review-handoff-v1` block. `fix-this` consumes only a
+// block that validates here. Arbitrary review prose never authorizes fixes,
+// conflict resolution, merge, or bookkeeping. The handoff pins the completed
+// review; it never approves future commits.
+
+export const REVIEW_HANDOFF_VERSION = "review-handoff-v1";
+
+const REVIEW_HANDOFF_START = "<!-- ruralnative:review-handoff:start -->";
+const REVIEW_HANDOFF_END = "<!-- ruralnative:review-handoff:end -->";
+
+export type ReviewHandoffSource = "standards" | "spec";
+export type ReviewHandoffCategory =
+  | "security"
+  | "performance"
+  | "correctness-and-edge-cases"
+  | "style"
+  | "tests-and-test-bloat"
+  | "documentation";
+export type ReviewHandoffSeverity = "advisory" | "blocking";
+export type ReviewHandoffEvidenceKind = "inline" | "failure";
+
+export interface ReviewHandoffFinding {
+  /** Stable finding ID unique within the handoff, e.g. `F-1`. */
+  id: string;
+  source: ReviewHandoffSource;
+  category: ReviewHandoffCategory;
+  severity: ReviewHandoffSeverity;
+  file: string;
+  /** Pinned 1-based line in the reviewed head. */
+  line: number;
+  message: string;
+  evidenceKind: ReviewHandoffEvidenceKind;
+  /** Quoted offending span for inline evidence. */
+  quote?: string;
+  /** Failing command for failure evidence. */
+  command?: string;
+  /** Observed output for failure evidence. */
+  output?: string;
+  /** Governing rule, e.g. a Standards rule or `#<issue>:AC-N`. */
+  governingRule: string;
+  reviewedHeadSha: string;
+  reviewedBaseSha: string;
+  /** Linked implementation ticket, when the finding names one. */
+  ticket?: number;
+}
+
+export interface ReviewHandoffProvenance {
+  /** Native GitHub review ID as observed by the reader, e.g. `123456`. */
+  reviewId: string;
+  /** Native author login, e.g. `octocat`. */
+  reviewAuthor: string;
+  /** Commit reviewed by that native report. */
+  reviewedCommit: string;
+  /** Native review timestamp when known, otherwise empty. */
+  reviewedAt: string;
+  /** Native API URL of the source report when known, otherwise empty. */
+  sourceUrl: string;
+  /**
+   * Reviewer permission observed at read time:
+   * `policy` means a project policy establishes this reviewer,
+   * otherwise `write`, `maintain`, or `admin`.
+   */
+  reviewerPermission: "policy" | "write" | "maintain" | "admin";
+  /** Associated native comment IDs, when any. */
+  commentIds: readonly string[];
+}
+
+export interface ReviewHandoffInput {
+  /** Repository in `owner/name` form. */
+  repository: string;
+  prNumber: number;
+  reviewedHeadSha: string;
+  reviewedBaseSha: string;
+  /** Closed-ticket association carried by the reviewed PR. */
+  closesTicket: number | null;
+  requirementsRevision: string;
+  reviewPolicyRevision: string;
+  /** Local verification recorded by the review publication. */
+  verificationCommand: string;
+  verificationResult: string;
+  verificationPassed: boolean;
+  /** Complete validated findings; empty means no findings. */
+  findings: readonly ReviewHandoffFinding[];
+  provenance: ReviewHandoffProvenance;
+}
+
+export type ReviewHandoffStatus =
+  | "current"
+  | "missing"
+  | "malformed"
+  | "unsupported-version"
+  | "stale";
+
+export interface ReviewHandoffResult {
+  status: ReviewHandoffStatus;
+  reason: string;
+  handoff?: ReviewHandoffInput;
+}
+
+export interface ReviewHandoffCheck {
+  /** Raw published review body that should carry the handoff block. */
+  body: string;
+  /** Repository in `owner/name` form. */
+  repository: string;
+  prNumber: number;
+  /** Current PR head SHA known to the consumer. */
+  currentHeadSha: string;
+  /** Current PR base SHA known to the consumer. */
+  currentBaseSha: string;
+  /** Current requirements value recomputed from the issue bodies. */
+  currentRequirementsRevision: string;
+  /** Current effective-policy value recomputed from governing sources. */
+  currentReviewPolicyRevision: string;
+  /**
+   * Native metadata observed for the selected review. The payload never
+   * authenticates itself: this observation must supply identity, author,
+   * permission, commit, and source report before the handoff is usable.
+   */
+  observedProvenance: {
+    reviewId: string;
+    reviewAuthor: string;
+    reviewerPermission: ReviewHandoffProvenance["reviewerPermission"] | "unknown";
+    reviewedCommit: string;
+    reviewedAt?: string;
+    sourceUrl?: string;
+    commentIds?: readonly string[];
+  };
+  /** True when the selected native review is completed. */
+  reviewCompleted: boolean;
+  /** True when the selected native review was dismissed. */
+  reviewDismissed: boolean;
+}
+
+function escapeReviewHandoffRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function reviewHandoffInner(body: string): string | null {
+  const normalized = normalizeNewlines(body);
+  const pattern = new RegExp(
+    `${escapeReviewHandoffRegExp(REVIEW_HANDOFF_START)}[ \\t]*\\n([\\u0000-\\uFFFF]*?)\\n[ \\t]*${escapeReviewHandoffRegExp(REVIEW_HANDOFF_END)}`,
+  );
+  return normalized.match(pattern)?.[1] ?? null;
+}
+
+/** Count review-handoff blocks in a published body (LF/CRLF tolerant). */
+export function countReviewHandoffBlocks(body: string): number {
+  const normalized = normalizeNewlines(body);
+  const pattern = new RegExp(
+    `${escapeReviewHandoffRegExp(REVIEW_HANDOFF_START)}[ \\t]*\\n([\\u0000-\\uFFFF]*?)\\n[ \\t]*${escapeReviewHandoffRegExp(REVIEW_HANDOFF_END)}`,
+    "g",
+  );
+  return [...normalized.matchAll(pattern)].length;
+}
+
+function reviewHandoffField(inner: string, label: string): string[] {
+  const pattern = new RegExp(`^[ \\t]*-[ \\t]*${escapeReviewHandoffRegExp(label)}[ \\t]*:(.*)$`, "gm");
+  const values: string[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = pattern.exec(inner)) !== null) values.push((m[1] ?? "").trim());
+  return values;
+}
+
+function reviewHandoffSubfield(segment: string, label: string): string | null {
+  const lines = segment.split("\n");
+  // The finding header `- Finding:` is top-level; its fields are indented.
+  const start = label === "Finding" ? 0 : 1;
+  for (let i = start; i < lines.length; i++) {
+    if (label !== "Finding" && !/^[ \t]+-/.test(lines[i])) continue;
+    const m = lines[i].match(new RegExp(`^[ \\t]*-[ \\t]*${escapeReviewHandoffRegExp(label)}[ \\t]*:(.*)$`));
+    if (m) {
+      const value = (m[1] ?? "").trim();
+      return value === "" ? null : value;
+    }
+  }
+  return null;
+}
+
+function oneReviewHandoffField(inner: string, label: string): string | null {
+  const values = reviewHandoffField(inner, label);
+  if (values.length !== 1 || values[0] === "") return null;
+  return values[0];
+}
+
+function parseReviewHandoffFindings(inner: string): { findings: ReviewHandoffFinding[]; error: string | null } {
+  const findings: ReviewHandoffFinding[] = [];
+  const lines = inner.split("\n");
+  const starts: number[] = [];
+  lines.forEach((line, i) => {
+    if (/^[ \t]*-[ \t]*Finding:[ \t]*\S/.test(line)) starts.push(i);
+  });
+  const end = lines.findIndex((line) => /^[ \t]*-[ \t]*Findings count:/.test(line));
+  const stop = end >= 0 ? end : lines.length;
+  const relevant = starts.filter((i) => i < stop);
+  for (let h = 0; h < relevant.length; h++) {
+    const segment = lines.slice(relevant[h], h + 1 < relevant.length ? relevant[h + 1] : stop).join("\n");
+    const get = (label: string): string | null => reviewHandoffSubfield(segment, label);
+    const id = get("Finding");
+    const source = get("Source");
+    const category = get("Category");
+    const severity = get("Severity");
+    const file = get("File");
+    const lineRaw = get("Line");
+    const message = get("Message");
+    const evidenceKind = get("Evidence");
+    const governingRule = get("Governing rule");
+    const headSha = get("Reviewed head");
+    const baseSha = get("Reviewed base");
+    if (!id || !source || !category || !severity || !file || !lineRaw || !message || !evidenceKind || !governingRule || !headSha || !baseSha) {
+      return { findings: [], error: "review handoff carries an incomplete finding; republish the review" };
+    }
+    if (source !== "standards" && source !== "spec") {
+      return { findings: [], error: `review handoff finding ${id} has an unknown source` };
+    }
+    if (severity !== "advisory" && severity !== "blocking") {
+      return { findings: [], error: `review handoff finding ${id} has an unknown severity` };
+    }
+    if (
+      category !== "security" &&
+      category !== "performance" &&
+      category !== "correctness-and-edge-cases" &&
+      category !== "style" &&
+      category !== "tests-and-test-bloat" &&
+      category !== "documentation"
+    ) {
+      return { findings: [], error: `review handoff finding ${id} has an unknown category` };
+    }
+    if (evidenceKind !== "inline" && evidenceKind !== "failure") {
+      return { findings: [], error: `review handoff finding ${id} has an unknown evidence kind` };
+    }
+    const line = Number(lineRaw);
+    if (!Number.isInteger(line) || line < 1) {
+      return { findings: [], error: `review handoff finding ${id} has an invalid line` };
+    }
+    const quote = get("Quote");
+    const command = get("Command");
+    const output = get("Output");
+    if (evidenceKind === "inline" && !quote) {
+      return { findings: [], error: `review handoff finding ${id} needs quoted evidence` };
+    }
+    if (evidenceKind === "failure" && (!command || !output)) {
+      return { findings: [], error: `review handoff finding ${id} needs command and output evidence` };
+    }
+    const ticketRaw = get("Ticket");
+    let ticket: number | undefined;
+    if (ticketRaw !== null) {
+      const ticketNumber = Number(ticketRaw.replace(/^#/, ""));
+      if (!Number.isInteger(ticketNumber) || ticketNumber < 1) {
+        return { findings: [], error: `review handoff finding ${id} has an invalid ticket` };
+      }
+      ticket = ticketNumber;
+    }
+    findings.push({
+      id,
+      source,
+      category,
+      severity,
+      file,
+      line,
+      message,
+      evidenceKind,
+      quote: quote ?? undefined,
+      command: command ?? undefined,
+      output: output ?? undefined,
+      governingRule,
+      reviewedHeadSha: headSha,
+      reviewedBaseSha: baseSha,
+      ticket,
+    });
+  }
+  return { findings, error: null };
+}
+
+function validateReviewHandoffInput(input: ReviewHandoffInput): string | null {
+  if (!/^[A-Za-z0-9-_.]+\/[A-Za-z0-9-_.]+$/.test(input.repository)) return "review handoff repository must be owner/name";
+  if (!Number.isInteger(input.prNumber) || input.prNumber < 1) return "review handoff PR number is invalid";
+  if (input.reviewedHeadSha.trim() === "" || input.reviewedBaseSha.trim() === "") {
+    return "review handoff needs trustworthy reviewed revisions";
+  }
+  if (!requirementsPinWellFormed(input.requirementsRevision)) return "review handoff requirements revision is malformed";
+  if (input.reviewPolicyRevision.trim() === "") return "review handoff policy revision is malformed";
+  if (!isNonEmptyHandoffString(input.verificationCommand)) return "review handoff verification command is missing";
+  if (!isNonEmptyHandoffString(input.verificationResult)) return "review handoff verification result is missing";
+  if (input.closesTicket !== null && (!Number.isInteger(input.closesTicket) || input.closesTicket < 1)) {
+    return "review handoff closing ticket is invalid";
+  }
+  const ids = new Set<string>();
+  for (const finding of input.findings) {
+    if (ids.has(finding.id)) return `review handoff carries a duplicate finding id: ${finding.id}`;
+    ids.add(finding.id);
+    if (finding.reviewedHeadSha !== input.reviewedHeadSha || finding.reviewedBaseSha !== input.reviewedBaseSha) {
+      return `review handoff finding ${finding.id} is pinned to another revision`;
+    }
+  }
+  if (input.provenance.reviewId.trim() === "") return "review handoff provenance needs a native review ID";
+  if (input.provenance.reviewAuthor.trim() === "") return "review handoff provenance needs a native author";
+  if (input.provenance.reviewedCommit.trim() === "") return "review handoff provenance needs the reviewed commit";
+  if (input.provenance.reviewedCommit !== input.reviewedHeadSha) {
+    return "review handoff provenance commit does not match the reviewed head";
+  }
+  return null;
+}
+
+function isNonEmptyHandoffString(value: unknown): boolean {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function escapeHandoffText(value: string): string {
+  return value.replace(/-->/g, "--\\u003E").replace(/\r?\n/g, " ");
+}
+
+/**
+ * Render the machine-readable review handoff published by `review-this`.
+ * Throws on invalid input so malformed reviews never publish a usable block.
+ */
+export function renderReviewHandoff(input: ReviewHandoffInput): string {
+  const error = validateReviewHandoffInput(input);
+  if (error) throw new Error(`invalid review handoff: ${error}`);
+  const lines: string[] = [REVIEW_HANDOFF_START, "## Review handoff", "", `- Handoff version: ${REVIEW_HANDOFF_VERSION}`];
+  lines.push(`- Repository: ${escapeHandoffText(input.repository)}`);
+  lines.push(`- PR: ${input.prNumber}`);
+  lines.push(`- Reviewed head: ${escapeHandoffText(input.reviewedHeadSha)}`);
+  lines.push(`- Reviewed base: ${escapeHandoffText(input.reviewedBaseSha)}`);
+  lines.push(`- Closes ticket: ${input.closesTicket === null ? "none" : `#${input.closesTicket}`}`);
+  lines.push(`- Requirements revision: ${escapeHandoffText(input.requirementsRevision)}`);
+  lines.push(`- Review policy revision: ${escapeHandoffText(input.reviewPolicyRevision)}`);
+  lines.push(`- Verification command: \`${escapeHandoffText(input.verificationCommand)}\``);
+  lines.push(`- Verification passed: ${input.verificationPassed ? "true" : "false"}`);
+  lines.push(`- Verification result: ${escapeHandoffText(input.verificationResult)}`);
+  lines.push(`- Review ID: ${escapeHandoffText(input.provenance.reviewId)}`);
+  lines.push(`- Review author: ${escapeHandoffText(input.provenance.reviewAuthor)}`);
+  lines.push(`- Reviewed commit: ${escapeHandoffText(input.provenance.reviewedCommit)}`);
+  lines.push(`- Reviewed at: ${escapeHandoffText(input.provenance.reviewedAt)}`);
+  lines.push(`- Source URL: ${escapeHandoffText(input.provenance.sourceUrl)}`);
+  lines.push(`- Reviewer permission: ${input.provenance.reviewerPermission}`);
+  lines.push(`- Comment IDs: ${input.provenance.commentIds.map((id) => escapeHandoffText(id)).join(", ")}`);
+  for (const finding of input.findings) {
+    lines.push(`- Finding: ${escapeHandoffText(finding.id)}`);
+    lines.push(`  - Source: ${finding.source}`);
+    lines.push(`  - Category: ${finding.category}`);
+    lines.push(`  - Severity: ${finding.severity}`);
+    lines.push(`  - File: ${escapeHandoffText(finding.file)}`);
+    lines.push(`  - Line: ${finding.line}`);
+    lines.push(`  - Message: ${escapeHandoffText(finding.message)}`);
+    lines.push(`  - Evidence: ${finding.evidenceKind}`);
+    if (finding.evidenceKind === "inline") lines.push(`  - Quote: ${escapeHandoffText(finding.quote ?? "")}`);
+    else {
+      lines.push(`  - Command: \`${escapeHandoffText(finding.command ?? "")}\``);
+      lines.push(`  - Output: ${escapeHandoffText(finding.output ?? "")}`);
+    }
+    lines.push(`  - Governing rule: ${escapeHandoffText(finding.governingRule)}`);
+    lines.push(`  - Reviewed head: ${escapeHandoffText(finding.reviewedHeadSha)}`);
+    lines.push(`  - Reviewed base: ${escapeHandoffText(finding.reviewedBaseSha)}`);
+    if (finding.ticket !== undefined) lines.push(`  - Ticket: #${finding.ticket}`);
+  }
+  lines.push(`- Findings count: ${input.findings.length}`);
+  lines.push(REVIEW_HANDOFF_END);
+  return lines.join("\n");
+}
+
+/** Parse one review-handoff block without trusting it. Callers must validate. */
+export function parseReviewHandoff(body: string): { found: boolean; version: string | null } {
+  const inner = reviewHandoffInner(body);
+  if (inner === null) return { found: false, version: null };
+  const version = oneReviewHandoffField(inner, "Handoff version");
+  return { found: true, version };
+}
+
+/**
+ * Validate the published review handoff for `fix-this`. The observed native
+ * provenance must match the payload; a forged, partial, dismissed, unknown,
+ * stale, or mismatched report is never current. Requirements and policy must
+ * also match the consumer's recomputed current values.
+ */
+export function validateReviewHandoff(check: ReviewHandoffCheck): ReviewHandoffResult {
+  const normalized = normalizeNewlines(check.body);
+  const starts = normalized.split(REVIEW_HANDOFF_START).length - 1;
+  const ends = normalized.split(REVIEW_HANDOFF_END).length - 1;
+  if (starts !== ends || starts !== countReviewHandoffBlocks(check.body)) {
+    return { status: "malformed", reason: "stray or unbalanced review handoff markers in the review body" };
+  }
+  if (starts === 0) {
+    return { status: "missing", reason: "no review handoff block in the published review; republish the review" };
+  }
+  if (starts > 1) {
+    return { status: "malformed", reason: "multiple review handoff blocks in the published review" };
+  }
+  const inner = reviewHandoffInner(check.body);
+  if (inner === null) {
+    return { status: "malformed", reason: "review handoff block is unreadable; republish the review" };
+  }
+  const version = oneReviewHandoffField(inner, "Handoff version");
+  if (version === null) {
+    return { status: "malformed", reason: "review handoff version is missing or duplicated" };
+  }
+  if (version !== REVIEW_HANDOFF_VERSION) {
+    return { status: "unsupported-version", reason: `unsupported review handoff ${version}; upgrade the producing skill` };
+  }
+  const lines = inner.split("\n");
+  const topLevel = (label: string): string | null => {
+    const values: string[] = [];
+    for (const line of lines) {
+      if (/^[ \t]+-/.test(line)) continue;
+      const m = line.match(new RegExp(`^[ \\t]*-[ \\t]*${escapeReviewHandoffRegExp(label)}[ \\t]*:(.*)$`));
+      if (m) values.push((m[1] ?? "").trim());
+    }
+    if (values.length !== 1 || values[0] === "") return null;
+    return values[0];
+  };
+  const required = [
+    "Repository",
+    "PR",
+    "Reviewed head",
+    "Reviewed base",
+    "Requirements revision",
+    "Review policy revision",
+    "Verification command",
+    "Verification passed",
+    "Verification result",
+    "Review ID",
+    "Review author",
+    "Reviewed commit",
+    "Reviewer permission",
+    "Findings count",
+  ] as const;
+  for (const label of required) {
+    if (topLevel(label) === null) {
+      return { status: "malformed", reason: `review handoff ${label.toLowerCase()} is missing or duplicated` };
+    }
+  }
+  const repository = topLevel("Repository")!;
+  const prRaw = topLevel("PR")!;
+  const reviewedHead = topLevel("Reviewed head")!;
+  const reviewedBase = topLevel("Reviewed base")!;
+  const prNumber = Number(prRaw);
+  if (!Number.isInteger(prNumber) || prNumber < 1) {
+    return { status: "malformed", reason: "review handoff PR number is invalid" };
+  }
+  const closesRaw = topLevel("Closes ticket") ?? "none";
+  let closesTicket: number | null = null;
+  if (closesRaw !== "none") {
+    const parsed = Number(closesRaw.replace(/^#/, ""));
+    if (!Number.isInteger(parsed) || parsed < 1) {
+      return { status: "malformed", reason: "review handoff closing ticket is invalid" };
+    }
+    closesTicket = parsed;
+  }
+  const requirementsRevision = topLevel("Requirements revision")!;
+  const policyRevision = topLevel("Review policy revision")!;
+  const verificationCommand = topLevel("Verification command")!;
+  const verificationPassedRaw = topLevel("Verification passed")!;
+  const verificationResult = topLevel("Verification result")!;
+  if (verificationPassedRaw !== "true" && verificationPassedRaw !== "false") {
+    return { status: "malformed", reason: "review handoff verification status is invalid" };
+  }
+  const findingsCountRaw = topLevel("Findings count")!;
+  const findingsCount = Number(findingsCountRaw);
+  if (!Number.isInteger(findingsCount) || findingsCount < 0) {
+    return { status: "malformed", reason: "review handoff findings count is invalid" };
+  }
+  const parsedFindings = parseReviewHandoffFindings(inner);
+  if (parsedFindings.error) return { status: "malformed", reason: parsedFindings.error };
+  if (parsedFindings.findings.length !== findingsCount) {
+    return { status: "malformed", reason: "review handoff findings count does not match its findings" };
+  }
+  const reviewId = topLevel("Review ID")!;
+  const reviewAuthor = topLevel("Review author")!;
+  const reviewedCommit = topLevel("Reviewed commit")!;
+  const reviewedAt = topLevel("Reviewed at") ?? "";
+  const sourceUrl = topLevel("Source URL") ?? "";
+  const reviewerPermission = topLevel("Reviewer permission")!;
+  if (
+    reviewerPermission !== "policy" &&
+    reviewerPermission !== "write" &&
+    reviewerPermission !== "maintain" &&
+    reviewerPermission !== "admin"
+  ) {
+    return { status: "malformed", reason: "review handoff reviewer permission is invalid" };
+  }
+  const commentIds = topLevel("Comment IDs") ?? "";
+  const handoff: ReviewHandoffInput = {
+    repository,
+    prNumber,
+    reviewedHeadSha: reviewedHead,
+    reviewedBaseSha: reviewedBase,
+    closesTicket,
+    requirementsRevision,
+    reviewPolicyRevision: policyRevision,
+    verificationCommand,
+    verificationResult,
+    verificationPassed: verificationPassedRaw === "true",
+    findings: parsedFindings.findings,
+    provenance: {
+      reviewId,
+      reviewAuthor,
+      reviewedCommit,
+      reviewedAt,
+      sourceUrl,
+      reviewerPermission,
+      commentIds: commentIds === "" ? [] : commentIds.split(",").map((id) => id.trim()).filter((id) => id !== ""),
+    },
+  };
+  if (validateReviewHandoffInput(handoff)) {
+    return { status: "malformed", reason: validateReviewHandoffInput(handoff)! };
+  }
+  if (!check.reviewCompleted || check.reviewDismissed) {
+    return { status: "stale", reason: "the selected native review is incomplete or dismissed; republish the review" };
+  }
+  if (check.observedProvenance.reviewerPermission === "unknown") {
+    return { status: "malformed", reason: "reviewer permission was not observed; verify it before fixes" };
+  }
+  if (
+    check.observedProvenance.reviewId !== handoff.provenance.reviewId ||
+    check.observedProvenance.reviewAuthor !== handoff.provenance.reviewAuthor ||
+    check.observedProvenance.reviewerPermission !== handoff.provenance.reviewerPermission ||
+    check.observedProvenance.reviewedCommit !== handoff.provenance.reviewedCommit ||
+    check.observedProvenance.reviewedCommit !== handoff.reviewedHeadSha
+  ) {
+    return { status: "stale", reason: "observed native review does not match the published handoff" };
+  }
+  if (handoff.repository.toLowerCase() !== check.repository.toLowerCase() || handoff.prNumber !== check.prNumber) {
+    return { status: "stale", reason: "review handoff names another repository or pull request" };
+  }
+  if (handoff.reviewedHeadSha !== check.currentHeadSha || handoff.reviewedBaseSha !== check.currentBaseSha) {
+    return {
+      status: "stale",
+      reason: "review handoff is pinned to another head or base; republish the review on the current revisions",
+    };
+  }
+  if (!requirementsPinWellFormed(check.currentRequirementsRevision) || handoff.requirementsRevision !== check.currentRequirementsRevision) {
+    return { status: "stale", reason: "review handoff requirements revision no longer matches the issue bodies" };
+  }
+  if (handoff.reviewPolicyRevision !== check.currentReviewPolicyRevision) {
+    return { status: "stale", reason: "review handoff policy revision no longer matches the governing sources" };
+  }
+  return { status: "current", reason: "validated review handoff for the current revisions", handoff };
+}
+
+// --- Fix-this finalization (ADR-0035) ----------------------------------------
+//
+// `fix-this` owns post-review fixes, conflict resolution, merge, and
+// bookkeeping. It never generates another review verdict. Local verification
+// is mandatory; CI status is observed only when GitHub enforces it as a merge
+// restriction. A successful local gate without CI or fresh review is weaker
+// assurance; that tradeoff was explicitly selected and is recorded here.
+
+export type FixProgressStep = "fixes" | "evidence" | "push" | "merge" | "bookkeeping";
+
+export interface FixFindingDisposition {
+  /** Stable finding ID from the validated handoff. */
+  findingId: string;
+  /** How the finding was resolved. */
+  disposition: "fixed" | "already-resolved" | "unresolvable";
+  /** Changed files for this finding, if any. */
+  files: readonly string[];
+  /** Resulting commit SHA carrying the resolution, if any. */
+  commitSha: string;
+  /** Focused verification command. */
+  verificationCommand: string;
+  /** Observed verification result. */
+  verificationResult: string;
+}
+
+export interface FixEligibilityFact {
+  /** Validated handoff status from `validateReviewHandoff`. */
+  handoffStatus: string;
+  /** Current requirements value still matches the handoff. */
+  requirementsCurrent: boolean;
+  /** Current policy value still matches the handoff. */
+  policyCurrent: boolean;
+  /** Every published finding has a proven disposition. */
+  allFindingsResolved: boolean;
+  /** At least one disposition still needs a human decision. */
+  hasUnresolvableFinding: boolean;
+  /** Local merge conflicts are complete. */
+  conflictsResolved: boolean;
+  /** Whether conflict resolution needed a new product decision. */
+  conflictNeedsDecision: boolean;
+  /** Local verification ran on the resulting head and passed. */
+  localVerificationPassed: boolean;
+  /** Local verification command is established, not invented. */
+  verificationCapable: boolean;
+  /** Implementation evidence validates `current` on the resulting head. */
+  evidenceCurrent: boolean;
+  /** Clean worktree before merge. */
+  worktreeClean: boolean;
+  /** PR is open and not a draft. */
+  pullRequestOpen: boolean;
+  /** GitHub reports the PR mergeable. */
+  mergeable: boolean;
+  /** Resulting head equals the verified PR head. */
+  headMatchesVerifiedResult: boolean;
+}
+
+export interface FixEligibilityDecision {
+  eligible: boolean;
+  blockers: string[];
+}
+
+/**
+ * Dedicated finalization gate for `fix-this`. It does not call the legacy
+ * exact-revision review gate and adds no CI condition. GitHub branch
+ * protection remains authoritative at merge time.
+ */
+export function isFixEligible(fact: FixEligibilityFact): FixEligibilityDecision {
+  const blockers: string[] = [];
+  if (fact.handoffStatus !== "current") blockers.push("validated review handoff is not current");
+  if (!fact.requirementsCurrent) blockers.push("the issue bodies no longer match the reviewed requirements revision");
+  if (!fact.policyCurrent) blockers.push("governing policy no longer matches the reviewed policy revision");
+  if (fact.hasUnresolvableFinding) blockers.push("a finding needs a human decision before merge");
+  if (!fact.allFindingsResolved) blockers.push("published findings are unresolved");
+  if (fact.conflictNeedsDecision) blockers.push("conflict resolution needs a new product decision");
+  if (!fact.conflictsResolved) blockers.push("merge conflicts are unresolved");
+  if (!fact.verificationCapable) blockers.push("no established local verification command; do not invent one");
+  if (!fact.localVerificationPassed) blockers.push("local verification did not pass on the resulting head");
+  if (!fact.evidenceCurrent) blockers.push("implementation evidence is not current on the resulting head");
+  if (!fact.worktreeClean) blockers.push("the worktree is not clean");
+  if (!fact.pullRequestOpen) blockers.push("the pull request is not open");
+  if (!fact.mergeable) blockers.push("pull request is not mergeable");
+  if (!fact.headMatchesVerifiedResult) blockers.push("the pull-request head is not the verified result");
+  return { eligible: blockers.length === 0, blockers };
+}
+
+export const FIX_PROGRESS_VERSION = "fix-progress-v1";
+const FIX_PROGRESS_START = "<!-- ruralnative:fix-progress:start -->";
+const FIX_PROGRESS_END = "<!-- ruralnative:fix-progress:end -->";
+
+export interface FixProgressInput {
+  repository: string;
+  prNumber: number;
+  sourceReviewId: string;
+  sourceHandoffDigest: string;
+  ticket: number | null;
+  parent: number | null;
+  startedHeadSha: string;
+  startedBaseSha: string;
+  resultingHeadSha: string;
+  resultingBaseSha: string;
+  dispositions: readonly FixFindingDisposition[];
+  completedSteps: readonly FixProgressStep[];
+}
+
+export interface FixProgressCheck {
+  body: string;
+  repository: string;
+  prNumber: number;
+}
+
+function fixProgressInner(body: string): string | null {
+  const normalized = normalizeNewlines(body);
+  const pattern = new RegExp(
+    `${escapeReviewHandoffRegExp(FIX_PROGRESS_START)}[ \\t]*\\n([\\u0000-\\uFFFF]*?)\\n[ \\t]*${escapeReviewHandoffRegExp(FIX_PROGRESS_END)}`,
+  );
+  return normalized.match(pattern)?.[1] ?? null;
+}
+
+/** Count fix-progress blocks in a comment body (LF/CRLF tolerant). */
+export function countFixProgressBlocks(body: string): number {
+  const normalized = normalizeNewlines(body);
+  const pattern = new RegExp(
+    `${escapeReviewHandoffRegExp(FIX_PROGRESS_START)}[ \\t]*\\n([\\u0000-\\uFFFF]*?)\\n[ \\t]*${escapeReviewHandoffRegExp(FIX_PROGRESS_END)}`,
+    "g",
+  );
+  return [...normalized.matchAll(pattern)].length;
+}
+
+/** Render the resumable progress checkpoint consumed only by reruns. */
+export function renderFixProgress(input: FixProgressInput): string {
+  const lines: string[] = [FIX_PROGRESS_START, "## Fix progress", "", `- Progress version: ${FIX_PROGRESS_VERSION}`];
+  lines.push(`- Repository: ${escapeHandoffText(input.repository)}`);
+  lines.push(`- PR: ${input.prNumber}`);
+  lines.push(`- Source review: ${escapeHandoffText(input.sourceReviewId)}`);
+  lines.push(`- Handoff digest: ${escapeHandoffText(input.sourceHandoffDigest)}`);
+  lines.push(`- Ticket: ${input.ticket === null ? "none" : `#${input.ticket}`}`);
+  lines.push(`- Parent: ${input.parent === null ? "none" : `#${input.parent}`}`);
+  lines.push(`- Started head: ${escapeHandoffText(input.startedHeadSha)}`);
+  lines.push(`- Started base: ${escapeHandoffText(input.startedBaseSha)}`);
+  lines.push(`- Resulting head: ${escapeHandoffText(input.resultingHeadSha)}`);
+  lines.push(`- Resulting base: ${escapeHandoffText(input.resultingBaseSha)}`);
+  for (const disposition of input.dispositions) {
+    lines.push(`- Finding: ${escapeHandoffText(disposition.findingId)}`);
+    lines.push(`  - Disposition: ${disposition.disposition}`);
+    lines.push(`  - Files: ${disposition.files.map((file) => escapeHandoffText(file)).join(", ")}`);
+    lines.push(`  - Commit: ${escapeHandoffText(disposition.commitSha)}`);
+    lines.push(`  - Verification command: \`${escapeHandoffText(disposition.verificationCommand)}\``);
+    lines.push(`  - Verification result: ${escapeHandoffText(disposition.verificationResult)}`);
+  }
+  lines.push(`- Findings count: ${input.dispositions.length}`);
+  lines.push(`- Completed steps: ${input.completedSteps.join(", ")}`);
+  lines.push(FIX_PROGRESS_END);
+  return lines.join("\n");
+}
+
+/** Parse the resumable progress checkpoint for a rerun. Never authorizes work alone. */
+export function parseFixProgress(check: FixProgressCheck): {
+  found: boolean;
+  repository?: string;
+  prNumber?: number;
+  sourceReviewId?: string;
+  sourceHandoffDigest?: string;
+  startedHeadSha?: string;
+  startedBaseSha?: string;
+  resultingHeadSha?: string;
+  resultingBaseSha?: string;
+  malformed: boolean;
+  reason: string;
+} {
+  const normalized = normalizeNewlines(check.body);
+  const starts = normalized.split(FIX_PROGRESS_START).length - 1;
+  const ends = normalized.split(FIX_PROGRESS_END).length - 1;
+  if (starts !== ends || starts !== countFixProgressBlocks(check.body)) {
+    return { found: false, malformed: true, reason: "stray or unbalanced fix progress markers" };
+  }
+  if (starts === 0) return { found: false, malformed: false, reason: "no fix progress checkpoint" };
+  if (starts > 1) return { found: false, malformed: true, reason: "multiple fix progress checkpoints" };
+  const inner = fixProgressInner(check.body);
+  if (inner === null) return { found: false, malformed: true, reason: "fix progress checkpoint is unreadable" };
+  const one = (label: string): string | null => oneReviewHandoffField(inner, label);
+  const repository = one("Repository");
+  const prRaw = one("PR");
+  const sourceReviewId = one("Source review");
+  const digest = one("Handoff digest");
+  const startedHeadSha = one("Started head");
+  const startedBaseSha = one("Started base");
+  const resultingHeadSha = one("Resulting head");
+  const resultingBaseSha = one("Resulting base");
+  if (!repository || !prRaw || !sourceReviewId || !digest || !startedHeadSha || !startedBaseSha || !resultingHeadSha || !resultingBaseSha) {
+    return { found: false, malformed: true, reason: "fix progress checkpoint is incomplete" };
+  }
+  const prNumber = Number(prRaw);
+  if (!Number.isInteger(prNumber) || prNumber < 1) {
+    return { found: false, malformed: true, reason: "fix progress PR number is invalid" };
+  }
+  if (repository.toLowerCase() !== check.repository.toLowerCase() || prNumber !== check.prNumber) {
+    return { found: false, malformed: true, reason: "fix progress checkpoint names another target" };
+  }
+  return {
+    found: true,
+    repository,
+    prNumber,
+    sourceReviewId,
+    sourceHandoffDigest: digest,
+    startedHeadSha,
+    startedBaseSha,
+    resultingHeadSha,
+    resultingBaseSha,
+    malformed: false,
+    reason: "fix progress checkpoint parsed",
+  };
 }

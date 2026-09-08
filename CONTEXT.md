@@ -22,7 +22,7 @@ document-for-humans). Per ADR-0004, with a narrow exception for
 audience-neutral utilities such as `unslopify` where one behavior applies
 unchanged across audiences and a suffix would invent a false distinction
 (ADR-0005), and for task-scoped fixed-template workflow adapters such as
-`plan-this`, `implement-this`, and `review-this`
+`plan-this`, `implement-this`, `review-this`, and `fix-this`
 where the identity is the user-facing slash command and a suffix would
 obscure the explicit invocation contract. See ADR-0006 and ADR-0013 (superseded by the ADR-0014 workflow contract).
 _Avoid_: noun-phrase names (documentation-for-ai), router prefixes (docs/)
@@ -149,7 +149,7 @@ Retired by ADR-0031: the former lifecycle state when a managed worktree existed 
 _Avoid_: duplicate worktree, recreate worker
 
 **Workflow command**:
-One of the three direct human entry points, `plan-this`, `implement-this`, or `review-this`. It owns the boundaries and state changes of its stage while delegated skills supply methods inside those boundaries.
+One of the four direct human entry points, `plan-this`, `implement-this`, `review-this`, or `fix-this`. It owns the boundaries and state changes of its stage while delegated skills supply methods inside those boundaries.
 _Avoid_: Wrapper, coordinator
 
 **Parent specification**:
@@ -165,11 +165,19 @@ The open, unassigned child tickets of a parent specification that have no open n
 _Avoid_: Ready queue, batch
 
 **Current checkout**:
-The user's invoking working tree where `/implement-this` and `/review-this` run. Neither command creates, polls, or removes another worktree.
+The user's invoking working tree where `/implement-this`, `/review-this`, and `/fix-this` run. No command creates, polls, or removes another worktree.
 _Avoid_: worktree (when the invoking checkout is meant)
 
 **Configured fix agent**:
 Retired by ADR-0033: the former optional Kilo subagent named `review-fixer` that applied confirmed review findings in the current checkout. Review now publishes findings and stops with no delegated editor.
+
+**Review handoff**:
+The versioned `review-handoff-v1` block a completed `review-this` publication carries for `fix-this`: repository and PR identity, reviewed revisions, requirements and policy revisions, verification evidence, the complete finding list, and observed native review provenance. Only a block that validates in the shared core authorizes finalization (ADR-0035).
+_Avoid_: review summary (when the validated block is meant)
+
+**Fix progress**:
+The versioned `fix-progress-v1` checkpoint `fix-this` maintains for resumable finalization: source review, starting and resulting revisions, finding dispositions, verification evidence, and completed delivery steps. It reconciles reruns against observed facts and never authorizes work alone (ADR-0035).
+_Avoid_: merge checklist (when the checkpoint is meant)
 _Avoid_: mutation worker, fix worker
 
 **Implementation wave**:

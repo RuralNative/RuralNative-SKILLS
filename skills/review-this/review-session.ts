@@ -17,9 +17,16 @@ export { reviewIsFresh, verdictReusable };
 export interface CheckoutMatchFact {
   /** The worktree has no uncommitted changes. */
   worktreeClean: boolean;
-  /** Current branch name in the invoking checkout. */
+  /**
+   * Current branch name in the invoking checkout.
+   * Informational only: branch aliases, `main`, and detached `HEAD`
+   * never decide the match. Empty or `HEAD` means detached.
+   */
   currentBranch: string;
-  /** Expected pull-request head branch name. */
+  /**
+   * Expected pull-request head branch name.
+   * Informational only: kept for caller compatibility and diagnostics.
+   */
   expectedBranch: string;
   /** Local `HEAD` SHA in the invoking checkout. */
   localHeadSha: string;
@@ -32,7 +39,9 @@ export type CheckoutMatchDecision =
   | { match: false; reason: string };
 
 /**
- * The current checkout must match the selected pull-request head. A mismatch
+ * The current checkout must be clean and at the selected pull-request head
+ * commit. Local branch names are informational: the same commit checked out
+ * under an alias, `main`, or detached `HEAD` still matches. A mismatch
  * stops instead of checking out or creating another worktree.
  */
 export function checkoutMatchDecision(
@@ -44,19 +53,13 @@ export function checkoutMatchDecision(
   if (fact.localHeadSha.trim() === "" || fact.pullRequestHeadSha.trim() === "") {
     return { match: false, reason: "no trustworthy pull-request head revision to match" };
   }
-  if (fact.currentBranch !== fact.expectedBranch) {
-    return {
-      match: false,
-      reason: `the current checkout is on ${fact.currentBranch}, not the pull-request branch ${fact.expectedBranch}`,
-    };
-  }
   if (fact.localHeadSha !== fact.pullRequestHeadSha) {
     return {
       match: false,
       reason: "local HEAD does not match the pull-request head; fetch and align outside this command",
     };
   }
-  return { match: true, reason: "the current checkout matches the pull-request head" };
+  return { match: true, reason: "the clean checkout is at the pull-request head commit" };
 }
 
 export interface RevisionChangeFact {
