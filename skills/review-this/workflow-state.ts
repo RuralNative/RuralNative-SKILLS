@@ -129,6 +129,50 @@ export function activeCriteria(
 }
 
 /**
+ * Coverage of proof entries against the resolved active criteria of one
+ * issue (ADR-0038). Evidence IDs must match the resolved records: an
+ * envelope's self-reported count never substitutes for per-ID coverage.
+ */
+export interface CriterionCoverageReport {
+  /** Active criterion IDs in local order. */
+  expectedIds: readonly string[];
+  /** Proof IDs present exactly once. */
+  covered: readonly string[];
+  /** Active criteria without proof. */
+  missing: readonly string[];
+  /** Proof IDs that are retired or unknown for this issue. */
+  extra: readonly string[];
+  /** Proof IDs recorded more than once. */
+  duplicates: readonly string[];
+}
+
+export function criterionCoverage(
+  criteria: readonly AcceptanceCriterion[],
+  proofIds: readonly string[],
+): CriterionCoverageReport {
+  const known = new Map(criteria.map((c) => [c.id, c.status] as const));
+  const expected = activeCriteria(criteria).map((c) => c.id);
+  const seen = new Set<string>();
+  const covered: string[] = [];
+  const duplicates: string[] = [];
+  const extra: string[] = [];
+  for (const id of proofIds) {
+    const status = known.get(id);
+    if (status !== "active") {
+      extra.push(id);
+      continue;
+    }
+    if (seen.has(id)) duplicates.push(id);
+    else {
+      seen.add(id);
+      covered.push(id);
+    }
+  }
+  const missing = expected.filter((id) => !seen.has(id));
+  return { expectedIds: expected, covered, missing, extra, duplicates };
+}
+
+/**
  * Versioned requirements revision (parent #183, ticket #190).
  *
  * A fingerprint over the normalized authoritative sections of the parent
@@ -381,9 +425,22 @@ function fenceSegments(body: string): { text: string; fenced: boolean }[] {
 
 const ACCEPTANCE_LABEL = "acceptance criteria";
 
+/**
+ * True when a line starts an acceptance-criteria section in an adapted body.
+ * Exact labels (`Acceptance criteria`, `**Acceptance criteria**:`, headings)
+ * are recognized everywhere. Heading-styled lines whose label ends in
+ * `acceptance criteria` (for example `## Project-level acceptance criteria`)
+ * are recognized too, so a parent's suffixed acceptance heading resolves
+ * instead of being read as an empty criterion set. A prose line merely
+ * mentioning the phrase never starts a section.
+ */
 function isAcceptanceStart(line: string): boolean {
+  const trimmed = line.trim();
+  const headingStyled = /^#{1,6}\s+/.test(trimmed) || /^\*\*.*\*\*\s*:?\s*$/.test(trimmed);
   const text = stripAdaptedLabelMarkup(line).replace(/:\s*$/, "").trim().toLowerCase();
-  return text === ACCEPTANCE_LABEL;
+  if (text === ACCEPTANCE_LABEL) return true;
+  if (headingStyled && text.endsWith(ACCEPTANCE_LABEL)) return true;
+  return false;
 }
 
 function criterionFromRecord(line: string): AcceptanceCriterion | null {
@@ -518,10 +575,17 @@ export function resolveRequirementsBody(
   }
   const lines = proseLines(body);
   const structural: string[] = [];
+  const notes: string[] = [];
+  // A body carrying both settlement homes is not a consumption
+  // contradiction (ADR-0038): the adapted fingerprint retains both homes in
+  // the whole-body hash. Strict canonical publication validation still
+  // rejects the pair, so canonical output keeps one home per role.
   const hasSolution = lines.some((line) => line.trim() === "## Solution");
   const hasSettled = lines.some((line) => line.trim() === "## Settled decisions");
   if (hasSolution && hasSettled) {
-    structural.push("ambiguous sections: ## Solution and ## Settled decisions must not both carry requirements");
+    notes.push(
+      "adapted intake: the body carries both ## Solution and ## Settled decisions; the complete body is fingerprinted with both homes retained",
+    );
   }
   for (const segment of fenceSegments(body)) {
     if (segment.fenced) continue;
@@ -551,8 +615,32 @@ export function resolveRequirementsBody(
     notes: [
       "adapted intake: the body uses a non-canonical template; criteria and requirements resolved by explicit IDs and section labels",
       ...adapted.notes,
+      ...notes,
     ],
   };
+}
+
+/**
+ * Typed requirements-resolution failure (ADR-0038). Thrown before any
+ * fingerprint is computed when a parent or ticket body does not resolve;
+ * callers stop with `needs-info` and surface the role-specific diagnostics.
+ * No default, partial-body, or agent-computed pin replaces the throw.
+ */
+export interface RequirementsResolutionDiagnostic {
+  role: PlanningRole;
+  errors: readonly string[];
+}
+
+export class RequirementsResolutionError extends Error {
+  readonly name = "RequirementsResolutionError";
+  readonly diagnostics: readonly RequirementsResolutionDiagnostic[];
+  constructor(diagnostics: readonly RequirementsResolutionDiagnostic[]) {
+    const detail = diagnostics
+      .map((d) => `${d.role}: ${d.errors.join("; ")}`)
+      .join(" | ");
+    super(`requirements resolution failed; no requirements revision is emitted for unresolved bodies (${detail})`);
+    this.diagnostics = diagnostics;
+  }
 }
 
 /**
@@ -641,6 +729,15 @@ export function requirementsRevision(
   );
   const parent = resolveRequirementsBody(parentLines.join("\n"), "parent");
   const ticket = resolveRequirementsBody(ticketLines.join("\n"), "ticket");
+  // A requirements revision exists only for resolved requirements (ADR-0038).
+  // Resolution failure stops before hashing; the typed error carries the
+  // role-specific diagnostics so every caller and CLI boundary can name them.
+  if (!parent.ok || !ticket.ok) {
+    const diagnostics: RequirementsResolutionDiagnostic[] = [];
+    if (!parent.ok) diagnostics.push({ role: "parent", errors: parent.errors });
+    if (!ticket.ok) diagnostics.push({ role: "ticket", errors: ticket.errors });
+    throw new RequirementsResolutionError(diagnostics);
+  }
   if (parent.format === "canonical" && ticket.format === "canonical") {
     return {
       version: REQUIREMENTS_REVISION_VERSION,
@@ -1164,6 +1261,49 @@ function validateEvidenceProof(inner: string): string | null {
   return null;
 }
 
+export interface EvidenceBehaviorClaim {
+  criterionId: string;
+  /** Focused command the criterion proof claims passed. */
+  command: string;
+}
+
+/**
+ * Extract the passing behavior claims from an evidence block. A claim exists
+ * only for a criterion whose segment records a focused command, `Passed:
+ * true`, and a result; non-behavior checks and non-passing records never
+ * claim success. The bundled CLI uses these claims to require recorded
+ * execution receipts checked against the observed project configuration
+ * (ADR-0038): the block alone never authenticates a success label.
+ */
+export function extractEvidenceBehaviorClaims(body: string): EvidenceBehaviorClaim[] {
+  const normalized = normalizeNewlines(body);
+  const pattern = new RegExp(
+    `${escapeHandoffRegExp(COMPACT_START)}[ \t]*\n([\u0000-\uFFFF]*?)\n[ \t]*${escapeHandoffRegExp(COMPACT_END)}`,
+  );
+  const match = normalized.match(pattern);
+  if (!match) return [];
+  const inner = match[1];
+  const lines = inner.split("\n");
+  const headerIndexes: number[] = [];
+  lines.forEach((line, i) => {
+    if (/\*\*Criterion:\*\*/.test(line)) headerIndexes.push(i);
+  });
+  const criteriaEnd = lines.findIndex((line) => /^[ \t]*-[ \t]*Criteria revision:/.test(line));
+  const end = criteriaEnd >= 0 ? criteriaEnd : lines.length;
+  const claims: EvidenceBehaviorClaim[] = [];
+  for (let h = 0; h < headerIndexes.length; h++) {
+    const segment = lines.slice(headerIndexes[h], h + 1 < headerIndexes.length ? headerIndexes[h + 1] : end).join("\n");
+    const idMatch = segment.match(/`?([A-Za-z]{2,3}-\d+)`?/);
+    const commandMatch = segment.match(/Focused command:[ \t]*`([^`]+)`/);
+    const passedTrue = /Passed:[ \t]*true/i.test(segment);
+    const hasResult = /Result:[ \t]*\S/.test(segment);
+    if (!idMatch || !commandMatch) continue;
+    if (!passedTrue || !hasResult) continue;
+    claims.push({ criterionId: idMatch[1], command: commandMatch[1] });
+  }
+  return claims;
+}
+
 /** Count compact evidence blocks in a body (LF/CRLF tolerant). */
 export function countEvidenceBlocks(body: string): number {
   const normalized = normalizeNewlines(body);
@@ -1308,6 +1448,361 @@ export function validateEvidenceHandoff(check: EvidenceHandoffCheck): EvidenceHa
     return { status: "malformed", reason: proofError };
   }
   return { status: "current", reason: "evidence requirements revision matches the current bodies" };
+}
+
+// --- Shared implementation evidence rendering (ADR-0038) ---------------------
+//
+// Pure evidence render/upsert/read helpers shared by `/implement-this` and
+// `/fix-this`. Both stages render and validate `evidence-v2` from their own
+// installed bundle; `implement-this` keeps local compatibility exports that
+// re-export from this core.
+
+/** Marker constants kept for compatibility with local producer modules. */
+export const COMPACT_EVIDENCE_MARKER_START = COMPACT_START;
+export const COMPACT_EVIDENCE_MARKER_END = COMPACT_END;
+export const LEGACY_EVIDENCE_MARKER_START = LEGACY_START;
+export const LEGACY_EVIDENCE_MARKER_END = LEGACY_END;
+
+export type CriterionEvidence =
+  | {
+      criterionId: string;
+      kind: "behavior";
+      /** Focused command run, e.g. `node --test skills/...`. */
+      focusedCommand: string;
+      /** Observed result, e.g. `12 passed`. */
+      result: string;
+      /** Explicit result from the focused command. Failed runs are not proof. */
+      passed: boolean;
+    }
+  | {
+      criterionId: string;
+      kind: "non-behavior";
+      /** Narrow check run, or why no executable behavior changed. */
+      rationale: string;
+    };
+
+export interface CompactEvidenceInput {
+  /** Criterion records carrying stable local IDs, text, and status. */
+  criteria: readonly AcceptanceCriterion[];
+  evidence: readonly CriterionEvidence[];
+  isBugFix: boolean;
+  /** Defect-specific failing command recorded before the fix. */
+  bugRedCommand?: string;
+  /** Defect-specific failing output recorded before the fix. */
+  bugRedOutput?: string;
+  /** The versioned requirements revision value pinned for this ticket. */
+  requirementsRevision: string;
+  /** Final committed head SHA the evidence was verified against. */
+  headSha: string;
+}
+
+export interface EvidenceValidationResult {
+  ok: boolean;
+  errors: readonly string[];
+}
+
+function isNonEmptyEvidenceString(value: unknown): boolean {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function escapeEvidenceText(value: string): string {
+  return value.replace(/-->/g, "--\\u003E");
+}
+
+function activeCriterionIdSet(criteria: readonly AcceptanceCriterion[]): Set<string> {
+  return new Set(activeCriteria(criteria).map((c) => c.id));
+}
+
+function retiredCriterionIdSet(criteria: readonly AcceptanceCriterion[]): Set<string> {
+  return new Set(criteria.filter((c) => c.status === "retired").map((c) => c.id));
+}
+
+export function validateCompactEvidence(
+  input: CompactEvidenceInput,
+): EvidenceValidationResult {
+  const errors: string[] = [];
+
+  const activeIds = activeCriterionIdSet(input.criteria);
+  const retiredIds = retiredCriterionIdSet(input.criteria);
+  const allCriterionIds = new Set(input.criteria.map((c) => c.id));
+
+  for (const criterion of input.criteria) {
+    if (!/^[A-Za-z]{2,3}-\d+$/.test(criterion.id)) {
+      errors.push(`malformed criterion id: ${criterion.id}`);
+    }
+    if (criterion.status !== "active" && criterion.status !== "retired") {
+      errors.push(`criterion ${criterion.id} must be active or retired`);
+    }
+  }
+  const seenCriteria = new Set<string>();
+  for (const criterion of input.criteria) {
+    if (seenCriteria.has(criterion.id)) {
+      errors.push(`duplicate or reused criterion id within the issue: ${criterion.id}`);
+    }
+    seenCriteria.add(criterion.id);
+  }
+
+  const expectedActive = activeCriteria(input.criteria).length;
+  if (input.evidence.length !== expectedActive) {
+    errors.push(
+      `criterion coverage: expected ${expectedActive} evidence entries, got ${input.evidence.length}`,
+    );
+  }
+
+  const seen = new Set<string>();
+  for (const ev of input.evidence) {
+    if (!allCriterionIds.has(ev.criterionId)) {
+      errors.push(`unknown criterion: ${ev.criterionId}`);
+    } else if (retiredIds.has(ev.criterionId)) {
+      errors.push(`retired criterion is never accepted as active evidence: ${ev.criterionId}`);
+    }
+    if (seen.has(ev.criterionId)) {
+      errors.push(`duplicate criterion: ${ev.criterionId}`);
+    }
+    seen.add(ev.criterionId);
+  }
+  for (const id of activeIds) {
+    if (!seen.has(id)) {
+      errors.push(`missing evidence for criterion: ${id}`);
+    }
+  }
+
+  for (const ev of input.evidence) {
+    if (ev.kind === "behavior") {
+      if (!isNonEmptyEvidenceString(ev.focusedCommand)) {
+        errors.push(`behavior criterion "${ev.criterionId}" requires a focused command`);
+      }
+      if (!isNonEmptyEvidenceString(ev.result)) {
+        errors.push(`behavior criterion "${ev.criterionId}" requires a result`);
+      }
+      if (ev.passed !== true) {
+        errors.push(`behavior criterion "${ev.criterionId}" requires an explicitly passing result`);
+      }
+    } else if (ev.kind === "non-behavior") {
+      if (!isNonEmptyEvidenceString(ev.rationale)) {
+        errors.push(`non-behavior criterion "${ev.criterionId}" requires a rationale`);
+      }
+    } else {
+      errors.push(`criterion "${(ev as { criterionId: string }).criterionId}" has unknown kind`);
+    }
+  }
+
+  if (input.isBugFix === true) {
+    if (!isNonEmptyEvidenceString(input.bugRedCommand)) {
+      errors.push("bug-fix ticket requires the defect-specific failing command");
+    }
+    if (!isNonEmptyEvidenceString(input.bugRedOutput)) {
+      errors.push("bug-fix ticket requires the defect-specific failing output");
+    }
+  }
+
+  if (!requirementsPinWellFormed(input.requirementsRevision)) {
+    errors.push(
+      `requirements revision must match a supported version (${SUPPORTED_REQUIREMENTS_VERSIONS.join(", ")}):parent=<sha256>;ticket=<sha256>`,
+    );
+  }
+
+  if (!isNonEmptyEvidenceString(input.headSha)) {
+    errors.push("evidence head SHA must be a non-empty value");
+  }
+
+  return { ok: errors.length === 0, errors };
+}
+
+export function renderCompactEvidence(input: CompactEvidenceInput): string {
+  const validation = validateCompactEvidence(input);
+  if (!validation.ok) {
+    throw new Error(`invalid compact evidence: ${validation.errors.join("; ")}`);
+  }
+  const evidenceByCriterion = new Map(input.evidence.map((e) => [e.criterionId, e] as const));
+  const lines: string[] = [];
+  lines.push(COMPACT_START);
+  lines.push("## Implementation evidence");
+  lines.push("");
+  for (const criterion of activeCriteria(input.criteria)) {
+    const ev = evidenceByCriterion.get(criterion.id)!;
+    lines.push(`- **Criterion:** \`${escapeEvidenceText(criterion.id)}\` — ${escapeEvidenceText(criterion.text)}`);
+    if (ev.kind === "behavior") {
+      lines.push(`  - Focused command: \`${escapeEvidenceText(ev.focusedCommand)}\``);
+      lines.push("  - Passed: true");
+      lines.push(`  - Result: ${escapeEvidenceText(ev.result)}`);
+    } else {
+      lines.push(`  - Check: ${escapeEvidenceText(ev.rationale)}`);
+    }
+  }
+  if (input.isBugFix === true) {
+    lines.push("");
+    lines.push("### Bug reproduction");
+    lines.push(`- RED command: \`${escapeEvidenceText(input.bugRedCommand!)}\``);
+    lines.push(`- RED output: ${escapeEvidenceText(input.bugRedOutput!)}`);
+  }
+  lines.push("");
+  lines.push(`- Criteria revision: ${escapeEvidenceText(criteriaRevision(input.criteria))}`);
+  lines.push(`- Requirements revision: ${escapeEvidenceText(input.requirementsRevision)}`);
+  lines.push(`- Envelope version: ${EVIDENCE_ENVELOPE_VERSION}`);
+  lines.push(`- Head SHA: ${escapeEvidenceText(input.headSha)}`);
+  lines.push(COMPACT_END);
+  return lines.join("\n");
+}
+
+function evidenceBlockSource(): string {
+  return `${escapeReviewHandoffRegExp(COMPACT_START)}[ \\t]*\\r?\\n([\\s\\S]*?)\\r?\\n[ \\t]*${escapeReviewHandoffRegExp(COMPACT_END)}`;
+}
+
+function evidenceBodyPattern(): RegExp {
+  return new RegExp(evidenceBlockSource());
+}
+
+function evidenceBodyPatternGlobal(): RegExp {
+  return new RegExp(evidenceBlockSource(), "g");
+}
+
+/** Upsert exactly one compact evidence block into a pull-request body. */
+export function upsertCompactEvidenceBlock(existingBody: string, block: string): string {
+  const withoutOldBlocks = existingBody.replace(evidenceBodyPatternGlobal(), "").trimEnd();
+  return withoutOldBlocks.length > 0
+    ? `${withoutOldBlocks}\n\n${block}\n`
+    : `${block}\n`;
+}
+
+/** Read the compact block from a pull-request body, if present. */
+export function parseCompactEvidenceBlock(body: string): string | null {
+  const normalized = normalizeNewlines(body);
+  const match = normalized.match(evidenceBodyPattern());
+  return match ? match[1] : null;
+}
+
+/**
+ * Migration read: the compact block lives only in the pull-request body,
+ * otherwise the legacy acceptance-evidence block in the body or comments.
+ * Comment bodies carry legacy evidence only. New runs write only the
+ * compact body form.
+ */
+export function readEvidenceForReview(
+  body: string,
+  comments: readonly string[] = [],
+): string | null {
+  const compact = parseCompactEvidenceBlock(body);
+  if (compact !== null) return compact;
+  const normalized = normalizeNewlines(body);
+  const legacy = normalized.match(
+    new RegExp(
+      `${escapeReviewHandoffRegExp(LEGACY_START)}[ \\t]*\\n([\\s\\S]*?)\\n[ \\t]*${escapeReviewHandoffRegExp(LEGACY_END)}`,
+    ),
+  );
+  if (legacy) return legacy[1];
+  for (const comment of comments) {
+    const normalizedComment = normalizeNewlines(comment);
+    const legacyComment = normalizedComment.match(
+      new RegExp(
+        `${escapeReviewHandoffRegExp(LEGACY_START)}[ \\t]*\\n([\\s\\S]*?)\\n[ \\t]*${escapeReviewHandoffRegExp(LEGACY_END)}`,
+      ),
+    );
+    if (legacyComment) return legacyComment[1];
+  }
+  return null;
+}
+
+function evidenceFenceSegments(body: string): { text: string; fenced: boolean }[] {
+  const segments: { text: string; fenced: boolean }[] = [];
+  const fencePattern = /```[\s\S]*?(?:```|$)/g;
+  let last = 0;
+  let m: RegExpExecArray | null;
+  while ((m = fencePattern.exec(body)) !== null) {
+    if (m.index > last) segments.push({ text: body.slice(last, m.index), fenced: false });
+    segments.push({ text: m[0], fenced: true });
+    last = m.index + m[0].length;
+  }
+  if (last < body.length) segments.push({ text: body.slice(last), fenced: false });
+  if (segments.length === 0) segments.push({ text: body, fenced: false });
+  return segments;
+}
+
+function evidenceTargetClosingAssociation(ticket: number): RegExp {
+  return new RegExp(
+    `(?:close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved)[ \\t]+(?:https?:\\/\\/[^\\s]+\\/issues\\/${ticket}(?!\\d)|#${ticket}(?!\\d))`,
+    "i",
+  );
+}
+
+function evidenceProseHasTargetClosing(body: string, ticket: number): boolean {
+  const pattern = evidenceTargetClosingAssociation(ticket);
+  return evidenceFenceSegments(body).some((s) => !s.fenced && pattern.test(s.text));
+}
+
+function evidenceRemoveStandaloneTargetCloses(body: string, ticket: number): string {
+  return evidenceFenceSegments(body)
+    .map((s) => {
+      if (s.fenced) return s.text;
+      return s.text.replace(/^[ \t]*[Cc]loses[ \t]+#\d+[ \t]*\r?$/gm, (line) => {
+        const n = Number(line.match(/#(\d+)/)?.[1] ?? NaN);
+        return n === ticket ? "" : line;
+      });
+    })
+    .join("");
+}
+
+function evidenceCollapseProseBlankLines(body: string): string {
+  return evidenceFenceSegments(body)
+    .map((s) => (s.fenced ? s.text : s.text.replace(/\n{3,}/g, "\n\n")))
+    .join("");
+}
+
+/**
+ * Ensure exactly one `Closes #<ticket>` line for the target ticket.
+ * Preserves unrelated prose and fenced examples.
+ */
+export function ensureClosingReference(body: string, ticket: number): string {
+  const prose = evidenceFenceSegments(body)
+    .filter((s) => !s.fenced)
+    .map((s) => s.text)
+    .join("");
+  const targetPattern = new RegExp(`^[ \\t]*[Cc]loses[ \\t]+#${ticket}[ \\t]*\\r?$`, "gm");
+  if ((prose.match(targetPattern) ?? []).length === 1 && !evidenceProseHasTargetClosingOtherForm(body, ticket)) {
+    return body.endsWith("\n") ? body : `${body}\n`;
+  }
+  const withoutTargets = evidenceRemoveStandaloneTargetCloses(body, ticket);
+  if (evidenceProseHasTargetClosing(withoutTargets, ticket)) {
+    const cleaned = evidenceCollapseProseBlankLines(withoutTargets).trimEnd();
+    return cleaned.endsWith("\n") ? cleaned : `${cleaned}\n`;
+  }
+  const cleaned = evidenceCollapseProseBlankLines(withoutTargets).trimEnd();
+  const line = `Closes #${ticket}`;
+  return cleaned.length > 0 ? `${cleaned}\n\n${line}\n` : `${line}\n`;
+}
+
+function evidenceProseHasTargetClosingOtherForm(body: string, ticket: number): boolean {
+  const segments = evidenceFenceSegments(body);
+  const prose = segments
+    .filter((s) => !s.fenced)
+    .map((s) => s.text)
+    .join("");
+  const withoutCanonical = prose.replace(/^[ \t]*[Cc]loses[ \t]+#\d+[ \t]*\r?$/gm, "");
+  return evidenceTargetClosingAssociation(ticket).test(withoutCanonical);
+}
+
+/**
+ * Compose the pull-request body in one publication operation: exactly one
+ * compact evidence block plus exactly one target closing reference,
+ * preserving unrelated prose and fenced examples.
+ */
+export function composePullRequestBody(
+  existingBody: string,
+  ticket: number,
+  block: string,
+): string {
+  const withoutBlocks = existingBody.replace(evidenceBodyPatternGlobal(), "");
+  const withoutTargets = evidenceRemoveStandaloneTargetCloses(withoutBlocks, ticket);
+  const trimmedBlock = block.trim();
+  if (evidenceProseHasTargetClosing(withoutTargets, ticket)) {
+    const cleaned = evidenceCollapseProseBlankLines(withoutTargets).trimEnd();
+    if (cleaned.length === 0) return `${trimmedBlock}\n`;
+    return `${cleaned}\n\n${trimmedBlock}\n`;
+  }
+  const cleaned = evidenceCollapseProseBlankLines(withoutTargets).trimEnd();
+  const line = `Closes #${ticket}`;
+  if (cleaned.length === 0) return `${trimmedBlock}\n\n${line}\n`;
+  return `${cleaned}\n\n${trimmedBlock}\n\n${line}\n`;
 }
 
 // --- Planning body validation ---------------------------------------------
@@ -1873,6 +2368,184 @@ export function renderReviewHandoff(input: ReviewHandoffInput): string {
   return lines.join("\n");
 }
 
+/**
+ * Deterministic canonical text of a validated review handoff (ADR-0038).
+ * Fix progress digests hash this rendering of the validated source handoff,
+ * never the surrounding review prose.
+ */
+export function reviewHandoffCanonicalText(input: ReviewHandoffInput): string {
+  const findings = [...input.findings]
+    .sort((a, b) => a.id.localeCompare(b.id))
+    .map(
+      (f) =>
+        `${f.id}\t${f.source}\t${f.category}\t${f.severity}\t${f.file}\t${f.line}\t${f.message}\t${f.evidenceKind}\t${f.quote ?? ""}\t${f.command ?? ""}\t${f.output ?? ""}\t${f.governingRule}\t${f.ticket ?? ""}`,
+    )
+    .join("\n");
+  return [
+    `repository=${input.repository}`,
+    `pr=${input.prNumber}`,
+    `head=${input.reviewedHeadSha}`,
+    `base=${input.reviewedBaseSha}`,
+    `closes=${input.closesTicket ?? ""}`,
+    `requirements=${input.requirementsRevision}`,
+    `policy=${input.reviewPolicyRevision}`,
+    `verification=${input.verificationCommand}\t${input.verificationPassed}\t${input.verificationResult}`,
+    `provenance=${input.provenance.reviewId}\t${input.provenance.reviewAuthor}\t${input.provenance.reviewedCommit}\t${input.provenance.reviewerPermission}`,
+    findings,
+  ].join("\n");
+}
+
+/** Digest of the deterministic handoff rendering for fix-progress receipts. */
+export function reviewHandoffDigest(
+  input: ReviewHandoffInput,
+  hash: RevisionHasher,
+): string {
+  return hash(reviewHandoffCanonicalText(input));
+}
+
+export type ReviewHandoffStructuralParse =
+  | { ok: true; handoff: ReviewHandoffInput }
+  | { ok: false; reason: string };
+
+/**
+ * Structural parse of one review-handoff block into a validated input. It
+ * checks markers, version, required fields, findings, and payload
+ * self-consistency only; it never compares against current revisions or
+ * observed native facts, which belong to `validateReviewHandoff`. Callers
+ * use it to recompute the canonical handoff digest from a published body
+ * (ADR-0038) before trusting a checkpoint that names that digest.
+ */
+export function parseReviewHandoffInput(body: string): ReviewHandoffStructuralParse {
+  const normalized = normalizeNewlines(body);
+  const starts = normalized.split(REVIEW_HANDOFF_START).length - 1;
+  const ends = normalized.split(REVIEW_HANDOFF_END).length - 1;
+  if (starts !== ends || starts !== countReviewHandoffBlocks(body)) {
+    return { ok: false, reason: "stray or unbalanced review handoff markers in the review body" };
+  }
+  if (starts !== 1) {
+    return { ok: false, reason: "the review body must carry exactly one review handoff block" };
+  }
+  const inner = reviewHandoffInner(body);
+  if (inner === null) {
+    return { ok: false, reason: "review handoff block is unreadable" };
+  }
+  const version = oneReviewHandoffField(inner, "Handoff version");
+  if (version === null) {
+    return { ok: false, reason: "review handoff version is missing or duplicated" };
+  }
+  if (version !== REVIEW_HANDOFF_VERSION) {
+    return { ok: false, reason: `unsupported review handoff ${version}` };
+  }
+  const lines = inner.split("\n");
+  const topLevel = (label: string): string | null => {
+    const values: string[] = [];
+    for (const line of lines) {
+      if (/^[ \t]+-/.test(line)) continue;
+      const m = line.match(new RegExp(`^[ \\t]*-[ \\t]*${escapeReviewHandoffRegExp(label)}[ \\t]*:(.*)$`));
+      if (m) values.push((m[1] ?? "").trim());
+    }
+    if (values.length !== 1 || values[0] === "") return null;
+    return values[0];
+  };
+  const required = [
+    "Repository",
+    "PR",
+    "Reviewed head",
+    "Reviewed base",
+    "Requirements revision",
+    "Review policy revision",
+    "Verification command",
+    "Verification passed",
+    "Verification result",
+    "Review ID",
+    "Review author",
+    "Reviewed commit",
+    "Reviewer permission",
+    "Findings count",
+  ] as const;
+  for (const label of required) {
+    if (topLevel(label) === null) {
+      return { ok: false, reason: `review handoff ${label.toLowerCase()} is missing or duplicated` };
+    }
+  }
+  const prNumber = Number(topLevel("PR")!);
+  if (!Number.isInteger(prNumber) || prNumber < 1) {
+    return { ok: false, reason: "review handoff PR number is invalid" };
+  }
+  const closesRaw = topLevel("Closes ticket") ?? "none";
+  let closesTicket: number | null = null;
+  if (closesRaw !== "none") {
+    const parsed = Number(closesRaw.replace(/^#/, ""));
+    if (!Number.isInteger(parsed) || parsed < 1) {
+      return { ok: false, reason: "review handoff closing ticket is invalid" };
+    }
+    closesTicket = parsed;
+  }
+  const verificationPassedRaw = topLevel("Verification passed")!;
+  if (verificationPassedRaw !== "true" && verificationPassedRaw !== "false") {
+    return { ok: false, reason: "review handoff verification status is invalid" };
+  }
+  const findingsCountRaw = topLevel("Findings count")!;
+  const findingsCount = Number(findingsCountRaw);
+  if (!Number.isInteger(findingsCount) || findingsCount < 0) {
+    return { ok: false, reason: "review handoff findings count is invalid" };
+  }
+  const parsedFindings = parseReviewHandoffFindings(inner);
+  if (parsedFindings.error) return { ok: false, reason: parsedFindings.error };
+  if (parsedFindings.findings.length !== findingsCount) {
+    return { ok: false, reason: "review handoff findings count does not match its findings" };
+  }
+  const reviewerPermission = topLevel("Reviewer permission")!;
+  if (
+    reviewerPermission !== "policy" &&
+    reviewerPermission !== "write" &&
+    reviewerPermission !== "maintain" &&
+    reviewerPermission !== "admin"
+  ) {
+    return { ok: false, reason: "review handoff reviewer permission is invalid" };
+  }
+  const commentIds = topLevel("Comment IDs") ?? "";
+  const handoff: ReviewHandoffInput = {
+    repository: topLevel("Repository")!,
+    prNumber,
+    reviewedHeadSha: topLevel("Reviewed head")!,
+    reviewedBaseSha: topLevel("Reviewed base")!,
+    closesTicket,
+    requirementsRevision: topLevel("Requirements revision")!,
+    reviewPolicyRevision: topLevel("Review policy revision")!,
+    verificationCommand: (topLevel("Verification command") ?? "").replace(/^`|`$/g, ""),
+    verificationResult: topLevel("Verification result")!,
+    verificationPassed: verificationPassedRaw === "true",
+    findings: parsedFindings.findings,
+    provenance: {
+      reviewId: topLevel("Review ID")!,
+      reviewAuthor: topLevel("Review author")!,
+      reviewedCommit: topLevel("Reviewed commit")!,
+      reviewedAt: topLevel("Reviewed at") ?? "",
+      sourceUrl: topLevel("Source URL") ?? "",
+      reviewerPermission,
+      commentIds: commentIds === "" ? [] : commentIds.split(",").map((id) => id.trim()).filter((id) => id !== ""),
+    },
+  };
+  const error = validateReviewHandoffInput(handoff);
+  if (error) return { ok: false, reason: error };
+  return { ok: true, handoff };
+}
+
+/**
+ * Recompute the canonical handoff digest from a published review body. The
+ * checkpoint digest must equal this value; hashing surrounding review prose
+ * or accepting a payload-supplied digest never counts (ADR-0038).
+ */
+export function reviewHandoffDigestOfBody(
+  body: string,
+  hash: RevisionHasher,
+): { ok: true; digest: string } | { ok: false; reason: string } {
+  const parsed = parseReviewHandoffInput(body);
+  if (!parsed.ok) return { ok: false, reason: parsed.reason };
+  return { ok: true, digest: reviewHandoffDigest(parsed.handoff, hash) };
+}
+
 /** Parse one review-handoff block without trusting it. Callers must validate. */
 export function parseReviewHandoff(body: string): { found: boolean; version: string | null } {
   const inner = reviewHandoffInner(body);
@@ -1962,7 +2635,7 @@ export function validateReviewHandoff(check: ReviewHandoffCheck): ReviewHandoffR
   }
   const requirementsRevision = topLevel("Requirements revision")!;
   const policyRevision = topLevel("Review policy revision")!;
-  const verificationCommand = topLevel("Verification command")!;
+  const verificationCommand = (topLevel("Verification command") ?? "").replace(/^`|`$/g, "");
   const verificationPassedRaw = topLevel("Verification passed")!;
   const verificationResult = topLevel("Verification result")!;
   if (verificationPassedRaw !== "true" && verificationPassedRaw !== "false") {
@@ -2033,6 +2706,31 @@ export function validateReviewHandoff(check: ReviewHandoffCheck): ReviewHandoffR
   ) {
     return { status: "stale", reason: "observed native review does not match the published handoff" };
   }
+  const observedSourceUrl = check.observedProvenance.sourceUrl ?? "";
+  const observedComments = new Set(check.observedProvenance.commentIds ?? []);
+  const observedReviewedAt = check.observedProvenance.reviewedAt ?? "";
+  // Provenance fields beyond identity are validated independently (ADR-0038):
+  // a payload-supplied source URL, comment ownership, or timestamp must match
+  // the observation. The handoff renders before GitHub reports the native
+  // submission timestamp, so an empty payload timestamp stays valid while
+  // pending; once the payload supplies one it must match observation.
+  if (observedSourceUrl.trim() === "") {
+    return { status: "malformed", reason: "the observed native review source URL is missing; verify it before fixes" };
+  }
+  if (handoff.provenance.sourceUrl.trim() !== "" && handoff.provenance.sourceUrl !== observedSourceUrl) {
+    return { status: "stale", reason: "review handoff source URL does not match the observed native report" };
+  }
+  for (const id of handoff.provenance.commentIds) {
+    if (!observedComments.has(id)) {
+      return { status: "stale", reason: "review handoff claims comments the observed native report does not own" };
+    }
+  }
+  if (
+    handoff.provenance.reviewedAt.trim() !== "" &&
+    handoff.provenance.reviewedAt !== observedReviewedAt
+  ) {
+    return { status: "stale", reason: "review handoff timestamp does not match the observed native report" };
+  }
   if (handoff.repository.toLowerCase() !== check.repository.toLowerCase() || handoff.prNumber !== check.prNumber) {
     return { status: "stale", reason: "review handoff names another repository or pull request" };
   }
@@ -2077,8 +2775,12 @@ export interface FixFindingDisposition {
 }
 
 export interface FixEligibilityFact {
-  /** Validated handoff status from `validateReviewHandoff`. */
-  handoffStatus: string;
+  /**
+   * The published review handoff validated `current` through
+   * `validateReviewHandoff` with independently observed native provenance.
+   * An unchecked status string never enters this gate (ADR-0038).
+   */
+  reviewHandoffCurrent: boolean;
   /** Current requirements value still matches the handoff. */
   requirementsCurrent: boolean;
   /** Current policy value still matches the handoff. */
@@ -2119,7 +2821,7 @@ export interface FixEligibilityDecision {
  */
 export function isFixEligible(fact: FixEligibilityFact): FixEligibilityDecision {
   const blockers: string[] = [];
-  if (fact.handoffStatus !== "current") blockers.push("validated review handoff is not current");
+  if (!fact.reviewHandoffCurrent) blockers.push("the validated review handoff is not current");
   if (!fact.requirementsCurrent) blockers.push("the issue bodies no longer match the reviewed requirements revision");
   if (!fact.policyCurrent) blockers.push("governing policy no longer matches the reviewed policy revision");
   if (fact.hasUnresolvableFinding) blockers.push("a finding needs a human decision before merge");
@@ -2136,14 +2838,133 @@ export function isFixEligible(fact: FixEligibilityFact): FixEligibilityDecision 
   return { eligible: blockers.length === 0, blockers };
 }
 
-export const FIX_PROGRESS_VERSION = "fix-progress-v1";
+/**
+ * Classify a pinned requirements carrier against the current one (ADR-0038).
+ * Pin inequality alone never proves a requirements edit. This function sees
+ * only the two carriers, never the historical body or how the old pin was
+ * produced, so a same-version mismatch reports a revision mismatch with
+ * unproven cause unless the caller separately proves the body changed. A
+ * version difference is a legacy-contract mismatch whose cause is unproven
+ * and whose recovery requires full revalidation before any repin.
+ */
+export type PinnedRevisionClassification =
+  | "equal"
+  | "legacy-contract"
+  | "body-change"
+  | "revision-mismatch"
+  | "missing-or-malformed";
+
+export interface PinnedRevisionClassificationResult {
+  classification: PinnedRevisionClassification;
+  reason: string;
+}
+
+export function classifyRequirementsPin(
+  pinned: string,
+  current: string,
+  options: { provenBodyChange?: boolean } = {},
+): PinnedRevisionClassificationResult {
+  if (!requirementsPinWellFormed(pinned)) {
+    return {
+      classification: "missing-or-malformed",
+      reason: "the pinned requirements revision is missing or malformed; it is never provenance",
+    };
+  }
+  if (pinned === current) {
+    return { classification: "equal", reason: "the pinned revision matches the current bodies" };
+  }
+  const pinnedVersion = pinned.slice(0, pinned.indexOf(":"));
+  const currentVersion = current.slice(0, current.indexOf(":"));
+  if (pinnedVersion !== currentVersion) {
+    return {
+      classification: "legacy-contract",
+      reason: `the pinned ${pinnedVersion} revision and the current ${currentVersion} revision differ under different parser contracts; cause unproven, full revalidation required before any repin`,
+    };
+  }
+  if (options.provenBodyChange === true) {
+    return {
+      classification: "body-change",
+      reason: "the pinned and current revisions differ under the same contract and separate evidence proves the parent or ticket body changed; reconcile the changed requirements before any repin",
+    };
+  }
+  return {
+    classification: "revision-mismatch",
+    reason: "the pinned and current revisions differ under the same contract; pin inequality alone never proves a body change, so reconcile the bodies and proof before any repin (ADR-0038)",
+  };
+}
+
+/**
+ * Repair revalidation gate for `/implement-this` (ADR-0038). Only a
+ * legacy-contract mismatch with the full current scope resolved and real
+ * proof revalidated may publish fresh evidence. A proven body change, an
+ * unproven same-version revision mismatch, malformed provenance, or missing
+ * proof stops.
+ */
+export interface RepairRevalidationFact {
+  classification: PinnedRevisionClassification;
+  /** The full current parent and ticket scope resolves. */
+  currentScopeResolved: boolean;
+  /** Real proof was revalidated against the current scope on the current head. */
+  proofRevalidated: boolean;
+}
+
+export function decideRepairRevalidation(
+  fact: RepairRevalidationFact,
+): { proceed: boolean; reason: string } {
+  if (fact.classification === "body-change") {
+    return {
+      proceed: false,
+      reason: "the parent or ticket body changed under the same contract with proof; reconcile the changed requirements before any repin",
+    };
+  }
+  if (fact.classification === "revision-mismatch") {
+    return {
+      proceed: false,
+      reason: "revision mismatch with unproven cause under the same contract; only a proven legacy-contract mismatch may republish after full revalidation, so stop with needs-info",
+    };
+  }
+  if (fact.classification === "missing-or-malformed") {
+    return {
+      proceed: false,
+      reason: "the pinned evidence is missing or malformed; it is never provenance and never proof of historical equivalence",
+    };
+  }
+  if (!fact.currentScopeResolved) {
+    return { proceed: false, reason: "the current parent and ticket scope does not resolve; stop with needs-info" };
+  }
+  if (!fact.proofRevalidated) {
+    return { proceed: false, reason: "real proof was not revalidated against the current scope; never republish evidence on unproven work" };
+  }
+  if (fact.classification === "equal") {
+    return { proceed: true, reason: "the pinned revision still matches; no repin is needed" };
+  }
+  return {
+    proceed: true,
+    reason: "legacy-contract mismatch with revalidated current scope and proof; fresh evidence may publish with the old pin and repair reason retained as provenance",
+  };
+}
+
+export const FIX_PROGRESS_LEGACY_VERSION = "fix-progress-v1";
+export const FIX_PROGRESS_VERSION = "fix-progress-v2";
 const FIX_PROGRESS_START = "<!-- ruralnative:fix-progress:start -->";
 const FIX_PROGRESS_END = "<!-- ruralnative:fix-progress:end -->";
+
+export interface FixVerificationReceipt {
+  /** Command whose recorded output and exit status carry the claim. */
+  command: string;
+  /** Observed result output. */
+  result: string;
+  /** Explicit passing result; a skipped or failed check never passes. */
+  passed: boolean;
+}
+
+export type FixIntendedRemoteOperation = "none" | "push" | "merge";
 
 export interface FixProgressInput {
   repository: string;
   prNumber: number;
   sourceReviewId: string;
+  /** Digest over the deterministic rendering of the validated source handoff. */
   sourceHandoffDigest: string;
   ticket: number | null;
   parent: number | null;
@@ -2152,13 +2973,43 @@ export interface FixProgressInput {
   resultingHeadSha: string;
   resultingBaseSha: string;
   dispositions: readonly FixFindingDisposition[];
+  /** Complete verification receipts for the resulting head. */
+  verificationReceipts: readonly FixVerificationReceipt[];
+  /** The intended remote operation recorded before it runs. */
+  intendedRemoteOperation: FixIntendedRemoteOperation;
   completedSteps: readonly FixProgressStep[];
+  /** Confirmed merge commit SHA once the host reports the merge. */
+  mergeReceipt: string | null;
 }
 
 export interface FixProgressCheck {
   body: string;
   repository: string;
   prNumber: number;
+}
+
+export interface ParsedFixProgress {
+  found: boolean;
+  malformed: boolean;
+  reason: string;
+  version?: string;
+  /** True for legacy fix-progress-v1 receipts: diagnostic only. */
+  legacy?: boolean;
+  repository?: string;
+  prNumber?: number;
+  sourceReviewId?: string;
+  sourceHandoffDigest?: string;
+  ticket?: number | null;
+  parent?: number | null;
+  startedHeadSha?: string;
+  startedBaseSha?: string;
+  resultingHeadSha?: string;
+  resultingBaseSha?: string;
+  dispositions?: readonly FixFindingDisposition[];
+  verificationReceipts?: readonly FixVerificationReceipt[];
+  intendedRemoteOperation?: FixIntendedRemoteOperation;
+  completedSteps?: readonly FixProgressStep[];
+  mergeReceipt?: string | null;
 }
 
 function fixProgressInner(body: string): string | null {
@@ -2179,8 +3030,81 @@ export function countFixProgressBlocks(body: string): number {
   return [...normalized.matchAll(pattern)].length;
 }
 
-/** Render the resumable progress checkpoint consumed only by reruns. */
+const FIX_PROGRESS_STEPS: readonly FixProgressStep[] = [
+  "fixes",
+  "evidence",
+  "push",
+  "merge",
+  "bookkeeping",
+];
+
+function validateFixProgressInput(input: FixProgressInput): string | null {
+  if (!/^[A-Za-z0-9-_.]+\/[A-Za-z0-9-_.]+$/.test(input.repository)) {
+    return "fix progress repository must be owner/name";
+  }
+  if (!Number.isInteger(input.prNumber) || input.prNumber < 1) {
+    return "fix progress PR number is invalid";
+  }
+  if (input.sourceReviewId.trim() === "") return "fix progress needs the source review ID";
+  if (!/^[a-f0-9]{64}$/.test(input.sourceHandoffDigest)) {
+    return "fix progress handoff digest must be a sha256 hex value";
+  }
+  if (input.ticket !== null && (!Number.isInteger(input.ticket) || input.ticket < 1)) {
+    return "fix progress ticket is invalid";
+  }
+  if (input.parent !== null && (!Number.isInteger(input.parent) || input.parent < 1)) {
+    return "fix progress parent is invalid";
+  }
+  if (input.startedHeadSha.trim() === "" || input.startedBaseSha.trim() === "") {
+    return "fix progress needs a trustworthy started revision pair";
+  }
+  if (input.resultingHeadSha.trim() === "" || input.resultingBaseSha.trim() === "") {
+    return "fix progress needs a trustworthy resulting revision pair";
+  }
+  if (input.intendedRemoteOperation !== "none" && input.intendedRemoteOperation !== "push" && input.intendedRemoteOperation !== "merge") {
+    return "fix progress intended remote operation is invalid";
+  }
+  const ids = new Set<string>();
+  for (const disposition of input.dispositions) {
+    if (ids.has(disposition.findingId)) {
+      return `fix progress carries a duplicate disposition: ${disposition.findingId}`;
+    }
+    ids.add(disposition.findingId);
+    if (
+      disposition.disposition !== "fixed" &&
+      disposition.disposition !== "already-resolved" &&
+      disposition.disposition !== "unresolvable"
+    ) {
+      return `fix progress disposition ${disposition.findingId} is invalid`;
+    }
+    if (disposition.disposition === "unresolvable" && disposition.commitSha.trim() !== "") {
+      return `fix progress disposition ${disposition.findingId} cannot carry a fix commit`;
+    }
+  }
+  const steps = new Set<string>();
+  for (const step of input.completedSteps) {
+    if (!FIX_PROGRESS_STEPS.includes(step)) {
+      return `fix progress completed step is invalid: ${step}`;
+    }
+    if (steps.has(step)) return `fix progress completed step repeats: ${step}`;
+    steps.add(step);
+  }
+  if (input.mergeReceipt !== null && !/^[a-f0-9]{40,64}$/.test(input.mergeReceipt)) {
+    return "fix progress merge receipt is invalid";
+  }
+  if (input.mergeReceipt !== null && !steps.has("merge")) {
+    return "fix progress merge receipt requires a completed merge step";
+  }
+  if (input.mergeReceipt === null && steps.has("merge")) {
+    return "fix progress completed merge step requires a confirmed merge receipt";
+  }
+  return null;
+}
+
+/** Render the fix-progress-v2 checkpoint consumed only by reruns. Throws on invalid input. */
 export function renderFixProgress(input: FixProgressInput): string {
+  const error = validateFixProgressInput(input);
+  if (error) throw new Error(`invalid fix progress: ${error}`);
   const lines: string[] = [FIX_PROGRESS_START, "## Fix progress", "", `- Progress version: ${FIX_PROGRESS_VERSION}`];
   lines.push(`- Repository: ${escapeHandoffText(input.repository)}`);
   lines.push(`- PR: ${input.prNumber}`);
@@ -2192,6 +3116,7 @@ export function renderFixProgress(input: FixProgressInput): string {
   lines.push(`- Started base: ${escapeHandoffText(input.startedBaseSha)}`);
   lines.push(`- Resulting head: ${escapeHandoffText(input.resultingHeadSha)}`);
   lines.push(`- Resulting base: ${escapeHandoffText(input.resultingBaseSha)}`);
+  lines.push(`- Intended operation: ${input.intendedRemoteOperation}`);
   for (const disposition of input.dispositions) {
     lines.push(`- Finding: ${escapeHandoffText(disposition.findingId)}`);
     lines.push(`  - Disposition: ${disposition.disposition}`);
@@ -2201,25 +3126,128 @@ export function renderFixProgress(input: FixProgressInput): string {
     lines.push(`  - Verification result: ${escapeHandoffText(disposition.verificationResult)}`);
   }
   lines.push(`- Findings count: ${input.dispositions.length}`);
+  for (const receipt of input.verificationReceipts) {
+    lines.push(`- Verification receipt: \`${escapeHandoffText(receipt.command)}\``);
+    lines.push(`  - Passed: ${receipt.passed ? "true" : "false"}`);
+    lines.push(`  - Result: ${escapeHandoffText(receipt.result)}`);
+  }
+  lines.push(`- Merge receipt: ${input.mergeReceipt === null ? "none" : escapeHandoffText(input.mergeReceipt)}`);
   lines.push(`- Completed steps: ${input.completedSteps.join(", ")}`);
   lines.push(FIX_PROGRESS_END);
   return lines.join("\n");
 }
 
-/** Parse the resumable progress checkpoint for a rerun. Never authorizes work alone. */
-export function parseFixProgress(check: FixProgressCheck): {
-  found: boolean;
-  repository?: string;
-  prNumber?: number;
-  sourceReviewId?: string;
-  sourceHandoffDigest?: string;
-  startedHeadSha?: string;
-  startedBaseSha?: string;
-  resultingHeadSha?: string;
-  resultingBaseSha?: string;
-  malformed: boolean;
-  reason: string;
-} {
+function parseFixProgressDispositions(
+  inner: string,
+): { dispositions: FixFindingDisposition[]; error: string | null } {
+  const lines = inner.split("\n");
+  const starts: number[] = [];
+  lines.forEach((line, i) => {
+    if (/^[ \t]*-[ \t]*Finding:[ \t]*\S/.test(line)) starts.push(i);
+  });
+  const end = lines.findIndex((line) => /^[ \t]*-[ \t]*Findings count:/.test(line));
+  const stop = end >= 0 ? end : lines.length;
+  const relevant = starts.filter((i) => i < stop);
+  const dispositions: FixFindingDisposition[] = [];
+  const seen = new Set<string>();
+  for (let h = 0; h < relevant.length; h++) {
+    const segment = lines.slice(relevant[h], h + 1 < relevant.length ? relevant[h + 1] : stop).join("\n");
+    const get = (label: string): string | null => reviewHandoffSubfield(segment, label);
+    const findingId = get("Finding");
+    const disposition = get("Disposition");
+    const filesRaw = get("Files") ?? "";
+    const commitSha = get("Commit") ?? "";
+    const verificationCommand = get("Verification command");
+    const verificationResult = get("Verification result");
+    if (!findingId || !disposition || !verificationCommand || !verificationResult) {
+      return { dispositions: [], error: "fix progress carries an incomplete finding disposition" };
+    }
+    if (seen.has(findingId)) {
+      return { dispositions: [], error: `fix progress carries a duplicate disposition: ${findingId}` };
+    }
+    seen.add(findingId);
+    if (disposition !== "fixed" && disposition !== "already-resolved" && disposition !== "unresolvable") {
+      return { dispositions: [], error: `fix progress disposition ${findingId} is invalid` };
+    }
+    const files = filesRaw === "" ? [] : filesRaw.split(",").map((file) => file.trim()).filter((file) => file !== "");
+    dispositions.push({
+      findingId,
+      disposition,
+      files,
+      commitSha,
+      verificationCommand: verificationCommand.replace(/^`|`$/g, ""),
+      verificationResult,
+    });
+  }
+  return { dispositions, error: null };
+}
+
+function parseFixProgressReceipts(
+  inner: string,
+): { receipts: FixVerificationReceipt[]; error: string | null } {
+  const lines = inner.split("\n");
+  const starts: number[] = [];
+  lines.forEach((line, i) => {
+    if (/^[ \t]*-[ \t]*Verification receipt:[ \t]*\S/.test(line)) starts.push(i);
+  });
+  const stop = lines.findIndex((line) => /^[ \t]*-[ \t]*Merge receipt:/.test(line));
+  const limit = stop >= 0 ? stop : lines.length;
+  const relevant = starts.filter((i) => i < limit);
+  const receipts: FixVerificationReceipt[] = [];
+  for (let h = 0; h < relevant.length; h++) {
+    const segment = lines.slice(relevant[h], h + 1 < relevant.length ? relevant[h + 1] : limit).join("\n");
+    const get = (label: string): string | null => reviewHandoffSubfield(segment, label);
+    const headerLine = segment.split("\n")[0];
+    const headerMatch = headerLine.match(/^[ \t]*-[ \t]*Verification receipt:[ \t]*(.*)$/);
+    const command = headerMatch ? headerMatch[1].trim() : get("Verification receipt");
+    const passed = get("Passed");
+    const result = get("Result");
+    if (!command || (passed !== "true" && passed !== "false") || !result) {
+      return { receipts: [], error: "fix progress carries an incomplete verification receipt" };
+    }
+    receipts.push({
+      command: command.replace(/^`|`$/g, ""),
+      passed: passed === "true",
+      result,
+    });
+  }
+  return { receipts, error: null };
+}
+
+function parseOneFixProgressField(inner: string, label: string): string | null {
+  return oneReviewHandoffField(inner, label);
+}
+
+function parseFixProgressNumber(raw: string | null): number | null {
+  if (raw === null) return null;
+  const n = Number(raw);
+  return Number.isInteger(n) && n >= 1 ? n : null;
+}
+
+function parseFixProgressSteps(inner: string): { steps: FixProgressStep[]; error: string | null } {
+  const raw = parseOneFixProgressField(inner, "Completed steps");
+  if (raw === null || raw === "") return { steps: [], error: "fix progress completed steps are missing" };
+  const steps: FixProgressStep[] = [];
+  for (const step of raw.split(",").map((s) => s.trim()).filter((s) => s !== "")) {
+    if (!FIX_PROGRESS_STEPS.includes(step as FixProgressStep)) {
+      return { steps: [], error: `fix progress completed step is invalid: ${step}` };
+    }
+    if (steps.includes(step as FixProgressStep)) {
+      return { steps: [], error: `fix progress completed step repeats: ${step}` };
+    }
+    steps.push(step as FixProgressStep);
+  }
+  return { steps, error: null };
+}
+
+/**
+ * Parse the resumable progress checkpoint for a rerun without trusting it.
+ * fix-progress-v2 receipts carry the full verified-recovery record; legacy
+ * fix-progress-v1 checkpoints parse as diagnostic input only and never
+ * authorize skipping work (ADR-0038). Unknown versions, duplicate or
+ * unbalanced markers, and incomplete records are malformed.
+ */
+export function parseFixProgress(check: FixProgressCheck): ParsedFixProgress {
   const normalized = normalizeNewlines(check.body);
   const starts = normalized.split(FIX_PROGRESS_START).length - 1;
   const ends = normalized.split(FIX_PROGRESS_END).length - 1;
@@ -2230,36 +3258,107 @@ export function parseFixProgress(check: FixProgressCheck): {
   if (starts > 1) return { found: false, malformed: true, reason: "multiple fix progress checkpoints" };
   const inner = fixProgressInner(check.body);
   if (inner === null) return { found: false, malformed: true, reason: "fix progress checkpoint is unreadable" };
-  const one = (label: string): string | null => oneReviewHandoffField(inner, label);
-  const repository = one("Repository");
-  const prRaw = one("PR");
-  const sourceReviewId = one("Source review");
-  const digest = one("Handoff digest");
-  const startedHeadSha = one("Started head");
-  const startedBaseSha = one("Started base");
-  const resultingHeadSha = one("Resulting head");
-  const resultingBaseSha = one("Resulting base");
-  if (!repository || !prRaw || !sourceReviewId || !digest || !startedHeadSha || !startedBaseSha || !resultingHeadSha || !resultingBaseSha) {
+  const version = parseOneFixProgressField(inner, "Progress version");
+  if (version === null) return { found: false, malformed: true, reason: "fix progress version is missing" };
+  if (version !== FIX_PROGRESS_VERSION && version !== FIX_PROGRESS_LEGACY_VERSION) {
+    return { found: false, malformed: true, reason: `unsupported fix progress version: ${version}` };
+  }
+  const repository = parseOneFixProgressField(inner, "Repository");
+  const prRaw = parseOneFixProgressField(inner, "PR");
+  const sourceReviewId = parseOneFixProgressField(inner, "Source review");
+  const digest = parseOneFixProgressField(inner, "Handoff digest");
+  const startedHeadSha = parseOneFixProgressField(inner, "Started head");
+  const startedBaseSha = parseOneFixProgressField(inner, "Started base");
+  const resultingHeadSha = parseOneFixProgressField(inner, "Resulting head");
+  const resultingBaseSha = parseOneFixProgressField(inner, "Resulting base");
+  if (
+    !repository || !prRaw || !sourceReviewId || !digest || !startedHeadSha ||
+    !startedBaseSha || !resultingHeadSha || !resultingBaseSha
+  ) {
     return { found: false, malformed: true, reason: "fix progress checkpoint is incomplete" };
   }
-  const prNumber = Number(prRaw);
-  if (!Number.isInteger(prNumber) || prNumber < 1) {
+  if (!/^[a-f0-9]{64}$/.test(digest)) {
+    return { found: false, malformed: true, reason: "fix progress handoff digest is malformed" };
+  }
+  const prNumber = parseFixProgressNumber(prRaw);
+  if (prNumber === null) {
     return { found: false, malformed: true, reason: "fix progress PR number is invalid" };
   }
   if (repository.toLowerCase() !== check.repository.toLowerCase() || prNumber !== check.prNumber) {
     return { found: false, malformed: true, reason: "fix progress checkpoint names another target" };
   }
-  return {
+  const ticketRaw = parseOneFixProgressField(inner, "Ticket");
+  const parentRaw = parseOneFixProgressField(inner, "Parent");
+  const ticket = ticketRaw === null || ticketRaw === "none" ? null : parseFixProgressNumber(ticketRaw.replace(/^#/, ""));
+  const parent = parentRaw === null || parentRaw === "none" ? null : parseFixProgressNumber(parentRaw.replace(/^#/, ""));
+  if ((ticketRaw !== null && ticketRaw !== "none" && ticket === null) || (parentRaw !== null && parentRaw !== "none" && parent === null)) {
+    return { found: false, malformed: true, reason: "fix progress ticket or parent is invalid" };
+  }
+  if (version !== FIX_PROGRESS_LEGACY_VERSION && (ticketRaw === null || parentRaw === null)) {
+    return { found: false, malformed: true, reason: "fix progress checkpoint is missing its ticket or parent" };
+  }
+  const parsedDispositions = parseFixProgressDispositions(inner);
+  if (parsedDispositions.error) {
+    return { found: false, malformed: true, reason: parsedDispositions.error };
+  }
+  const countRaw = parseOneFixProgressField(inner, "Findings count");
+  const count = countRaw === null ? null : Number(countRaw);
+  if (count === null || !Number.isInteger(count) || count < 0 || count !== parsedDispositions.dispositions.length) {
+    return { found: false, malformed: true, reason: "fix progress findings count does not match its dispositions" };
+  }
+  const parsedSteps = parseFixProgressSteps(inner);
+  if (parsedSteps.error) {
+    return { found: false, malformed: true, reason: parsedSteps.error };
+  }
+  const legacy = version === FIX_PROGRESS_LEGACY_VERSION;
+  const base: ParsedFixProgress = {
     found: true,
+    malformed: false,
+    reason: legacy
+      ? "legacy fix-progress-v1 checkpoint parsed as diagnostic input; it never authorizes skipping work"
+      : "fix progress checkpoint parsed; reconcile it against observed facts before resuming",
+    version,
+    legacy,
     repository,
     prNumber,
     sourceReviewId,
     sourceHandoffDigest: digest,
+    ticket: ticketRaw === null ? null : ticket,
+    parent: parentRaw === null ? null : parent,
     startedHeadSha,
     startedBaseSha,
     resultingHeadSha,
     resultingBaseSha,
-    malformed: false,
-    reason: "fix progress checkpoint parsed",
+    dispositions: parsedDispositions.dispositions,
+    completedSteps: parsedSteps.steps,
+  };
+  if (legacy) return base;
+  const operation = parseOneFixProgressField(inner, "Intended operation");
+  if (
+    operation === null ||
+    (operation !== "none" && operation !== "push" && operation !== "merge")
+  ) {
+    return { found: false, malformed: true, reason: "fix progress intended operation is missing or invalid" };
+  }
+  const receipts = parseFixProgressReceipts(inner);
+  if (receipts.error) {
+    return { found: false, malformed: true, reason: receipts.error };
+  }
+  const mergeRaw = parseOneFixProgressField(inner, "Merge receipt");
+  const mergeReceipt = mergeRaw === null || mergeRaw === "none" ? null : mergeRaw;
+  if (mergeReceipt !== null && !/^[a-f0-9]{40,64}$/.test(mergeReceipt)) {
+    return { found: false, malformed: true, reason: "fix progress merge receipt is invalid" };
+  }
+  if (mergeReceipt !== null && !parsedSteps.steps.includes("merge")) {
+    return { found: false, malformed: true, reason: "fix progress merge receipt requires a completed merge step" };
+  }
+  if (mergeReceipt === null && parsedSteps.steps.includes("merge")) {
+    return { found: false, malformed: true, reason: "fix progress completed merge step requires a confirmed merge receipt" };
+  }
+  return {
+    ...base,
+    verificationReceipts: receipts.receipts,
+    intendedRemoteOperation: operation,
+    mergeReceipt,
   };
 }

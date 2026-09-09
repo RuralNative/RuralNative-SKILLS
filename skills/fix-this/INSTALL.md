@@ -7,10 +7,11 @@ The run consumes only a validated `review-handoff-v1` block from the latest comp
 ## Requirements
 
 - A GitHub repository with native sub-issue and `blocked_by` relationships linking child tickets to their parent specification.
-- One open non-draft pull request against `main` with a valid `Closes #<ticket>` reference.
+- Node 24 or newer: the bundled `workflow-cli.mjs` (evidence and fix-progress checks) ships in this package next to the shared `workflow-state.ts` and fails closed on older runtimes.
+- One open non-draft pull request against `main` with a valid `Closes #<ticket>` reference, or a merged PR resuming bookkeeping through a reconciled `fix-progress-v2` checkpoint.
 - One completed native review published by the updated `review-this` carrying exactly one valid `review-handoff-v1` block. Legacy prose-only reviews need one publication by the updated reviewer before first use.
 - `/unslopify` installed through its registry lane: `npx skills add RuralNative/RuralNative-SKILLS --skill unslopify`.
-- A clean invoking checkout at the reviewed PR head. Branch aliases, `main`, and detached `HEAD` at the same commit are accepted; `main` and detached `HEAD` create a feature branch before edits.
+- A clean invoking checkout at the reviewed PR head (or at the checkpoint's resulting head on resume). Branch aliases, `main`, and detached `HEAD` at the same commit are accepted; `main` and detached `HEAD` create a feature branch before edits.
 - Tracked project permissions in `.kilo/kilo.jsonc` require no `agent_manager` entry. No fix subagent is used.
 
 ## Install
@@ -39,7 +40,7 @@ From the clean checkout at the reviewed PR head, after the review published its 
 /fix-this #285
 ```
 
-The skill resolves PR #285, validates the handoff and provenance against the current requirements revision (canonical and adapted alike) and policy, applies all findings, merges the current base when needed, runs local verification, updates implementation evidence, squash-merges with the expected head constraint, confirms the merge commit, closes the implementation ticket, promotes eligible dependents, closes the parent only when complete, and stops. A newer malformed workflow review never falls back to an older report. Reruns resume from the `fix-progress-v1` checkpoint without repeating verified commits.
+The skill resolves PR #285, validates the handoff and provenance against the current requirements revision (canonical and adapted alike) and policy, applies all findings, merges the current base when needed, runs local verification, updates implementation evidence, squash-merges with the expected head constraint, confirms the merge commit, closes the implementation ticket, promotes eligible dependents, closes the parent only when complete, and stops. A newer malformed workflow review never falls back to an older report. Reruns resume from the `fix-progress-v2` checkpoint without repeating verified commits; a confirmed merged PR resumes bookkeeping only, and a legacy `fix-progress-v1` checkpoint stays diagnostic input.
 
 Repository checks run via:
 

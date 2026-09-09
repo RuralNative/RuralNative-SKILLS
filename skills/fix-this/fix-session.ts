@@ -19,6 +19,28 @@ export interface FixCheckoutFact {
    * Those states need a feature branch before fixes, not a stop.
    */
   needsFeatureBranch: boolean;
+  /**
+   * Entry action from `decideFixEntry` (ADR-0038). Fresh runs and resumed
+   * fixes require head equality against the reviewed head or the
+   * checkpoint's resulting head; bookkeeping after a confirmed merge needs
+   * only a clean worktree because the merge already happened on GitHub.
+   */
+  entryAction?: "fresh" | "resume-fixes" | "resume-bookkeeping" | "stop";
+  /** Checkpoint resulting head SHA for a resume-fixes entry. */
+  expectedHeadSha?: string;
+  /**
+   * Reconciled checkpoint facts for a resume-fixes entry (ADR-0038): the
+   * started and resulting revisions plus the completed steps recorded by the
+   * checkpoint. The checkout gate uses them to derive the remote head the
+   * pull request should still carry: the started head while the result is
+   * prepared but unpushed, the resulting head once the push step completed.
+   * Unexplained movement of the observed remote head stops the resume.
+   */
+  resumeCheckpoint?: {
+    startedHeadSha: string;
+    resultingHeadSha: string;
+    completedSteps: readonly string[];
+  };
 }
 
 export type FixCheckoutDecision =
@@ -27,15 +49,57 @@ export type FixCheckoutDecision =
   | { action: "stop"; reason: string };
 
 /**
- * Fresh-run checkout gate. A branch alias never blocks: clean HEAD equality
- * to both the PR head and the reviewed head is sufficient. `main` and
- * detached HEAD need an explicit feature-branch step before edits.
+ * Checkout gate. A branch alias never blocks: clean HEAD equality is what
+ * matters. Fresh runs keep clean HEAD = PR head = reviewed head. A resume
+ * fixes path requires the checkpoint's resulting head locally and the remote
+ * PR head at the state the checkpoint recorded (started head while
+ * prepared-but-unpushed, resulting head after a completed push); external
+ * remote movement stops. A confirmed merged PR resumes bookkeeping on any
+ * clean checkout. `main` and detached HEAD need an explicit feature-branch
+ * step before edits.
  */
 export function fixCheckoutDecision(fact: FixCheckoutFact): FixCheckoutDecision {
   if (!fact.worktreeClean) {
     return { action: "stop", reason: "the current checkout is dirty; commit or stash outside this command" };
   }
-  if (fact.localHeadSha.trim() === "" || fact.pullRequestHeadSha.trim() === "" || fact.reviewedHeadSha.trim() === "") {
+  if (fact.localHeadSha.trim() === "") {
+    return { action: "stop", reason: "no trustworthy local head revision" };
+  }
+  if (fact.entryAction === "resume-bookkeeping") {
+    return { action: "proceed", reason: "confirmed merged PR; bookkeeping resumes on the clean checkout" };
+  }
+  if (fact.entryAction === "resume-fixes") {
+    if ((fact.expectedHeadSha ?? "").trim() === "") {
+      return { action: "stop", reason: "no trustworthy checkpoint resulting head to resume against" };
+    }
+    if (fact.localHeadSha !== fact.expectedHeadSha) {
+      return { action: "stop", reason: "local HEAD does not match the checkpoint's resulting head; reconcile before resuming" };
+    }
+    if (fact.resumeCheckpoint === undefined) {
+      return { action: "stop", reason: "no reconciled checkpoint facts; run fix-progress reconciliation before deciding the checkout" };
+    }
+    const pushed = fact.resumeCheckpoint.completedSteps.includes("push");
+    const expectedRemoteHead = pushed
+      ? fact.resumeCheckpoint.resultingHeadSha
+      : fact.resumeCheckpoint.startedHeadSha;
+    if (fact.pullRequestHeadSha.trim() === "") {
+      return { action: "stop", reason: "no trustworthy observed pull-request head to reconcile the checkpoint against" };
+    }
+    if (fact.pullRequestHeadSha !== expectedRemoteHead) {
+      return {
+        action: "stop",
+        reason: `the pull-request head moved beyond the checkpoint's recorded state (expected ${expectedRemoteHead}, observed ${fact.pullRequestHeadSha}); reconcile the remote before resuming`,
+      };
+    }
+    if (fact.needsFeatureBranch) {
+      return { action: "create-feature-branch", reason: "create the feature branch in this checkout before further edits" };
+    }
+    return { action: "proceed", reason: "clean checkout at the checkpoint's resulting head with the recorded remote state" };
+  }
+  if (fact.entryAction === "stop") {
+    return { action: "stop", reason: "the entry decision stopped; no finalization work proceeds" };
+  }
+  if (fact.pullRequestHeadSha.trim() === "" || fact.reviewedHeadSha.trim() === "") {
     return { action: "stop", reason: "no trustworthy head revision for the pull request or review" };
   }
   if (fact.localHeadSha !== fact.pullRequestHeadSha) {
@@ -59,19 +123,26 @@ export interface FixPushFact {
   pushRef: string;
   /** Verified PR head ref. */
   expectedHeadRef: string;
-  /** Remote head SHA observed immediately before push. */
-  remoteHeadSha: string;
-  /** Local head SHA the run verified. */
+  /** Remote head SHA the run recorded when the push was planned. */
+  recordedRemoteHeadSha: string;
+  /** Remote head SHA observed immediately before the push. */
+  observedRemoteHeadSha: string;
+  /** Verified local result head the run intends to push. */
   localHeadSha: string;
-  /** True when the remote moved since the run started. */
-  remoteMoved: boolean;
 }
 
 export type FixPushDecision =
   | { action: "push"; reason: string }
   | { action: "stop"; reason: string };
 
-/** Push only to the verified PR head ref; concurrent movement stops. */
+/**
+ * Push only to the verified PR head ref (ADR-0038). A meaningful push moves
+ * the recorded pre-push remote head to a verified local result, so the gate
+ * compares the current observation with the recorded pre-push head: any
+ * external movement since the run recorded it stops. A no-op push (local
+ * already equals the observed remote head) stops too because there is
+ * nothing to push.
+ */
 export function fixPushDecision(fact: FixPushFact): FixPushDecision {
   if (fact.repository.toLowerCase() !== fact.pullRequestRepository.toLowerCase()) {
     return { action: "stop", reason: "the pull request lives in another repository" };
@@ -79,10 +150,108 @@ export function fixPushDecision(fact: FixPushFact): FixPushDecision {
   if (fact.pushRef.trim() === "" || fact.expectedHeadRef.trim() === "" || fact.pushRef !== fact.expectedHeadRef) {
     return { action: "stop", reason: "push ref does not match the verified pull-request head ref" };
   }
-  if (fact.remoteMoved || fact.remoteHeadSha !== fact.localHeadSha) {
-    return { action: "stop", reason: "the remote head moved; reread it before pushing" };
+  if (fact.observedRemoteHeadSha.trim() === "" || fact.recordedRemoteHeadSha.trim() === "") {
+    return { action: "stop", reason: "no trustworthy remote head pair to push against" };
   }
-  return { action: "push", reason: "push explicitly to the verified pull-request head ref" };
+  if (fact.observedRemoteHeadSha !== fact.recordedRemoteHeadSha) {
+    return {
+      action: "stop",
+      reason: `the remote head moved since the run recorded it (recorded ${fact.recordedRemoteHeadSha}, observed ${fact.observedRemoteHeadSha}); reread before pushing`,
+    };
+  }
+  if (fact.localHeadSha.trim() === "") {
+    return { action: "stop", reason: "no verified local result head to push" };
+  }
+  if (fact.localHeadSha === fact.observedRemoteHeadSha) {
+    return { action: "stop", reason: "local HEAD already equals the remote head; nothing to push" };
+  }
+  return { action: "push", reason: "push the verified result to the recorded pull-request head ref" };
+}
+
+export type FixEntryAction = "fresh" | "resume-fixes" | "resume-bookkeeping" | "stop";
+
+export interface FixEntryFact {
+  /** Observed PR state. */
+  pullRequestState: "open" | "merged" | "closed";
+  /** A fix-progress checkpoint comment exists in the PR thread. */
+  hasCheckpoint: boolean;
+  /**
+   * Independently observed parts of the checkpoint reconciliation
+   * (ADR-0038). Trust is derived here from the parts, never accepted as one
+   * caller-supplied flag: the checkpoint must parse well-formed as
+   * fix-progress-v2, its digest must match the digest recomputed from the
+   * validated source review, its comment author must equal the validated
+   * source review author, it must name this exact target, and its
+   * dispositions must cover the source findings exactly. Missing parts are
+   * as untrustworthy as failing ones. Legacy v1 checkpoints are diagnostic
+   * input and never trusted.
+   */
+  checkpoint?: {
+    /** Checkpoint parsed well-formed as fix-progress-v2 (not legacy). */
+    wellFormed: boolean;
+    /** Recomputed source-handoff digest equals the checkpoint digest. */
+    digestMatches: boolean;
+    /** Checkpoint comment author equals the validated source review author. */
+    authorMatches: boolean;
+    /** Checkpoint names this repository and pull request. */
+    targetMatches: boolean;
+    /** Dispositions cover the source findings exactly. */
+    dispositionsCoverSource: boolean;
+  };
+}
+
+function checkpointTrustReason(fact: FixEntryFact): string {
+  const checkpoint = fact.checkpoint ?? null;
+  if (checkpoint === null) {
+    return "the checkpoint comment was not reconciled against the validated source review; run the fix-progress reconciliation before deciding the entry";
+  }
+  const failures: string[] = [];
+  if (!checkpoint.wellFormed) failures.push("the checkpoint is malformed or a legacy v1 diagnostic record");
+  if (!checkpoint.digestMatches) failures.push("the checkpoint digest does not match the validated source review");
+  if (!checkpoint.authorMatches) failures.push("the checkpoint author does not match the validated source review author");
+  if (!checkpoint.targetMatches) failures.push("the checkpoint names another repository or pull request");
+  if (!checkpoint.dispositionsCoverSource) failures.push("the checkpoint dispositions do not cover the source findings exactly");
+  return failures.length > 0 ? failures.join("; ") : "the checkpoint does not reconcile against observed facts";
+}
+
+/**
+ * Decide fresh versus resumable entry (ADR-0038). Fresh runs require an open
+ * PR and keep clean HEAD = PR head = reviewed head. A checkpoint resumes only
+ * missing steps after every reconciliation part derived from observed facts
+ * passes: on an open PR it resumes fixes; on a merged PR it resumes
+ * bookkeeping only. A merged PR without a reconciled checkpoint, a
+ * closed-unmerged PR, or a checkpoint that fails any part stops.
+ */
+export function decideFixEntry(fact: FixEntryFact): { action: FixEntryAction; reason: string } {
+  const trusted =
+    fact.hasCheckpoint &&
+    fact.checkpoint !== undefined &&
+    fact.checkpoint.wellFormed &&
+    fact.checkpoint.digestMatches &&
+    fact.checkpoint.authorMatches &&
+    fact.checkpoint.targetMatches &&
+    fact.checkpoint.dispositionsCoverSource;
+  if (fact.pullRequestState === "closed") {
+    return { action: "stop", reason: "the pull request is closed without a merge; it never counts as delivered" };
+  }
+  if (fact.pullRequestState === "merged") {
+    if (fact.hasCheckpoint && trusted) {
+      return { action: "resume-bookkeeping", reason: "confirmed merged PR with a reconciled checkpoint resumes bookkeeping only" };
+    }
+    return {
+      action: "stop",
+      reason: fact.hasCheckpoint
+        ? `the merged PR checkpoint is not reconciled (${checkpointTrustReason(fact)}); reconcile it before any bookkeeping`
+        : "the merged PR has no reconciled checkpoint; bookkeeping cannot resume without verified progress",
+    };
+  }
+  if (fact.hasCheckpoint && !trusted) {
+    return { action: "stop", reason: `a checkpoint exists but is not reconciled (${checkpointTrustReason(fact)}); reconcile it before resuming` };
+  }
+  if (fact.hasCheckpoint) {
+    return { action: "resume-fixes", reason: "reconciled checkpoint resumes only the missing finalization steps" };
+  }
+  return { action: "fresh", reason: "no checkpoint; fresh finalization keeps clean HEAD = PR head = reviewed head" };
 }
 
 export interface FixBookkeepingFact {

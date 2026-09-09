@@ -1,9 +1,15 @@
 // Test-only adapter fakes. Production adapters expose host contracts only.
-import type { FixGitHubAdapter, FixPublishAdapter, FixVerificationAdapter } from "../adapters.ts";
+import type {
+  FixGitHubAdapter,
+  FixProgressComment,
+  FixPublishAdapter,
+  FixVerificationAdapter,
+} from "../adapters.ts";
 
 export function fakeFixGitHubAdapter(
   pr: Awaited<ReturnType<FixGitHubAdapter["fetchPullRequest"]>>,
   review: Awaited<ReturnType<FixGitHubAdapter["fetchSelectedReview"]>> = null,
+  progress: FixProgressComment | null = null,
 ): FixGitHubAdapter {
   return {
     name: "fake-fix-github",
@@ -15,6 +21,9 @@ export function fakeFixGitHubAdapter(
     },
     async fetchRequirementBodies(_ticket, _parent) {
       return null;
+    },
+    async fetchFixProgress(_prNumber) {
+      return progress;
     },
   };
 }

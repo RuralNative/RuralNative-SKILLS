@@ -13,6 +13,7 @@ Each ticket carries an `ordinary` or `high-risk` class from planning. The compac
 ## Requirements
 
 - A GitHub repository with an issue tracker and native sub-issue plus `blocked_by` relationships for parent and dependency state.
+- Node 24 or newer: the bundled validators `workflow-cli.mjs` (requirements and evidence checks) ship in this package next to the shared `workflow-state.ts` and fail closed on older runtimes.
 - `/unslopify` installed through its own registry lane for prose quality.
 - A clean invoking checkout where the feature branch may be created or reused.
 - Tracked project permissions in `.kilo/kilo.jsonc` require no `agent_manager` entry; `task` keeps its existing approval posture. `.kilo/agent-manager.json` is never edited.

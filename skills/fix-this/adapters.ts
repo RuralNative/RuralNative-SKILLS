@@ -33,11 +33,25 @@ export interface FixSelectedReview {
   commentIds: readonly string[];
 }
 
+/** Observed fix-progress checkpoint comment in the PR thread. */
+export interface FixProgressComment {
+  /** Full comment body carrying the checkpoint block. */
+  body: string;
+  /** Native author login of the comment; `null` when not observable. */
+  author: string | null;
+}
+
 export interface FixGitHubAdapter {
   readonly name: string;
   fetchPullRequest(prNumber: number): Promise<FixPullRequestFacts | null>;
   fetchSelectedReview(prNumber: number): Promise<FixSelectedReview | null>;
   fetchRequirementBodies(ticket: number, parent: number | null): Promise<{ parentBody: string; ticketBody: string } | null>;
+  /**
+   * Read the fix-progress checkpoint comment from the PR thread, if any.
+   * Returns the body together with the observed native comment author so the
+   * entry gate can reject forged checkpoint authorship; never a bare body.
+   */
+  fetchFixProgress(prNumber: number): Promise<FixProgressComment | null>;
 }
 
 export interface FixPublishAdapter {

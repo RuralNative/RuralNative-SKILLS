@@ -78,7 +78,7 @@ Same-repository checks run read-only against the pinned diff. An untrusted fork 
 
 ## Verification expectations
 
-A finding carries one validated evidence form: an inline finding quotes the offending span at its pinned file and line, while a reproduced failure names the failing command and observed output. The repository gate is `npm run verify`. Reviewers re-run a claim before acting on it; "this should also work" without a mechanism is advisory.
+A finding carries one validated evidence form: an inline finding quotes the offending span at its pinned file and line, while a reproduced failure names the failing command and observed output. The repository gate is `npm run verify`. The repository requires Node 24 or newer (declared in `package.json` `engines`); the bundled workflow validator commands fail closed on older runtimes. Reviewers re-run a claim before acting on it; "this should also work" without a mechanism is advisory.
 
 ## Current-head freshness
 

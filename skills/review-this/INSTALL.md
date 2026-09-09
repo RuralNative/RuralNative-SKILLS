@@ -8,6 +8,7 @@ The skill requires a clean current checkout at the selected pull-request head co
 
 - A GitHub repository with native sub-issue and `blocked_by` relationships linking child tickets to their parent specification.
 - One open pull request against `main` with a closing reference `Closes #<ticket>`, current head and base SHAs, and compact or legacy implementation evidence.
+- Node 24 or newer: the review-only `publish-review.mjs` entry point and the read-only `workflow-cli.mjs` review check ship in this package and fail closed on older runtimes.
 - `/unslopify` installed through its registry lane: `npx skills add RuralNative/RuralNative-SKILLS --skill unslopify`.
 - Tracked project permissions in `.kilo/kilo.jsonc` require no `agent_manager` entry. No fix subagent is used.
 

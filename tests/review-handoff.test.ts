@@ -125,11 +125,43 @@ describe("review handoff round-trip", () => {
     );
     assert.equal(validateReviewHandoff(check(body.replace(/- Findings count: 1/, "- Findings count: 2"))).status, "malformed");
   });
+  test("source URL, comment ownership, and timestamps validate independently (ADR-0038)", () => {
+    const body = renderReviewHandoff(input());
+    const base = check(body);
+    assert.equal(
+      validateReviewHandoff({ ...base, observedProvenance: { ...base.observedProvenance, sourceUrl: "https://github.com/o/r/pull/285#review-999" } }).status,
+      "stale",
+      "a forged observed source URL never matches a payload-supplied URL",
+    );
+    assert.equal(
+      validateReviewHandoff({ ...base, observedProvenance: { ...base.observedProvenance, commentIds: [] as readonly string[] } }).status,
+      "stale",
+      "payload comment ownership must be observed",
+    );
+    assert.equal(
+      validateReviewHandoff({ ...base, observedProvenance: { ...base.observedProvenance, reviewedAt: "2026-09-08T01:00:00Z" } }).status,
+      "stale",
+      "a payload-supplied timestamp must match observation",
+    );
+    assert.equal(
+      validateReviewHandoff({ ...base, observedProvenance: { ...base.observedProvenance, sourceUrl: "" } }).status,
+      "malformed",
+      "the observed native source URL is required provenance",
+    );
+  });
+  test("an empty payload timestamp stays valid while the review is pending", () => {
+    const body = renderReviewHandoff(input({ provenance: { ...input().provenance, reviewedAt: "", sourceUrl: "" } }));
+    const result = validateReviewHandoff({
+      ...check(body),
+      observedProvenance: { ...check(body).observedProvenance, reviewedAt: "2026-09-09T00:00:00Z" },
+    });
+    assert.equal(result.status, "current");
+  });
 });
 
 describe("fix eligibility without review or CI gates", () => {
   const eligible = {
-    handoffStatus: "current",
+    reviewHandoffCurrent: true,
     requirementsCurrent: true,
     policyCurrent: true,
     allFindingsResolved: true,
@@ -155,7 +187,7 @@ describe("fix eligibility without review or CI gates", () => {
       { ...eligible, localVerificationPassed: false },
       { ...eligible, verificationCapable: false },
       { ...eligible, mergeable: false },
-      { ...eligible, handoffStatus: "stale" },
+      { ...eligible, reviewHandoffCurrent: false },
     ]) {
       assert.equal(isFixEligible(fact).eligible, false);
     }
@@ -176,9 +208,224 @@ describe("fix progress checkpoint", () => {
       resultingHeadSha: "h2",
       resultingBaseSha: "b1",
       dispositions: [],
+      verificationReceipts: [],
+      intendedRemoteOperation: "none",
       completedSteps: ["fixes"],
+      mergeReceipt: null,
     });
     assert.equal(parseFixProgress({ body, repository: "o/r", prNumber: 285 }).found, true);
     assert.equal(parseFixProgress({ body, repository: "x/y", prNumber: 285 }).malformed, true);
+  });
+  test("fix-progress-v2 round-trips dispositions, receipts, operation, and merge receipt", () => {
+    const body = renderFixProgress({
+      repository: "o/r",
+      prNumber: 285,
+      sourceReviewId: "987",
+      sourceHandoffDigest: "a".repeat(64),
+      ticket: 278,
+      parent: 99,
+      startedHeadSha: "h1",
+      startedBaseSha: "b1",
+      resultingHeadSha: "h2",
+      resultingBaseSha: "b1",
+      dispositions: [
+        {
+          findingId: "F-1",
+          disposition: "fixed",
+          files: ["a.ts"],
+          commitSha: "c1",
+          verificationCommand: "node --test a.ts",
+          verificationResult: "1 passed",
+        },
+      ],
+      verificationReceipts: [
+        { command: "npm run verify", result: "all checks passed", passed: true },
+      ],
+      intendedRemoteOperation: "merge",
+      completedSteps: ["fixes", "evidence", "push", "merge"],
+      mergeReceipt: "1".repeat(40),
+    });
+    const parsed = parseFixProgress({ body, repository: "o/r", prNumber: 285 });
+    assert.equal(parsed.found, true);
+    assert.equal(parsed.malformed, false);
+    assert.equal(parsed.version, "fix-progress-v2");
+    assert.equal(parsed.legacy, false);
+    assert.equal(parsed.sourceReviewId, "987");
+    assert.equal(parsed.resultingHeadSha, "h2");
+    assert.equal(parsed.intendedRemoteOperation, "merge");
+    assert.equal(parsed.mergeReceipt, "1".repeat(40));
+    assert.deepEqual(parsed.dispositions?.map((d) => d.findingId), ["F-1"]);
+    assert.deepEqual(parsed.verificationReceipts, [
+      { command: "npm run verify", result: "all checks passed", passed: true },
+    ]);
+    assert.deepEqual(parsed.completedSteps, ["fixes", "evidence", "push", "merge"]);
+  });
+  test("legacy fix-progress-v1 checkpoints parse as diagnostic input only", () => {
+    const legacy = [
+      "<!-- ruralnative:fix-progress:start -->",
+      "## Fix progress",
+      "",
+      "- Progress version: fix-progress-v1",
+      "- Repository: o/r",
+      "- PR: 285",
+      "- Source review: 987",
+      "- Handoff digest: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "- Ticket: #278",
+      "- Parent: #99",
+      "- Started head: h1",
+      "- Started base: b1",
+      "- Resulting head: h2",
+      "- Resulting base: b1",
+      "- Findings count: 0",
+      "- Completed steps: fixes",
+      "<!-- ruralnative:fix-progress:end -->",
+      "",
+    ].join("\n");
+    const parsed = parseFixProgress({ body: legacy, repository: "o/r", prNumber: 285 });
+    assert.equal(parsed.found, true);
+    assert.equal(parsed.malformed, false);
+    assert.equal(parsed.legacy, true);
+    assert.equal(parsed.version, "fix-progress-v1");
+    assert.ok(parsed.reason.includes("diagnostic"));
+    assert.equal(parsed.intendedRemoteOperation, undefined);
+  });
+  test("unknown versions, duplicate markers, and forged digests are malformed", () => {
+    const body = renderFixProgress({
+      repository: "o/r",
+      prNumber: 285,
+      sourceReviewId: "987",
+      sourceHandoffDigest: "a".repeat(64),
+      ticket: 278,
+      parent: 99,
+      startedHeadSha: "h1",
+      startedBaseSha: "b1",
+      resultingHeadSha: "h2",
+      resultingBaseSha: "b1",
+      dispositions: [],
+      verificationReceipts: [],
+      intendedRemoteOperation: "none",
+      completedSteps: ["fixes"],
+      mergeReceipt: null,
+    });
+    assert.equal(
+      parseFixProgress({ body: body.replace("fix-progress-v2", "fix-progress-v9"), repository: "o/r", prNumber: 285 }).malformed,
+      true,
+    );
+    assert.equal(
+      parseFixProgress({ body: body.replace("a".repeat(64), "xyz"), repository: "o/r", prNumber: 285 }).malformed,
+      true,
+    );
+    assert.equal(
+      parseFixProgress({ body: `${body}\n\n${body}`, repository: "o/r", prNumber: 285 }).malformed,
+      true,
+    );
+  });
+  test("duplicate disposition IDs with an adjusted count are malformed", () => {
+    const body = renderFixProgress({
+      repository: "o/r",
+      prNumber: 285,
+      sourceReviewId: "987",
+      sourceHandoffDigest: "a".repeat(64),
+      ticket: 278,
+      parent: 99,
+      startedHeadSha: "h1",
+      startedBaseSha: "b1",
+      resultingHeadSha: "h2",
+      resultingBaseSha: "b1",
+      dispositions: [
+        {
+          findingId: "F-1",
+          disposition: "fixed",
+          files: ["a.ts"],
+          commitSha: "c1",
+          verificationCommand: "node --test a.ts",
+          verificationResult: "1 passed",
+        },
+      ],
+      verificationReceipts: [],
+      intendedRemoteOperation: "none",
+      completedSteps: ["fixes"],
+      mergeReceipt: null,
+    });
+    const duplicated = body.replace(
+      "- Findings count: 1",
+      "- Finding: F-1\n  - Disposition: fixed\n  - Files: a.ts\n  - Commit: c1\n  - Verification command: `node --test a.ts`\n  - Verification result: 1 passed\n- Findings count: 2",
+    );
+    const parsed = parseFixProgress({ body: duplicated, repository: "o/r", prNumber: 285 });
+    assert.equal(parsed.malformed, true);
+    assert.ok(String(parsed.reason).includes("duplicate disposition"));
+  });
+  test("a v2 checkpoint missing its ticket or parent lines is malformed", () => {
+    const body = renderFixProgress({
+      repository: "o/r",
+      prNumber: 285,
+      sourceReviewId: "987",
+      sourceHandoffDigest: "a".repeat(64),
+      ticket: 278,
+      parent: 99,
+      startedHeadSha: "h1",
+      startedBaseSha: "b1",
+      resultingHeadSha: "h2",
+      resultingBaseSha: "b1",
+      dispositions: [],
+      verificationReceipts: [],
+      intendedRemoteOperation: "none",
+      completedSteps: ["fixes"],
+      mergeReceipt: null,
+    });
+    for (const label of ["- Ticket: #278", "- Parent: #99"]) {
+      const stripped = body.replace(`${label}\n`, "");
+      const parsed = parseFixProgress({ body: stripped, repository: "o/r", prNumber: 285 });
+      assert.equal(parsed.malformed, true, label);
+      assert.ok(String(parsed.reason).includes("ticket or parent"));
+    }
+  });
+  test("a completed merge step without a confirmed merge receipt is malformed", () => {
+    const body = renderFixProgress({
+      repository: "o/r",
+      prNumber: 285,
+      sourceReviewId: "987",
+      sourceHandoffDigest: "a".repeat(64),
+      ticket: 278,
+      parent: 99,
+      startedHeadSha: "h1",
+      startedBaseSha: "b1",
+      resultingHeadSha: "h2",
+      resultingBaseSha: "b1",
+      dispositions: [],
+      verificationReceipts: [],
+      intendedRemoteOperation: "merge",
+      completedSteps: ["fixes", "evidence", "push"],
+      mergeReceipt: null,
+    });
+    const withMergeStep = body.replace(
+      "- Completed steps: fixes, evidence, push",
+      "- Completed steps: fixes, evidence, push, merge",
+    );
+    const parsed = parseFixProgress({ body: withMergeStep, repository: "o/r", prNumber: 285 });
+    assert.equal(parsed.malformed, true);
+    assert.ok(String(parsed.reason).includes("merge receipt"));
+  });
+  test("the renderer rejects a completed merge step without a receipt", () => {
+    assert.throws(() =>
+      renderFixProgress({
+        repository: "o/r",
+        prNumber: 285,
+        sourceReviewId: "987",
+        sourceHandoffDigest: "a".repeat(64),
+        ticket: 278,
+        parent: 99,
+        startedHeadSha: "h1",
+        startedBaseSha: "b1",
+        resultingHeadSha: "h2",
+        resultingBaseSha: "b1",
+        dispositions: [],
+        verificationReceipts: [],
+        intendedRemoteOperation: "merge",
+        completedSteps: ["fixes", "evidence", "push", "merge"],
+        mergeReceipt: null,
+      }),
+      /merge receipt/,
+    );
   });
 });

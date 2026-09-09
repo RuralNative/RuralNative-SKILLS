@@ -7,6 +7,9 @@
     "docs:check": "./scripts/docs-check.sh",
     "verify": "npm ci && npm test && npx tsc --noEmit && npm run docs:check"
   },
+  "engines": {
+    "node": ">=24"
+  },
   "devDependencies": {
     "@types/node": "^26.2.0",
     "typescript": "^5.5.0"

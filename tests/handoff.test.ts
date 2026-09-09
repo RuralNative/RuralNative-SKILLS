@@ -3,15 +3,20 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import {
+  classifyRequirementsPin,
   countEvidenceBlocks,
   decideRepairPath,
+  decideRepairRevalidation,
   effectivePolicyRevision,
+  isFixEligible,
   parseEvidenceHandoff,
   renderReviewHandoff,
   requirementsMatch,
   requirementsPinWellFormed,
   requirementsRevision,
   requirementsRevisionValue,
+  resolveRequirementsBody,
+  reviewHandoffDigest,
   validateAuthoritativeBody,
   validateEvidenceHandoff,
   validateRepairTicket,
@@ -25,6 +30,12 @@ import {
 } from "../skills/implement-this/acceptance-evidence.ts";
 import { checkoutMatchDecision as reviewCheckoutMatchDecision } from "../skills/review-this/review-session.ts";
 import { isReviewReady } from "../skills/review-this/discovery.ts";
+import {
+  INCIDENT_LEGACY_PIN,
+  INCIDENT_PR_HEAD_SHA,
+  incidentParentBody,
+  incidentTicketBody,
+} from "./incident-fixtures.ts";
 
 const sha256 = (s: string): string => createHash("sha256").update(s, "utf8").digest("hex");
 const HASH_A = "a".repeat(64);
@@ -388,5 +399,126 @@ describe("hardened handoff gates", () => {
     });
     assert.equal(decision.ready, false);
     assert.match(decision.reason, /validateEvidenceHandoff/);
+  });
+});
+
+describe("incident-shaped composed handoff (ADR-0038)", () => {
+  const parent = incidentParentBody();
+  const ticket = incidentTicketBody();
+  const pin = requirementsRevisionValue(requirementsRevision(parent, ticket, sha256));
+  const resolvedTicket = resolveRequirementsBody(ticket, "ticket");
+  const resolvedParent = resolveRequirementsBody(parent, "parent");
+  const policy = effectivePolicyRevision([{ path: "REVIEW.md", hash: "h1" }]);
+
+  test("a legacy pin on the incident pair classifies as a legacy-contract mismatch", () => {
+    const classification = classifyRequirementsPin(INCIDENT_LEGACY_PIN, pin);
+    assert.equal(classification.classification, "legacy-contract");
+    assert.equal(
+      decideRepairRevalidation({
+        classification: classification.classification,
+        currentScopeResolved: resolvedParent.ok && resolvedTicket.ok,
+        proofRevalidated: true,
+      }).proceed,
+      true,
+    );
+  });
+  test("evidence rendered from the ticket criteria validates current on the head", () => {
+    const block = renderCompactEvidence({
+      criteria: resolvedTicket.criteria,
+      evidence: resolvedTicket.criteria.map((c) => ({
+        criterionId: c.id,
+        kind: "behavior" as const,
+        focusedCommand: "node scripts/docs-check.mjs",
+        result: "focused checks passed",
+        passed: true,
+      })),
+      isBugFix: false,
+      requirementsRevision: pin,
+      headSha: INCIDENT_PR_HEAD_SHA,
+    });
+    const body = composePullRequestBody("P1 — governed reconstruction.\n", 288, block);
+    const parsed = parseEvidenceHandoff(body);
+    assert.equal(parsed.requirementsRevision, pin);
+    const check = validateEvidenceHandoff({
+      body,
+      currentRequirementsRevision: pin,
+      currentHeadSha: INCIDENT_PR_HEAD_SHA,
+    });
+    assert.equal(check.status, "current");
+    assert.equal(countEvidenceBlocks(body), 1);
+  });
+  test("the composed review handoff validates current and fix eligibility passes", () => {
+    const reviewBody = renderReviewHandoff({
+      repository: "owner/eScraper-Business-Brokers-for-Seacher-Insights",
+      prNumber: 294,
+      reviewedHeadSha: INCIDENT_PR_HEAD_SHA,
+      reviewedBaseSha: "99b016dd1489eac85bbeca68e18502cda25824aa",
+      closesTicket: 288,
+      requirementsRevision: pin,
+      reviewPolicyRevision: policy,
+      verificationCommand: "node --test tests/workflow-cli.test.ts",
+      verificationResult: "handoff checks observed",
+      verificationPassed: true,
+      findings: [],
+      provenance: {
+        reviewId: "294review",
+        reviewAuthor: "reviewer",
+        reviewedCommit: INCIDENT_PR_HEAD_SHA,
+        reviewedAt: "2026-09-09T09:00:00Z",
+        sourceUrl: "https://github.com/owner/eScraper-Business-Brokers-for-Seacher-Insights/pull/294#review-294review",
+        reviewerPermission: "write",
+        commentIds: [],
+      },
+    });
+    const handoff = validateReviewHandoff({
+      body: reviewBody,
+      repository: "owner/eScraper-Business-Brokers-for-Seacher-Insights",
+      prNumber: 294,
+      currentHeadSha: INCIDENT_PR_HEAD_SHA,
+      currentBaseSha: "99b016dd1489eac85bbeca68e18502cda25824aa",
+      currentRequirementsRevision: pin,
+      currentReviewPolicyRevision: policy,
+      observedProvenance: {
+        reviewId: "294review",
+        reviewAuthor: "reviewer",
+        reviewerPermission: "write" as const,
+        reviewedCommit: INCIDENT_PR_HEAD_SHA,
+        reviewedAt: "2026-09-09T09:00:00Z",
+        sourceUrl: "https://github.com/owner/eScraper-Business-Brokers-for-Seacher-Insights/pull/294#review-294review",
+        commentIds: [] as readonly string[],
+      },
+      reviewCompleted: true,
+      reviewDismissed: false,
+    });
+    assert.equal(handoff.status, "current");
+    assert.ok(handoff.handoff, "current validation returns the validated handoff content");
+    const digest = reviewHandoffDigest(handoff.handoff!, sha256);
+    assert.equal(digest.length, 64);
+    assert.equal(
+      isFixEligible({
+        reviewHandoffCurrent: true,
+        requirementsCurrent: true,
+        policyCurrent: true,
+        allFindingsResolved: true,
+        hasUnresolvableFinding: false,
+        conflictsResolved: true,
+        conflictNeedsDecision: false,
+        localVerificationPassed: true,
+        verificationCapable: true,
+        evidenceCurrent: true,
+        worktreeClean: true,
+        pullRequestOpen: true,
+        mergeable: true,
+        headMatchesVerifiedResult: true,
+      }).eligible,
+      true,
+    );
+  });
+  test("issue-scoped identities keep #287:AC-1 and #288:AC-1 distinct", () => {
+    assert.equal(resolvedParent.criteria.length, 12);
+    assert.equal(resolvedTicket.criteria.length, 9);
+    assert.ok(resolvedParent.criteria.some((c) => c.id === "AC-1"));
+    assert.ok(resolvedTicket.criteria.some((c) => c.id === "AC-1"));
+    assert.notEqual(`${287}:AC-1`, `${288}:AC-1`, "issue number plus local ID is the stable key");
   });
 });

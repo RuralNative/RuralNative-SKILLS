@@ -11,6 +11,11 @@
     "allowImportingTsExtensions": true,
     "allowJs": true
   },
-  "include": ["skills/**/*.test.ts", "skills/**/*.ts"],
+  "include": [
+    "skills/**/*.test.ts",
+    "skills/**/*.ts",
+    "tests/**/*.ts",
+    "scripts/**/*.ts"
+  ],
   "exclude": ["node_modules"]
 }

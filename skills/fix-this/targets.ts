@@ -77,6 +77,12 @@ function sameRepository(a: RepositoryRef | null, b: RepositoryRef): boolean {
   return a.owner.toLowerCase() === b.owner.toLowerCase() && a.name.toLowerCase() === b.name.toLowerCase();
 }
 
+/**
+ * Resolve exactly one fix target. Open PRs resolve for fresh finalization;
+ * merged PRs resolve so a trusted checkpoint may resume bookkeeping
+ * (ADR-0038). Closed-unmerged PRs never count as delivered and stop; fork
+ * writes, issue references, and cross-repository targets stop too.
+ */
 export function resolveFixTarget(
   rawRefs: readonly string[],
   observation: FixTargetObservation,
@@ -100,8 +106,8 @@ export function resolveFixTarget(
   if (observation.currentRepository && !sameRepository(selected.repository, observation.currentRepository)) {
     return { ok: false, reference, diagnostic: "cross-repository-target", detail: "PR lives in another repository" };
   }
-  if (selected.state !== "open") {
-    return { ok: false, reference, diagnostic: "closed-pull-request", detail: `PR #${selected.prNumber} is ${selected.state}` };
+  if (selected.state === "closed") {
+    return { ok: false, reference, diagnostic: "closed-pull-request", detail: `PR #${selected.prNumber} is closed without a merge; it never counts as delivered` };
   }
   if (selected.fork) {
     return { ok: false, reference, diagnostic: "fork-mutation-unsupported", detail: "fork writes are out of scope for this stage" };

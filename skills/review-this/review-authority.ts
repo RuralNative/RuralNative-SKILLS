@@ -29,6 +29,9 @@ export const REVIEWER_ALLOWED_ACTIONS = [
   "run-focused-checks",
   "run-local-fallback-once",
   "align-clean-checkout",
+  "create-pending-review",
+  "submit-review",
+  "read-back-review",
 ] as const;
 
 export type ReviewerAllowedAction = (typeof REVIEWER_ALLOWED_ACTIONS)[number];

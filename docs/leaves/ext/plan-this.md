@@ -41,9 +41,12 @@ label state from the pure workflow state core → finishes with the ELI18 Why /
 What / Where / How summary and returns control to the user.
 
 The runtime helper `workflow-state.ts` is a packaged copy of the authored
-`scripts/workflow-state.ts` core (#132): frontier selection, dispatch
-validation, label decisions, one-retry recovery, head freshness, merge
-eligibility, follow-up creation, and parent completion decisions.
+`scripts/workflow-state.ts` core (#132): frontier selection, label decisions,
+head freshness, merge eligibility, and parent completion decisions. Dispatch
+and worker-retry concepts retired with ADR-0031; the single-target workflow
+keeps no dispatch machinery. The bundled read-only validator
+`workflow-cli.mjs` (generated into the skill package, Node 24+) runs the
+canonical planning gate and the requirements checks.
 `risk.ts` is the pure risk decision table that assigns `ordinary` or
 `high-risk` before publication. Tests live in `skills/plan-this/tests/` and
 feed captured facts; they never make live GitHub calls.

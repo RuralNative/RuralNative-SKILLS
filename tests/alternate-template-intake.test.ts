@@ -34,6 +34,12 @@ import {
   composePullRequestBody,
 } from "../skills/implement-this/acceptance-evidence.ts";
 import { renderReviewHandoff } from "../scripts/workflow-state.ts";
+import {
+  INCIDENT_LEGACY_PIN,
+  incidentParentBody,
+  incidentPullRequestBody,
+  incidentTicketBody,
+} from "./incident-fixtures.ts";
 
 const sha256 = (s: string): string => createHash("sha256").update(s, "utf8").digest("hex");
 
@@ -182,12 +188,74 @@ describe("adapted intake of alternate templates", () => {
       "ticket",
     );
     assert.equal(numbered.ok, false);
-    const homes = resolveRequirementsBody(
+  });
+  test("coexistence of both settlement homes consumes as adapted (ADR-0038)", () => {
+    // A ticket body with both homes but no criteria still stops, now because
+    // no active criteria resolve, never because coexistence is a
+    // contradiction.
+    const homesOnly = resolveRequirementsBody(
       "## Solution\n- one\n## Settled decisions\n- another\n",
       "ticket",
     );
-    assert.equal(homes.ok, false);
-    assert.ok(homes.errors.some((e) => e.includes("ambiguous sections")));
+    assert.equal(homesOnly.ok, false);
+    assert.equal(homesOnly.errors.some((e) => e.includes("ambiguous sections")), false);
+    assert.ok(homesOnly.errors.some((e) => e.includes("acceptance criteria section")));
+    // A parent with both homes and explicit records consumes as adapted with
+    // both homes retained in the whole-body fingerprint.
+    const parent = [
+      "## Problem Statement",
+      "Current documentation cannot establish complete product understanding.",
+      "## Solution",
+      "Deliver the manual and benchmark defined below. This parent is not an implementation ticket.",
+      "## Settled decisions",
+      "1. Authored docs remain the preferred sources.",
+      "2. Human outputs never become coding-agent authority.",
+      "## Project-level acceptance criteria",
+      "- `AC-1`: The manual covers purpose, design, layers, and operations.",
+      "- `AC-2`: Every current page and access state is represented.",
+      "## Delivery Graph",
+      "P1 establishes governance; later packages depend only on P1.",
+      "",
+    ].join("\n");
+    const resolved = resolveRequirementsBody(parent, "parent");
+    assert.equal(resolved.ok, true);
+    assert.equal(resolved.format, "adapted");
+    assert.deepEqual(resolved.criteria.map((c) => c.id), ["AC-1", "AC-2"]);
+    assert.ok(
+      resolved.notes.some((n) => n.includes("both ## Solution and ## Settled decisions")),
+    );
+    const edited = parent.replace(
+      "2. Human outputs never become coding-agent authority.",
+      "2. Human outputs never become technical authority.",
+    );
+    assert.notEqual(
+      requirementsRevisionValue(requirementsRevision(parent, ticketBody(), sha256)),
+      requirementsRevisionValue(requirementsRevision(edited, ticketBody(), sha256)),
+    );
+  });
+  test("strict canonical publication still rejects both settlement homes", () => {
+    const body = [
+      "## Affected seams",
+      "- implement-this",
+      "## Acceptance criteria",
+      "- [ ] AC-1: Ship one behavior",
+      "## Structural constraints",
+      "- None",
+      "## Blocked by",
+      "- None",
+      "## Solution",
+      "- Approved direction",
+      "## Settled decisions",
+      "- Another settlement home",
+      "## Risk",
+      "- ordinary",
+      "## Smallest sufficient verification",
+      "- node --test a",
+      "",
+    ].join("\n");
+    assert.ok(
+      validateAuthoritativeBody(body, "ticket").some((e) => e.includes("ambiguous sections")),
+    );
   });
   test("fenced examples never create criteria and fenced markers are retained", () => {
     const body = [
@@ -330,7 +398,7 @@ describe("adapted pairs flow through delivery, review, and fix", () => {
     assert.equal(handoff.status, "current");
     assert.equal(
       isFixEligible({
-        handoffStatus: "current",
+        reviewHandoffCurrent: true,
         requirementsCurrent: true,
         policyCurrent: true,
         allFindingsResolved: true,
@@ -382,6 +450,53 @@ describe("adapted pairs flow through delivery, review, and fix", () => {
       currentHeadSha: "abc123",
     });
     assert.equal(stale.status, "stale");
+  });
+});
+
+describe("incident parent shape resolves through suffixed acceptance headings (ADR-0038)", () => {
+  test("the parent fixture resolves all twelve criteria under the suffixed heading", () => {
+    const resolved = resolveRequirementsBody(incidentParentBody(), "parent");
+    assert.equal(resolved.ok, true);
+    assert.equal(resolved.format, "adapted");
+    assert.deepEqual(
+      resolved.criteria.map((c) => c.id),
+      Array.from({ length: 12 }, (_, i) => `AC-${i + 1}`),
+    );
+    assert.deepEqual(resolved.criteria.map((c) => c.status), Array(12).fill("active"));
+    assert.ok(resolved.notes.some((n) => n.includes("both ## Solution and ## Settled decisions")));
+  });
+  test("the ticket fixture resolves nine checkbox records without swallowing inline fields", () => {
+    const resolved = resolveRequirementsBody(incidentTicketBody(), "ticket");
+    assert.equal(resolved.ok, true);
+    assert.equal(resolved.format, "adapted");
+    assert.deepEqual(
+      resolved.criteria.map((c) => c.id),
+      Array.from({ length: 9 }, (_, i) => `AC-${i + 1}`),
+    );
+    assert.ok(!resolved.criteria[8].text.includes("Smallest verification"));
+    assert.ok(!resolved.criteria[8].text.includes("Prerequisites"));
+  });
+  test("the incident pair pins an adapted revision and the PR body stays parseable", () => {
+    const rev = requirementsRevision(incidentParentBody(), incidentTicketBody(), sha256);
+    assert.equal(rev.version, REQUIREMENTS_ADAPTED_VERSION);
+    const carrier = requirementsRevisionValue(rev);
+    assert.ok(requirementsPinWellFormed(carrier));
+    assert.notEqual(carrier, INCIDENT_LEGACY_PIN);
+    assert.equal(requirementsGate(INCIDENT_LEGACY_PIN, carrier).action, "stop");
+  });
+  test("two suffixed or mixed acceptance headings are a duplicate-section stop", () => {
+    const body = [
+      "## Solution",
+      "- one",
+      "## Acceptance criteria",
+      "- [ ] AC-1: First",
+      "## Project-level acceptance criteria",
+      "- `AC-2`: Second",
+      "",
+    ].join("\n");
+    const resolved = resolveRequirementsBody(body, "parent");
+    assert.equal(resolved.ok, false);
+    assert.ok(resolved.errors.some((e) => e.includes("duplicate section")));
   });
 });
 

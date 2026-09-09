@@ -89,16 +89,24 @@ describe("plan-this structured workflow (INV-3, INV-4)", () => {
     assert.ok(norm(skill).includes("separate explicit approval gate"));
   });
 
-  test("keeps the adapter free of runtime and command machinery", () => {
+  test("keeps the adapter free of directory machinery and ships the bundled validator only", () => {
     assert.equal(fs.existsSync(path.join(ROOT, "skills/plan-this/scripts")), false);
-    assert.equal(
-      fs.existsSync(path.join(ROOT, "skills/plan-this/package.json")),
-      false,
-    );
     assert.equal(
       fs.existsSync(path.join(ROOT, ".kilo/command/plan-this.md")),
       false,
     );
+    assert.equal(
+      fs.existsSync(path.join(ROOT, "skills/plan-this/workflow-cli.mjs")),
+      true,
+      "the bundled validator command ships with the skill",
+    );
+    const metadata = JSON.parse(
+      fs.readFileSync(path.join(ROOT, "skills/plan-this/package.json"), "utf8"),
+    ) as { type?: string; private?: boolean; engines?: { node?: string } };
+    assert.equal(metadata.type, "module");
+    assert.equal(metadata.private, true);
+    assert.equal(metadata.engines?.node, ">=24");
+    assert.deepEqual(Object.keys(metadata).sort(), ["engines", "private", "type"]);
   });
 });
 
@@ -299,10 +307,45 @@ describe("plan-this trust, approval, and publication (INV-8, INV-9)", () => {
   });
 });
 
+describe("plan-this canonical publication contract (INV-12, INV-13)", () => {
+  test("ships literal canonical parent and ticket bodies with one settlement home per role", () => {
+    const templates = read("skills/plan-this/reference/canonical-bodies.md");
+    const fenced = [...templates.matchAll(/```markdown\n([\s\S]*?)```/g)].map((m) => m[1]);
+    assert.equal(fenced.length, 2, "one fenced parent template and one fenced ticket template");
+    const [parent, ticket] = fenced;
+    assert.ok(parent.includes("## Solution"), "parent decisions live under ## Solution");
+    assert.equal(parent.includes("## Settled decisions"), false, "parents never publish a second settlement home");
+    assert.ok(ticket.includes("## Settled decisions"), "ticket decisions live under ## Settled decisions");
+    assert.equal(ticket.includes("## Solution"), false, "tickets never publish a second settlement home");
+    for (const section of [
+      "## Affected seams",
+      "## Acceptance criteria",
+      "## Structural constraints",
+      "## Blocked by",
+      "## Risk",
+    ]) {
+      assert.ok(parent.includes(section) && ticket.includes(section), `both templates carry ${section}`);
+    }
+    assert.equal((parent.match(/- \[ \] AC-1:/g) ?? []).length, 1, "one checkbox example per template");
+    assert.equal((ticket.match(/- \[ \] AC-1:/g) ?? []).length, 1);
+    assert.ok(parent.includes("## Smallest sufficient verification"));
+    assert.ok(ticket.includes("## Smallest sufficient verification"));
+    assert.ok(templates.includes("never both"));
+  });
+  test("the workflow skill routes publication through the templates and read-back checks", () => {
+    const content = body(read(SKILL));
+    assert.ok(content.includes("reference/canonical-bodies.md"));
+    assert.ok(content.includes("no claimable label"));
+    assert.ok(content.includes("read back the actual issue body"));
+    assert.ok(content.includes("blocker graph"));
+    assert.ok(content.includes("workflow-cli.mjs planning"));
+  });
+});
+
 describe("plan-this documentation contract", () => {
   test("leaf records every invariant and the structured-workflow decision", () => {
     const leaf = read(LEAF);
-    for (let i = 1; i <= 11; i++) {
+    for (let i = 1; i <= 13; i++) {
       assert.ok(leaf.includes(`INV-${i}`), `leaf must contain INV-${i}`);
     }
     assert.ok(leaf.includes("ADR-0020"));

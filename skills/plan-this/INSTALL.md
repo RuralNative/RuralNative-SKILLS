@@ -13,6 +13,7 @@ Before publication approval, planning resolves an orientation set for every prop
 ## Requirements
 
 - A codebase you want to plan work for.
+- Node 24 or newer: the bundled read-only validator `workflow-cli.mjs` (shipped in this package next to the shared `workflow-state.ts`) checks the canonical publication gate and requirements revision and fails closed on older runtimes.
 - Hard dependencies: `/grill-with-docs`, `/to-spec`, `/to-tickets`, and `/unslopify`. Install the skills that provide those commands before invoking this one. This wrapper does not reimplement them.
 - `/unslopify` is this repository's local prose-cleanup utility — install it before use; the workflow stops without it.
 

@@ -5,12 +5,15 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import path from "node:path";
+import { createHash } from "node:crypto";
 import {
   LABEL_READY_FOR_AGENT,
   LABEL_BLOCKED,
   LABEL_UNBLOCKED,
   LABEL_NEEDS_INFO,
   MAX_FIX_ROUNDS,
+  REQUIREMENTS_ADAPTED_VERSION,
+  RequirementsResolutionError,
   selectFrontier,
   labelTransitions,
   validateSingleTicket,
@@ -20,11 +23,22 @@ import {
   promotionAfterClosure,
   parentClosureReady,
   verdictReusable,
+  requirementsRevision,
+  requirementsRevisionValue,
+  resolveRequirementsBody,
+  classifyRequirementsPin,
+  decideRepairRevalidation,
   type TicketFact,
   type PullRequestFact,
   type ReviewFact,
 } from "../scripts/workflow-state.ts";
 import { driftedCopies } from "../scripts/generate-workflow-state.ts";
+import {
+  incidentParentBody,
+  incidentTicketBody,
+} from "./incident-fixtures.ts";
+
+const sha256 = (s: string): string => createHash("sha256").update(s, "utf8").digest("hex");
 
 const SPEC = 130;
 
@@ -232,6 +246,92 @@ describe("verdict reuse", () => {
     assert.equal(verdictReusable(key, { ...key, reviewPolicyRevision: "p2" }), false);
     assert.equal(verdictReusable({ ...key, baseSha: "" }, { ...key, baseSha: "" }), false);
     assert.equal(verdictReusable({ ...key, requirementsRevision: "" }, { ...key, requirementsRevision: "" }), false);
+  });
+});
+
+describe("requirements resolution failure stops pinning (ADR-0038)", () => {
+  test("unresolved ticket bodies throw a typed error naming the role", () => {
+    const broken = "## What to build\n\nShip everything without any criteria.\n";
+    assert.throws(
+      () => requirementsRevision(incidentParentBody(), broken, sha256),
+      (error: unknown) => {
+        assert.ok(error instanceof RequirementsResolutionError);
+        const diagnostics = (error as RequirementsResolutionError).diagnostics;
+        assert.ok(diagnostics.some((d) => d.role === "ticket"));
+        assert.ok(
+          diagnostics.some((d) =>
+            d.errors.some((e) => e.includes("acceptance criteria section")),
+          ),
+        );
+        return true;
+      },
+    );
+  });
+  test("unresolved parent bodies throw before any hash is produced", () => {
+    const brokenParent = [
+      "## Project-level acceptance criteria",
+      "- `AC-1`: First",
+      "- `AC-1`: duplicate id",
+      "",
+    ].join("\n");
+    let returned: unknown = "no value";
+    try {
+      returned = requirementsRevision(brokenParent, incidentTicketBody(), sha256);
+    } catch (error) {
+      assert.ok(error instanceof RequirementsResolutionError);
+      assert.ok(
+        (error as RequirementsResolutionError).diagnostics.some(
+          (d) => d.role === "parent" && d.errors.some((e) => e.includes("AC-1")),
+        ),
+      );
+    }
+    assert.equal(returned, "no value", "a failed resolution must never emit a pin");
+  });
+  test("the incident pair now resolves and pins adapted", () => {
+    const rev = requirementsRevision(incidentParentBody(), incidentTicketBody(), sha256);
+    assert.equal(rev.version, REQUIREMENTS_ADAPTED_VERSION);
+    assert.ok(requirementsRevisionValue(rev).startsWith("requirements-adapted-v1:"));
+    const parent = resolveRequirementsBody(incidentParentBody(), "parent");
+    const ticket = resolveRequirementsBody(incidentTicketBody(), "ticket");
+    assert.equal(parent.ok && ticket.ok, true);
+    assert.equal(parent.criteria.length, 12);
+    assert.equal(ticket.criteria.length, 9);
+  });
+});
+
+describe("pinned revision classification and repair revalidation (ADR-0038)", () => {
+  const V1_PIN = `requirements-v1:parent=${"a".repeat(64)};ticket=${"b".repeat(64)}`;
+  const ADAPTED_PIN = `requirements-adapted-v1:parent=${"c".repeat(64)};ticket=${"d".repeat(64)}`;
+  const V1_OTHER = `requirements-v1:parent=${"e".repeat(64)};ticket=${"b".repeat(64)}`;
+  test("equal pins classify equal; malformed pins are never provenance", () => {
+    assert.equal(classifyRequirementsPin(V1_PIN, V1_PIN).classification, "equal");
+    assert.equal(classifyRequirementsPin("", V1_PIN).classification, "missing-or-malformed");
+    assert.equal(classifyRequirementsPin("requirements-v9:parent=x", V1_PIN).classification, "missing-or-malformed");
+  });
+  test("a version difference is a legacy-contract mismatch, never a proven edit", () => {
+    const result = classifyRequirementsPin(V1_PIN, ADAPTED_PIN);
+    assert.equal(result.classification, "legacy-contract");
+    assert.ok(result.reason.includes("cause unproven"));
+  });
+  test("a same-version difference is a revision mismatch with unproven cause, never a proven edit", () => {
+    const result = classifyRequirementsPin(V1_PIN, V1_OTHER);
+    assert.equal(result.classification, "revision-mismatch");
+    assert.ok(result.reason.includes("never proves a body change"));
+    const proven = classifyRequirementsPin(V1_PIN, V1_OTHER, { provenBodyChange: true });
+    assert.equal(proven.classification, "body-change");
+    assert.ok(proven.reason.includes("separate evidence proves"));
+  });
+  test("only a legacy-contract mismatch with revalidated scope and proof may repin", () => {
+    const eligible = { classification: "legacy-contract" as const, currentScopeResolved: true, proofRevalidated: true };
+    assert.equal(decideRepairRevalidation(eligible).proceed, true);
+    assert.equal(decideRepairRevalidation({ ...eligible, currentScopeResolved: false }).proceed, false);
+    assert.equal(decideRepairRevalidation({ ...eligible, proofRevalidated: false }).proceed, false);
+    assert.equal(decideRepairRevalidation({ classification: "body-change" as const, currentScopeResolved: true, proofRevalidated: true }).proceed, false);
+    assert.equal(decideRepairRevalidation({ classification: "revision-mismatch" as const, currentScopeResolved: true, proofRevalidated: true }).proceed, false);
+    assert.equal(decideRepairRevalidation({ classification: "missing-or-malformed" as const, currentScopeResolved: true, proofRevalidated: true }).proceed, false);
+  });
+  test("an equal pin needs no repin", () => {
+    assert.equal(decideRepairRevalidation({ classification: "equal" as const, currentScopeResolved: true, proofRevalidated: true }).proceed, true);
   });
 });
 
