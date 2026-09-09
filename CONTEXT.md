@@ -157,7 +157,7 @@ The GitHub issue that records the agreed scope and groups every implementation t
 _Avoid_: Parent ticket, spec ticket
 
 **Acceptance criterion**:
-A requirement row in a published ticket that carries a local ID unique within its own issue, written `- \`AC-1\`: text`. The stable criterion key is the authority issue number plus the local ID, so two issues may both use `AC-1`. Clearer wording keeps the same ID; changed observable behavior gets a new ID and retires the old one, and retired IDs are never reused or accepted as active evidence. Workers cite and prove criteria by ID, never by full sentence text.
+A requirement row in a published parent specification or ticket that carries a local ID unique within its own issue, written `- [ ] AC-1: text` (standardized checkbox; legacy `- \`AC-1\`: text` and bare `AC-1: text` fingerprint identically). The stable criterion key is the authority issue number plus the local ID, so two issues may both use `AC-1`. Clearer wording keeps the same ID; changed observable behavior gets a new ID and retires the old one with an explicit `(retired)` marker, and retired IDs are never reused or accepted as active evidence. A checked box is never completion evidence and never retires a criterion. Workers cite and prove criteria by ID, never by full sentence text.
 _Avoid_: acceptance requirement (when the stable ID is meant)
 
 **Ticket frontier**:
@@ -237,7 +237,7 @@ A decision, policy, or glossary entry a leaf marks as loading the agent must rea
 _Avoid_: linked decision, must-read (when the resolved contract is meant)
 
 **Requirements revision**:
-The versioned fingerprint of the authoritative sections of a parent specification and ticket body — affected seams, criterion IDs/text/status, structural constraints, blockers, settled decisions, risk, and verification intent. It carries a contract version plus separate parent and ticket SHA-256 digests, normalizes line endings and insignificant trailing whitespace, and excludes comments, acceptance evidence, timing summaries, paths, branches, commit SHAs, and runtime output. Dispatch and review packets carry the same value; a body change stops delivery and review with `needs-info` until the body is reconciled and the user resumes, with no waiver (ticket #190).
+The versioned fingerprint of parent and ticket requirements. Canonical pairs carry `requirements-v1` over the authoritative sections — affected seams, criterion IDs/text/status, structural constraints, blockers, settled decisions, risk, and verification intent. Alternate-template pairs carry `requirements-adapted-v1` over the complete normalized bodies, preserving blank-line structure and excluding only structurally validated workflow evidence blocks outside fences. Both versions normalize line endings and trailing horizontal whitespace only, exclude comments, and reject unknown versions; a missing or malformed pin never counts as current. Dispatch and review packets carry the same value; a body change stops delivery and review with `needs-info` until the body is reconciled and the user resumes, with no waiver (ticket #190, ADR-0037).
 _Avoid_: requirement hash (when the versioned object is meant), body checksum
 
 **Task band**:

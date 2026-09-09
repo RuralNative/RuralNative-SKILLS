@@ -96,15 +96,26 @@ describe("canonical planning output survives parsing", () => {
     const rev = requirementsRevision(parentBody(), ticketBody(), sha256);
     assert.ok(requirementsPinWellFormed(requirementsRevisionValue(rev)));
   });
-  test("missing sections, duplicates, and checkbox criteria stop before pinning", () => {
+  test("missing sections, duplicates, and ambiguity stop before pinning", () => {
     assert.ok(validateAuthoritativeBody("no sections", "ticket").some((e) => e.includes("missing required section")));
     const dup = `${ticketBody()}\n## Risk\n- again\n`;
     assert.ok(validateAuthoritativeBody(dup, "ticket").some((e) => e.includes("duplicate section")));
-    const checkbox = ticketBody().replace("- `AC-1`: Ship one behavior", "- [ ] AC-1: Ship one behavior");
-    assert.ok(validateAuthoritativeBody(checkbox, "ticket").some((e) => e.includes("unsupported criterion line")));
+    const numbered = ticketBody().replace("- `AC-1`: Ship one behavior", "1. AC-1: Ship one behavior");
+    assert.ok(validateAuthoritativeBody(numbered, "ticket").some((e) => e.includes("unsupported criterion line")));
     const bothHomes = ticketBody().replace("## Settled decisions", "## Solution");
     const both = `${bothHomes}\n## Settled decisions\n- extra\n`;
     assert.ok(validateAuthoritativeBody(both, "ticket").some((e) => e.includes("ambiguous sections")));
+  });
+  test("standardized checkbox criteria pass canonical publication", () => {
+    const checkbox = ticketBody()
+      .replace("- `AC-1`: Ship one behavior", "- [ ] AC-1: Ship one behavior")
+      .replace("- `AC-2`: Docs note", "- [ ] AC-2: Docs note");
+    assert.deepEqual(validateAuthoritativeBody(checkbox, "ticket"), []);
+    assert.deepEqual(validateAuthoritativeBody(parentBody(), "parent"), []);
+    const legacy = requirementsRevision(parentBody(), ticketBody(), sha256);
+    const published = requirementsRevision(parentBody(), checkbox, sha256);
+    assert.equal(legacy.version, "requirements-v1");
+    assert.equal(requirementsRevisionValue(published), requirementsRevisionValue(legacy));
   });
   test("a missing pin never matches, even against itself", () => {
     assert.equal(requirementsMatch("", ""), false);

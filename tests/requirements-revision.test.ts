@@ -28,6 +28,8 @@ import {
 const sha256 = (text: string): string =>
   createHash("sha256").update(text).digest("hex");
 
+// Full canonical fixtures: parent holds every required parent section, the
+// ticket holds every required ticket section plus one verification intent.
 const PARENT_BODY = [
   "## Affected seams",
   "",
@@ -41,9 +43,21 @@ const PARENT_BODY = [
   "",
   "- Keep the current checkout.",
   "",
-  "## Settled decisions",
+  "## Blocked by",
+  "",
+  "- None",
+  "",
+  "## Solution",
   "",
   "- No workers.",
+  "",
+  "## Risk",
+  "",
+  "- ordinary",
+  "",
+  "## Smallest test-first verification",
+  "",
+  "- `node --test skills/implement-this/tests/acceptance-evidence.test.ts`",
 ].join("\n");
 
 const TICKET_BODY = [
@@ -55,9 +69,25 @@ const TICKET_BODY = [
   "",
   "- `AC-1`: Focused proof passes.",
   "",
+  "## Structural constraints",
+  "",
+  "- Keep the current checkout.",
+  "",
+  "## Blocked by",
+  "",
+  "- None",
+  "",
+  "## Settled decisions",
+  "",
+  "- Focused proof only.",
+  "",
+  "## Risk",
+  "",
+  "- ordinary",
+  "",
   "## Smallest sufficient verification",
   "",
-  "- `node --test skills/implement-this/tests/verification.test.ts`",
+  "- `node --test skills/implement-this/tests/acceptance-evidence.test.ts`",
 ].join("\n");
 
 function revision(): string {

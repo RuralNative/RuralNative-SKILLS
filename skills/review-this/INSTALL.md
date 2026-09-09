@@ -47,7 +47,7 @@ From any clean checkout of the repository, after implementation has delivered:
 /review-this #100
 ```
 
-The skill resolves the single target, validates evidence and requirements revision, aligns a clean checkout to the pinned head commit when needed, then validates the strict checkout match, decides the review-policy path, runs one frontier Standards-plus-Spec pass, reads required checks once, publishes the pinned review and verified inline findings, and stops. A missing policy continues under skill-owned defaults; pending CI publishes the pinned review and stops; a later invocation reuses it when head, base, requirements revision, and review-policy revision are unchanged.
+The skill resolves the single target, validates evidence and the current requirements revision (canonical `requirements-v1` and adapted `requirements-adapted-v1` alike), aligns a clean checkout to the pinned head commit when needed, then validates the strict checkout match, decides the review-policy path, runs one frontier Standards-plus-Spec pass, reads required checks once, publishes the pinned review and verified inline findings, and stops. A missing policy continues under skill-owned defaults; pending CI publishes the pinned review and stops; a later invocation reuses it when head, base, requirements revision, and review-policy revision are unchanged.
 
 Repository checks run via:
 

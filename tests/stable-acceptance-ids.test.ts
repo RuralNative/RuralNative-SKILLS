@@ -38,6 +38,22 @@ describe("stable criterion identity", () => {
     assert.equal(criterionKey(10, "AC-1"), "#10:AC-1");
     assert.equal(criterionReference(10, "AC-1"), "#10:AC-1");
   });
+  test("standardized checkbox, legacy bullet, and bare-ID records agree", () => {
+    const checkbox = parseAcceptanceCriteria("- [ ] AC-1: Focused proof passes.");
+    const bullet = parseAcceptanceCriteria("- `AC-1`: Focused proof passes.");
+    const bare = parseAcceptanceCriteria("AC-1: Focused proof passes.");
+    assert.deepEqual(checkbox, bullet);
+    assert.deepEqual(bare, bullet);
+    assert.deepEqual(activeCriteria(checkbox).map((c) => c.id), ["AC-1"]);
+    assert.equal(criteriaRevision(checkbox), criteriaRevision(bullet));
+  });
+  test("a checked box is active, never retired and never evidence", () => {
+    const checked = parseAcceptanceCriteria("- [x] AC-1: Focused proof passes.");
+    assert.deepEqual(activeCriteria(checked).map((c) => c.id), ["AC-1"]);
+    assert.deepEqual(checked.map((c) => c.status), ["active"]);
+    const checkboxRetired = parseAcceptanceCriteria("- [ ] AC-2 (retired): Old behavior.");
+    assert.deepEqual(checkboxRetired.map((c) => c.status), ["retired"]);
+  });
   test("wording clarification keeps the ID but changes the revision", () => {
     const a = parseAcceptanceCriteria("- `AC-1`: First wording.");
     const b = parseAcceptanceCriteria("- `AC-1`: Clearer wording.");

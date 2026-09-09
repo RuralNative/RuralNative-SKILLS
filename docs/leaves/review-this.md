@@ -20,10 +20,10 @@ Owns one pull-request review in the current checkout: resolve the target, align 
 13. **INV-13** — Retired by ADR-0031: one persistent PR worktree/worker with full-then-delta review. Current: one frontier pass in-session with delta review for later revisions; no worktree, worker, wave, or fix round.
 14. **INV-14** — Retired by ADR-0033: frontier owns verdict, commit, push, merge, and bookkeeping with an optional `review-fixer`. Narrowed by ADR-0035: the frontier reviewer publishes readable findings plus one validated `review-handoff-v1` block and stops; no fix subagent runs and no source edit, commit, push, merge, label, promotion, or closure occurs here. Finalization belongs to `fix-this`. ADR-0036: clean-checkout alignment is preparation, not a source edit, and the single permitted working-tree effect.
 15. **INV-15** — Review orientation resolution (ADR-0024, ADR-0032): one resolution for the pinned head/base pair; length alone never stops the run.
-16. **INV-16** — Requirements revision plus effective-policy revision: the published review pins head, base, requirements, and the resolved governing sources; reuse only when every key is unchanged; mismatch stops with `needs-info`; no waiver.
+16. **INV-16** — Requirements revision plus effective-policy revision (ADR-0037): the published review pins head, base, requirements (`requirements-v1` or `requirements-adapted-v1` via `resolveRequirementsBody`), and the resolved governing sources; reuse only when every key is unchanged; mismatch stops with `needs-info`; no waiver.
 17. **INV-17** — CI publication: local review starts without waiting for CI; the publication gate reads required checks once and never polls; pending CI publishes the review and stops; an established verification command runs once as fallback, and no established command stops with a verification-capability diagnostic instead of an invented one.
 18. **INV-18** — Narrowed by ADR-0034: `REVIEW.md` is optional project guidance. Absence never blocks review and nothing is created; an existing policy supplies project rules without relaxing skill boundaries; policy authority resolves from the pinned base, never a head-only relaxation; unreadable files, symlinks, and conflicting sources stop with a diagnostic and create nothing.
-19. **INV-19** — Evidence consumption: readiness requires the shared handoff validator over the actual PR body. A missing pin is never provenance; pinned evidence without validation is not ready; unpinned new evidence stops with a compatibility diagnostic, and review never fabricates a pin or patches the PR.
+19. **INV-19** — Evidence consumption: readiness requires the shared handoff validator over the actual PR body against the recomputed current requirements revision (canonical and adapted alike). A missing pin is never provenance; pinned evidence without validation is not ready; unpinned new evidence stops with a compatibility diagnostic, and review never fabricates a pin or patches the PR.
 
 ## Verification
 
@@ -31,4 +31,4 @@ Equivalent required CI on the reviewed head/base, or the established local comma
 
 ## Links
 
-Glossary: `CONTEXT.md`. Decisions: ADR-0006, ADR-0014, ADR-0015, ADR-0019, ADR-0022, ADR-0023, ADR-0024, ADR-0031, ADR-0032, ADR-0033, ADR-0034, ADR-0035, ADR-0036. Review policy: `REVIEW.md` (optional). Redirect: `docs/leaves/ext/review-this.md`.
+Glossary: `CONTEXT.md`. Decisions: ADR-0006, ADR-0014, ADR-0015, ADR-0019, ADR-0022, ADR-0023, ADR-0024, ADR-0031, ADR-0032, ADR-0033, ADR-0034, ADR-0035, ADR-0036, ADR-0037. Review policy: `REVIEW.md` (optional). Redirect: `docs/leaves/ext/review-this.md`.

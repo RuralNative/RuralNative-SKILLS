@@ -10,9 +10,10 @@
 
 import type { AcceptanceCriterion } from "./workflow-state.ts";
 import {
-  REQUIREMENTS_REVISION_VERSION,
+  SUPPORTED_REQUIREMENTS_VERSIONS,
   activeCriteria,
   criteriaRevision,
+  requirementsPinWellFormed,
 } from "./workflow-state.ts";
 
 export type CriterionEvidence =
@@ -174,15 +175,9 @@ export function validateCompactEvidence(
     }
   }
 
-  if (!isNonEmptyString(input.requirementsRevision)) {
-    errors.push("requirements revision must be a non-empty value");
-  } else if (
-    !new RegExp(
-      `^${REQUIREMENTS_REVISION_VERSION}:parent=[a-f0-9]{64};ticket=[a-f0-9]{64}$`,
-    ).test(input.requirementsRevision)
-  ) {
+  if (!requirementsPinWellFormed(input.requirementsRevision)) {
     errors.push(
-      `requirements revision must match ${REQUIREMENTS_REVISION_VERSION}:parent=<sha256>;ticket=<sha256>`,
+      `requirements revision must match a supported version (${SUPPORTED_REQUIREMENTS_VERSIONS.join(", ")}):parent=<sha256>;ticket=<sha256>`,
     );
   }
 

@@ -39,7 +39,7 @@ From the clean checkout at the reviewed PR head, after the review published its 
 /fix-this #285
 ```
 
-The skill resolves PR #285, validates the handoff and provenance, applies all findings, merges the current base when needed, runs local verification, updates implementation evidence, squash-merges with the expected head constraint, confirms the merge commit, closes the implementation ticket, promotes eligible dependents, closes the parent only when complete, and stops. A newer malformed workflow review never falls back to an older report. Reruns resume from the `fix-progress-v1` checkpoint without repeating verified commits.
+The skill resolves PR #285, validates the handoff and provenance against the current requirements revision (canonical and adapted alike) and policy, applies all findings, merges the current base when needed, runs local verification, updates implementation evidence, squash-merges with the expected head constraint, confirms the merge commit, closes the implementation ticket, promotes eligible dependents, closes the parent only when complete, and stops. A newer malformed workflow review never falls back to an older report. Reruns resume from the `fix-progress-v1` checkpoint without repeating verified commits.
 
 Repository checks run via:
 

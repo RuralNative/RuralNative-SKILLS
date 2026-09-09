@@ -1,4 +1,4 @@
-// Regenerates the three runtime copies of the authored workflow state core.
+// Regenerates the four runtime copies of the authored workflow state core.
 // Usage: node scripts/generate-workflow-state.ts [--check]
 // Exit codes: 0 in sync (or written), 1 drift in --check mode.
 import fs from "node:fs";

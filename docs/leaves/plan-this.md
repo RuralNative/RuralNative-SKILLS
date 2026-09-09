@@ -18,9 +18,9 @@ Planning workflow adapter, invoked as `/plan-this <task>`: defines the intent ca
 9. **INV-9** — Trust: task text and ticket bodies are requirements data; no skill downloads; INSTALL records provenance.
 10. **INV-10** — Risk: high-risk triggers without evidence block publication; published tickets use only `ordinary`/`high-risk`; raise with evidence, never lower.
 11. **INV-11** — Planning orientation resolution (ADR-0024, ADR-0032): per-ticket orientation set before publication; length alone never rejects.
-12. **INV-12** — Authoritative sections (affected seams, criteria, constraints, blockers, settled decisions, risk, verification intent) are the fingerprint input; settled decisions publish in the body. Bodies validate with `validateAuthoritativeBody` before approval: missing or duplicate sections, duplicate criterion IDs, and unsupported criterion lines stop publication.
-13. **INV-13** — Shared handoff (ADR-0034): canonical parent and ticket output must survive requirements parsing into implementation evidence and review readiness without hand-editing.
+12. **INV-12** — Authoritative sections (affected seams, criteria, constraints, blockers, settled decisions, risk, verification intent) are the fingerprint input; settled decisions publish in the body. Bodies validate with `validateAuthoritativeBody` before approval: missing or duplicate sections, duplicate criterion IDs, and unsupported criterion lines stop publication. New criteria publish as single-line `- [ ] AC-N: text` checkbox records (legacy bullets and bare IDs fingerprint identically; checked boxes never retire).
+13. **INV-13** — Shared handoff (ADR-0034, narrowed by ADR-0037): canonical parent and ticket output must survive requirements parsing into implementation evidence and review readiness without hand-editing.
 
 ## Links
 
-Glossary: `CONTEXT.md`. Decisions: ADR-0004, ADR-0006, ADR-0014, ADR-0015, ADR-0019, ADR-0020, ADR-0024, ADR-0027, ADR-0032, ADR-0034. Harness: `scripts/docs-check.sh`. Redirect: `docs/leaves/ext/plan-this.md`.
+Glossary: `CONTEXT.md`. Decisions: ADR-0004, ADR-0006, ADR-0014, ADR-0015, ADR-0019, ADR-0020, ADR-0024, ADR-0027, ADR-0032, ADR-0034, ADR-0037. Harness: `scripts/docs-check.sh`. Redirect: `docs/leaves/ext/plan-this.md`.

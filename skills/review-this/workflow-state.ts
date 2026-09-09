@@ -48,14 +48,25 @@ export function criterionKey(issue: number, id: string): string {
   return `#${issue}:${id}`;
 }
 
+// Criterion records (ADR-0037): one shared syntax covers the standardized
+// GitHub checkbox form `- [ ] AC-1: text` (plan-this output, `[x]` allowed),
+// the legacy bullet form `- \`AC-1\`: text`, and the bare-ID form
+// `AC-1: text`. Backticks around the ID are optional and a `*` bullet is
+// accepted. Checkbox state is never criterion status and never reaches the
+// canonical serialization; a checked box is not completion evidence.
 const CRITERION_LINE =
-  /^\s*-\s*(?:~~)?`?([A-Za-z]{2,3}-\d+)`?(?:~~)?\s*(?:\(retired\))\s*:\s*(.+)$/;
-const ACTIVE_CRITERION_LINE = /^\s*-\s*`?([A-Za-z]{2,3}-\d+)`?\s*:\s*(.+)$/;
+  /^\s*(?:[-*]\s*)?(?:\[[ xX]\]\s*)?(?:~~)?`?([A-Za-z]{2,3}-\d+)`?(?:~~)?\s*\(retired\)\s*:\s*(.+)$/;
+const ACTIVE_CRITERION_LINE =
+  /^\s*(?:[-*]\s*)?(?:\[[ xX]\]\s*)?(?:~~)?`?([A-Za-z]{2,3}-\d+)`?(?:~~)?\s*:\s*(.+)$/;
+const CHECKED_CRITERION_LINE =
+  /^\s*(?:[-*]\s*)?\[[xX]\]\s*(?:~~)?`?[A-Za-z]{2,3}-\d+`?(?:~~)?\s*(?:\(retired\))?\s*:/;
 
 /**
  * Parse the published acceptance-criteria bullets of one issue body.
- * An active bullet is `- \`AC-1\`: text`; a retired bullet carries a
- * `(retired)` marker, e.g. `- \`AC-2\` (retired): old text`.
+ * An active record is `- [ ] AC-1: text` (standardized), `- \`AC-1\`: text`
+ * (legacy bullet), or `AC-1: text` (bare ID); a retired record carries a
+ * `(retired)` marker, e.g. `- \`AC-2\` (retired): old text`. A checked
+ * checkbox is normalized to an active record; it never means done.
  */
 export function parseAcceptanceCriteria(body: string): AcceptanceCriterion[] {
   const criteria: AcceptanceCriterion[] = [];
@@ -266,21 +277,387 @@ export function canonicalRequirementsText(sections: AuthoritativeSections): stri
   return `${REQUIREMENTS_REVISION_VERSION}\n${JSON.stringify(canonical)}`;
 }
 
+// --- Adapted intake (ADR-0037) -------------------------------------------------
+//
+// Bodies published outside the plan-this template resolve through one shared
+// consumption resolver instead of stopping on format. Canonical bodies keep
+// the existing versioned fingerprint; adapted bodies carry a second explicit
+// version over the complete normalized bodies, so no requirement-bearing
+// text can hide from freshness. Adaptation is read-only: it never rewrites
+// issue bodies, never invents criterion IDs, and never repins old evidence.
+export const REQUIREMENTS_ADAPTED_VERSION = "requirements-adapted-v1";
+
+/** Requirements-revision versions understood by every consuming stage. */
+export const SUPPORTED_REQUIREMENTS_VERSIONS: readonly string[] = [
+  REQUIREMENTS_REVISION_VERSION,
+  REQUIREMENTS_ADAPTED_VERSION,
+];
+
+/** True when the value names a supported requirements-revision version. */
+export function isSupportedRequirementsVersion(version: string): boolean {
+  return SUPPORTED_REQUIREMENTS_VERSIONS.includes(version);
+}
+
+/** Labels that end an acceptance-criteria section in an adapted body. */
+const ADAPTED_SECTION_BOUNDARIES = new Set([
+  "affected seams",
+  "acceptance criteria",
+  "structural constraints",
+  "blocked by",
+  "settled decisions",
+  "solution",
+  "risk",
+  "smallest sufficient verification",
+  "smallest test-first verification",
+  "smallest verification",
+  "verification",
+  "parent",
+  "prerequisites",
+  "overlap",
+  "orientation evidence",
+  "completion record",
+  "what to build",
+  "scope",
+  "non-goals",
+  "out of scope",
+  "notes",
+]);
+
+function stripAdaptedLabelMarkup(line: string): string {
+  let text = line.trim().replace(/^#{1,6}\s+/, "").trim();
+  text = text.replace(/^\*\*(.+)\*\*:?\s*$/, "$1").replace(/^\*(.+)\*:?\s*$/, "$1").trim();
+  return text;
+}
+
+function adaptedLabel(line: string): string | null {
+  const text = stripAdaptedLabelMarkup(line);
+  if (text === "") return null;
+  // A label stays a section boundary only when no other text precedes it on
+  // the line: criterion paragraphs absorb their own colons (`AC-1: text`),
+  // and a section ends at `Label`, `Label:`, or `Label: content` lines.
+  const labelMatch = text.match(/^([A-Za-z][A-Za-z0-9 /_-]{1,60}?)\s*(?::\s*.*)?$/);
+  if (!labelMatch) return null;
+  const label = labelMatch[1].trim().toLowerCase();
+  if (ADAPTED_SECTION_BOUNDARIES.has(label)) return label;
+  return null;
+}
+
+/**
+ * Split a body into fenced and prose segments. A fence run opens on a line
+ * whose first non-whitespace characters are at least three backticks and
+ * closes on the next such line; a lone opening fence runs to the body end.
+ */
+function fenceSegments(body: string): { text: string; fenced: boolean }[] {
+  const segments: { text: string; fenced: boolean }[] = [];
+  const lines = body.split("\n");
+  let prose: string[] = [];
+  let fence: string[] | null = null;
+  const flush = (): void => {
+    if (prose.length > 0) {
+      segments.push({ text: `${prose.join("\n")}\n`, fenced: false });
+      prose = [];
+    }
+  };
+  for (const line of lines) {
+    if (/^\s*```/.test(line)) {
+      if (fence === null) {
+        flush();
+        fence = [line];
+      } else {
+        fence.push(line);
+        segments.push({ text: `${fence.join("\n")}\n`, fenced: true });
+        fence = null;
+      }
+      continue;
+    }
+    if (fence === null) prose.push(line);
+    else fence.push(line);
+  }
+  if (fence !== null) segments.push({ text: `${fence.join("\n")}\n`, fenced: true });
+  else if (prose.length > 0) segments.push({ text: `${prose.join("\n")}\n`, fenced: false });
+  if (segments.length === 0) segments.push({ text: body, fenced: false });
+  return segments;
+}
+
+const ACCEPTANCE_LABEL = "acceptance criteria";
+
+function isAcceptanceStart(line: string): boolean {
+  const text = stripAdaptedLabelMarkup(line).replace(/:\s*$/, "").trim().toLowerCase();
+  return text === ACCEPTANCE_LABEL;
+}
+
+function criterionFromRecord(line: string): AcceptanceCriterion | null {
+  const retired = line.match(CRITERION_LINE);
+  if (retired) return { id: retired[1], text: retired[2].trim(), status: "retired" };
+  const active = line.match(ACTIVE_CRITERION_LINE);
+  if (active) return { id: active[1], text: active[2].trim(), status: "active" };
+  return null;
+}
+
+/** A label-shaped line that is not a criterion and not a known boundary. */
+function looksLikeLabel(line: string): boolean {
+  const text = line.trim();
+  return /^[A-Z][A-Za-z0-9 /_-]{2,60}:\s*\S/.test(text) && criterionFromRecord(line) === null;
+}
+
+export type RequirementsBodyFormat = "canonical" | "adapted";
+
+export interface RequirementsBodyResolution {
+  /** True when the body resolved to usable criteria. */
+  ok: boolean;
+  format: RequirementsBodyFormat;
+  role: PlanningRole;
+  /** Criteria records for evidence matching (possibly empty for a parent). */
+  criteria: AcceptanceCriterion[];
+  /** Errors stop the run; adaptation never downgrades them. */
+  errors: string[];
+  /** Informational notes for the run log, e.g. checkbox normalization. */
+  notes: string[];
+}
+
+/**
+ * Adapted acceptance-criteria extraction. Fenced examples, quoted examples,
+ * and validated-content exclusions never create criteria. Continuation lines
+ * fold into the previous criterion only when they cannot be a new record, a
+ * known section boundary, or a label-shaped line; anything else stops with
+ * a line-specific diagnostic instead of being silently dropped or merged.
+ */
+function extractAdaptedCriteria(
+  lines: readonly string[],
+  role: PlanningRole,
+): { criteria: AcceptanceCriterion[]; errors: string[]; notes: string[] } {
+  const errors: string[] = [];
+  const notes: string[] = [];
+  const start = lines.findIndex(isAcceptanceStart);
+  if (start < 0) {
+    if (role === "ticket") {
+      errors.push(
+        "no acceptance criteria section found; publish explicit `AC-N:` records under an Acceptance criteria section",
+      );
+    } else {
+      notes.push("parent supplies shared contracts without an acceptance criteria section");
+    }
+    return { criteria: [], errors, notes };
+  }
+  const duplicates = lines.filter(isAcceptanceStart);
+  if (duplicates.length > 1) {
+    errors.push("duplicate section: Acceptance criteria");
+    return { criteria: [], errors, notes };
+  }
+  const criteria: AcceptanceCriterion[] = [];
+  let lastRecord = -1;
+  for (let i = start + 1; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+    if (trimmed === "") continue;
+    if (/^#{1,6}\s/.test(trimmed) || /^```/.test(trimmed)) break;
+    if (isAcceptanceStart(line)) {
+      errors.push("duplicate section: Acceptance criteria");
+      return { criteria: [], errors, notes };
+    }
+    const boundary = adaptedLabel(line);
+    if (boundary !== null) break;
+    const record = criterionFromRecord(line);
+    if (record) {
+      criteria.push(record);
+      lastRecord = criteria.length - 1;
+      if (CHECKED_CRITERION_LINE.test(line)) {
+        notes.push(
+          `checked checkbox normalized to an active criterion, never completion evidence: ${record.id}`,
+        );
+      }
+      continue;
+    }
+    if (/^>\s?/.test(trimmed)) {
+      errors.push(`unsupported criterion line (use "- [ ] AC-N: text"): ${trimmed.slice(0, 80)}`);
+      return { criteria: [], errors, notes };
+    }
+    if (lastRecord >= 0 && !looksLikeLabel(line)) {
+      criteria[lastRecord] = {
+        ...criteria[lastRecord],
+        text: `${criteria[lastRecord].text} ${trimmed}`,
+      };
+      continue;
+    }
+    errors.push(`unsupported criterion line (use "- [ ] AC-N: text"): ${trimmed.slice(0, 80)}`);
+    return { criteria: [], errors, notes };
+  }
+  const recordErrors = validateCriterionRecords(criteria);
+  for (const error of recordErrors) errors.push(error);
+  if (errors.length > 0) return { criteria: [], errors, notes };
+  const active = criteria.filter((c) => c.status === "active");
+  if (role === "ticket" && active.length === 0) {
+    errors.push(
+      "missing required content: Acceptance criteria has no active criterion records",
+    );
+  }
+  return { criteria, errors, notes };
+}
+
+/**
+ * Resolve one planning body for consumption. Canonical bodies pass straight
+ * through. Bodies that fail canonical formatting adapt when their
+ * requirements are unambiguous; structural ambiguity (conflicting settlement
+ * homes, unbalanced workflow-evidence markers, duplicate or unparsable
+ * criterion records) still stops. Comments never enter criteria.
+ */
+export function resolveRequirementsBody(
+  body: string,
+  role: PlanningRole,
+): RequirementsBodyResolution {
+  const canonical = validateAuthoritativeBody(body, role);
+  if (canonical.length === 0) {
+    return {
+      ok: true,
+      format: "canonical",
+      role,
+      criteria: parseAuthoritativeSections(body).criteria,
+      errors: [],
+      notes: [],
+    };
+  }
+  const lines = proseLines(body);
+  const structural: string[] = [];
+  const hasSolution = lines.some((line) => line.trim() === "## Solution");
+  const hasSettled = lines.some((line) => line.trim() === "## Settled decisions");
+  if (hasSolution && hasSettled) {
+    structural.push("ambiguous sections: ## Solution and ## Settled decisions must not both carry requirements");
+  }
+  for (const segment of fenceSegments(body)) {
+    if (segment.fenced) continue;
+    for (const [start, end] of workflowEvidenceMarkerPairs()) {
+      const starts = segment.text.split(start).length - 1;
+      const ends = segment.text.split(end).length - 1;
+      if (starts !== ends) {
+        structural.push("unbalanced workflow evidence markers in the issue body; reconcile them before pinning");
+        break;
+      }
+    }
+    if (structural.length > 0) break;
+  }
+  if (structural.length > 0) {
+    return { ok: false, format: "adapted", role, criteria: [], errors: structural, notes: [] };
+  }
+  const adapted = extractAdaptedCriteria(proseLines(body), role);
+  if (adapted.errors.length > 0) {
+    return { ok: false, format: "adapted", role, criteria: [], errors: adapted.errors, notes: adapted.notes };
+  }
+  return {
+    ok: true,
+    format: "adapted",
+    role,
+    criteria: adapted.criteria,
+    errors: [],
+    notes: [
+      "adapted intake: the body uses a non-canonical template; criteria and requirements resolved by explicit IDs and section labels",
+      ...adapted.notes,
+    ],
+  };
+}
+
+/**
+ * Prose lines of a body for structural and criterion extraction: fenced
+ * content never carries requirements, so extraction reads only prose.
+ */
+function proseLines(body: string): string[] {
+  const normalized = fenceSegments(normalizeNewlines(body))
+    .filter((segment) => !segment.fenced)
+    .map((segment) => segment.text)
+    .join("");
+  const lines = normalized.endsWith("\n") ? normalized.slice(0, -1).split("\n") : normalized.split("\n");
+  return lines.map((line) => line.replace(/[ \t]+$/g, ""));
+}
+
+/** Workflow-generated evidence blocks excluded from adapted fingerprints. */
+function workflowEvidenceMarkerPairs(): [string, string][] {
+  return [
+    [COMPACT_START, COMPACT_END],
+    [LEGACY_START, LEGACY_END],
+    [REVIEW_HANDOFF_START, REVIEW_HANDOFF_END],
+    [FIX_PROGRESS_START, FIX_PROGRESS_END],
+  ];
+}
+
+/**
+ * Normalized whole-body text for the adapted fingerprint. Normalizes line
+ * endings and trailing horizontal whitespace only; prose and Markdown
+ * structure (including blank lines) stay intact. Structurally valid workflow
+ * evidence blocks outside fences are excluded. Malformed or fenced markers
+ * are retained, never removed, because their presence is a
+ * requirement-state fact.
+ */
+function normalizedFullBody(body: string): string {
+  const normalized = normalizeNewlines(body)
+    .split("\n")
+    .map((line) => line.replace(/[ \t]+$/g, ""))
+    .join("\n");
+  // Strip complete block runs: from a start marker line through its matching
+  // end marker line, or a complete block on one line. The exclusion requires
+  // the full marker range on marker-bearing lines, so partial or prose-bound
+  // markers are retained.
+  const pairs = workflowEvidenceMarkerPairs();
+  const opensMarker = (line: string): boolean =>
+    pairs.some(([start]) => line.includes(start));
+  const closesMarker = (line: string): boolean =>
+    pairs.some(([, end]) => line.includes(end));
+  const stripped = fenceSegments(normalized)
+    .map((segment) => {
+      if (segment.fenced) return segment.text;
+      for (const [start, end] of pairs) {
+        const starts = segment.text.split(start).length - 1;
+        const ends = segment.text.split(end).length - 1;
+        if (starts === 0 && ends === 0) continue;
+        if (starts !== ends) return segment.text;
+      }
+      const out: string[] = [];
+      let depth = 0;
+      for (const line of segment.text.split("\n")) {
+        const opens = opensMarker(line);
+        const closes = closesMarker(line);
+        if (depth === 0 && !opens) {
+          out.push(line);
+          continue;
+        }
+        if (depth === 0 && opens && closes) continue;
+        depth += (opens ? 1 : 0) - (closes ? 1 : 0);
+        if (depth < 0) depth = 0;
+      }
+      return out.join("\n");
+    })
+    .join("");
+  return stripped;
+}
+
 export function requirementsRevision(
   parentBody: string,
   ticketBody: string,
   hash: RevisionHasher,
 ): RequirementsRevision {
+  const parentLines = normalizeNewlines(parentBody).split("\n").map((line) =>
+    line.replace(/[ \t]+$/g, "")
+  );
+  const ticketLines = normalizeNewlines(ticketBody).split("\n").map((line) =>
+    line.replace(/[ \t]+$/g, "")
+  );
+  const parent = resolveRequirementsBody(parentLines.join("\n"), "parent");
+  const ticket = resolveRequirementsBody(ticketLines.join("\n"), "ticket");
+  if (parent.format === "canonical" && ticket.format === "canonical") {
+    return {
+      version: REQUIREMENTS_REVISION_VERSION,
+      parent: hash(canonicalRequirementsText(parseAuthoritativeSections(parentBody))),
+      ticket: hash(canonicalRequirementsText(parseAuthoritativeSections(ticketBody))),
+    };
+  }
   return {
-    version: REQUIREMENTS_REVISION_VERSION,
-    parent: hash(canonicalRequirementsText(parseAuthoritativeSections(parentBody))),
-    ticket: hash(canonicalRequirementsText(parseAuthoritativeSections(ticketBody))),
+    version: REQUIREMENTS_ADAPTED_VERSION,
+    parent: hash(normalizedFullBody(parentBody)),
+    ticket: hash(normalizedFullBody(ticketBody)),
   };
 }
 
 /** One stable carrier string so dispatch and review packets compare the same value. */
 export function requirementsRevisionValue(rev: RequirementsRevision): string {
-  return `${REQUIREMENTS_REVISION_VERSION}:parent=${rev.parent};ticket=${rev.ticket}`;
+  return `${rev.version}:parent=${rev.parent};ticket=${rev.ticket}`;
 }
 
 /**
@@ -292,13 +669,12 @@ export function requirementsMatch(dispatched: string, current: string): boolean 
   return dispatched === current;
 }
 
-/** True when a requirements carrier is present and well formed. */
+/** True when a requirements carrier is present, supported, and well formed. */
 export function requirementsPinWellFormed(value: unknown): boolean {
   if (typeof value !== "string") return false;
   if (value.trim() === "") return false;
-  return new RegExp(
-    `^${REQUIREMENTS_REVISION_VERSION}:parent=[a-f0-9]{64};ticket=[a-f0-9]{64}$`,
-  ).test(value);
+  const versions = SUPPORTED_REQUIREMENTS_VERSIONS.map(escapeHandoffRegExp).join("|");
+  return new RegExp(`^(?:${versions}):parent=[a-f0-9]{64};ticket=[a-f0-9]{64}$`).test(value);
 }
 
 export interface RequirementsGateDecision {
@@ -309,12 +685,22 @@ export interface RequirementsGateDecision {
 
 /**
  * The requirements gate. A mismatch stops and records `needs-info`; there is
- * no waiver path. Only reconciling the issue bodies changes the input.
+ * no waiver path. Only reconciling the issue bodies changes the input. Both
+ * sides must be well-formed supported pins before equality can pass: a
+ * missing or malformed pin is never provenance.
  */
 export function requirementsGate(
   dispatched: string,
   current: string,
 ): RequirementsGateDecision {
+  if (!requirementsPinWellFormed(dispatched) || !requirementsPinWellFormed(current)) {
+    return {
+      action: "stop",
+      addLabels: [LABEL_NEEDS_INFO],
+      reason:
+        "the pinned or current requirements revision is missing or malformed; reconcile the issue bodies and resume explicitly",
+    };
+  }
   if (dispatched === current) {
     return {
       action: "continue",
@@ -1003,7 +1389,9 @@ export function validateAuthoritativeBody(body: string, role: PlanningRole): str
     errors.push("duplicate section: ## Acceptance criteria");
   }
 
-  // Criterion syntax: only canonical single-line bullets are fingerprinted.
+  // Criterion syntax: single-line records via the shared parser — the
+  // standardized `- [ ] AC-N: text` checkbox form, legacy `- \`AC-N\`: text`
+  // bullets, and bare `AC-N: text` records.
   const criteriaStart = lines.findIndex((line) => line.trim() === "## Acceptance criteria");
   if (criteriaStart >= 0) {
     const raw: string[] = [];
@@ -1015,18 +1403,16 @@ export function validateAuthoritativeBody(body: string, role: PlanningRole): str
     const seen = new Set<string>();
     for (const line of raw) {
       const trimmed = line.trim();
-      const canonical =
-        /^\s*-\s*(?:~~)?`?([A-Za-z]{2,3}-\d+)`?(?:~~)?\s*(?:\(retired\))\s*:\s*(.+)$/.test(line) ||
-        /^\s*-\s*`?([A-Za-z]{2,3}-\d+)`?\s*:\s*(.+)$/.test(line);
+      const canonical = CRITERION_LINE.test(line) || ACTIVE_CRITERION_LINE.test(line);
       if (canonical) {
         const id = line.match(/([A-Za-z]{2,3}-\d+)/)?.[1] ?? line;
         if (seen.has(id)) errors.push(`duplicate or reused criterion id within the issue: ${id}`);
         seen.add(id);
         continue;
       }
-      errors.push(`unsupported criterion line (use "- \`AC-N\`: text"): ${trimmed.slice(0, 80)}`);
+      errors.push(`unsupported criterion line (use "- [ ] AC-N: text"): ${trimmed.slice(0, 80)}`);
     }
-    if (seen.size === 0) errors.push("missing required content: ## Acceptance criteria has no criterion bullets");
+    if (seen.size === 0) errors.push("missing required content: ## Acceptance criteria has no criterion records");
   }
   return errors;
 }

@@ -37,7 +37,9 @@ repository rule, an acceptance criterion, or a reproduced failure.
 Review starts when one open pull request has a valid closing reference,
 current head and base revisions, and compact implementation evidence that pins
 the same requirements revision the ticket published; the current parent and
-ticket bodies must still produce that revision, and a changed body stops
+ticket bodies must still produce that revision (canonical `requirements-v1` or
+adapted `requirements-adapted-v1` for alternate-template bodies, resolved via
+`resolveRequirementsBody`), and a changed body stops
 review publication with `needs-info` until the body is reconciled and the user
 resumes, with no waiver. Evidence posted before the revision contract existed
 pins nothing and compares as current.

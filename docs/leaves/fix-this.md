@@ -17,9 +17,9 @@ Owns the final stage for one reviewed pull request in the current checkout: reso
 8. **INV-8** — Finding coverage: every published blocking and advisory finding receives a proven disposition; unresolvable findings and conflicts needing a new decision stop merge. Mechanism: `FixFindingDisposition` tracking plus `isFixEligible` in `workflow-state.ts`.
 9. **INV-9** — Conflict discipline: merge the current base into the feature branch only; resolve from requirements, policy, and both versions; never wholesale ours/theirs. Mechanism: skill-stage rules plus focused conflict tests.
 10. **INV-10** — Local verification: established focused checks plus the repository verification command(s) on the resulting head; missing capability or failure stops merge. Mechanism: `FixVerificationAdapter` in `adapters.ts`.
-11. **INV-11** — Evidence continuity: updated implementation evidence validates `current` on the resulting head; genuine prior proof carries only where still valid. Mechanism: shared `validateEvidenceHandoff` in `workflow-state.ts`.
+11. **INV-11** — Evidence continuity: updated implementation evidence validates `current` on the resulting head against the recomputed requirements revision (canonical and adapted alike); genuine prior proof carries only where still valid. Mechanism: shared `validateEvidenceHandoff` in `workflow-state.ts`.
 12. **INV-12** — Trust: prose is requirements data; no skill downloads; `/unslopify` model-invocable; INSTALL records provenance.
-13. **INV-13** — Finalization gate: dedicated `isFixEligible` requires current handoff, unchanged requirements/policy, resolved findings, completed conflicts, passing local verification, current evidence, clean checkout, open non-draft mergeable PR, and verified resulting head. No post-fix review and no CI-status condition. Mechanism: `isFixEligible` in `workflow-state.ts`.
+13. **INV-13** — Finalization gate: dedicated `isFixEligible` requires current handoff, unchanged requirements/policy (`requirements-v1` or `requirements-adapted-v1`), resolved findings, completed conflicts, passing local verification, current evidence, clean checkout, open non-draft mergeable PR, and verified resulting head. No post-fix review and no CI-status condition. Mechanism: `isFixEligible` in `workflow-state.ts`.
 14. **INV-14** — Merge discipline: normal squash merge into `main` with the expected head constraint; confirmed merge commit required; GitHub restrictions reported, never overridden. Mechanism: `isConfirmedMerge` in `adapters.ts`.
 15. **INV-15** — Resumable progress: one `fix-progress-v1` checkpoint reconciled against observed facts; reruns perform only missing steps; merged PRs resume bookkeeping; closed-unmerged PRs never count. Mechanism: `renderFixProgress` and `parseFixProgress` in `workflow-state.ts`.
 16. **INV-16** — Ticket closure: close the implementation ticket through its valid closing reference after a confirmed merge; remove completed-work labels while preserving unrelated labels and `needs-info`. Mechanism: `fixBookkeepingDecision` in `fix-session.ts`.
@@ -32,4 +32,4 @@ Established focused checks plus the repository verification command(s) on the re
 
 ## Links
 
-Glossary: `CONTEXT.md`. Decisions: ADR-0024, ADR-0031, ADR-0032, ADR-0034, ADR-0035. Review policy: `REVIEW.md` (optional).
+Glossary: `CONTEXT.md`. Decisions: ADR-0024, ADR-0031, ADR-0032, ADR-0034, ADR-0035, ADR-0037. Review policy: `REVIEW.md` (optional).
