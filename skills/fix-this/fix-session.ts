@@ -86,6 +86,15 @@ export function fixCheckoutDecision(fact: FixCheckoutFact): FixCheckoutDecision 
       return { action: "stop", reason: "no trustworthy observed pull-request head to reconcile the checkpoint against" };
     }
     if (fact.pullRequestHeadSha !== expectedRemoteHead) {
+      // A successful remote push with an unsaved progress flag still shows
+      // the verified result on GitHub: recognize it instead of rejecting the
+      // proven remote state (ADR-0040). Unexplained movement still stops.
+      if (!pushed && fact.pullRequestHeadSha === fact.resumeCheckpoint.resultingHeadSha) {
+        if (fact.needsFeatureBranch) {
+          return { action: "create-feature-branch", reason: "remote already carries the verified result despite the stale push flag; create the feature branch before further edits" };
+        }
+        return { action: "proceed", reason: "remote already carries the verified result despite the stale push flag" };
+      }
       return {
         action: "stop",
         reason: `the pull-request head moved beyond the checkpoint's recorded state (expected ${expectedRemoteHead}, observed ${fact.pullRequestHeadSha}); reconcile the remote before resuming`,
@@ -177,14 +186,15 @@ export interface FixEntryFact {
   hasCheckpoint: boolean;
   /**
    * Independently observed parts of the checkpoint reconciliation
-   * (ADR-0038). Trust is derived here from the parts, never accepted as one
-   * caller-supplied flag: the checkpoint must parse well-formed as
-   * fix-progress-v2, its digest must match the digest recomputed from the
-   * validated source review, its comment author must equal the validated
-   * source review author, it must name this exact target, and its
-   * dispositions must cover the source findings exactly. Missing parts are
-   * as untrustworthy as failing ones. Legacy v1 checkpoints are diagnostic
-   * input and never trusted.
+   * (ADR-0038, narrowed by ADR-0040). Trust is derived here from the parts,
+   * never accepted as one caller-supplied flag: the checkpoint must parse
+   * well-formed as fix-progress-v2, its digest must match the digest
+   * recomputed from the validated source review, it must name this exact
+   * target, and its dispositions must cover the source findings exactly.
+   * The checkpoint author equals the validated source review author or is
+   * independently authorized as a collaborator fixing another person's
+   * review; missing parts are as untrustworthy as failing ones. Legacy v1
+   * checkpoints are diagnostic input and never trusted.
    */
   checkpoint?: {
     /** Checkpoint parsed well-formed as fix-progress-v2 (not legacy). */
@@ -193,11 +203,20 @@ export interface FixEntryFact {
     digestMatches: boolean;
     /** Checkpoint comment author equals the validated source review author. */
     authorMatches: boolean;
+    /** Checkpoint author carries independent fix authorization when different. */
+    authorIndependentlyAuthorized?: boolean;
     /** Checkpoint names this repository and pull request. */
     targetMatches: boolean;
     /** Dispositions cover the source findings exactly. */
     dispositionsCoverSource: boolean;
   };
+  /**
+   * Confirmed native merge with exact PR and issue associations verified
+   * from GitHub (ADR-0040). Allows bookkeeping-only recovery without a
+   * current checkpoint; never invents receipts, repeats a merge, or claims
+   * an externally merged PR passed this workflow.
+   */
+  mergeVerifiedWithoutCheckpoint?: boolean;
 }
 
 function checkpointTrustReason(fact: FixEntryFact): string {
@@ -208,27 +227,34 @@ function checkpointTrustReason(fact: FixEntryFact): string {
   const failures: string[] = [];
   if (!checkpoint.wellFormed) failures.push("the checkpoint is malformed or a legacy v1 diagnostic record");
   if (!checkpoint.digestMatches) failures.push("the checkpoint digest does not match the validated source review");
-  if (!checkpoint.authorMatches) failures.push("the checkpoint author does not match the validated source review author");
+  if (!checkpoint.authorMatches && checkpoint.authorIndependentlyAuthorized !== true) {
+    failures.push("the checkpoint author matches neither the validated source review author nor an independently authorized fixer");
+  }
   if (!checkpoint.targetMatches) failures.push("the checkpoint names another repository or pull request");
   if (!checkpoint.dispositionsCoverSource) failures.push("the checkpoint dispositions do not cover the source findings exactly");
   return failures.length > 0 ? failures.join("; ") : "the checkpoint does not reconcile against observed facts";
 }
 
 /**
- * Decide fresh versus resumable entry (ADR-0038). Fresh runs require an open
- * PR and keep clean HEAD = PR head = reviewed head. A checkpoint resumes only
- * missing steps after every reconciliation part derived from observed facts
- * passes: on an open PR it resumes fixes; on a merged PR it resumes
- * bookkeeping only. A merged PR without a reconciled checkpoint, a
- * closed-unmerged PR, or a checkpoint that fails any part stops.
+ * Decide fresh versus resumable entry (ADR-0038, narrowed by ADR-0040).
+ * Fresh runs require an open PR and keep clean HEAD = PR head = reviewed
+ * head. A checkpoint resumes only missing steps after every reconciliation
+ * part derived from observed facts passes: on an open PR it resumes fixes;
+ * on a merged PR it resumes bookkeeping only. A confirmed native merge with
+ * verified associations resumes bookkeeping only even without a current
+ * checkpoint. A closed-unmerged PR, or a checkpoint that fails any part,
+ * stops.
  */
 export function decideFixEntry(fact: FixEntryFact): { action: FixEntryAction; reason: string } {
+  const authorOk =
+    fact.checkpoint !== undefined &&
+    (fact.checkpoint.authorMatches || fact.checkpoint.authorIndependentlyAuthorized === true);
   const trusted =
     fact.hasCheckpoint &&
     fact.checkpoint !== undefined &&
     fact.checkpoint.wellFormed &&
     fact.checkpoint.digestMatches &&
-    fact.checkpoint.authorMatches &&
+    authorOk &&
     fact.checkpoint.targetMatches &&
     fact.checkpoint.dispositionsCoverSource;
   if (fact.pullRequestState === "closed") {
@@ -238,11 +264,14 @@ export function decideFixEntry(fact: FixEntryFact): { action: FixEntryAction; re
     if (fact.hasCheckpoint && trusted) {
       return { action: "resume-bookkeeping", reason: "confirmed merged PR with a reconciled checkpoint resumes bookkeeping only" };
     }
+    if (!fact.hasCheckpoint && fact.mergeVerifiedWithoutCheckpoint === true) {
+      return { action: "resume-bookkeeping", reason: "confirmed native merge with verified associations resumes bookkeeping only without a checkpoint" };
+    }
     return {
       action: "stop",
       reason: fact.hasCheckpoint
         ? `the merged PR checkpoint is not reconciled (${checkpointTrustReason(fact)}); reconcile it before any bookkeeping`
-        : "the merged PR has no reconciled checkpoint; bookkeeping cannot resume without verified progress",
+        : "the merged PR has no reconciled checkpoint; bookkeeping cannot resume without verified merge associations",
     };
   }
   if (fact.hasCheckpoint && !trusted) {

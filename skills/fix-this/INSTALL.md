@@ -2,16 +2,16 @@
 
 `fix-this` finalizes exactly one reviewed pull request in the current checkout. Invoke it explicitly as `/fix-this <target>` where `<target>` is one pull-request number (`285` or `#285`) or one same-repository pull-request URL. Unlike `/review-this`, an issue number never resolves through a closing PR here: the invocation names the PR to finalize.
 
-The run consumes only a validated `review-handoff-v1` block from the latest completed non-dismissed native review. It applies every published blocking and advisory finding, resolves merge conflicts, runs mandatory local verification, squash-merges into `main`, and completes ticket/spec bookkeeping. It never generates another review verdict, never waits for or gates on CI status, never bypasses branch protection, and never force-pushes. GitHub server restrictions stay authoritative: a rejected merge is reported, not overridden.
+The run consumes only a validated `review-handoff-v1` block from the latest completed non-dismissed native review. It applies every published blocking and advisory finding, resolves merge conflicts, runs mandatory local verification, squash-merges into the pinned default branch with the verified head SHA, and completes ticket/spec bookkeeping with native closing-link and history proof. It never generates another review verdict, never waits for or gates on CI status, never bypasses branch protection, and never force-pushes. GitHub server restrictions stay authoritative: a rejected merge is reported, not overridden.
 
 ## Requirements
 
 - A GitHub repository with native sub-issue and `blocked_by` relationships linking child tickets to their parent specification.
-- Node 24 or newer: the bundled `workflow-cli.mjs` (evidence and fix-progress checks) ships in this package next to the shared `workflow-state.ts` and fails closed on older runtimes.
-- One open non-draft pull request against `main` with a valid `Closes #<ticket>` reference, or a merged PR resuming bookkeeping through a reconciled `fix-progress-v2` checkpoint.
+- Node 24 or newer: the bundled `workflow-cli.mjs` (evidence and fix-progress checks), read-only `github-facts.mjs` native reads, and bounded `gh-fix-transport.ts` publisher ship in this package next to the shared `workflow-state.ts` and `github-facts.ts` and fail closed on older runtimes.
+- One open non-draft pull request against the pinned default branch with a valid native closing link, or a merged PR resuming bookkeeping through a reconciled `fix-progress-v2` checkpoint with verified merge associations.
 - One completed native review published by the updated `review-this` carrying exactly one valid `review-handoff-v1` block. Legacy prose-only reviews need one publication by the updated reviewer before first use.
 - `/unslopify` installed through its registry lane: `npx skills add RuralNative/RuralNative-SKILLS --skill unslopify`.
-- A clean invoking checkout at the reviewed PR head (or at the checkpoint's resulting head on resume). Branch aliases, `main`, and detached `HEAD` at the same commit are accepted; `main` and detached `HEAD` create a feature branch before edits.
+- A clean invoking checkout at the reviewed PR head (or at the checkpoint's resulting head on resume). Branch aliases, the pinned default branch, and detached `HEAD` at the same commit are accepted; the default branch and detached `HEAD` create a feature branch before edits.
 - Tracked project permissions in `.kilo/kilo.jsonc` require no `agent_manager` entry. No fix subagent is used.
 
 ## Install

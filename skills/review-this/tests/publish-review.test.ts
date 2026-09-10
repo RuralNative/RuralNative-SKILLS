@@ -57,6 +57,8 @@ function input(overrides: Partial<ReviewPublicationInput> = {}): ReviewPublicati
     commitSha: "abc123",
     reviewProse: "## Standards\n\nok\n\n## Spec\n\nno findings",
     handoff: handoffInput(),
+    observedReviewerPermission: "write",
+    expectedAuthor: "reviewer",
     ...overrides,
   };
 }
@@ -71,7 +73,8 @@ describe("review publication procedure", () => {
     assert.equal(isSubmittedReviewState(outcome.readBack.state), true);
     assert.equal(outcome.readBack.body, outcome.body);
     assert.equal(outcome.readBack.commitSha, "abc123");
-    assert.equal(outcome.readBack.commentIds.length, 1);
+    assert.deepEqual(outcome.readBack.commentIds, []);
+    assert.equal(outcome.readBack.commentsComplete, true);
     assert.equal(fake.calls.filter((c) => c.startsWith("create")).length, 1);
     assert.equal(fake.calls.filter((c) => c.startsWith("submit")).length, 1);
     assert.ok(fake.calls.some((c) => c.includes("event=COMMENT")));
@@ -87,7 +90,7 @@ describe("review publication procedure", () => {
   });
   test("an explicit submit event maps to its native submitted state", async () => {
     const fake = fakeReviewPublicationHost();
-    const outcome = await publishReviewPublication(input({ submitEvent: "APPROVE" }), fake);
+    const outcome = await publishReviewPublication(input({ submitEvent: "APPROVE", nonDefaultEventApproved: true }), fake);
     assert.equal(outcome.status, "published");
     if (outcome.status !== "published") return;
     assert.equal(outcome.readBack.state, "APPROVED");
@@ -174,9 +177,12 @@ describe("review publication procedure", () => {
         return { ok: true };
       },
       async readBackReview() {
-        return { reviewId: "x", author: "reviewer", commitSha: "abc123", state: "PENDING", body: "", commentIds: [] };
+        return { reviewId: "x", author: "reviewer", commitSha: "abc123", state: "PENDING", body: "", commentIds: [], commentsComplete: true };
       },
       async listPendingReviews() {
+        return [];
+      },
+      async listReviews() {
         return [];
       },
     };
@@ -208,7 +214,7 @@ describe("review publication procedure", () => {
       assert.equal(readBack.body, outcome.body);
       assert.equal(
         outcome.body,
-        composeReviewPublicationBodyFor(inputValue, outcome.reviewId),
+        composeReviewPublicationBodyFor(inputValue, outcome.reviewId, []),
       );
     }
   });
@@ -241,23 +247,26 @@ describe("lost create response recovery by discovery", () => {
       failCreate: "response lost after creation",
       loseCreateResponse: true,
     });
+    const marker = (await import("../publish-review.ts")).buildPublicationMarker(input());
     fake.host.set("pre-1", {
       reviewId: "pre-1",
       author: "reviewer",
       commitSha: "abc123",
       state: "PENDING",
-      body: "",
+      body: marker,
       sourceUrl: "https://github.com/o/r/pull/300#review-pre-1",
       commentIds: [],
+      commentsComplete: false,
     });
     fake.host.set("pre-2", {
       reviewId: "pre-2",
       author: "reviewer",
       commitSha: "abc123",
       state: "PENDING",
-      body: "",
+      body: marker,
       sourceUrl: "https://github.com/o/r/pull/300#review-pre-2",
       commentIds: [],
+      commentsComplete: false,
     });
     const outcome = await publishReviewPublication(input(), fake);
     assert.equal(outcome.status, "stop");
@@ -290,7 +299,10 @@ describe("read-back provenance validation before success", () => {
     assert.ok(outcome.reviewId !== undefined);
   });
   test("approved read-backs with matching provenance publish", async () => {
-    const outcome = await publishReviewPublication(input({ submitEvent: "APPROVE" }), fakeReviewPublicationHost());
+    const outcome = await publishReviewPublication(
+      input({ submitEvent: "APPROVE", nonDefaultEventApproved: true }),
+      fakeReviewPublicationHost(),
+    );
     assert.equal(outcome.status, "published");
   });
   test("an empty host transport never fabricates IDs", async () => {
@@ -308,10 +320,146 @@ describe("read-back provenance validation before success", () => {
       async listPendingReviews() {
         return [];
       },
+      async listReviews() {
+        return [];
+      },
     };
     const outcome = await publishReviewPublication(input(), empty);
     assert.equal(outcome.status, "stop");
     assert.equal(outcome.status === "stop" && outcome.step, "create");
+  });
+});
+
+describe("native publication gaps (ADR-0040)", () => {
+  test("payload permission never substitutes for the observed permission", async () => {
+    const fake = fakeReviewPublicationHost();
+    const claimingAdmin = input({
+      handoff: {
+        ...handoffInput(),
+        provenance: { ...handoffInput().provenance, reviewerPermission: "admin" },
+      },
+      observedReviewerPermission: "write",
+    });
+    const outcome = await publishReviewPublication(claimingAdmin, fake);
+    assert.equal(outcome.status, "published");
+  });
+  test("movement between still-authorized roles keeps the content valid", async () => {
+    const { validateReviewHandoff } = await import("../workflow-state.ts");
+    const { renderReviewHandoff } = await import("../workflow-state.ts");
+    const pin = handoffInput().requirementsRevision;
+    const policy = handoffInput().reviewPolicyRevision;
+    const handoff = { ...handoffInput(), provenance: { ...handoffInput().provenance, reviewerPermission: "write" as const } };
+    const body = renderReviewHandoff(handoff);
+    const result = validateReviewHandoff({
+      body,
+      repository: "o/r",
+      prNumber: 300,
+      currentHeadSha: "abc123",
+      currentBaseSha: "base1",
+      currentRequirementsRevision: pin,
+      currentReviewPolicyRevision: policy,
+      observedProvenance: {
+        reviewId: "555",
+        reviewAuthor: "reviewer",
+        reviewerPermission: "admin",
+        reviewedCommit: "abc123",
+        reviewedAt: "",
+        sourceUrl: "https://github.com/o/r/pull/300#review-555",
+        commentIds: [],
+      },
+      reviewCompleted: true,
+      reviewDismissed: false,
+    });
+    assert.equal(result.status, "current");
+  });
+  test("unknown observed permission stops publication", async () => {
+    const fake = fakeReviewPublicationHost();
+    const outcome = await publishReviewPublication(input({ observedReviewerPermission: "unknown" }), fake);
+    assert.equal(outcome.status, "stop");
+  });
+  test("non-default events need explicit human approval", async () => {
+    const fake = fakeReviewPublicationHost();
+    const gated = await publishReviewPublication(input({ submitEvent: "APPROVE" }), fake);
+    assert.equal(gated.status, "stop");
+    assert.ok(String(gated.status === "stop" && gated.reason).includes("explicit human approval"));
+    const approved = await publishReviewPublication(
+      input({ submitEvent: "APPROVE", nonDefaultEventApproved: true }),
+      fakeReviewPublicationHost(),
+    );
+    assert.equal(approved.status, "published");
+  });
+  test("unmarked legacy drafts never adopt at the same commit", async () => {
+    const fake = fakeReviewPublicationHost({ failCreate: "lost", loseCreateResponse: false });
+    fake.host.set("legacy", {
+      reviewId: "legacy",
+      author: "reviewer",
+      commitSha: "abc123",
+      state: "PENDING",
+      body: "unmarked legacy draft",
+      sourceUrl: "https://github.com/o/r/pull/300#review-legacy",
+      commentIds: [],
+      commentsComplete: false,
+    });
+    const outcome = await publishReviewPublication(input(), fake);
+    assert.equal(outcome.status, "stop");
+    assert.equal(outcome.status === "stop" && outcome.step, "create");
+  });
+  test("inline findings publish as native comments and read back covered", async () => {
+    const fake = fakeReviewPublicationHost();
+    const outcome = await publishReviewPublication(
+      input({ inlineComments: [{ path: "src/a.ts", line: 10, body: "fix this" }] }),
+      fake,
+    );
+    assert.equal(outcome.status, "published");
+    if (outcome.status !== "published") return;
+    assert.ok(outcome.readBack.commentIds.length >= 1);
+    assert.equal(outcome.readBack.commentsComplete, true);
+  });
+  test("comment-read failures never succeed", async () => {
+    const fake = fakeReviewPublicationHost({ failComments: true });
+    const outcome = await publishReviewPublication(input(), fake);
+    assert.equal(outcome.status, "stop");
+  });
+  test("missing permission stops before any write", async () => {
+    const fake = fakeReviewPublicationHost();
+    const outcome = await publishReviewPublication(
+      { ...input(), observedReviewerPermission: undefined as unknown as "write" },
+      fake,
+    );
+    assert.equal(outcome.status, "stop");
+    assert.equal(fake.calls.filter((c) => c.startsWith("create")).length, 0);
+  });
+  test("repeating the same publication reuses the exact completed review", async () => {
+    const fake = fakeReviewPublicationHost();
+    const first = await publishReviewPublication(input(), fake);
+    assert.equal(first.status, "published");
+    if (first.status !== "published") return;
+    const second = await publishReviewPublication(input(), fake);
+    assert.equal(second.status, "published");
+    if (second.status !== "published") return;
+    assert.equal(second.reviewId, first.reviewId);
+    assert.equal(fake.host.size, 1);
+  });
+  test("an edited pending draft stops instead of being overwritten", async () => {
+    const fake = fakeReviewPublicationHost({ failSubmit: "network dropped" });
+    const first = await publishReviewPublication(input(), fake);
+    assert.equal(first.status, "stop");
+    if (first.status !== "stop" || first.reviewId === undefined) return;
+    const pending = fake.host.get(first.reviewId)!;
+    fake.host.set(first.reviewId, { ...pending, body: `${pending.body}\nUser added text` });
+    const resumed = await publishReviewPublication(input({ resumeReviewId: first.reviewId }), fake);
+    assert.equal(resumed.status, "stop");
+  });
+  test("inline resume collects observed comment IDs before submitting", async () => {
+    const fake = fakeReviewPublicationHost({ failSubmit: "network dropped" });
+    const inline = input({ inlineComments: [{ path: "src/a.ts", line: 10, body: "fix this" }] });
+    const first = await publishReviewPublication(inline, fake);
+    assert.equal(first.status, "stop");
+    if (first.status !== "stop" || first.reviewId === undefined) return;
+    const resumed = await publishReviewPublication({ ...inline, resumeReviewId: first.reviewId }, fake);
+    assert.equal(resumed.status, "published");
+    if (resumed.status !== "published") return;
+    assert.ok(resumed.readBack.commentIds.length >= 1);
   });
 });
 
@@ -333,6 +481,7 @@ describe("submitted state model", () => {
       body: "body",
       submittedAt: "2026-09-09T09:00:00Z",
       commentIds: ["c-1"],
+      commentsComplete: true,
     };
     assert.equal(readBack.state, "CHANGES_REQUESTED");
   });

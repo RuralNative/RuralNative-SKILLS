@@ -1781,6 +1781,68 @@ function evidenceProseHasTargetClosingOtherForm(body: string, ticket: number): b
   return evidenceTargetClosingAssociation(ticket).test(withoutCanonical);
 }
 
+export interface NativeClosingReference {
+  /** Repository in `owner/name` form when the reference names one, else null. */
+  repository: string | null;
+  ticket: number;
+  /** Raw matched text for diagnostics. */
+  raw: string;
+}
+
+/**
+ * Native closing references with full repository identity (ADR-0040).
+ * Local `Closes #<ticket>` text is presentation only; association authority
+ * is the native link GitHub reports. This parser extracts only closing-keyword
+ * references (`Closes owner/repo#123`, `Fixes #123`, closing issue URLs) so a
+ * plain mention such as `see o/r#288` never counts as association proof.
+ */
+export function extractClosingReferences(body: string): NativeClosingReference[] {
+  const out: NativeClosingReference[] = [];
+  const keyword = "(?:close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved)";
+  for (const segment of evidenceFenceSegments(body)) {
+    if (segment.fenced) continue;
+    const text = segment.text;
+    const urlPattern = new RegExp(`${keyword}[ \\t]+https?://[^\\s]+/([A-Za-z0-9-_.]+/[A-Za-z0-9-_.]+)/issues/(\\d+)(?!\\d)`, "gi");
+    let m: RegExpExecArray | null;
+    while ((m = urlPattern.exec(text)) !== null) {
+      out.push({ repository: m[1], ticket: Number(m[2]), raw: m[0] });
+    }
+    const qualifiedPattern = new RegExp(`${keyword}[ \\t]+([A-Za-z0-9-_.]+/[A-Za-z0-9-_.]+)#(\\d+)(?!\\d)`, "gi");
+    while ((m = qualifiedPattern.exec(text)) !== null) {
+      out.push({ repository: m[1], ticket: Number(m[2]), raw: m[0] });
+    }
+    const barePattern = /(?:close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved)[ \t]+#(\d+)(?!\d)/gi;
+    while ((m = barePattern.exec(text)) !== null) {
+      const before = text.slice(Math.max(0, (m.index ?? 0) - 60), m.index ?? 0);
+      if (/[A-Za-z0-9-_.]+\/[A-Za-z0-9-_.]+$/.test(before.trimEnd())) continue;
+      out.push({ repository: null, ticket: Number(m[1]), raw: m[0] });
+    }
+  }
+  return out;
+}
+
+/**
+ * True when the body carries a native closing link for the ticket in the
+ * expected repository. Bare `#<ticket>` counts only when no conflicting
+ * repository-qualified link for the same ticket names another repository.
+ * An empty expected repository never matches.
+ */
+export function hasNativeClosingReference(body: string, ticket: number, expectedRepository: string): boolean {
+  if (expectedRepository.trim() === "") return false;
+  const refs = extractClosingReferences(body).filter((r) => r.ticket === ticket);
+  if (refs.length === 0) return false;
+  const expected = expectedRepository.toLowerCase();
+  let bare = false;
+  for (const ref of refs) {
+    if (ref.repository === null) {
+      bare = true;
+      continue;
+    }
+    if (ref.repository.toLowerCase() === expected) return true;
+  }
+  return bare && !refs.some((r) => r.repository !== null && r.repository.toLowerCase() !== expected);
+}
+
 /**
  * Compose the pull-request body in one publication operation: exactly one
  * compact evidence block plus exactly one target closing reference,
@@ -1953,8 +2015,10 @@ export function validateRepairTicket(
 export interface RepairPrMatch {
   /** Count of matching open PRs for this ticket in the same repository. */
   matchingOpenPrs: number;
-  /** The single match has the expected base (`main`). */
+  /** The single match has the expected base (`main`). @deprecated Use baseMatchesDefault. */
   baseIsMain: boolean;
+  /** The single match targets the pinned default branch (ADR-0040). */
+  baseMatchesDefault?: boolean;
   /** The single match targets the ticket (valid `Closes #<ticket>`). */
   closesTicket: boolean;
   /** Current checkout branch equals the PR head branch. */
@@ -1972,8 +2036,9 @@ export function decideRepairPath(match: RepairPrMatch): { proceed: boolean; reas
   if (!match.closesTicket) {
     return { proceed: false, reason: "the single open pull request does not close this ticket" };
   }
-  if (!match.baseIsMain) {
-    return { proceed: false, reason: "the single open pull request does not target main" };
+  const baseOk = match.baseMatchesDefault ?? match.baseIsMain;
+  if (!baseOk) {
+    return { proceed: false, reason: "the single open pull request does not target the pinned default branch" };
   }
   if (!match.checkoutMatchesPrHead) {
     return { proceed: false, reason: "the current checkout does not match the pull-request head branch" };
@@ -2123,6 +2188,10 @@ export interface ReviewHandoffFinding {
   reviewedBaseSha: string;
   /** Linked implementation ticket, when the finding names one. */
   ticket?: number;
+  /** Native review-comment ID carrying this finding, when published inline. */
+  commentId?: string;
+  /** Native review-thread node ID for disposition, when GitHub reports one. */
+  threadId?: string;
 }
 
 export interface ReviewHandoffProvenance {
@@ -2205,6 +2274,13 @@ export interface ReviewHandoffCheck {
     reviewedAt?: string;
     sourceUrl?: string;
     commentIds?: readonly string[];
+    /**
+     * True when the comment list is a complete native enumeration.
+     * When true, an empty claimed set passes only against an empty
+     * observation and every claimed ID must be observed (ADR-0040).
+     * When absent, legacy subset checking applies to valid prior records.
+     */
+    commentIdsComplete?: boolean;
   };
   /** True when the selected native review is completed. */
   reviewCompleted: boolean;
@@ -2331,6 +2407,14 @@ function parseReviewHandoffFindings(inner: string): { findings: ReviewHandoffFin
       }
       ticket = ticketNumber;
     }
+    const commentId = get("Comment ID");
+    const threadId = get("Thread ID");
+    if (commentId !== null && commentId.trim() === "") {
+      return { findings: [], error: `review handoff finding ${id} has an invalid comment ID` };
+    }
+    if (threadId !== null && threadId.trim() === "") {
+      return { findings: [], error: `review handoff finding ${id} has an invalid thread ID` };
+    }
     findings.push({
       id,
       source,
@@ -2347,6 +2431,8 @@ function parseReviewHandoffFindings(inner: string): { findings: ReviewHandoffFin
       reviewedHeadSha: headSha,
       reviewedBaseSha: baseSha,
       ticket,
+      commentId: commentId ?? undefined,
+      threadId: threadId ?? undefined,
     });
   }
   return { findings, error: null };
@@ -2366,11 +2452,22 @@ function validateReviewHandoffInput(input: ReviewHandoffInput): string | null {
     return "review handoff closing ticket is invalid";
   }
   const ids = new Set<string>();
+  const commentIds = new Set<string>();
   for (const finding of input.findings) {
     if (ids.has(finding.id)) return `review handoff carries a duplicate finding id: ${finding.id}`;
     ids.add(finding.id);
     if (finding.reviewedHeadSha !== input.reviewedHeadSha || finding.reviewedBaseSha !== input.reviewedBaseSha) {
       return `review handoff finding ${finding.id} is pinned to another revision`;
+    }
+    if (finding.commentId !== undefined) {
+      if (finding.commentId.trim() === "") return `review handoff finding ${finding.id} has an invalid comment ID`;
+      if (commentIds.has(finding.commentId)) {
+        return `review handoff carries a duplicate comment id: ${finding.commentId}`;
+      }
+      commentIds.add(finding.commentId);
+    }
+    if (finding.threadId !== undefined && finding.threadId.trim() === "") {
+      return `review handoff finding ${finding.id} has an invalid thread ID`;
     }
   }
   if (input.provenance.reviewId.trim() === "") return "review handoff provenance needs a native review ID";
@@ -2433,6 +2530,8 @@ export function renderReviewHandoff(input: ReviewHandoffInput): string {
     lines.push(`  - Reviewed head: ${escapeHandoffText(finding.reviewedHeadSha)}`);
     lines.push(`  - Reviewed base: ${escapeHandoffText(finding.reviewedBaseSha)}`);
     if (finding.ticket !== undefined) lines.push(`  - Ticket: #${finding.ticket}`);
+    if (finding.commentId !== undefined) lines.push(`  - Comment ID: ${escapeHandoffText(finding.commentId)}`);
+    if (finding.threadId !== undefined) lines.push(`  - Thread ID: ${escapeHandoffText(finding.threadId)}`);
   }
   lines.push(`- Findings count: ${input.findings.length}`);
   lines.push(REVIEW_HANDOFF_END);
@@ -2617,6 +2716,30 @@ export function reviewHandoffDigestOfBody(
   return { ok: true, digest: reviewHandoffDigest(parsed.handoff, hash) };
 }
 
+/**
+ * Collaborator permissions that authorize review content (ADR-0040).
+ * Movement between these roles alone never invalidates the content;
+ * `policy` is a separate project authorization and `unknown` never passes.
+ */
+export function isCollaboratorReviewPermission(
+  value: string,
+): value is "write" | "maintain" | "admin" {
+  return value === "write" || value === "maintain" || value === "admin";
+}
+
+/**
+ * Payload permission matches observation when both name the same
+ * collaborator tier or both name `policy`. A claimed historical role never
+ * overrides current authorization: the observed value decides.
+ */
+export function reviewerPermissionMatches(
+  observed: string,
+  claimed: string,
+): boolean {
+  if (observed === claimed) return true;
+  return isCollaboratorReviewPermission(observed) && isCollaboratorReviewPermission(claimed);
+}
+
 /** Parse one review-handoff block without trusting it. Callers must validate. */
 export function parseReviewHandoff(body: string): { found: boolean; version: string | null } {
   const inner = reviewHandoffInner(body);
@@ -2771,11 +2894,16 @@ export function validateReviewHandoff(check: ReviewHandoffCheck): ReviewHandoffR
   if (
     check.observedProvenance.reviewId !== handoff.provenance.reviewId ||
     check.observedProvenance.reviewAuthor !== handoff.provenance.reviewAuthor ||
-    check.observedProvenance.reviewerPermission !== handoff.provenance.reviewerPermission ||
     check.observedProvenance.reviewedCommit !== handoff.provenance.reviewedCommit ||
     check.observedProvenance.reviewedCommit !== handoff.reviewedHeadSha
   ) {
     return { status: "stale", reason: "observed native review does not match the published handoff" };
+  }
+  // Independent authorization (ADR-0040): the observed permission decides.
+  // Movement between still-authorized collaborator roles alone keeps the
+  // content valid; a claimed role never overrides the observation.
+  if (!reviewerPermissionMatches(check.observedProvenance.reviewerPermission, handoff.provenance.reviewerPermission)) {
+    return { status: "stale", reason: "observed reviewer permission does not authorize the published handoff" };
   }
   const observedSourceUrl = check.observedProvenance.sourceUrl ?? "";
   const observedComments = new Set(check.observedProvenance.commentIds ?? []);
@@ -2794,6 +2922,17 @@ export function validateReviewHandoff(check: ReviewHandoffCheck): ReviewHandoffR
   for (const id of handoff.provenance.commentIds) {
     if (!observedComments.has(id)) {
       return { status: "stale", reason: "review handoff claims comments the observed native report does not own" };
+    }
+  }
+  // Complete enumeration (ADR-0040): when the caller proves the comment list
+  // is complete, every observed comment must be claimed. An empty claimed set
+  // passes only against a complete empty observation.
+  if (check.observedProvenance.commentIdsComplete === true) {
+    const claimed = new Set(handoff.provenance.commentIds);
+    for (const id of observedComments) {
+      if (!claimed.has(id)) {
+        return { status: "stale", reason: "observed native comments are missing from the published handoff" };
+      }
     }
   }
   if (

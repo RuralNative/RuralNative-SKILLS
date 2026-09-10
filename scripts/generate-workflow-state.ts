@@ -1,6 +1,7 @@
-// Regenerates the four runtime copies of the authored workflow state core and
-// the bundled validator CLI. Both files ship byte-identical into every skill
-// package so each installed bundle is self-contained (ADR-0038).
+// Regenerates the four runtime copies of the authored workflow state core,
+// the bundled validator CLI, and the shared native-read helpers. All files
+// ship byte-identical into every skill package so each installed bundle is
+// self-contained (ADR-0038, extended by ADR-0040).
 // Usage: node scripts/generate-workflow-state.ts [--check]
 // Exit codes: 0 in sync (or written), 1 drift in --check mode.
 import fs from "node:fs";
@@ -11,6 +12,8 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 export const AUTHORED_PATH = "scripts/workflow-state.ts";
 export const AUTHORED_CLI_PATH = "scripts/workflow-cli.mjs";
+export const AUTHORED_FACTS_PATH = "scripts/github-facts.ts";
+export const AUTHORED_FACTS_CLI_PATH = "scripts/github-facts.mjs";
 // Dependency-free ESM metadata: the bundled runtime is ESM and must execute
 // inside a foreign CommonJS target too, so every skill package carries a
 // minimal `type: module` marker plus the Node 24+ engine declaration
@@ -29,6 +32,18 @@ export const CLI_COPY_PATHS = [
   "skills/review-this/workflow-cli.mjs",
   "skills/fix-this/workflow-cli.mjs",
 ];
+export const FACTS_COPY_PATHS = [
+  "skills/plan-this/github-facts.ts",
+  "skills/implement-this/github-facts.ts",
+  "skills/review-this/github-facts.ts",
+  "skills/fix-this/github-facts.ts",
+];
+export const FACTS_CLI_COPY_PATHS = [
+  "skills/plan-this/github-facts.mjs",
+  "skills/implement-this/github-facts.mjs",
+  "skills/review-this/github-facts.mjs",
+  "skills/fix-this/github-facts.mjs",
+];
 export const RUNTIME_METADATA_PATHS = [
   "skills/plan-this/package.json",
   "skills/implement-this/package.json",
@@ -44,9 +59,19 @@ export function readAuthoredCli(): string {
   return fs.readFileSync(path.join(ROOT, AUTHORED_CLI_PATH), "utf8");
 }
 
+export function readAuthoredFacts(): string {
+  return fs.readFileSync(path.join(ROOT, AUTHORED_FACTS_PATH), "utf8");
+}
+
+export function readAuthoredFactsCli(): string {
+  return fs.readFileSync(path.join(ROOT, AUTHORED_FACTS_CLI_PATH), "utf8");
+}
+
 export function driftedCopies(): string[] {
   const authored = readAuthored();
   const authoredCli = readAuthoredCli();
+  const authoredFacts = readAuthoredFacts();
+  const authoredFactsCli = readAuthoredFactsCli();
   const drifted: string[] = [];
   const check = (rel: string, expected: string): void => {
     let actual: string | null = null;
@@ -59,6 +84,8 @@ export function driftedCopies(): string[] {
   };
   for (const rel of COPY_PATHS) check(rel, authored);
   for (const rel of CLI_COPY_PATHS) check(rel, authoredCli);
+  for (const rel of FACTS_COPY_PATHS) check(rel, authoredFacts);
+  for (const rel of FACTS_CLI_COPY_PATHS) check(rel, authoredFactsCli);
   for (const rel of RUNTIME_METADATA_PATHS) check(rel, AUTHORED_RUNTIME_METADATA);
   return drifted;
 }
@@ -66,11 +93,19 @@ export function driftedCopies(): string[] {
 export function regenerate(): void {
   const authored = readAuthored();
   const authoredCli = readAuthoredCli();
+  const authoredFacts = readAuthoredFacts();
+  const authoredFactsCli = readAuthoredFactsCli();
   for (const rel of COPY_PATHS) {
     fs.writeFileSync(path.join(ROOT, rel), authored);
   }
   for (const rel of CLI_COPY_PATHS) {
     fs.writeFileSync(path.join(ROOT, rel), authoredCli);
+  }
+  for (const rel of FACTS_COPY_PATHS) {
+    fs.writeFileSync(path.join(ROOT, rel), authoredFacts);
+  }
+  for (const rel of FACTS_CLI_COPY_PATHS) {
+    fs.writeFileSync(path.join(ROOT, rel), authoredFactsCli);
   }
   for (const rel of RUNTIME_METADATA_PATHS) {
     fs.writeFileSync(path.join(ROOT, rel), AUTHORED_RUNTIME_METADATA);
@@ -93,7 +128,7 @@ if (invokedDirectly) {
   } else {
     regenerate();
     console.log(
-      `regenerated ${COPY_PATHS.length} workflow-state copies, ${CLI_COPY_PATHS.length} workflow-cli copies, and ${RUNTIME_METADATA_PATHS.length} runtime metadata files`,
+      `regenerated ${COPY_PATHS.length} workflow-state copies, ${CLI_COPY_PATHS.length} workflow-cli copies, ${FACTS_COPY_PATHS.length} github-facts copies, ${FACTS_CLI_COPY_PATHS.length} github-facts CLI copies, and ${RUNTIME_METADATA_PATHS.length} runtime metadata files`,
     );
   }
 }

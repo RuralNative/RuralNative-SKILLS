@@ -1,6 +1,7 @@
 // Test-only adapter fakes. Production adapters expose host contracts only.
-import type { GitHubAdapter, ReviewPublicationTransport } from "../adapters.ts";
+import type { GitHubAdapter, ReviewPublicationTransport, TransportReadBack } from "../adapters.ts";
 import type { PullRequestLink } from "../discovery.ts";
+import { buildPublicationMarker, type ReviewPublicationInput } from "../publish-review.ts";
 
 export function fakeGitHubAdapter(
   pr: PullRequestLink | null,
@@ -24,26 +25,21 @@ export function fakeGitHubAdapter(
   };
 }
 
-export interface HostShapedReview {
-  reviewId: string;
-  author: string;
-  commitSha: string;
+export interface HostShapedReview extends TransportReadBack {
   state: "PENDING" | "COMMENTED" | "APPROVED" | "CHANGES_REQUESTED" | "DISMISSED";
-  body: string;
-  submittedAt?: string;
-  sourceUrl?: string;
-  commentIds: readonly string[];
 }
 
 /**
- * Host-shaped review publication fake (ADR-0038): it allocates native IDs
- * only on creation, persists the review, and returns the persisted body on
- * read-back. A submitted review can never be created again; failures and
- * lost responses are injected per call so tests exercise read-back and
- * discovery reconciliation without live GitHub. State transitions follow the
- * native contract: creation leaves the review PENDING without a body;
- * submission applies an event (COMMENT, APPROVE, or REQUEST_CHANGES) and the
- * review reads back as COMMENTED, APPROVED, or CHANGES_REQUESTED.
+ * Host-shaped review publication fake (ADR-0038, narrowed by ADR-0040): it
+ * allocates native IDs only on creation, persists the review, and returns
+ * the persisted body on read-back. A submitted review can never be created
+ * again; failures and lost responses are injected per call so tests exercise
+ * read-back and discovery reconciliation without live GitHub. State
+ * transitions follow the native contract: creation leaves the review PENDING
+ * with the publication marker body; submission applies an event (COMMENT,
+ * APPROVE, or REQUEST_CHANGES) and the review reads back as COMMENTED,
+ * APPROVED, or CHANGES_REQUESTED. Comment IDs allocate only for inline
+ * comments passed at creation; a failed comment read is null, never empty.
  */
 export function fakeReviewPublicationHost(options: {
   failCreate?: string;
@@ -51,6 +47,7 @@ export function fakeReviewPublicationHost(options: {
   loseCreateResponse?: boolean;
   failSubmit?: string;
   failReadBack?: boolean;
+  failComments?: boolean;
   /** Author assigned to reviews this actor creates. */
   author?: string;
   /** Discovery returns no pending reviews even when one exists. */
@@ -78,21 +75,23 @@ export function fakeReviewPublicationHost(options: {
     host,
     calls,
     name: "fake-review-host",
-    async createPendingReview(prNumber, commitSha) {
+    async createPendingReview(prNumber, commitSha, createOptions = {}) {
       if (options.failCreate !== undefined && createFailuresLeft > 0) {
         createFailuresLeft -= 1;
         if (options.loseCreateResponse === true) {
           // The host did create the review; only the response is lost.
           const reviewId = nextId();
           calls.push(`create pr#${prNumber} review=${reviewId} response-lost`);
+          const comments = createOptions.comments ?? [];
           host.set(reviewId, {
             reviewId,
             author: actor,
             commitSha,
             state: "PENDING",
-            body: "",
+            body: createOptions.body ?? "",
             sourceUrl: `https://github.com/o/r/pull/${prNumber}#review-${reviewId}`,
-            commentIds: [],
+            commentIds: comments.map((_, i) => `c-${reviewId}-${i + 1}`),
+            commentsComplete: true,
           });
         } else {
           calls.push(`create pr#${prNumber} failed`);
@@ -101,14 +100,16 @@ export function fakeReviewPublicationHost(options: {
       }
       const reviewId = nextId();
       calls.push(`create pr#${prNumber} review=${reviewId}`);
+      const comments = createOptions.comments ?? [];
       host.set(reviewId, {
         reviewId,
         author: actor,
         commitSha,
         state: "PENDING",
-        body: "",
+        body: createOptions.body ?? "",
         sourceUrl: `https://github.com/o/r/pull/${prNumber}#review-${reviewId}`,
-        commentIds: [],
+        commentIds: comments.map((_, i) => `c-${reviewId}-${i + 1}`),
+        commentsComplete: true,
       });
       return { ok: true, reviewId };
     },
@@ -128,13 +129,14 @@ export function fakeReviewPublicationHost(options: {
         state: stateFor(event),
         body,
         submittedAt: "2026-09-09T09:00:00Z",
-        commentIds: [`c-${reviewId}`],
+        commentsComplete: true,
       });
       return { ok: true };
     },
     async readBackReview(prNumber, reviewId) {
       calls.push(`read-back pr#${prNumber} review=${reviewId}`);
       if (options.failReadBack === true) return null;
+      if (options.failComments === true) return null;
       const review = host.get(reviewId);
       if (review === undefined) return null;
       return { ...review, commentIds: [...review.commentIds] };
@@ -150,6 +152,22 @@ export function fakeReviewPublicationHost(options: {
       );
       return pending.map((review) => ({ ...review, commentIds: [...review.commentIds] }));
     },
+    async listReviews(prNumber) {
+      calls.push(`list pr#${prNumber}`);
+      if (options.failDiscovery === true) return null;
+      return [...host.values()].map((review) => ({ ...review, commentIds: [...review.commentIds] }));
+    },
+    currentActor() {
+      return actor;
+    },
+    async observeReviewerPermission() {
+      return "write" as const;
+    },
   };
   return transport;
+}
+
+/** Marker input helper for tests that pre-seed a marked pending draft. */
+export function markedPendingBody(input: ReviewPublicationInput): string {
+  return buildPublicationMarker(input);
 }

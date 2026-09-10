@@ -34,6 +34,8 @@ const REQUIRED_SKILL_FILES = [
   "prepare-review.mjs",
   "workflow-cli.mjs",
   "workflow-state.ts",
+  "github-facts.ts",
+  "github-facts.mjs",
 ];
 
 // Shared contract: installed bytes must equal the tested source bytes for the
@@ -58,6 +60,8 @@ const BYTE_PARITY_FILES = [
   "prepare-review.mjs",
   "workflow-cli.mjs",
   "workflow-state.ts",
+  "github-facts.ts",
+  "github-facts.mjs",
 ];
 
 function wildcardMatch(pattern, value) {
@@ -148,7 +152,7 @@ function main() {
   if (agentMd) {
     try {
       const agent = readFileSync(agentMd, "utf8");
-      const needs = ["review exactly one pull request", "never fix", "prepare-review.mjs", "workflow-cli.mjs", "publish-review.mjs"];
+      const needs = ["review exactly one pull request", "never fix", "prepare-review.mjs", "workflow-cli.mjs", "publish-review.mjs", "github-facts.mjs"];
       for (const needle of needs) {
         if (!agent.includes(needle)) {
           fail(checks, `installed agent prompt is missing: ${needle}`);
@@ -165,8 +169,8 @@ function main() {
       if ("git branch*" in bash) {
         fail(checks, "installed agent still carries a broad git branch allow");
       }
-      const helpers = Object.keys(bash).filter((k) => k.includes("prepare-review.mjs") || k.includes("workflow-cli.mjs") || k.includes("publish-review.mjs"));
-      if (helpers.length < 6) {
+      const helpers = Object.keys(bash).filter((k) => k.includes("prepare-review.mjs") || k.includes("workflow-cli.mjs") || k.includes("publish-review.mjs") || k.includes("github-facts.mjs"));
+      if (helpers.length < 8) {
         fail(checks, "installed agent is missing installation-bound helper allows");
       }
       for (const h of helpers) {

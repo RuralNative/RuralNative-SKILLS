@@ -92,7 +92,11 @@ Every required Standards category status is checked before publication. A candid
 
 ## Inline-comment evidence
 
-An inline comment pins the file and line it judges and quotes the offending span. A comment without location or quotation is a question, not a finding, until someone substantiates it.
+An inline comment pins the file and line it judges and quotes the offending span. A comment without location or quotation is a question, not a finding, until someone substantiates it. Validated inline findings publish as native pending-review comments through the `comments` payload with `path`, `line`, and `side`; command failures and other non-inline evidence stay in the summary without invented anchors. Publication reads back the complete native comment enumeration and validates ownership before counting success.
+
+## Publication authority
+
+Reviews publish as native `COMMENT` by default; `APPROVE` and `REQUEST_CHANGES` need explicit human approval and never retry as another event. Reviewer permission comes from an independent fresh collaborator read, never the handoff payload; movement between still-authorized collaborator roles keeps the content valid.
 
 ## Subagent use
 

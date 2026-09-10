@@ -593,6 +593,8 @@ describe("combined incidents resolve independently without losing verified work"
         commitSha: INCIDENT_295_HEAD_SHA,
         reviewProse: "## Standards\n\nok\n\n## Spec\n\nok",
         handoff,
+        observedReviewerPermission: "write",
+        expectedAuthor: "reviewer",
       },
       fake,
     );

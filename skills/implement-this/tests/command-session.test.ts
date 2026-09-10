@@ -46,6 +46,7 @@ describe("decideDeliveryCompletion", () => {
       repository: "o/r",
       expectedRepository: "o/r",
       baseBranch: "main",
+      expectedBaseBranch: "main",
       headBranch: "impl/100-x",
       expectedBranch: "impl/100-x",
       headSha: "abc",
@@ -53,6 +54,21 @@ describe("decideDeliveryCompletion", () => {
       evidenceStatus: "current",
     });
     assert.equal(d.delivered, true);
+  });
+  test("missing default-branch pin stops instead of defaulting to main", () => {
+    const d = decideDeliveryCompletion({
+      ...base,
+      repository: "o/r",
+      expectedRepository: "o/r",
+      baseBranch: "main",
+      headBranch: "impl/100-x",
+      expectedBranch: "impl/100-x",
+      headSha: "abc",
+      expectedHeadSha: "abc",
+      evidenceStatus: "current",
+    });
+    assert.equal(d.delivered, false);
+    if (d.delivered === false) assert.match(d.reason, /default branch/);
   });
   test("wrong repository, base, branch, head, or evidence stops", () => {
     assert.equal(decideDeliveryCompletion({ ...base, repository: "o/other", expectedRepository: "o/r" }).delivered, false);
@@ -63,6 +79,21 @@ describe("decideDeliveryCompletion", () => {
     );
     assert.equal(decideDeliveryCompletion({ ...base, headSha: "x", expectedHeadSha: "y" }).delivered, false);
     assert.equal(decideDeliveryCompletion({ ...base, evidenceStatus: "stale" }).delivered, false);
+  });
+  test("delivery follows the pinned default branch instead of hard-coded main", () => {
+    const trunk = {
+      ...base,
+      repository: "o/r",
+      expectedRepository: "o/r",
+      headBranch: "impl/100-x",
+      expectedBranch: "impl/100-x",
+      headSha: "abc",
+      expectedHeadSha: "abc",
+      evidenceStatus: "current",
+    };
+    assert.equal(decideDeliveryCompletion({ ...trunk, baseBranch: "trunk", expectedBaseBranch: "trunk" }).delivered, true);
+    assert.equal(decideDeliveryCompletion({ ...trunk, baseBranch: "main", expectedBaseBranch: "trunk" }).delivered, false);
+    assert.equal(decideDeliveryCompletion({ ...trunk, baseBranch: "trunk", expectedBaseBranch: "  " }).delivered, false);
   });
 });
 

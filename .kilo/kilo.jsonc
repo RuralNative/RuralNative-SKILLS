@@ -96,6 +96,8 @@
           "node */.agents/skills/review-this/prepare-review.mjs*": "allow",
           "node */.kilocode/skills/review-this/publish-review.mjs*": "allow",
           "node */.agents/skills/review-this/publish-review.mjs*": "allow",
+          "node */.kilocode/skills/review-this/github-facts.mjs*": "allow",
+          "node */.agents/skills/review-this/github-facts.mjs*": "allow",
           "*>*": "deny",
           "*<*": "deny",
           "*|*": "deny",

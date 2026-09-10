@@ -102,6 +102,8 @@ export interface DeliveryCompletionFact extends DeliveryFact {
   expectedRepository?: string;
   /** Pull-request base branch name. */
   baseBranch?: string;
+  /** Pinned repository default branch; required, never defaults to `main`. */
+  expectedBaseBranch?: string;
   /** Pull-request head branch name. */
   headBranch?: string;
   /** Expected feature branch for the ticket. */
@@ -120,10 +122,12 @@ export type DeliveryCompletion =
 
 /**
  * Read-back completion: the observed pull request must be open in the
- * expected repository, against `main`, on the expected head branch and SHA,
- * with a valid closing reference and current validated evidence. Never infer
- * success from a write response. Evidence must carry the shared-validator
- * `current` status and the head SHA must equal the pushed commit.
+ * expected repository, against the pinned default branch, on the expected
+ * head branch and SHA, with a valid closing reference and current validated
+ * evidence. Never infer success from a write response. Evidence must carry
+ * the shared-validator `current` status and the head SHA must equal the
+ * pushed commit. A mid-run default-branch change or an incompatible existing
+ * PR stops instead of retargeting silently (ADR-0040).
  */
 export function decideDeliveryCompletion(fact: DeliveryCompletionFact): DeliveryCompletion {
   if (!fact.pullRequestOpen) return { delivered: false, reason: "the pull request is not open" };
@@ -145,8 +149,12 @@ export function decideDeliveryCompletion(fact: DeliveryCompletionFact): Delivery
   if (fact.repository!.toLowerCase() !== fact.expectedRepository!.toLowerCase()) {
     return { delivered: false, reason: "the pull request lives in another repository" };
   }
-  if (!fact.baseBranch || fact.baseBranch !== "main") {
-    return { delivered: false, reason: "the pull request does not target main" };
+  const expectedBase = (fact.expectedBaseBranch ?? "").trim();
+  if (expectedBase === "") {
+    return { delivered: false, reason: "no trustworthy default branch for delivery; pin the repository default branch from GitHub before delivery" };
+  }
+  if (!fact.baseBranch || fact.baseBranch !== expectedBase) {
+    return { delivered: false, reason: `the pull request does not target the pinned default branch ${expectedBase}` };
   }
   if (!fact.headBranch?.trim() || !fact.expectedBranch?.trim()) {
     return { delivered: false, reason: "no trustworthy head branch identity for the pull request" };

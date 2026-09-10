@@ -53,6 +53,7 @@ describe("install-check in fixture homes", () => {
         "prepare-review.mjs",
         "workflow-cli.mjs",
         "publish-review.mjs",
+        "github-facts.mjs",
         "  bash:",
         '    "*": ask',
         '    "git branch -D*": deny',
@@ -65,6 +66,8 @@ describe("install-check in fixture homes", () => {
         '    "node */.agents/skills/review-this/prepare-review.mjs": allow',
         '    "node */.kilocode/skills/review-this/publish-review.mjs": allow',
         '    "node */.agents/skills/review-this/publish-review.mjs": allow',
+        '    "node */.kilocode/skills/review-this/github-facts.mjs": allow',
+        '    "node */.agents/skills/review-this/github-facts.mjs": allow',
         '    "*>*": deny',
         "",
       ].join("\n"),
@@ -91,6 +94,7 @@ describe("install-check in fixture homes", () => {
         "prepare-review.mjs",
         "workflow-cli.mjs",
         "publish-review.mjs",
+        "github-facts.mjs",
         "  bash:",
         '    "*": ask',
         '    "git branch -D*": deny',
@@ -114,9 +118,17 @@ describe("install-check in fixture homes", () => {
     const missing = run(["--source", src, "--install", dst]);
     assert.equal(missing.exit, 1);
     copySkill(dst);
+    fs.rmSync(path.join(dst, "github-facts.mjs"));
+    const missingFacts = run(["--source", src, "--install", dst]);
+    assert.equal(missingFacts.exit, 1);
+    copySkill(dst);
     fs.appendFileSync(path.join(dst, "workflow-state.ts"), "\n// drift\n");
     const drift = run(["--source", src, "--install", dst]);
     assert.equal(drift.exit, 1);
     assert.ok(JSON.stringify(drift.json).includes("byte-mismatch"));
+    copySkill(dst);
+    fs.appendFileSync(path.join(dst, "github-facts.ts"), "\n// drift\n");
+    const factsDrift = run(["--source", src, "--install", dst]);
+    assert.equal(factsDrift.exit, 1);
   });
 });

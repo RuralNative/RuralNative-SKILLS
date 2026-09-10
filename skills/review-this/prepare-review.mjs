@@ -398,6 +398,8 @@ async function main() {
         // resume. Caller supplies the pinned reviewProse/handoff; this step
         // never repeats the Standards/Spec pass for a recoverable failure.
         // Authorization failures are restrictions, never recoverable retries.
+        // Permission is observed independently before any write; the handoff
+        // payload permission is never trusted.
         if (!validRepository(input.repository) || !validPrNumber(input.prNumber) || !validSha(input.commitSha)) {
           print(2, failure("publish-review requires repository, prNumber, and commitSha"));
         }
@@ -411,6 +413,29 @@ async function main() {
         const { publishReviewPublication } = await import(pathToFileURL(path.join(here, "publish-review.ts")).href);
         const { createGhReviewTransport } = await import(pathToFileURL(path.join(here, "gh-review-transport.ts")).href);
         const resumeId = typeof input.resumeReviewId === "string" && input.resumeReviewId !== "" ? input.resumeReviewId : undefined;
+        const claimedPermission = typeof input.observedReviewerPermission === "string" ? input.observedReviewerPermission : undefined;
+        const expectedAuthorInput = typeof input.expectedAuthor === "string" && input.expectedAuthor !== "" ? input.expectedAuthor : undefined;
+        const inlineComments = Array.isArray(input.inlineComments) ? input.inlineComments : undefined;
+        const nonDefaultEventApproved = input.nonDefaultEventApproved === true ? true : undefined;
+        let observedReviewerPermission;
+        let expectedAuthor = expectedAuthorInput;
+        if (claimedPermission === "policy") {
+          observedReviewerPermission = "policy";
+        } else {
+          const actorRes = await execArgs("gh", ["api", "user", "--jq", ".login"]);
+          const actor = actorRes.ok ? actorRes.output.trim() : "";
+          const permRes = actor !== "" ? await execArgs("gh", ["api", `repos/${input.repository}/collaborators/${actor}/permission`, "--jq", ".permission"]) : { ok: false, output: "" };
+          const observed = permRes.ok ? permRes.output.trim() : "";
+          const permission = observed === "admin" || observed === "maintain" || observed === "write" ? observed : "unknown";
+          if (actor === "" || permission === "unknown") {
+            print(1, { ok: false, operation, kind: "restricted", failureClass: "auth-denied", step: "read-back", reviewId: resumeId ?? null, reason: "reviewer permission was not independently observed; verify it before publication" });
+          }
+          if (expectedAuthor !== undefined && expectedAuthor !== actor) {
+            print(1, { ok: false, operation, kind: "restricted", failureClass: "auth-denied", step: "read-back", reviewId: resumeId ?? null, reason: `expected author ${expectedAuthor} does not match the authenticated actor ${actor}; stop instead of publishing as another user` });
+          }
+          expectedAuthor = actor;
+          observedReviewerPermission = permission;
+        }
         const baseInput = {
           repository: input.repository,
           prNumber: input.prNumber,
@@ -418,6 +443,10 @@ async function main() {
           reviewProse: input.reviewProse,
           handoff: input.handoff,
           submitEvent: input.submitEvent ?? "COMMENT",
+          nonDefaultEventApproved,
+          observedReviewerPermission,
+          expectedAuthor,
+          inlineComments,
           resumeReviewId: resumeId,
         };
         let outcome = await publishReviewPublication(baseInput, createGhReviewTransport(input.repository));
