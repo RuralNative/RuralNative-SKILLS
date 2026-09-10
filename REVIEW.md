@@ -16,8 +16,14 @@ publication. It publishes the review and verified inline findings to the
 selected pull request and stops. It never applies fixes, edits pull-request
 source, commits, pushes, merges, labels, promotes, or closes. The only
 pull-request body write is the scoped evidence-repair helper replacing
-exactly one validated evidence region with provenance (ADR-0039); general
-body updates stay forbidden. No fix subagent runs in this review.
+exactly one validated evidence region with provenance (ADR-0039); it runs
+through the observation-based `recover-evidence` operation, which establishes
+checks from the pinned configuration, requires a complete receipt for the
+observed verification intent and every active criterion, rejects truncated
+output and downgraded behavior proof, and re-reads pins, positive
+head-repository identity, and caller-observed governing sources before each
+write, while `repair-record` only inspects, and general body updates stay
+forbidden. No fix subagent runs in this review.
 
 ## Scope
 

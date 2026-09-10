@@ -22,6 +22,12 @@ import {
   parseEvidenceRepairRecord,
   evidenceRepairReusable,
   replaceSingleEvidenceBlock,
+  evidencePinPresence,
+  readEvidenceRed,
+  extractEvidenceBehaviorClaims,
+  extractDeclaredBehaviorCriteria,
+  insertEvidenceRepairRecord,
+  locateEvidenceRepairRecord,
   requirementsRevision,
   requirementsRevisionValue,
   resolveRequirementsBody,
@@ -49,6 +55,8 @@ import {
   decideCleanlinessAfterSetup,
   planEvidenceRecovery,
   decidePublicationResume,
+  isEstablishedRepairCommand,
+  summarizeExecutionReceipt,
 } from "../prepare-review.ts";
 import { publishReviewPublication } from "../publish-review.ts";
 import { fakeReviewPublicationHost } from "./fakes.ts";
@@ -760,6 +768,217 @@ describe("review hardening regressions", () => {
     const twoTargets = `${base}\nFixes #200\n`;
     // Base already closes #288; adding Fixes #200 is a conflicting association.
     assert.equal(replaceSingleEvidenceBlock(twoTargets, candidate).ok, false);
+  });
+
+  test("pin presence distinguishes absent, malformed, duplicate, and present carriers", () => {
+    const current = currentPin();
+    const body = renderStaleBlock(current);
+    assert.equal(evidencePinPresence(body).kind, "present");
+    const withoutPin = body.replace(/^- Requirements revision:.*$/m, "");
+    const absent = evidencePinPresence(withoutPin);
+    assert.equal(absent.kind, "absent");
+    const malformed = evidencePinPresence(body.replace(/^- Requirements revision:.*$/m, "- Requirements revision: garbage"));
+    assert.equal(malformed.kind, "malformed");
+    const duplicate = evidencePinPresence(body.replace(/^- Requirements revision:.*$/m, (line) => `${line}\n${line}`));
+    assert.equal(duplicate.kind, "duplicate");
+  });
+
+  test("RED history reads none, malformed, or the exact recorded command and output", () => {
+    const current = currentPin();
+    const ticket = resolveRequirementsBody(incidentTicketBody(), "ticket");
+    assert.equal(ticket.ok, true);
+    if (!ticket.ok) return;
+    const base = renderCompactEvidence({
+      criteria: ticket.criteria,
+      evidence: ticket.criteria.map((c) => ({
+        criterionId: c.id,
+        kind: "non-behavior" as const,
+        rationale: `check ${c.id}`,
+      })),
+      isBugFix: false,
+      requirementsRevision: current,
+      headSha: INCIDENT_295_HEAD_SHA,
+    });
+    assert.equal(readEvidenceRed(base).kind, "none");
+    const withRed = renderCompactEvidence({
+      criteria: ticket.criteria,
+      evidence: ticket.criteria.map((c) => ({
+        criterionId: c.id,
+        kind: "non-behavior" as const,
+        rationale: `check ${c.id}`,
+      })),
+      isBugFix: true,
+      bugRedCommand: "node --test tests/bug.test.ts",
+      bugRedOutput: "1 failing",
+      requirementsRevision: current,
+      headSha: INCIDENT_295_HEAD_SHA,
+    });
+    const read = readEvidenceRed(withRed);
+    assert.equal(read.kind, "present");
+    if (read.kind === "present") {
+      assert.equal(read.redCommand, "node --test tests/bug.test.ts");
+      assert.equal(read.redOutput, "1 failing");
+    }
+    const torn = withRed.replace(/^- RED output:.*$/m, "");
+    assert.equal(readEvidenceRed(torn).kind, "malformed");
+  });
+
+  test("the repair record stays inside one evidence region and the consumer accepts it", () => {
+    const current = currentPin();
+    const ticket = resolveRequirementsBody(incidentTicketBody(), "ticket");
+    assert.equal(ticket.ok, true);
+    if (!ticket.ok) return;
+    const block = renderCompactEvidence({
+      criteria: ticket.criteria,
+      evidence: ticket.criteria.map((c) => ({
+        criterionId: c.id,
+        kind: "non-behavior" as const,
+        rationale: `check ${c.id}`,
+      })),
+      isBugFix: false,
+      requirementsRevision: current,
+      headSha: INCIDENT_295_HEAD_SHA,
+    });
+    const record = {
+      repository: "owner/eScraper-Business-Brokers-for-Seacher-Insights",
+      prNumber: INCIDENT_295_PR_NUMBER,
+      oldRequirementsRevision: staleSameVersionPin(current),
+      newRequirementsRevision: current,
+      oldHeadSha: INCIDENT_295_HEAD_SHA,
+      newHeadSha: INCIDENT_295_HEAD_SHA,
+      baseSha: INCIDENT_295_BASE_SHA,
+      reason: "same-version stale pin with revalidated proof",
+      verificationProvenance: "npm run docs:check: exit 0, 12 bytes",
+    };
+    const composed = insertEvidenceRepairRecord(block, record);
+    const body = `Context\n\nCloses #288\n\n${composed}\n`;
+    assert.equal(countEvidenceBlocks(body), 1);
+    assert.equal(locateEvidenceRepairRecord(body).location, "inside");
+    assert.equal(parseEvidenceRepairRecord(body).found, true);
+    assert.equal(
+      validateEvidenceHandoff({
+        body,
+        currentRequirementsRevision: current,
+        currentHeadSha: INCIDENT_295_HEAD_SHA,
+      }).status,
+      "current",
+    );
+    // A record outside the compact region is rejected, not moved or deleted.
+    const outside = `${block}\n\n${renderEvidenceRepairRecord(record)}\n`;
+    assert.equal(locateEvidenceRepairRecord(outside).location, "outside");
+  });
+
+  test("regeneration replaces the region while preserving mixed outside bytes exactly", () => {
+    const current = currentPin();
+    const stale = staleSameVersionPin(current);
+    const ticket = resolveRequirementsBody(incidentTicketBody(), "ticket");
+    assert.equal(ticket.ok, true);
+    if (!ticket.ok) return;
+    const candidate = renderCompactEvidence({
+      criteria: ticket.criteria,
+      evidence: ticket.criteria.map((c) => ({
+        criterionId: c.id,
+        kind: "non-behavior" as const,
+        rationale: `check ${c.id}`,
+      })),
+      isBugFix: false,
+      requirementsRevision: current,
+      headSha: INCIDENT_295_HEAD_SHA,
+    });
+    const staleBlock = renderCompactEvidence({
+      criteria: ticket.criteria,
+      evidence: ticket.criteria.map((c) => ({
+        criterionId: c.id,
+        kind: "non-behavior" as const,
+        rationale: `check ${c.id}`,
+      })),
+      isBugFix: false,
+      requirementsRevision: stale,
+      headSha: INCIDENT_295_HEAD_SHA,
+    });
+    const prefix = "P1 — governed reconstruction.\r\n\r\nA second line.\n";
+    const suffix = "\n\nCloses #288\r\nFinal line with unicode ✓\n";
+    const mixed = `${prefix}${staleBlock}${suffix}`;
+    const replaced = replaceSingleEvidenceBlock(mixed, candidate);
+    assert.equal(replaced.ok, true);
+    if (!replaced.ok) return;
+    assert.ok(replaced.body.startsWith(prefix), "prefix bytes preserved");
+    assert.ok(replaced.body.endsWith(suffix), "suffix bytes preserved");
+    assert.equal(replaced.body.slice(prefix.length, replaced.body.length - suffix.length), candidate);
+  });
+
+  test("repair checks must be established by the pinned configuration", () => {
+    const config = { npmScripts: ["docs:check", "docs:diagrams"], trackedFiles: ["scripts/evidence-check.mjs"] };
+    assert.equal(isEstablishedRepairCommand("npm run docs:check", config).ok, true);
+    assert.equal(isEstablishedRepairCommand("npm run docs:missing", config).ok, false);
+    assert.equal(isEstablishedRepairCommand("node scripts/evidence-check.mjs", config).ok, true);
+    assert.equal(isEstablishedRepairCommand("node scripts/untracked.mjs", config).ok, false);
+    assert.equal(isEstablishedRepairCommand("node ../escape.mjs", config).ok, false);
+    assert.equal(isEstablishedRepairCommand("node scripts/evidence-check.mjs && rm -rf /", config).ok, false);
+    assert.equal(isEstablishedRepairCommand("npm run docs:check -- --write", config).ok, false);
+    // Node repair checks are argument-free: an argument can smuggle an
+    // absolute payload path or a write flag past establishment.
+    assert.equal(isEstablishedRepairCommand("node scripts/evidence-check.mjs --write /tmp/arbitrary-target", config).ok, false);
+    assert.equal(isEstablishedRepairCommand("node scripts/evidence-check.mjs -e evil", config).ok, false);
+    assert.match(summarizeExecutionReceipt({ command: "npm run docs:check", exitStatus: 0, outputBytes: 12, truncated: false }), /exit 0.*12 bytes/);
+    assert.match(summarizeExecutionReceipt({ command: "x", exitStatus: 1, outputBytes: 8000, truncated: true }), /first 8000 bytes/);
+  });
+
+  test("a declared behavior record cannot be hidden by a failing status", () => {
+    const current = currentPin();
+    const ticket = resolveRequirementsBody(incidentTicketBody(), "ticket");
+    assert.equal(ticket.ok, true);
+    if (!ticket.ok) return;
+    const block = renderCompactEvidence({
+      criteria: ticket.criteria,
+      evidence: ticket.criteria.map((c) => ({
+        criterionId: c.id,
+        kind: "behavior" as const,
+        focusedCommand: `node scripts/run.mjs ${c.id}`,
+        result: `failed ${c.id}`,
+        passed: true,
+      })),
+      isBugFix: false,
+      requirementsRevision: current,
+      headSha: INCIDENT_295_HEAD_SHA,
+    });
+    const failing = block.replace(/- Passed: true/g, "- Passed: false");
+    assert.equal(extractEvidenceBehaviorClaims(failing).length, 0);
+    assert.equal(
+      extractDeclaredBehaviorCriteria(failing).length,
+      ticket.criteria.filter((c) => c.status === "active").length,
+      "declared behavior is still detected when it did not pass",
+    );
+  });
+
+  test("multiline RED output survives a read/render round trip", () => {
+    const current = currentPin();
+    const ticket = resolveRequirementsBody(incidentTicketBody(), "ticket");
+    assert.equal(ticket.ok, true);
+    if (!ticket.ok) return;
+    const redOutput = "TypeError: boom\n  at first (a.ts:1)\nsecond line";
+    const render = (output: string): string =>
+      renderCompactEvidence({
+        criteria: ticket.criteria,
+        evidence: ticket.criteria.map((c) => ({
+          criterionId: c.id,
+          kind: "non-behavior" as const,
+          rationale: `check ${c.id}`,
+        })),
+        isBugFix: true,
+        bugRedCommand: "node --test tests/bug.test.ts",
+        bugRedOutput: output,
+        requirementsRevision: current,
+        headSha: INCIDENT_295_HEAD_SHA,
+      });
+    const read = readEvidenceRed(render(redOutput));
+    assert.equal(read.kind, "present");
+    if (read.kind !== "present") return;
+    assert.equal(read.redOutput, redOutput, "the full multi-line log is read, not just the first line");
+    const reread = readEvidenceRed(render(read.redOutput));
+    assert.equal(reread.kind, "present");
+    if (reread.kind !== "present") return;
+    assert.equal(reread.redOutput, redOutput, "re-rendering preserves the multi-line log");
   });
 
   test("CRLF bodies preserve CRLF style outside the replaced region", () => {

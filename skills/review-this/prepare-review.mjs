@@ -24,11 +24,17 @@
 // Usage: node prepare-review.mjs <input.json>  (or - for stdin)
 // Exit codes: 0 ok; 1 recoverable/restricted outcome (JSON describes it);
 // 2 input or runtime failure.
-import { execFile } from "node:child_process";
+import { execFile, spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import {
+  readCollaboratorPermission,
+  readIssueFacts,
+  readPullRequestFacts,
+} from "./github-facts.ts";
 
 const REQUIRED_NODE_MAJOR = 24;
 const RUN_ROOT = "/tmp/kilo/review-this";
@@ -132,6 +138,22 @@ function execArgsFull(command, args, maxOutput = 512 * 1024) {
   return execArgs(command, args, maxOutput);
 }
 
+// One shared bounded executor for approved checks. Keeps the integer exit
+// status, recorded output size, and truncation state so a shortened display is
+// never mistaken for a complete receipt.
+async function runApprovedCheck(command) {
+  const parts = command.trim().split(/\s+/);
+  const result = await execArgsFull(parts[0], parts.slice(1));
+  return {
+    command,
+    output: result.output,
+    outputBytes: result.output.length,
+    exitStatus: integerExit(result.exitStatus),
+    truncated: result.truncated === true,
+    fullLength: result.fullLength,
+  };
+}
+
 function isAuthFailureReason(reason) {
   return /\b(403|401|unauthorized|forbidden|authentication|auth[-\s]?denied|permission\s+denied|requires\s+authentication)\b/i.test(String(reason ?? ""));
 }
@@ -159,6 +181,186 @@ async function ghObservePr(repository, prNumber) {
     }
   }
   return pr;
+}
+
+function sha256Hex(text) {
+  return createHash("sha256").update(text, "utf8").digest("hex");
+}
+
+function integerExit(value) {
+  return Number.isInteger(value) ? value : 1;
+}
+
+// Synchronous `gh` runner for the shared completeness-aware readers
+// (`github-facts.ts`). Argument arrays only, sanitized environment, one bounded
+// call each. A spawn failure or buffer overflow is a failed read; output is
+// never silently truncated into a shorter "success".
+function ghSync(args) {
+  const result = spawnSync("gh", [...args], {
+    encoding: "utf8",
+    maxBuffer: 16 * 1024 * 1024,
+    timeout: 120000,
+    env: sanitizedEnv(),
+  });
+  if (result.error) {
+    return { ok: false, stdout: "", reason: result.error.message };
+  }
+  const stdout = result.stdout ?? "";
+  const stderr = result.stderr ?? "";
+  if (result.status !== 0) {
+    return { ok: false, stdout: "", reason: stderr.trim() || `gh exited ${result.status ?? "unknown"}` };
+  }
+  return { ok: true, stdout: stdout.trim() };
+}
+
+// Map a shared `FactStatus` onto the recovery failure vocabulary: a forbidden
+// read is an authorization failure, a malformed read is a hard restriction,
+// and a missing read is a bounded transient re-read.
+function classifyFactStatus(status) {
+  if (status.kind === "forbidden") return { failureClass: "auth-denied", kind: "restricted" };
+  if (status.kind === "malformed") return { failureClass: "malformed-facts", kind: "restricted" };
+  return { failureClass: "transient-read", kind: "recoverable" };
+}
+
+// Observe the authenticated actor and write permission independently. A
+// payload can never claim its own permission for the repair write.
+async function observeRecoveryPermission(repository) {
+  const actor = await execArgs("gh", ["api", "user", "--jq", ".login"]);
+  const login = actor.ok ? actor.output.trim() : "";
+  if (login === "") return { ok: false, failureClass: "auth-denied", reason: "the authenticated actor could not be observed" };
+  const permission = readCollaboratorPermission(ghSync, repository, login);
+  if (permission !== "admin" && permission !== "maintain" && permission !== "write") {
+    return { ok: false, failureClass: "auth-denied", reason: `authenticated actor ${login} has no observed write permission (${permission})` };
+  }
+  return { ok: true, actor: login, permission };
+}
+
+async function readRecoveryPr(repository, prNumber) {
+  const facts = readPullRequestFacts(ghSync, repository, prNumber);
+  if (facts.status.kind !== "complete") {
+    return { ok: false, ...classifyFactStatus(facts.status), reason: `pull request is unreadable: ${facts.status.reason}` };
+  }
+  return {
+    ok: true,
+    state: facts.state,
+    draft: facts.draft,
+    body: facts.body,
+    baseSha: facts.baseSha,
+    headSha: facts.headSha,
+    baseRef: facts.baseBranch,
+    headRef: facts.headBranch,
+    headRepository: facts.headRepository,
+    closingIssues: facts.closingIssues.map((issue) => ({ repository: `${issue.owner}/${issue.repo}`, number: issue.number })),
+  };
+}
+
+async function readIssue(repository, issueNumber) {
+  const facts = readIssueFacts(ghSync, repository, issueNumber);
+  if (facts.status.kind !== "complete") {
+    return { ok: false, ...classifyFactStatus(facts.status), reason: `issue ${issueNumber} is unreadable: ${facts.status.reason}` };
+  }
+  return { ok: true, body: facts.body, state: facts.state, parentNumber: facts.parentNumber };
+}
+
+// Re-read the caller-observed governing sources from the pinned checkout. A
+// declared path that is missing, a symlink, non-regular, or whose content no
+// longer matches the observed digest stops the write.
+async function readGoverningSources(sources) {
+  const out = [];
+  for (const entry of sources) {
+    if (entry === null || typeof entry !== "object" || Array.isArray(entry)) {
+      return { ok: false, reason: "governing sources must be objects with path and hash" };
+    }
+    const rel = typeof entry.path === "string" ? entry.path : "";
+    const expected = typeof entry.hash === "string" ? entry.hash.toLowerCase() : "";
+    if (rel === "" || rel.includes("..") || path.isAbsolute(rel) || rel.startsWith("~") || !/^[a-f0-9]{64}$/.test(expected)) {
+      return { ok: false, reason: "governing sources need repository-relative paths and sha256 hashes" };
+    }
+    try {
+      const stat = await fs.lstat(rel);
+      if (stat.isSymbolicLink() || !stat.isFile()) {
+        return { ok: false, reason: `governing source ${rel} is not a regular file` };
+      }
+      const digest = sha256Hex(await fs.readFile(rel, "utf8"));
+      if (digest !== expected) {
+        return { ok: false, reason: `governing source ${rel} changed since it was observed` };
+      }
+      out.push({ path: rel, hash: digest });
+    } catch (error) {
+      return { ok: false, reason: `governing source ${rel} is unreadable: ${error.message}` };
+    }
+  }
+  return { ok: true, sources: out };
+}
+
+// Establish repair checks from the pinned checkout itself: npm script names
+// from `package.json` plus the tracked-file listing. A caller list can never
+// authorize arbitrary code on its own.
+async function readRepairConfig() {
+  let npmScripts = [];
+  try {
+    const pkg = JSON.parse(await fs.readFile("package.json", "utf8"));
+    if (pkg && typeof pkg === "object" && pkg.scripts && typeof pkg.scripts === "object" && !Array.isArray(pkg.scripts)) {
+      npmScripts = Object.entries(pkg.scripts).filter(([, value]) => typeof value === "string").map(([name]) => name);
+    }
+  } catch {
+    return { ok: false, reason: "the pinned package.json is unreadable; repair checks cannot be established" };
+  }
+  // `git ls-files -s` exposes the blob mode. Symlinks (120000) and gitlinks
+  // (160000) are excluded so establishment can only name a regular tracked
+  // file; a symlinked "script" would otherwise resolve outside the checkout.
+  const ls = await execArgsFull("git", ["ls-files", "-s"]);
+  if (!ls.ok) return { ok: false, reason: "the tracked-file listing is unreadable" };
+  const trackedFiles = [];
+  for (const line of ls.output.split("\n")) {
+    const m = line.match(/^(\d{6}) [0-9a-f]+ \d+\t(.+)$/);
+    if (!m) continue;
+    if (m[1] === "120000" || m[1] === "160000") continue;
+    trackedFiles.push(m[2]);
+  }
+  return { ok: true, npmScripts, trackedFiles };
+}
+
+async function verifyLocalCheckout(pinnedHead, repository) {
+  const head = await execArgs("git", ["rev-parse", "HEAD"]);
+  if (!head.ok || head.output.trim() !== pinnedHead.trim()) {
+    return { ok: false, reason: "the local checkout is not at the pinned head; align it before repair and never execute fork code" };
+  }
+  const remote = await execArgs("git", ["remote", "get-url", "origin"]);
+  if (!remote.ok) return { ok: false, reason: "the origin remote is unreadable" };
+  const normalized = remote.output
+    .trim()
+    .replace(/\.git$/i, "")
+    .replace(/^git@github\.com:/i, "github.com/")
+    .toLowerCase();
+  if (!normalized.endsWith(`/${repository.toLowerCase()}`)) {
+    return { ok: false, reason: "the checkout origin does not match the target repository; fork code stays static-review-only" };
+  }
+  const status = await execArgs("git", ["status", "--porcelain"]);
+  if (!status.ok) return { ok: false, reason: "the git status is unreadable" };
+  if (status.output.trim() !== "") {
+    return { ok: false, reason: "tracked files are dirty; never clean, reset, stash, or discard to make the run look clean" };
+  }
+  return { ok: true };
+}
+
+// Accept the candidate through the actual bundled consumer. A mocked
+// validator is insufficient; this runs the shipped workflow-cli.mjs.
+function runBundledEvidenceCli(here, input) {
+  const cliPath = path.join(here, "workflow-cli.mjs");
+  const result = spawnSync(process.execPath, [cliPath, "evidence", "-"], {
+    input: JSON.stringify(input),
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+    env: sanitizedEnv(),
+  });
+  let parsed = null;
+  try {
+    parsed = JSON.parse(result.stdout ?? "");
+  } catch {
+    parsed = null;
+  }
+  return { exit: Number.isInteger(result.status) ? result.status : -1, parsed };
 }
 
 async function main() {
@@ -296,12 +498,22 @@ async function main() {
         }
         // Split into argv without a shell: first token is the executable,
         // remaining tokens are arguments (no chaining/redirection allowed by
-        // the pure allowlist above).
-        const parts = command.trim().split(/\s+/);
-        const result = await execArgs(parts[0], parts.slice(1));
-        // Tracked-file cleanliness is checked by the caller after setup;
-        // this helper never cleans, resets, stashes, or discards.
-        print(0, { ok: true, operation, runDir, receipt: { command, output: result.output, exitStatus: result.exitStatus } });
+        // the pure allowlist above). Only an approved command reaches here.
+        const receipt = await runApprovedCheck(command);
+        // The outer result reports the command's real outcome; truncation
+        // metadata rides along so a shortened display is never a receipt.
+        print(0, {
+          ok: receipt.exitStatus === 0,
+          operation,
+          runDir,
+          receipt: {
+            command: receipt.command,
+            output: receipt.output,
+            exitStatus: receipt.exitStatus,
+            truncated: receipt.truncated,
+            fullLength: receipt.fullLength,
+          },
+        });
         break;
       }
       case "prepare-checkout": {
@@ -535,37 +747,568 @@ async function main() {
         print(0, { ok: true, operation, runDir, outcome });
         break;
       }
-      case "recover-evidence":
       case "repair-record": {
-        // Classify evidence recovery from current proof facts. This operation
-        // never fabricates a pin: it runs the pure recovery gate and returns
-        // the decision. Scoped writes happen only through the evidence-repair
-        // path with pre-write re-read and post-write read-back.
-        const required = ["classification", "currentScopeResolved", "proofRevalidated", "unambiguousBlock", "historicalBugRedPreserved"];
-        for (const key of required) {
-          if (input[key] === undefined) {
-            print(2, failure(`${operation} requires ${key}`));
-          }
+        // Read-only inspection/reconciliation of an existing attempted repair:
+        // never a separate record writer or authorization bypass.
+        if (!validRepository(input.repository) || !validPrNumber(input.prNumber)) {
+          print(2, failure("repair-record requires repository and prNumber"));
         }
-        const runDir = await ensureRunDir(input.runId ?? `${operation}-${Date.now()}`);
+        const runDir = await ensureRunDir(input.runId ?? `repair-record-${Date.now()}`);
         if (input.dryRun === true) {
-          print(0, { ok: true, operation, runDir, validated: true });
+          print(0, { ok: true, operation, runDir, validated: true, repaired: false, ready: false });
         }
         const core = await import(pathToFileURL(path.join(here, "workflow-state.ts")).href);
-        if (typeof core.decideReviewEvidenceRecovery !== "function") {
+        for (const fn of ["locateEvidenceRepairRecord", "evidenceRepairReusable"]) {
+          if (typeof core[fn] !== "function") {
+            print(2, failure("the bundled shared core is unavailable"));
+          }
+        }
+        const pr = await readRecoveryPr(input.repository, input.prNumber);
+        if (!pr.ok) {
+          print(1, { ok: false, operation, kind: "restricted", failureClass: "transient-read", reason: `pull request is unreadable: ${pr.reason}` });
+        }
+        const located = core.locateEvidenceRepairRecord(pr.body);
+        if (located.location !== "inside") {
+          print(1, { ok: false, operation, kind: "restricted", reason: `no usable evidence repair record: ${located.reason}` });
+        }
+        const record = located.record;
+        // A record written for another target is never reusable.
+        if (record.repository.toLowerCase() !== input.repository.toLowerCase() || record.prNumber !== input.prNumber) {
+          print(1, { ok: false, operation, kind: "restricted", reason: "the repair record names a different repository or pull request; reconcile it outside review" });
+        }
+        // Reuse requires the recorded candidate to be exactly what is live and
+        // an identical stored intent. Without a hint, reuse cannot be proven.
+        let reusable = false;
+        let matchesLiveBody = false;
+        try {
+          const hint = JSON.parse(await fs.readFile(path.join(runDir, "evidence-repair.json"), "utf8"));
+          matchesLiveBody = typeof hint.candidateDigest === "string" && hint.candidateDigest === sha256Hex(pr.body);
+          reusable =
+            hint.repository === input.repository &&
+            hint.prNumber === input.prNumber &&
+            typeof hint.record === "object" &&
+            hint.record !== null &&
+            core.evidenceRepairReusable(hint.record, record) &&
+            matchesLiveBody;
+        } catch {
+          reusable = false;
+        }
+        print(0, { ok: true, operation, runDir, record, reusable, matchesLiveBody });
+        break;
+      }
+      case "recover-evidence": {
+        // One bounded, observation-based repair write. Remove the obsolete
+        // decision-only contract explicitly instead of silently ignoring a
+        // caller boolean.
+        if (input.checks === undefined && input.classification !== undefined) {
+          print(2, failure("recover-evidence no longer accepts decision-only booleans; supply repository, prNumber, headSha, baseSha, ticketNumber, parentNumber, boundary, approvedCommands, requiredCommands, governingSources, and criterion/check observations"));
+        }
+        if (!validRepository(input.repository) || !validPrNumber(input.prNumber) || !validSha(input.headSha) || !validSha(input.baseSha)) {
+          print(2, failure("recover-evidence requires repository, prNumber, headSha, and baseSha"));
+        }
+        if (!validPrNumber(input.ticketNumber) || !validPrNumber(input.parentNumber)) {
+          print(2, failure("recover-evidence requires ticketNumber and parentNumber"));
+        }
+        const boundary = input.boundary ?? null;
+        const approved = Array.isArray(input.approvedCommands) ? input.approvedCommands : [];
+        const checks = Array.isArray(input.checks) ? input.checks : null;
+        if (checks === null || checks.length === 0) {
+          print(2, failure("recover-evidence requires a non-empty criterion/check observation list"));
+        }
+        // The observed verification intent: every command the pinned ticket
+        // and requirements state requires. Recovery executes all of these, not
+        // only the commands a criterion happens to map to, so a mandatory check
+        // cannot be skipped by leaving it out of the criterion mapping.
+        const requiredCommands = Array.isArray(input.requiredCommands)
+          ? input.requiredCommands.filter((c) => typeof c === "string" && c.trim() !== "").map((c) => c.trim())
+          : null;
+        if (requiredCommands === null || requiredCommands.length === 0) {
+          print(2, failure("recover-evidence requires the observed requiredCommands verification intent"));
+        }
+        // Governing sources observed by policy resolution. Recovery re-reads
+        // them, at observation and again before the write, so a concurrent
+        // policy edit in the final window stops the write.
+        if (!Array.isArray(input.governingSources)) {
+          print(2, failure("recover-evidence requires observed governingSources (an array, empty when policy resolution found none)"));
+        }
+        if (typeof pure.isAllowedSetupCommand !== "function" || typeof pure.isValidInstallBoundary !== "function" || typeof pure.isEstablishedRepairCommand !== "function" || typeof pure.summarizeExecutionReceipt !== "function") {
           print(2, failure("preparation core is unavailable"));
         }
+        if (!pure.isValidInstallBoundary(boundary)) {
+          print(1, { ok: false, operation, kind: "restricted", reason: "install boundary is not a known frozen boundary with lifecycle scripts disabled" });
+        }
+        if (input.fork === true) {
+          print(1, { ok: false, operation, kind: "restricted", reason: "fork code remains static-review-only; never execute untrusted fork code" });
+        }
+        const core = await import(pathToFileURL(path.join(here, "workflow-state.ts")).href);
+        for (const fn of [
+          "decideReviewEvidenceRecovery",
+          "classifyRequirementsPin",
+          "requirementsRevision",
+          "requirementsRevisionValue",
+          "validateEvidenceHandoff",
+          "resolveRequirementsBody",
+          "renderCompactEvidence",
+          "insertEvidenceRepairRecord",
+          "replaceSingleEvidenceBlock",
+          "evidencePinPresence",
+          "readEvidenceRed",
+          "locateEvidenceRepairRecord",
+          "extractEvidenceBehaviorClaims",
+          "extractDeclaredBehaviorCriteria",
+          "parseEvidenceHandoff",
+        ]) {
+          if (typeof core[fn] !== "function") {
+            print(2, failure(`the bundled shared core is missing ${fn}`));
+          }
+        }
+        const runDir = await ensureRunDir(input.runId ?? `recover-${Date.now()}`);
+        if (input.dryRun === true) {
+          print(0, { ok: true, operation, runDir, validated: true, repaired: false, ready: false });
+        }
+        // Independently observe actor/write permission, the local checkout
+        // identity, and the declared governing sources.
+        const permission = await observeRecoveryPermission(input.repository);
+        if (!permission.ok) {
+          print(1, { ok: false, operation, kind: "restricted", failureClass: permission.failureClass ?? "auth-denied", reason: permission.reason });
+        }
+        const local = await verifyLocalCheckout(input.headSha, input.repository);
+        if (!local.ok) {
+          print(1, { ok: false, operation, kind: "restricted", reason: local.reason });
+        }
+        const governing = await readGoverningSources(input.governingSources);
+        if (!governing.ok) {
+          print(1, { ok: false, operation, kind: "restricted", reason: governing.reason });
+        }
+        // Native PR facts: open, exact pins, and positively same-repository head.
+        const pr = await readRecoveryPr(input.repository, input.prNumber);
+        if (!pr.ok) {
+          print(1, { ok: false, operation, kind: "restricted", failureClass: pr.failureClass ?? "transient-read", reason: pr.reason });
+        }
+        if (pr.state !== "open") {
+          print(1, { ok: false, operation, kind: "restricted", reason: `the pull request is ${pr.state}, not open` });
+        }
+        if (pr.headSha !== input.headSha.trim() || pr.baseSha !== input.baseSha.trim()) {
+          print(1, { ok: false, operation, kind: "restricted", failureClass: "revision-change", reason: "pull-request head or base moved from the expected pins; re-observe before repair" });
+        }
+        if (pr.headRepository === "" || pr.headRepository.toLowerCase() !== input.repository.toLowerCase()) {
+          print(1, { ok: false, operation, kind: "restricted", reason: "the pull request head repository is not positively the target repository; fork or deleted-source code stays static-review-only" });
+        }
+        // Native closing-ticket and parent associations.
+        const closingTargets = pr.closingIssues
+          .filter((issue) => issue.repository.toLowerCase() === input.repository.toLowerCase())
+          .map((issue) => issue.number);
+        if (closingTargets.length !== 1 || closingTargets[0] !== input.ticketNumber) {
+          print(1, { ok: false, operation, kind: "restricted", reason: "the pull request does not natively close exactly the expected ticket" });
+        }
+        const ticket = await readIssue(input.repository, input.ticketNumber);
+        if (!ticket.ok || ticket.body.trim() === "") {
+          print(1, { ok: false, operation, kind: "restricted", failureClass: ticket.failureClass ?? "transient-read", reason: "the closing ticket body is unreadable or empty" });
+        }
+        if (ticket.parentNumber !== input.parentNumber) {
+          print(1, { ok: false, operation, kind: "restricted", reason: "the closing ticket does not natively belong to the expected parent" });
+        }
+        const parent = await readIssue(input.repository, input.parentNumber);
+        if (!parent.ok || parent.body.trim() === "") {
+          print(1, { ok: false, operation, kind: "restricted", failureClass: parent.failureClass ?? "transient-read", reason: "the parent body is unreadable or empty" });
+        }
+        // Current requirements revision from the observed canonical bodies.
+        let currentCarrier = null;
+        try {
+          currentCarrier = core.requirementsRevisionValue(core.requirementsRevision(parent.body, ticket.body, sha256Hex));
+        } catch (error) {
+          print(1, { ok: false, operation, kind: "restricted", reason: `current requirements do not resolve: ${error.message}` });
+        }
+        const ticketResolution = core.resolveRequirementsBody(ticket.body, "ticket");
+        if (!ticketResolution.ok) {
+          print(1, { ok: false, operation, kind: "restricted", reason: "the ticket criteria do not resolve; reconcile requirements outside review" });
+        }
+        // Existing single block and a precise pin presence decision.
+        const existingPin = core.evidencePinPresence(pr.body);
+        if (existingPin.kind === "no-block") {
+          print(1, { ok: false, operation, kind: "restricted", reason: "no single compact evidence block is present; review preparation never composes an absent block" });
+        }
+        if (existingPin.kind === "duplicate" || existingPin.kind === "malformed") {
+          print(1, { ok: false, operation, kind: "restricted", reason: existingPin.reason });
+        }
+        const classification = core.classifyRequirementsPin(existingPin.kind === "present" ? existingPin.value : "", currentCarrier);
+        if (classification.classification === "equal") {
+          // Even a current pin must carry a usable repair record: a duplicate,
+          // out-of-region, or foreign record is a restriction, never a silent
+          // success, and an unsupported envelope stops instead of reporting
+          // ready: false with exit 0.
+          const locatedHere = core.locateEvidenceRepairRecord(pr.body);
+          if (locatedHere.location === "outside" || locatedHere.location === "ambiguous" || locatedHere.location === "malformed") {
+            print(1, { ok: false, operation, kind: "restricted", reason: `the pull request carries an unusable repair record: ${locatedHere.reason}` });
+          }
+          if (locatedHere.location === "inside") {
+            const prior = locatedHere.record;
+            if (prior.repository.toLowerCase() !== input.repository.toLowerCase() || prior.prNumber !== input.prNumber) {
+              print(1, { ok: false, operation, kind: "restricted", reason: "the repair record names a different repository or pull request; reconcile it outside review" });
+            }
+          }
+          const current = core.validateEvidenceHandoff({ body: pr.body, currentRequirementsRevision: currentCarrier, currentHeadSha: input.headSha.trim() });
+          if (current.status !== "current") {
+            print(1, { ok: false, operation, kind: "restricted", reason: `current-pin evidence is not reviewable: ${current.reason}` });
+          }
+          print(0, { ok: true, operation, runDir, repaired: false, ready: true, decision: { classification: "equal", reason: classification.reason } });
+        }
+        const red = core.readEvidenceRed(pr.body);
+        if (red.kind === "malformed") {
+          print(1, { ok: false, operation, kind: "restricted", reason: red.reason });
+        }
+        const isBugFix = red.kind === "present";
+        // The original evidence must be bound to the same head; repair never
+        // silently rebinds evidence verified against another commit.
+        const originalHandoff = core.parseEvidenceHandoff(pr.body);
+        const originalHead = (originalHandoff.headSha ?? "").trim();
+        if (originalHead !== "" && originalHead !== input.headSha.trim()) {
+          print(1, { ok: false, operation, kind: "restricted", reason: `the evidence block is bound to head ${originalHead.slice(0, 12)} while the pull request is at ${input.headSha.trim().slice(0, 12)}; rerun verification instead of rebinding` });
+        }
+        // Criterion/check observations must cover every active criterion once.
+        const activeIds = core.activeCriteria
+          ? core.activeCriteria(ticketResolution.criteria).map((criterion) => criterion.id)
+          : ticketResolution.criteria.filter((criterion) => criterion.status === "active").map((criterion) => criterion.id);
+        const checkById = new Map();
+        for (const entry of checks) {
+          if (entry === null || typeof entry !== "object" || Array.isArray(entry)) {
+            print(2, failure("each check observation must be one object"));
+          }
+          const criterionId = String(entry.criterionId ?? "");
+          if (!activeIds.includes(criterionId)) {
+            print(2, failure(`check names a non-active or unknown criterion: ${criterionId}`));
+          }
+          if (checkById.has(criterionId)) {
+            print(2, failure(`duplicate check observation for ${criterionId}`));
+          }
+          if (entry.kind !== "behavior" && entry.kind !== "non-behavior") {
+            print(2, failure(`check ${criterionId} must be behavior or non-behavior`));
+          }
+          const command = typeof entry.command === "string" ? entry.command.trim() : "";
+          if (command === "") {
+            print(2, failure(`check ${criterionId} requires a command`));
+          }
+          checkById.set(criterionId, {
+            criterionId,
+            kind: entry.kind,
+            command,
+            rationale: typeof entry.rationale === "string" ? entry.rationale : "",
+          });
+        }
+        const missingChecks = activeIds.filter((id) => !checkById.has(id));
+        const extraChecks = [...checkById.keys()].filter((id) => !activeIds.includes(id));
+        if (missingChecks.length > 0 || extraChecks.length > 0) {
+          print(1, { ok: false, operation, kind: "restricted", reason: `repair checks must cover every active criterion exactly once (missing: ${missingChecks.join(", ") || "none"}; extra: ${extraChecks.join(", ") || "none"})` });
+        }
+        // Any criterion that *declares* behavior proof (a `Focused command`,
+        // whether or not it passed) can never be downgraded to non-behavior.
+        const declaredBehavior = new Set(core.extractDeclaredBehaviorCriteria(pr.body));
+        for (const claim of core.extractEvidenceBehaviorClaims(pr.body)) declaredBehavior.add(claim.criterionId);
+        for (const check of checkById.values()) {
+          if (declaredBehavior.has(check.criterionId) && check.kind !== "behavior") {
+            print(1, { ok: false, operation, kind: "restricted", reason: `criterion ${check.criterionId} carried behavior proof and cannot be downgraded to non-behavior` });
+          }
+          if (check.kind === "non-behavior" && check.rationale.trim() === "") {
+            print(2, failure(`non-behavior check ${check.criterionId} requires a rationale`));
+          }
+        }
+        // Establish every command from the pinned configuration and the frozen
+        // boundary before executing anything.
+        const config = await readRepairConfig();
+        if (!config.ok) {
+          print(1, { ok: false, operation, kind: "restricted", reason: config.reason });
+        }
+        const criterionCommands = [...checkById.values()].map((check) => check.command);
+        const uniqueCommands = [...new Set([...requiredCommands, ...criterionCommands])];
+        for (const command of uniqueCommands) {
+          const established = pure.isEstablishedRepairCommand(command, config);
+          if (!established.ok) {
+            print(1, { ok: false, operation, kind: "restricted", reason: established.reason });
+          }
+          if (!pure.isAllowedSetupCommand(command, boundary, approved)) {
+            print(1, { ok: false, operation, kind: "restricted", reason: `repair check is outside the approved frozen boundary: ${command}` });
+          }
+        }
+        // One deduplicated execution set covering the full observed
+        // verification intent. Every required command gets a receipt even if
+        // no criterion maps to it.
+        const receipts = [];
+        for (const command of uniqueCommands) {
+          receipts.push(await runApprovedCheck(command));
+        }
+        const missingReceipts = uniqueCommands.filter((command) => !receipts.some((receipt) => receipt.command === command));
+        if (missingReceipts.length > 0) {
+          print(1, { ok: false, operation, kind: "restricted", reason: `no execution receipt recorded for required check(s): ${missingReceipts.join(", ")}` });
+        }
+        // A shortened display is never a receipt: incomplete check output
+        // cannot authorize a repair.
+        const truncated = receipts.filter((receipt) => receipt.truncated === true);
+        if (truncated.length > 0) {
+          print(1, { ok: false, operation, kind: "restricted", failureClass: "incomplete-receipt", reason: `repair check output is incomplete (truncated): ${truncated.map((receipt) => receipt.command).join(", ")}; re-run with a bounded check` });
+        }
+        // Recheck tracked-file cleanliness after checks and before deciding
+        // success or failure: a check that dirtied the tree must restrict, not
+        // continue with blockers against modified files.
+        const postChecks = await verifyLocalCheckout(input.headSha, input.repository);
+        if (!postChecks.ok) {
+          print(1, { ok: false, operation, kind: "restricted", reason: `after repair checks: ${postChecks.reason}` });
+        }
+        const failed = receipts.filter((receipt) => receipt.exitStatus !== 0);
+        if (failed.length > 0) {
+          // Trustworthy target/requirements with a real check failure: retain
+          // the old evidence unchanged and carry the failure into review.
+          print(0, {
+            ok: true,
+            operation,
+            runDir,
+            repaired: false,
+            ready: false,
+            outcome: {
+              kind: "reviewable-with-blockers",
+              failureClass: "policy-reviewable",
+              reason: `repair verification failed: ${failed.map((receipt) => receipt.command).join(", ")}`,
+              receipts: receipts.map((receipt) => ({
+                command: receipt.command,
+                exitStatus: receipt.exitStatus,
+                truncated: receipt.truncated,
+                outputBytes: receipt.outputBytes,
+                output: receipt.output,
+              })),
+            },
+          });
+        }
+        // Render the current evidence, preserve the original RED record
+        // verbatim, and place one repair record inside the same region.
+        const evidence = ticketResolution.criteria
+          .filter((criterion) => criterion.status === "active")
+          .map((criterion) => {
+            const check = checkById.get(criterion.id);
+            if (check.kind === "behavior") {
+              const receipt = receipts.find((item) => item.command === check.command);
+              return {
+                criterionId: criterion.id,
+                kind: "behavior",
+                focusedCommand: check.command,
+                result: pure.summarizeExecutionReceipt(receipt),
+                passed: true,
+              };
+            }
+            return { criterionId: criterion.id, kind: "non-behavior", rationale: check.rationale };
+          });
+        let candidateBlock;
+        try {
+          candidateBlock = core.renderCompactEvidence({
+            criteria: ticketResolution.criteria,
+            evidence,
+            isBugFix,
+            bugRedCommand: red.kind === "present" ? red.redCommand : undefined,
+            bugRedOutput: red.kind === "present" ? red.redOutput : undefined,
+            requirementsRevision: currentCarrier,
+            headSha: input.headSha.trim(),
+          });
+        } catch (error) {
+          print(1, { ok: false, operation, kind: "restricted", reason: `candidate evidence could not render: ${error.message}` });
+        }
+        const record = {
+          repository: input.repository,
+          prNumber: input.prNumber,
+          oldRequirementsRevision: existingPin.kind === "present" ? existingPin.value : "",
+          newRequirementsRevision: currentCarrier,
+          oldHeadSha: originalHead,
+          newHeadSha: input.headSha.trim(),
+          baseSha: input.baseSha.trim(),
+          reason: classification.reason,
+          verificationProvenance: receipts
+            .map((receipt) => pure.summarizeExecutionReceipt(receipt))
+            .join("; "),
+        };
+        // A prior repair record is never moved, deleted, or silently
+        // overwritten. An already-applied identical repair makes the block pin
+        // current, which the equal branch handled above; anything else here is
+        // an inconsistent prior attempt that needs reconciliation.
+        const priorRecord = core.locateEvidenceRepairRecord(pr.body);
+        if (priorRecord.location === "outside" || priorRecord.location === "ambiguous" || priorRecord.location === "malformed") {
+          print(1, { ok: false, operation, kind: "restricted", reason: `the pull request carries an unusable repair record: ${priorRecord.reason}` });
+        }
+        if (priorRecord.location === "inside") {
+          print(1, { ok: false, operation, kind: "restricted", reason: "a prior evidence repair record is present with a stale pin; reconcile it instead of overwriting" });
+        }
+        let composed;
+        try {
+          composed = core.insertEvidenceRepairRecord(candidateBlock, record);
+        } catch (error) {
+          print(1, { ok: false, operation, kind: "restricted", reason: `repair record could not compose: ${error.message}` });
+        }
+        const replaced = core.replaceSingleEvidenceBlock(pr.body, composed);
+        if (!replaced.ok) {
+          print(1, { ok: false, operation, kind: "restricted", reason: replaced.reason });
+        }
         const decision = core.decideReviewEvidenceRecovery({
-          classification: input.classification,
-          currentScopeResolved: !!input.currentScopeResolved,
-          proofRevalidated: !!input.proofRevalidated,
-          unambiguousBlock: !!input.unambiguousBlock,
-          historicalBugRedPreserved: !!input.historicalBugRedPreserved,
+          classification: classification.classification,
+          currentScopeResolved: true,
+          proofRevalidated: true,
+          unambiguousBlock: true,
+          historicalBugRedPreserved: true,
         });
         if (!decision.proceed) {
           print(1, { ok: false, operation, kind: "restricted", reason: decision.reason });
         }
-        print(0, { ok: true, operation, runDir, decision });
+        // Accept the full candidate through the bundled consumer with the
+        // observed configuration and the recorded receipts. Rejection means
+        // no write.
+        const cliInput = {
+          pullRequestBody: replaced.body,
+          parentBody: parent.body,
+          ticketBody: ticket.body,
+          headSha: input.headSha.trim(),
+          configuredCommands: uniqueCommands,
+          executionReceipts: receipts.map((receipt) => ({
+            command: receipt.command,
+            output: receipt.output.trim() === "" ? "(no output)" : receipt.output,
+            exitStatus: receipt.exitStatus,
+          })),
+        };
+        const cli = runBundledEvidenceCli(here, cliInput);
+        if (cli.exit !== 0) {
+          print(1, { ok: false, operation, kind: "restricted", reason: `the bundled evidence consumer rejected the candidate: ${cli.parsed?.reason ?? "unknown"}` });
+        }
+        // One guarded precondition check reused for the first write and the
+        // single corrective attempt: body, head, base, open state, positive
+        // head repository, permission actor, local HEAD/cleanliness,
+        // requirements, native associations, and governing sources.
+        const verifyWriteGuards = async () => {
+          const currentPr = await readRecoveryPr(input.repository, input.prNumber);
+          if (!currentPr.ok) return { ok: false, failureClass: currentPr.failureClass, reason: currentPr.reason };
+          if (
+            currentPr.body !== pr.body ||
+            currentPr.headSha !== pr.headSha ||
+            currentPr.baseSha !== pr.baseSha ||
+            currentPr.state !== "open" ||
+            currentPr.headRepository === "" ||
+            currentPr.headRepository.toLowerCase() !== input.repository.toLowerCase()
+          ) {
+            return { ok: false, reason: "the pull request moved between observation and write; re-observe before repair" };
+          }
+          const perm = await observeRecoveryPermission(input.repository);
+          if (!perm.ok || perm.actor !== permission.actor) {
+            return { ok: false, failureClass: "auth-denied", reason: "write permission changed between observation and write; stop" };
+          }
+          const localCheck = await verifyLocalCheckout(input.headSha, input.repository);
+          if (!localCheck.ok) return { ok: false, reason: `before write: ${localCheck.reason}` };
+          const reTicket = await readIssue(input.repository, input.ticketNumber);
+          const reParent = await readIssue(input.repository, input.parentNumber);
+          let reCarrier = null;
+          try {
+            reCarrier = core.requirementsRevisionValue(core.requirementsRevision(reParent.body ?? "", reTicket.body ?? "", sha256Hex));
+          } catch {
+            reCarrier = null;
+          }
+          const reTargets = currentPr.closingIssues
+            .filter((issue) => issue.repository.toLowerCase() === input.repository.toLowerCase())
+            .map((issue) => issue.number);
+          if (!reTicket.ok || !reParent.ok || reTargets.length !== 1 || reTargets[0] !== input.ticketNumber || reCarrier !== currentCarrier) {
+            return { ok: false, reason: "the requirements or native associations moved between observation and write; re-observe before repair" };
+          }
+          const gov = await readGoverningSources(input.governingSources);
+          if (!gov.ok) return { ok: false, reason: gov.reason };
+          return { ok: true };
+        };
+        const guard = await verifyWriteGuards();
+        if (!guard.ok) {
+          print(1, { ok: false, operation, kind: "restricted", failureClass: guard.failureClass, reason: guard.reason });
+        }
+        const originalDigest = sha256Hex(pr.body);
+        const candidateDigest = sha256Hex(replaced.body);
+        try {
+          await fs.writeFile(
+            path.join(runDir, "evidence-repair.json"),
+            `${JSON.stringify(
+              {
+                repository: input.repository,
+                prNumber: input.prNumber,
+                headSha: input.headSha,
+                baseSha: input.baseSha,
+                originalDigest,
+                candidateDigest,
+                candidateBody: replaced.body,
+                requiredCommands,
+                governingSources: governing.sources,
+                record,
+                receipts: receipts.map((receipt) => ({
+                  command: receipt.command,
+                  exitStatus: receipt.exitStatus,
+                  truncated: receipt.truncated,
+                  outputBytes: receipt.outputBytes,
+                  output: receipt.output,
+                })),
+              },
+              null,
+              2,
+            )}\n`,
+            { mode: 0o600 },
+          );
+        } catch (error) {
+          print(1, { ok: false, operation, kind: "restricted", reason: `repair reconciliation hint could not be stored: ${error.message}` });
+        }
+        const patch = await execArgsFull("gh", ["api", "--method", "PATCH", `repos/${input.repository}/pulls/${input.prNumber}`, "-f", `body=${replaced.body}`]);
+        const readBack = await readRecoveryPr(input.repository, input.prNumber);
+        if (!patch.ok && isAuthFailureReason(patch.output)) {
+          print(1, { ok: false, operation, kind: "restricted", failureClass: "auth-denied", reason: `body write denied: ${patch.output.slice(0, 200)}` });
+        }
+        const readBackLanded =
+          readBack.ok &&
+          readBack.body === replaced.body &&
+          readBack.headSha === input.headSha.trim() &&
+          readBack.baseSha === input.baseSha.trim() &&
+          readBack.state === "open";
+        if (readBackLanded) {
+          const readBackCheck = runBundledEvidenceCli(here, { ...cliInput, pullRequestBody: readBack.body });
+          if (readBackCheck.exit !== 0) {
+            print(1, { ok: false, operation, kind: "restricted", reason: "the written body failed consumer validation on read-back" });
+          }
+          print(0, {
+            ok: true,
+            operation,
+            runDir,
+            repaired: true,
+            ready: true,
+            status: patch.ok ? "repaired" : "adopted-after-response-loss",
+            record,
+            digests: { original: originalDigest, candidate: candidateDigest },
+          });
+        }
+        if (readBack.ok && readBack.body === pr.body) {
+          // The body is exactly the original: permit one bounded corrective
+          // attempt with fresh guards, then stop. Any different or
+          // persistently unreadable state is a restriction, never a replay.
+          const retryGuard = await verifyWriteGuards();
+          if (!retryGuard.ok) {
+            print(1, { ok: false, operation, kind: "restricted", failureClass: retryGuard.failureClass ?? "auth-denied", reason: "guards changed before the corrective attempt; stop without another write" });
+          }
+          const retry = await execArgsFull("gh", ["api", "--method", "PATCH", `repos/${input.repository}/pulls/${input.prNumber}`, "-f", `body=${replaced.body}`]);
+          const retryBack = await readRecoveryPr(input.repository, input.prNumber);
+          const retryLanded =
+            retry.ok &&
+            retryBack.ok &&
+            retryBack.body === replaced.body &&
+            retryBack.headSha === input.headSha.trim() &&
+            retryBack.baseSha === input.baseSha.trim() &&
+            retryBack.state === "open";
+          if (retryLanded) {
+            const retryCheck = runBundledEvidenceCli(here, { ...cliInput, pullRequestBody: retryBack.body });
+            if (retryCheck.exit !== 0) {
+              print(1, { ok: false, operation, kind: "restricted", reason: "the retried body failed consumer validation on read-back" });
+            }
+            print(0, { ok: true, operation, runDir, repaired: true, ready: true, status: "repaired-after-retry", record });
+          }
+          if (retryBack.ok && retryBack.body === pr.body) {
+            // One corrective attempt per repair, not per process: exhausted
+            // attempts restrict instead of inviting an unbounded replay.
+            print(1, { ok: false, operation, kind: "restricted", failureClass: "repair-exhausted", reason: `the body write did not take effect after the single corrective attempt: ${patch.ok ? "read-back mismatch" : patch.output.slice(0, 200) || "unknown write failure"}` });
+          }
+          print(1, { ok: false, operation, kind: "restricted", reason: "the pull request body is in a different state after the corrective attempt; stop without another write" });
+        }
+        print(1, { ok: false, operation, kind: "restricted", reason: "the pull request body is in an unexpected state after the write attempt; stop without another write" });
         break;
       }
       default: {

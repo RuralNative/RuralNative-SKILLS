@@ -413,6 +413,73 @@ export function planEvidenceRecovery(input: {
 // persistent unreadability remain restrictions. Keep CI one-read/no-poll;
 // publish failing or pending verification truthfully.
 
+// --- Repair check establishment and provenance -------------------------------
+//
+// A repair-time check may only be an npm script established by the pinned
+// `package.json` or a `node <relative>` entry over a tracked file in the
+// pinned checkout. PR prose, criterion claims, and a caller's approved-command
+// list never authorize arbitrary code; the executor allowlist still applies on
+// top of this establishment check.
+
+export interface RepairCheckConfig {
+  /** Script names observed in the pinned checkout's `package.json`. */
+  npmScripts: readonly string[];
+  /** Repository-relative paths tracked by git at the pinned head. */
+  trackedFiles: readonly string[];
+}
+
+export function isEstablishedRepairCommand(
+  command: string,
+  config: RepairCheckConfig,
+): { ok: boolean; reason: string } {
+  const trimmed = command.trim();
+  if (trimmed === "") return { ok: false, reason: "repair check command is empty" };
+  if (/[;&|><`$]/.test(trimmed)) {
+    return { ok: false, reason: "repair check carries shell syntax; use an argument array" };
+  }
+  const npm = trimmed.match(/^npm run ([A-Za-z0-9:_.-]+)$/);
+  if (npm) {
+    return config.npmScripts.includes(npm[1])
+      ? { ok: true, reason: `npm script ${npm[1]} is established by the pinned package.json` }
+      : { ok: false, reason: `npm script ${npm[1]} is not established by the pinned package.json` };
+  }
+  // A repair-time Node check is a bare script invocation: `node <relative
+  // tracked .js/.mjs>` with no arguments. Arguments would let a caller smuggle
+  // an absolute payload path or a write flag past the establishment check, so
+  // they are rejected rather than inspected.
+  const node = trimmed.match(/^node[ \t]+([A-Za-z0-9._/-]+\.m?js)$/);
+  if (node) {
+    const target = node[1];
+    if (target.includes("..") || target.startsWith("/") || target.startsWith("~")) {
+      return { ok: false, reason: "node repair check must use a repository-relative tracked script" };
+    }
+    if (!config.trackedFiles.includes(target)) {
+      return { ok: false, reason: `node script ${target} is not a tracked regular file in the pinned checkout` };
+    }
+    return { ok: true, reason: `node script ${target} is tracked in the pinned checkout` };
+  }
+  return {
+    ok: false,
+    reason: `repair check is not an established bare npm script or argument-free tracked node entry: ${trimmed.slice(0, 120)}`,
+  };
+}
+
+/**
+ * Bounded, non-secret provenance for one executed check. Never publishes raw
+ * logs or temporary paths; a truncated display is not a receipt.
+ */
+export function summarizeExecutionReceipt(receipt: {
+  command: string;
+  exitStatus: number;
+  outputBytes: number;
+  truncated: boolean;
+}): string {
+  const scope = receipt.truncated
+    ? `first ${receipt.outputBytes} bytes of a longer log`
+    : `${receipt.outputBytes} bytes`;
+  return `${receipt.command}: exit ${receipt.exitStatus}, ${scope}`;
+}
+
 export function decidePublicationResume(input: {
   hasResumeId: boolean;
   pinsUnchanged: boolean;

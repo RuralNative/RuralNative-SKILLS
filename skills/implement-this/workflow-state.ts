@@ -3284,25 +3284,24 @@ export function replaceSingleEvidenceBlock(
   if (distinct.length > 1) {
     return { ok: false, reason: "conflicting closing associations in the pull-request body; reconcile them outside review" };
   }
-  const usesCRLF = existingBody.includes("\r\n");
-  const normalized = normalizeNewlines(existingBody);
-  const pattern = new RegExp(
-    `${escapeHandoffRegExp(COMPACT_START)}[ \\t]*\\n([\\u0000-\\uFFFF]*?)\\n[ \\t]*${escapeHandoffRegExp(COMPACT_END)}`,
-  );
-  const match = normalized.match(pattern);
-  if (!match || match.index === undefined) {
-    return { ok: false, reason: "evidence block is unreadable; reconcile it outside review" };
-  }
-  const start = match.index;
-  const end = start + match[0].length;
-  // Preserve everything outside the single validated region byte-for-byte,
-  // including the original CRLF style when present.
+  // Splice the original string ranges without normalizing the whole body.
+  // Everything outside the one validated region stays byte-for-byte identical,
+  // including mixed LF/CRLF, whitespace, Unicode, and the final-newline state.
   const trimmedBlock = newBlock.trim();
   if (!trimmedBlock.startsWith(COMPACT_START) || !trimmedBlock.endsWith(COMPACT_END)) {
     return { ok: false, reason: "replacement block must be exactly one rendered compact evidence block" };
   }
-  const spliced = `${normalized.slice(0, start)}${trimmedBlock}${normalized.slice(end)}`;
-  return { ok: true, body: usesCRLF ? spliced.replace(/\n/g, "\r\n") : spliced };
+  const start = existingBody.indexOf(COMPACT_START);
+  const endMarker = existingBody.indexOf(COMPACT_END, start + COMPACT_START.length);
+  if (start < 0 || endMarker < 0) {
+    return { ok: false, reason: "evidence block is unreadable; reconcile it outside review" };
+  }
+  const end = endMarker + COMPACT_END.length;
+  // Match the replaced region's own line ending so a CRLF region stays CRLF
+  // without rewriting a single byte outside it.
+  const region = existingBody.slice(start, end);
+  const replacement = region.includes("\r\n") ? trimmedBlock.replace(/\n/g, "\r\n") : trimmedBlock;
+  return { ok: true, body: `${existingBody.slice(0, start)}${replacement}${existingBody.slice(end)}` };
 }
 
 // --- Workflow-owned evidence repair record -----------------------------------
@@ -3454,6 +3453,166 @@ export function evidenceRepairReusable(
     pinned.reason === current.reason &&
     pinned.verificationProvenance === current.verificationProvenance
   );
+}
+
+// --- Review-preparation repair composition (ADR-0039) ------------------------
+//
+// `classifyRequirementsPin` collapses a genuinely absent pin and a malformed
+// carrier into `missing-or-malformed`. Review preparation needs the
+// difference: only an absent pin in an otherwise valid supported block may
+// recover. These helpers also keep the repair record inside the single
+// permitted evidence region and preserve genuine historical RED history.
+
+export type EvidencePinPresence =
+  | { kind: "present"; value: string }
+  | { kind: "absent"; reason: string }
+  | { kind: "malformed"; reason: string }
+  | { kind: "duplicate"; reason: string }
+  | { kind: "no-block"; reason: string };
+
+/**
+ * Distinguish a genuinely absent requirements pin from an empty, malformed, or
+ * duplicated carrier inside exactly one compact block.
+ */
+export function evidencePinPresence(body: string): EvidencePinPresence {
+  if (hasStrayEvidenceMarkers(body) || countEvidenceBlocks(body) !== 1) {
+    return { kind: "no-block", reason: "expected exactly one compact evidence block" };
+  }
+  const normalized = normalizeNewlines(body);
+  const inner = normalized.match(evidenceBodyPattern())?.[1] ?? "";
+  const values = metadataValues(inner, "Requirements revision");
+  if (values.length === 0) return { kind: "absent", reason: "the evidence block carries no requirements revision" };
+  if (values.length > 1) return { kind: "duplicate", reason: "duplicate requirements revision lines in the evidence block" };
+  if (values[0] === "") return { kind: "malformed", reason: "evidence requirements revision is empty" };
+  if (!requirementsPinWellFormed(values[0])) return { kind: "malformed", reason: "evidence requirements revision is malformed" };
+  return { kind: "present", value: values[0] };
+}
+
+export type EvidenceRedRead =
+  | { kind: "none" }
+  | { kind: "present"; redCommand: string; redOutput: string }
+  | { kind: "malformed"; reason: string };
+
+/**
+ * Read the genuine historical bug RED record from one compact block. A
+ * partial record is malformed, never reconstructed; an absent record is
+ * distinct from a broken one.
+ *
+ * RED output is free text and may span multiple lines: the renderer only
+ * escapes `-->`, so a multi-line failing log is a legal record. Capture the
+ * full span after `RED output:` up to the next metadata line (or block end)
+ * so a repair round-trip never truncates recorded history.
+ */
+export function readEvidenceRed(body: string): EvidenceRedRead {
+  if (hasStrayEvidenceMarkers(body) || countEvidenceBlocks(body) !== 1) {
+    return { kind: "malformed", reason: "expected exactly one compact evidence block" };
+  }
+  const normalized = normalizeNewlines(body);
+  const inner = normalized.match(evidenceBodyPattern())?.[1] ?? "";
+  const lines = inner.split("\n");
+  const headingIndex = lines.findIndex((line) => /^### Bug reproduction[ \t]*$/.test(line));
+  const commandIndex = lines.findIndex((line) => /^[ \t]*-[ \t]*RED command:[ \t]*`([^`]*)`[ \t]*$/.test(line));
+  const outputIndex = lines.findIndex((line) => /^[ \t]*-[ \t]*RED output:[ \t]?/.test(line));
+  if (headingIndex < 0 && commandIndex < 0 && outputIndex < 0) return { kind: "none" };
+  if (headingIndex < 0 || commandIndex < 0 || outputIndex < 0) {
+    return { kind: "malformed", reason: "bug reproduction RED record is incomplete; never reconstruct lost history" };
+  }
+  const commandMatch = lines[commandIndex].match(/^[ \t]*-[ \t]*RED command:[ \t]*`([^`]*)`[ \t]*$/);
+  if (!commandMatch || commandMatch[1].trim() === "") {
+    return { kind: "malformed", reason: "bug reproduction RED record is incomplete; never reconstruct lost history" };
+  }
+  let end = lines.length;
+  for (let i = outputIndex + 1; i < lines.length; i++) {
+    if (/^[ \t]*-[ \t]*(Criteria revision|Requirements revision|Envelope version|Head SHA)[ \t]*:/.test(lines[i])) {
+      end = i;
+      break;
+    }
+  }
+  const firstOutput = lines[outputIndex].replace(/^[ \t]*-[ \t]*RED output:[ \t]?/, "");
+  const outputLines = [firstOutput, ...lines.slice(outputIndex + 1, end)];
+  while (outputLines.length > 0 && outputLines[outputLines.length - 1].trim() === "") outputLines.pop();
+  const redOutput = outputLines.join("\n").trim();
+  if (redOutput === "") {
+    return { kind: "malformed", reason: "bug reproduction RED record is incomplete; never reconstruct lost history" };
+  }
+  return { kind: "present", redCommand: commandMatch[1], redOutput };
+}
+
+/**
+ * Extract every criterion id whose segment *declares* behavior proof
+ * (`Focused command:`), regardless of pass state. `extractEvidenceBehaviorClaims`
+ * returns only passing claims; recovery uses this wider set to reject a
+ * downgrade that would erase a failed or torn behavior record.
+ */
+export function extractDeclaredBehaviorCriteria(body: string): string[] {
+  const normalized = normalizeNewlines(body);
+  const pattern = new RegExp(
+    `${escapeHandoffRegExp(COMPACT_START)}[ \t]*\n([\u0000-\uFFFF]*?)\n[ \t]*${escapeHandoffRegExp(COMPACT_END)}`,
+  );
+  const match = normalized.match(pattern);
+  if (!match) return [];
+  const inner = match[1];
+  const lines = inner.split("\n");
+  const headerIndexes: number[] = [];
+  lines.forEach((line, i) => {
+    if (/\*\*Criterion:\*\*/.test(line)) headerIndexes.push(i);
+  });
+  const criteriaEnd = lines.findIndex((line) => /^[ \t]*-[ \t]*Criteria revision:/.test(line));
+  const end = criteriaEnd >= 0 ? criteriaEnd : lines.length;
+  const ids: string[] = [];
+  for (let h = 0; h < headerIndexes.length; h++) {
+    const segment = lines.slice(headerIndexes[h], h + 1 < headerIndexes.length ? headerIndexes[h + 1] : end).join("\n");
+    if (!/Focused command:[ \t]*\S/.test(segment)) continue;
+    const idMatch = segment.match(/`?([A-Za-z]{2,3}-\d+)`?/);
+    if (idMatch) ids.push(idMatch[1]);
+  }
+  return ids;
+}
+
+/**
+ * Insert one evidence-repair record inside the compact block after its
+ * metadata and before the closing marker, so evidence and provenance share one
+ * permitted region and one native write.
+ */
+export function insertEvidenceRepairRecord(block: string, record: EvidenceRepairRecord): string {
+  const trimmed = block.trim();
+  if (!trimmed.startsWith(COMPACT_START) || !trimmed.endsWith(COMPACT_END)) {
+    throw new Error("evidence repair composition requires exactly one rendered compact evidence block");
+  }
+  const body = trimmed.slice(0, trimmed.length - COMPACT_END.length).trimEnd();
+  return `${body}\n\n${renderEvidenceRepairRecord(record)}\n${COMPACT_END}`;
+}
+
+export type EvidenceRepairLocation = "absent" | "inside" | "outside" | "ambiguous" | "malformed";
+
+/**
+ * Locate an existing evidence-repair record relative to the single compact
+ * block. A record outside the block, duplicate, or malformed record stops
+ * reconciliation instead of being moved or overwritten.
+ */
+export function locateEvidenceRepairRecord(
+  body: string,
+): { location: EvidenceRepairLocation; record?: EvidenceRepairRecord; reason: string } {
+  const normalized = normalizeNewlines(body);
+  const starts = normalized.split(EVIDENCE_REPAIR_START).length - 1;
+  const ends = normalized.split(EVIDENCE_REPAIR_END).length - 1;
+  if (starts === 0 && ends === 0) return { location: "absent", reason: "no evidence repair record" };
+  if (starts !== 1 || ends !== 1) {
+    return { location: "ambiguous", reason: "stray, unbalanced, or duplicate evidence repair markers" };
+  }
+  if (hasStrayEvidenceMarkers(body) || countEvidenceBlocks(body) !== 1) {
+    return { location: "ambiguous", reason: "repair record requires exactly one compact evidence block" };
+  }
+  const recordStart = normalized.indexOf(EVIDENCE_REPAIR_START);
+  const recordEnd = normalized.indexOf(EVIDENCE_REPAIR_END) + EVIDENCE_REPAIR_END.length;
+  const blockStart = normalized.indexOf(COMPACT_START);
+  const blockEnd = normalized.indexOf(COMPACT_END) + COMPACT_END.length;
+  if (recordStart < blockStart || recordEnd > blockEnd) {
+    return { location: "outside", reason: "evidence repair record is outside the compact evidence block" };
+  }
+  const parsed = parseEvidenceRepairRecord(body);
+  if (!parsed.found || !parsed.record) return { location: "malformed", reason: parsed.reason };
+  return { location: "inside", record: parsed.record, reason: parsed.reason };
 }
 
 // --- Shared owner-decision and policy-change facts (review + fix) ------------

@@ -85,6 +85,44 @@ describe("github facts readers", () => {
     );
     assert.equal(facts.status.kind, "malformed");
   });
+  test("pull request body and head repository identity are observed", () => {
+    const facts = readPullRequestFacts(
+      (args) => {
+        if (args.some((a) => a.includes("/timeline"))) return { ok: true, stdout: "[]" };
+        return {
+          ok: true,
+          stdout: JSON.stringify({
+            state: "open",
+            body: "hello",
+            base: { ref: "trunk", sha: "b" },
+            head: { ref: "impl/1-x", sha: "h", repo: { full_name: "o/r" } },
+          }),
+        };
+      },
+      "o/r",
+      300,
+    );
+    assert.equal(facts.body, "hello");
+    assert.equal(facts.headRepository, "o/r");
+  });
+  test("an absent head repository is unknown identity, never empty success", () => {
+    const facts = readPullRequestFacts(
+      (args) => {
+        if (args.some((a) => a.includes("/timeline"))) return { ok: true, stdout: "[]" };
+        return {
+          ok: true,
+          stdout: JSON.stringify({
+            state: "open",
+            base: { ref: "trunk", sha: "b" },
+            head: { ref: "impl/1-x", sha: "h" },
+          }),
+        };
+      },
+      "o/r",
+      300,
+    );
+    assert.equal(facts.headRepository, "");
+  });
   test("only connected timeline events count as closing links", () => {
     const facts = readPullRequestFacts(
       (args) => {

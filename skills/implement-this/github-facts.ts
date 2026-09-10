@@ -90,6 +90,8 @@ export interface IssueFacts {
 export interface PullRequestFacts {
   number: number;
   repository: string;
+  /** Raw pull-request body; drives evidence observation and repair. */
+  body: string;
   state: "open" | "closed" | "merged";
   draft: boolean;
   baseBranch: string;
@@ -97,6 +99,12 @@ export interface PullRequestFacts {
   headBranch: string;
   headRef: string;
   headSha: string;
+  /**
+   * Native `head.repo.full_name`, or "" when the source repository is absent
+   * (for example a deleted fork). Empty is unknown identity, never proof of
+   * same-repository code.
+   */
+  headRepository: string;
   mergeable: boolean | null;
   mergeCommitSha: string;
   closingIssues: { owner: string; repo: string; number: number }[];
@@ -152,6 +160,7 @@ export function readPullRequestFacts(
   const empty: PullRequestFacts = {
     number: prNumber,
     repository,
+    body: "",
     state: "closed",
     draft: false,
     baseBranch: "",
@@ -159,6 +168,7 @@ export function readPullRequestFacts(
     headBranch: "",
     headRef: "",
     headSha: "",
+    headRepository: "",
     mergeable: null,
     mergeCommitSha: "",
     closingIssues: [],
@@ -199,6 +209,7 @@ export function readPullRequestFacts(
     return {
       number: prNumber,
       repository,
+      body: typeof raw["body"] === "string" ? raw["body"] : "",
       state,
       draft: raw["draft"] === true,
       baseBranch,
@@ -206,6 +217,7 @@ export function readPullRequestFacts(
       headBranch,
       headRef: headBranch,
       headSha,
+      headRepository: typeof headRepo["full_name"] === "string" ? String(headRepo["full_name"]) : "",
       mergeable: typeof raw["mergeable"] === "boolean" ? (raw["mergeable"] as boolean) : null,
       mergeCommitSha: typeof raw["merge_commit_sha"] === "string" ? raw["merge_commit_sha"] : "",
       closingIssues: closing.issues,
@@ -218,6 +230,7 @@ export function readPullRequestFacts(
     return {
       number: prNumber,
       repository,
+      body: typeof raw["body"] === "string" ? raw["body"] : "",
       state,
       draft: raw["draft"] === true,
       baseBranch,
@@ -225,6 +238,7 @@ export function readPullRequestFacts(
       headBranch,
       headRef: headBranch,
       headSha,
+      headRepository: typeof headRepo["full_name"] === "string" ? String(headRepo["full_name"]) : "",
       mergeable: typeof raw["mergeable"] === "boolean" ? (raw["mergeable"] as boolean) : null,
       mergeCommitSha: typeof raw["merge_commit_sha"] === "string" ? raw["merge_commit_sha"] : "",
       closingIssues: [],
@@ -238,6 +252,7 @@ export function readPullRequestFacts(
   return {
     number: prNumber,
     repository,
+    body: typeof raw["body"] === "string" ? raw["body"] : "",
     state,
     draft: raw["draft"] === true,
     baseBranch,
@@ -245,6 +260,7 @@ export function readPullRequestFacts(
     headBranch,
     headRef: headBranch,
     headSha,
+    headRepository: typeof headRepo["full_name"] === "string" ? String(headRepo["full_name"]) : "",
     mergeable: typeof raw["mergeable"] === "boolean" ? (raw["mergeable"] as boolean) : null,
     mergeCommitSha: typeof raw["merge_commit_sha"] === "string" ? raw["merge_commit_sha"] : "",
     closingIssues: closing.issues,
