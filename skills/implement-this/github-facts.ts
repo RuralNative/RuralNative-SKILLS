@@ -428,7 +428,7 @@ export function readSubIssues(
   repository: string,
   issueNumber: number,
 ): { subIssues: number[]; status: FactStatus } {
-  const { numbers, status } = readNumberList(runner, `repos/${repository}/issues/${issueNumber}/sub-issues`, "sub-issues");
+  const { numbers, status } = readNumberList(runner, `repos/${repository}/issues/${issueNumber}/sub_issues`, "sub-issues");
   return { subIssues: numbers, status };
 }
 

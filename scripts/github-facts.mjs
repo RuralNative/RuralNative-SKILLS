@@ -79,7 +79,7 @@ function main() {
         return;
       }
       const endpoint = operation === "sub-issues"
-        ? `repos/${repository}/issues/${issueNumber}/sub-issues`
+        ? `repos/${repository}/issues/${issueNumber}/sub_issues`
         : operation === "blocked-by"
           ? `repos/${repository}/issues/${issueNumber}/dependencies/blocked_by`
           : `repos/${repository}/issues/${issueNumber}/dependencies/blocking`;

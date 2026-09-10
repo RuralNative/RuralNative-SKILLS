@@ -29,6 +29,13 @@ Implementation adapter: validates one open ticket, implements it directly in the
 
 Focused checks named by the ticket's smallest sufficient verification.
 
+The `github-facts.mjs` operation is `sub-issues` (hyphen); the GitHub REST
+suffix is `/sub_issues` (underscore). The reader requests
+`gh api --paginate --slurp repos/<owner>/<repo>/issues/<n>/sub_issues`, so a
+complete read returns the native child numbers and a failed read stops.
+Regression: `node --test tests/github-facts.test.ts`. Reference:
+[GitHub sub-issues REST API](https://docs.github.com/en/rest/issues/sub-issues).
+
 ## Links
 
 Glossary: `CONTEXT.md`. Decisions: ADR-0014, 0015, 0019, 0021, 0023, 0024, 0031, 0032, 0034, 0037, 0038, 0040. Review policy: `REVIEW.md` (optional). Redirect: `docs/leaves/ext/implement-this.md`.
