@@ -197,6 +197,40 @@ function prEvidenceEntry(n: number): string[] {
   ];
 }
 
+// --- PR #295 automatic-recovery fixtures (distinct from the #294 legacy case) --
+//
+// #295 closes the same ticket #288 under parent #287, but its evidence block
+// carries a same-version `requirements-adapted-v1` stale pin (not a legacy
+// `requirements-v1` pin) with an unchanged head and currently resolvable
+// parent/ticket bodies. Policy: root REVIEW.md absent at both revisions;
+// the head proposes changes to three governing sources, covered by three
+// scoped owner exceptions in the matching decision.
+
+export const INCIDENT_295_PR_NUMBER = 295;
+export const INCIDENT_295_HEAD_SHA = "ca77a40823c48ddfbaee537255bbbf54446cc917";
+export const INCIDENT_295_BASE_SHA = "363fe3b0a00ffed6af4e30b6fcec26386eb84cd0";
+export const INCIDENT_295_DECISION_COMMENT_ID = "5605141890";
+export const INCIDENT_295_DECISION_BODY =
+  "Owner approval for PR #295: scoped repository-local exceptions for docs/adr/0041-benchmark-governance-human-manual-study.md, docs/seams/documentation.md, and scripts/docs-check.mjs. Base and head pins verified; requirements revision verified. No general approval; all other proposed governing changes remain blocking.";
+
+export const INCIDENT_295_EXCEPTION_SCOPE: readonly string[] = [
+  "docs/adr/0041-benchmark-governance-human-manual-study.md",
+  "docs/seams/documentation.md",
+  "scripts/docs-check.mjs",
+];
+
+export function incident295BaseSources(): { path: string; hash: string }[] {
+  return [];
+}
+
+export function incident295HeadSources(): { path: string; hash: string }[] {
+  return [
+    { path: "docs/adr/0041-benchmark-governance-human-manual-study.md", hash: "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2" },
+    { path: "docs/seams/documentation.md", hash: "b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3" },
+    { path: "scripts/docs-check.mjs", hash: "c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4" },
+  ];
+}
+
 /** PR body with a nine-entry evidence-v2 block pinned to the legacy value. */
 export function incidentPullRequestBody(): string {
   const lines: string[] = [

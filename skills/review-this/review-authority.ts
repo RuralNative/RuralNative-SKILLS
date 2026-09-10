@@ -32,6 +32,7 @@ export const REVIEWER_ALLOWED_ACTIONS = [
   "create-pending-review",
   "submit-review",
   "read-back-review",
+  "repair-evidence-block",
 ] as const;
 
 export type ReviewerAllowedAction = (typeof REVIEWER_ALLOWED_ACTIONS)[number];

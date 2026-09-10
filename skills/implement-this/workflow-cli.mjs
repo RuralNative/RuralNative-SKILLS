@@ -475,12 +475,82 @@ function operationReview(core, record) {
   }
   const requirementsRevision = core.requirementsRevisionValue(detail.revision);
   const sources = Array.isArray(record.policySources) ? record.policySources : [];
-  const policyRevision = core.effectivePolicyRevision(
-    sources.map((source) => ({
-      path: String(source.path ?? ""),
-      hash: String(source.hash ?? ""),
-    })),
-  );
+  const normalizedSources = sources.map((source) => ({
+    path: String(source.path ?? ""),
+    hash: String(source.hash ?? ""),
+  }));
+  const legacyPolicyRevision = core.effectivePolicyRevision(normalizedSources);
+  // Single-line v1 carrier includes the accepted approval scope when present.
+  // Existing valid no-source/single-source legacy reports keep validating
+  // against the independently recomputed legacy value; new multi-source
+  // reports use the hashed carrier that survives publication unchanged.
+  let approvedScope = null;
+  if (record.approvedDecision !== undefined && record.approvedDecision !== null) {
+    const ad = record.approvedDecision;
+    if (typeof ad === "object" && !Array.isArray(ad)) {
+      approvedScope = {
+        commentId: String(ad.commentId ?? ""),
+        bodyHash: String(ad.bodyHash ?? ""),
+        scope: Array.isArray(ad.scope) ? ad.scope.map((s) => String(s)) : [],
+      };
+      if (approvedScope.commentId.trim() === "" || approvedScope.bodyHash.trim() === "" || approvedScope.scope.length === 0) {
+        approvedScope = null;
+      }
+    }
+  }
+  let policyRevision = legacyPolicyRevision;
+  if (typeof core.reviewPolicyRevision === "function") {
+    try {
+      policyRevision = core.reviewPolicyRevision(normalizedSources, HASH, approvedScope);
+    } catch {
+      policyRevision = legacyPolicyRevision;
+    }
+  }
+  // Backward compatibility: a handoff carrying a legacy single-line revision
+  // validates against the recomputed legacy value; a handoff carrying the
+  // v1 hashed carrier validates against the recomputed v1 value. A lossy
+  // flattened multi-source legacy report never equals the recomputed legacy
+  // value and correctly reports stale. The pinned revision is read from the
+  // parsed handoff block only; prose outside the block never selects the
+  // version.
+  try {
+    const pinnedPolicy = (() => {
+      try {
+        if (typeof core.parseReviewHandoffInput === "function") {
+          const parsed = core.parseReviewHandoffInput(String(reviewBody));
+          if (parsed && parsed.ok && parsed.handoff && typeof parsed.handoff.reviewPolicyRevision === "string") {
+            return parsed.handoff.reviewPolicyRevision.trim();
+          }
+          return "";
+        }
+      } catch {
+        // Fall through to block-scoped extraction below.
+      }
+      const block = String(reviewBody).match(/<!-- ruralnative:review-handoff:start -->([\s\S]*?)<!-- ruralnative:review-handoff:end -->/);
+      const inner = block ? block[1] : "";
+      const m = inner.match(/^[ \t]*-[ \t]*Review policy revision:[ \t]*(.*)[ \t]*$/m);
+      return m ? m[1].trim() : "";
+    })();
+    if (pinnedPolicy.startsWith("review-contract-v1:")) {
+      policyRevision = legacyPolicyRevision;
+      // When an approval is present, the legacy path cannot represent it;
+      // the v1 carrier is required. Keep the legacy comparison only when no
+      // approval scope was supplied.
+      if (approvedScope !== null && typeof core.reviewPolicyRevision === "function") {
+        try {
+          policyRevision = core.reviewPolicyRevision(normalizedSources, HASH, approvedScope);
+        } catch {
+          policyRevision = legacyPolicyRevision;
+        }
+      }
+    } else if (pinnedPolicy.startsWith("review-policy-v1:") && typeof core.reviewPolicyRevision === "function") {
+      // Already computed as v1 above.
+    } else if (pinnedPolicy !== "" && typeof core.reviewPolicyRevision === "function") {
+      // Unknown version: keep v1 for a clear stale/unsupported diagnostic downstream.
+    }
+  } catch {
+    // Keep the computed policyRevision on inspection failure.
+  }
   const observed = record.observedProvenance ?? null;
   if (observed === null || typeof observed !== "object" || Array.isArray(observed)) {
     return {

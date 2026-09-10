@@ -169,14 +169,14 @@ The user's invoking working tree where `/implement-this`, `/review-this`, and `/
 _Avoid_: worktree (when the invoking checkout is meant)
 
 **Checkout alignment**:
-The `review-this` preparation that switches a clean current checkout at a different commit to the verified pull-request head commit in detached `HEAD`, moving no branch and creating no worktree. It changes which commit the worktree shows, never what the review publishes; dirty, unfinished-operation, and collision states stop with no checkout effect (ADR-0036).
+The `review-this` preparation that switches a clean current checkout at a different commit to the verified pull-request head commit in detached `HEAD`, moving no branch and creating no worktree. It changes which commit the worktree shows, never what the review publishes; dirty, unfinished-operation, and collision states stop with no checkout effect (ADR-0036). Bounded preparation (ADR-0039) extends this with one attempt per recoverable class — compatible runtimes, frozen installs, scoped evidence repair — and resumes interrupted publication once.
 _Avoid_: manual realignment (what the stop clause required before ADR-0036)
 
 **Configured fix agent**:
 Retired by ADR-0033: the former optional Kilo subagent named `review-fixer` that applied confirmed review findings in the current checkout. Review now publishes findings and stops with no delegated editor.
 
 **Review handoff**:
-The versioned `review-handoff-v1` block a completed `review-this` publication carries for `fix-this`: repository and PR identity, reviewed revisions, requirements and policy revisions, verification evidence, the complete finding list, and observed native review provenance. Only a block that validates in the shared core authorizes finalization (ADR-0035).
+The versioned `review-handoff-v1` block a completed `review-this` publication carries for `fix-this`: repository and PR identity, reviewed revisions, requirements and policy revisions, verification evidence, the complete finding list, and observed native review provenance. Policy revisions publish as the single-line `review-policy-v1` SHA-256 carrier over sources plus approval scope; legacy no-source/single-source reports still validate against recomputed legacy values. Only a block that validates in the shared core authorizes finalization (ADR-0035, ADR-0039).
 _Avoid_: review summary (when the validated block is meant)
 
 **Fix progress**:
@@ -237,8 +237,16 @@ A decision, policy, or glossary entry a leaf marks as loading the agent must rea
 _Avoid_: linked decision, must-read (when the resolved contract is meant)
 
 **Requirements revision**:
-The versioned fingerprint of parent and ticket requirements. Canonical pairs carry `requirements-v1` over the authoritative sections — affected seams, criterion IDs/text/status, structural constraints, blockers, settled decisions, risk, and verification intent. Alternate-template pairs carry `requirements-adapted-v1` over the complete normalized bodies, preserving blank-line structure and excluding only structurally validated workflow evidence blocks outside fences. Both versions normalize line endings and trailing horizontal whitespace only, exclude comments, and reject unknown versions; a missing or malformed pin never counts as current. A revision exists only for resolved requirements: `requirementsRevision` throws a typed `RequirementsResolutionError` naming the failing role before hashing invalid input, and consumption treats a body with both `## Solution` and `## Settled decisions` as adapted with both homes fingerprinted. Dispatch and review packets carry the same value; a body change stops delivery and review with `needs-info` until the body is reconciled and the user resumes, with no waiver. Pin inequality alone never proves a requirements edit: a mismatch under the same contract version is a revision mismatch with unproven cause unless separate evidence proves the body changed, while a version difference is a legacy-contract mismatch requiring full revalidation before any repin (ticket #190, ADR-0037, ADR-0038).
+The versioned fingerprint of parent and ticket requirements. Canonical pairs carry `requirements-v1` over the authoritative sections — affected seams, criterion IDs/text/status, structural constraints, blockers, settled decisions, risk, and verification intent. Alternate-template pairs carry `requirements-adapted-v1` over the complete normalized bodies, preserving blank-line structure and excluding only structurally validated workflow evidence blocks outside fences. Both versions normalize line endings and trailing horizontal whitespace only, exclude comments, and reject unknown versions; a missing or malformed pin never counts as current. A revision exists only for resolved requirements: `requirementsRevision` throws a typed `RequirementsResolutionError` naming the failing role before hashing invalid input, and consumption treats a body with both `## Solution` and `## Settled decisions` as adapted with both homes fingerprinted. Dispatch and review packets carry the same value; a body change stops delivery and review with `needs-info` until the body is reconciled and the user resumes, with no waiver. Pin inequality alone never proves a requirements edit: a mismatch under the same contract version is a revision mismatch with unproven cause unless separate evidence proves the body changed, while a version difference is a legacy-contract mismatch requiring full revalidation before any repin (ticket #190, ADR-0037, ADR-0038). Review preparation (ADR-0039) may recover supported legacy and same-version stale pins, or a missing pin in an unambiguous block, only after current scope resolves and full proof is revalidated on the head, retaining the old pin, new pin, reason, and receipts.
 _Avoid_: requirement hash (when the versioned object is meant), body checksum
+
+**Evidence repair**:
+The workflow-owned `evidence-repair-v1` record review preparation writes when it repins scoped evidence: old and new requirements revisions, old/new head and base, reason, and verification provenance. Pre-write re-reads the full PR body and pinned inputs, replaces exactly one validated evidence region preserving surrounding bytes, then reads back and revalidates; identical records are reused after interruption, and races are reported (ADR-0039).
+_Avoid_: manual repin (what the stop clause required before ADR-0039)
+
+**Owner decision**:
+The native PR comment that approves scoped repository-local policy exceptions. It verifies against repository/PR identity, owner/admin authority or base-policy delegation, body/hash, referenced revisions/requirements, exact scope, and revocation; a matching decision supplies only its named exceptions (ADR-0039).
+_Avoid_: general approval (which never authorizes)
 
 **Task band**:
 The task class that selects which orientation source categories resolve — ordinary, API or route, schema or data, or re-orientation (ADR-0024, ADR-0032).

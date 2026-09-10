@@ -14,8 +14,10 @@ The frontier reviewer owns the shared revision packet, Standards and Spec
 completeness, verification of every candidate finding, and review
 publication. It publishes the review and verified inline findings to the
 selected pull request and stops. It never applies fixes, edits pull-request
-source, commits, pushes, merges, updates the pull-request body, labels,
-promotes, or closes. No fix subagent runs in this review.
+source, commits, pushes, merges, labels, promotes, or closes. The only
+pull-request body write is the scoped evidence-repair helper replacing
+exactly one validated evidence region with provenance (ADR-0039); general
+body updates stay forbidden. No fix subagent runs in this review.
 
 ## Scope
 
@@ -98,4 +100,4 @@ No fix subagent runs in this review. The frontier reviewer verifies every findin
 
 ## Final stage
 
-The completed review publishes one validated `review-handoff-v1` block alongside readable findings. Checkout matching is commit-based: a clean checkout at the PR head commit matches under a branch alias, `main`, or detached `HEAD`. A clean checkout at a different commit is aligned automatically: the review fetches the verified pull-request head, confirms the pinned SHA, and switches to that exact commit in detached `HEAD` before reviewing, leaving the checkout there for `/fix-this` (ADR-0036). `/fix-this` owns post-review fixes, conflict resolution, local verification, squash merge, and ticket bookkeeping under ADR-0035; it runs no additional review and adds no CI wait or CI merge gate.
+The completed review publishes one validated `review-handoff-v1` block alongside readable findings. Checkout matching is commit-based: a clean checkout at the PR head commit matches under a branch alias, `main`, or detached `HEAD`. A clean checkout at a different commit is aligned automatically: the review fetches the verified pull-request head, confirms the pinned SHA, and switches to that exact commit in detached `HEAD` before reviewing, leaving the checkout there for `/fix-this` (ADR-0036). Bounded preparation (ADR-0039) may repair review metadata — same-version and supported legacy evidence pins with full revalidation and provenance, compatible runtimes, frozen dependencies — and resume an interrupted publication once; it never fixes source, approves exceptions, or delivers. Policy authority resolves from the pinned base with verified owner exceptions only, and policy revisions publish as the single-line `review-policy-v1` carrier. `/fix-this` owns post-review fixes, conflict resolution, local verification, squash merge, and ticket bookkeeping under ADR-0035; it runs no additional review and adds no CI wait or CI merge gate.

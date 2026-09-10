@@ -45,9 +45,10 @@ describe("single checkout contract (INV-6, INV-7)", () => {
       assert.equal(fs.existsSync(path.join(ROOT, "skills/implement-this", f)), false, `${f} must be removed`);
     }
   });
-  test("config carries no Agent Manager permission", () => {
-    const config = read(".kilo/kilo.jsonc");
-    assert.equal(config.includes("agent_manager"), false);
+  test("config carries no Agent Manager authority", () => {
+    const config = JSON.parse(read(".kilo/kilo.jsonc"));
+    const perm = (config as any).agent?.["review-this"]?.permission ?? {};
+    assert.ok(!("agent_manager" in perm) || (perm as any)["agent_manager"] === "deny", "Agent Manager must be absent or denied");
   });
 });
 

@@ -1994,6 +1994,13 @@ export interface PolicySource {
  * Deterministic effective-policy revision. Sorts sources so file discovery
  * order never changes the value. Absence of REVIEW.md is part of the value,
  * so adding or removing it invalidates verdict reuse.
+ *
+ * Legacy contract: multi-source values contain newlines and do not survive
+ * `escapeHandoffText` flattening. New code uses `reviewPolicyRevision`
+ * (single-line SHA-256 carrier) for publication; this function is retained
+ * for independent recomputation of existing valid no-source/single-source
+ * legacy reports. Never normalize a lossy multi-source flattened report
+ * into a trusted match.
  */
 export function effectivePolicyRevision(
   sources: readonly PolicySource[],
@@ -2003,6 +2010,70 @@ export function effectivePolicyRevision(
     .sort()
     .join("\n");
   return `${REVIEW_CONTRACT_VERSION}:${canonical === "" ? "no-sources" : canonical}`;
+}
+
+// --- Review-policy revision v1 (single-line carrier) ------------------------
+//
+// `effectivePolicyRevision` joins multiple sources with newlines while
+// `escapeHandoffText` flattens newlines to spaces before the validator
+// compares the result. A multi-source policy revision therefore never
+// round-trips. `reviewPolicyRevision` is the publication carrier: a
+// single-line, versioned SHA-256 over the canonical sorted source
+// identities/hashes, including policy presence and the accepted approval
+// scope. Callers pass the hasher through the shared pure boundary, as
+// requirements revisions already do.
+
+export const REVIEW_POLICY_VERSION = "review-policy-v1";
+
+export const SUPPORTED_POLICY_VERSIONS: readonly string[] = [
+  REVIEW_CONTRACT_VERSION,
+  REVIEW_POLICY_VERSION,
+];
+
+export function isSupportedPolicyVersion(version: string): boolean {
+  return (SUPPORTED_POLICY_VERSIONS as readonly string[]).includes(version);
+}
+
+/** Canonical text hashed by `reviewPolicyRevision`. Sorted; presence is explicit. */
+export function policyCanonicalText(
+  sources: readonly PolicySource[],
+  acceptedApproval?: { commentId: string; bodyHash: string; scope: readonly string[] } | null,
+): string {
+  const sorted = [...sources]
+    .map((s) => `${s.path}\t${s.hash}`)
+    .sort();
+  const body = sorted.length === 0 ? "no-sources" : sorted.join("\n");
+  const approval = acceptedApproval
+    ? `approval:${acceptedApproval.commentId}\t${acceptedApproval.bodyHash}\t${[...acceptedApproval.scope].sort().join(",")}`
+    : "no-approval";
+  return `${REVIEW_POLICY_VERSION}\n${body}\n${approval}`;
+}
+
+/**
+ * Single-line versioned policy revision. Includes governing sources and the
+ * accepted approval scope; adding, removing, or changing a source or the
+ * approval invalidates verdict reuse. Survives `escapeHandoffText`
+ * unchanged because it contains no newlines.
+ */
+export function reviewPolicyRevision(
+  sources: readonly PolicySource[],
+  hash: RevisionHasher,
+  acceptedApproval?: { commentId: string; bodyHash: string; scope: readonly string[] } | null,
+): string {
+  return `${REVIEW_POLICY_VERSION}:${hash(policyCanonicalText(sources, acceptedApproval ?? null))}`;
+}
+
+/** True when the value is a well-formed supported policy revision. */
+export function policyRevisionWellFormed(value: unknown): boolean {
+  if (typeof value !== "string" || value.trim() === "") return false;
+  if (new RegExp(`^${escapeHandoffRegExp(REVIEW_POLICY_VERSION)}:[a-f0-9]{64}$`).test(value)) return true;
+  if (value.startsWith(`${REVIEW_CONTRACT_VERSION}:`) && value.length > REVIEW_CONTRACT_VERSION.length + 1) {
+    // Legacy single-line reports (no-source or single-source) round-trip;
+    // lossy multi-source flattened reports never equal a recomputed legacy
+    // value and therefore never match.
+    return !value.includes("\n");
+  }
+  return false;
 }
 
 // --- Review handoff for fix-this (ADR-0035) ----------------------------------
@@ -2288,7 +2359,7 @@ function validateReviewHandoffInput(input: ReviewHandoffInput): string | null {
     return "review handoff needs trustworthy reviewed revisions";
   }
   if (!requirementsPinWellFormed(input.requirementsRevision)) return "review handoff requirements revision is malformed";
-  if (input.reviewPolicyRevision.trim() === "") return "review handoff policy revision is malformed";
+  if (!policyRevisionWellFormed(input.reviewPolicyRevision)) return "review handoff policy revision is malformed";
   if (!isNonEmptyHandoffString(input.verificationCommand)) return "review handoff verification command is missing";
   if (!isNonEmptyHandoffString(input.verificationResult)) return "review handoff verification result is missing";
   if (input.closesTicket !== null && (!Number.isInteger(input.closesTicket) || input.closesTicket < 1)) {
@@ -2942,6 +3013,481 @@ export function decideRepairRevalidation(
     proceed: true,
     reason: "legacy-contract mismatch with revalidated current scope and proof; fresh evidence may publish with the old pin and repair reason retained as provenance",
   };
+}
+
+// --- Review-specific evidence recovery (review-this preparation) -------------
+//
+// `decideRepairRevalidation` stays narrow for implementation/finalization:
+// a same-version `revision-mismatch` never repins there. Review preparation
+// may recover supported legacy and same-version stale pins, or a missing pin
+// in an otherwise unambiguous supported block, only after current
+// requirements resolve and full current-scope proof is revalidated on the
+// selected head. `classifyRequirementsPin` stays honest about unknown
+// historical causes; recovery never describes fresh verification as proof
+// that historical requirements were identical and never reconstructs lost
+// history.
+
+export interface ReviewEvidenceRecoveryFact {
+  classification: PinnedRevisionClassification;
+  /** Full current parent/ticket scope resolves. */
+  currentScopeResolved: boolean;
+  /** Real proof revalidated against the current scope on the current head. */
+  proofRevalidated: boolean;
+  /**
+   * Exactly one validated evidence region with a known envelope version,
+   * no duplicate/unbalanced markers, and no conflicting associations.
+   * False for ambiguous, duplicated, or unknown-version blocks.
+   */
+  unambiguousBlock: boolean;
+  /**
+   * Genuine historical bug RED evidence preserved (or not a bug-fix).
+   * Fresh verification never replaces lost RED history.
+   */
+  historicalBugRedPreserved: boolean;
+}
+
+export function decideReviewEvidenceRecovery(
+  fact: ReviewEvidenceRecoveryFact,
+): { proceed: boolean; reason: string } {
+  if (fact.classification === "body-change") {
+    return {
+      proceed: false,
+      reason: "the parent or ticket body changed with proof; reconcile the changed requirements before any repin",
+    };
+  }
+  if (!fact.currentScopeResolved) {
+    return { proceed: false, reason: "the current parent and ticket scope does not resolve; stop with needs-info" };
+  }
+  if (!fact.proofRevalidated) {
+    return { proceed: false, reason: "real proof was not revalidated against the current scope on the current head; never republish evidence on unproven work" };
+  }
+  if (!fact.historicalBugRedPreserved) {
+    return { proceed: false, reason: "genuine historical bug RED evidence is missing; never reconstruct lost history" };
+  }
+  if (!fact.unambiguousBlock) {
+    return { proceed: false, reason: "the evidence block is ambiguous, duplicated, or carries an unknown envelope version; reconcile it outside review" };
+  }
+  if (fact.classification === "equal") {
+    return { proceed: true, reason: "the pinned revision still matches; no repin is needed" };
+  }
+  if (fact.classification === "legacy-contract") {
+    return {
+      proceed: true,
+      reason: "supported legacy pin with revalidated current scope and proof; fresh evidence may publish with the old pin and repair reason retained as provenance",
+    };
+  }
+  if (fact.classification === "revision-mismatch") {
+    return {
+      proceed: true,
+      reason: "same-version stale pin with revalidated current scope and proof; fresh evidence may publish with the old pin and repair reason retained as provenance (review preparation only)",
+    };
+  }
+  // missing-or-malformed: only a missing pin in an otherwise unambiguous
+  // supported block may recover; malformed carriers never become provenance.
+  return {
+    proceed: true,
+    reason: "missing pin in an otherwise unambiguous supported evidence block with revalidated current scope and proof; fresh evidence may publish with repair provenance",
+  };
+}
+
+// --- Evidence repair body helpers (review preparation) -----------------------
+//
+// GitHub's PR-body PATCH has no expected-body-version parameter; there is no
+// atomic compare-and-swap. Callers must re-read the full PR body and all
+// pinned inputs immediately before writing, replace exactly one validated
+// evidence region preserving everything outside it byte-for-byte, then read
+// back and revalidate. A concurrent human edit in the remaining network
+// window is a documented risk; report any observed race.
+
+/**
+ * Replace exactly one compact evidence block, preserving surrounding bytes.
+ * Rejects duplicate/unbalanced markers, unknown envelope versions, and
+ * conflicting closing associations instead of guessing.
+ */
+export function replaceSingleEvidenceBlock(
+  existingBody: string,
+  newBlock: string,
+): { ok: true; body: string } | { ok: false; reason: string } {
+  if (hasStrayEvidenceMarkers(existingBody)) {
+    return { ok: false, reason: "stray or unbalanced compact evidence markers in the pull-request body" };
+  }
+  const blocks = countEvidenceBlocks(existingBody);
+  if (blocks !== 1) {
+    return {
+      ok: false,
+      reason: blocks === 0
+        ? "no compact evidence block to replace; use compose for a missing block"
+        : "multiple compact evidence blocks in the pull-request body",
+    };
+  }
+  const parsed = parseEvidenceHandoff(existingBody);
+  if (
+    parsed.envelopeVersion !== EVIDENCE_ENVELOPE_VERSION &&
+    parsed.envelopeVersion !== EVIDENCE_ENVELOPE_V1
+  ) {
+    return {
+      ok: false,
+      reason: `unsupported evidence envelope ${parsed.envelopeVersion ?? "unknown"}; upgrade the producing skill before review`,
+    };
+  }
+  // Conflicting associations: more than one distinct closing target outside
+  // fences, across close/fix/resolve forms and `#N`/URL references.
+  const proseOutsideFences = evidenceFenceSegments(existingBody)
+    .filter((s) => !s.fenced)
+    .map((s) => s.text)
+    .join("");
+  const closingTargets = [
+    ...normalizeNewlines(proseOutsideFences).matchAll(
+      /(?:close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved)[ \t]+(?:https?:\/\/[^\s]+\/issues\/(\d+)|#(\d+))/gi,
+    ),
+  ].map((m) => m[1] ?? m[2]);
+  const distinct = [...new Set(closingTargets.filter(Boolean))];
+  if (distinct.length > 1) {
+    return { ok: false, reason: "conflicting closing associations in the pull-request body; reconcile them outside review" };
+  }
+  const usesCRLF = existingBody.includes("\r\n");
+  const normalized = normalizeNewlines(existingBody);
+  const pattern = new RegExp(
+    `${escapeHandoffRegExp(COMPACT_START)}[ \\t]*\\n([\\u0000-\\uFFFF]*?)\\n[ \\t]*${escapeHandoffRegExp(COMPACT_END)}`,
+  );
+  const match = normalized.match(pattern);
+  if (!match || match.index === undefined) {
+    return { ok: false, reason: "evidence block is unreadable; reconcile it outside review" };
+  }
+  const start = match.index;
+  const end = start + match[0].length;
+  // Preserve everything outside the single validated region byte-for-byte,
+  // including the original CRLF style when present.
+  const trimmedBlock = newBlock.trim();
+  if (!trimmedBlock.startsWith(COMPACT_START) || !trimmedBlock.endsWith(COMPACT_END)) {
+    return { ok: false, reason: "replacement block must be exactly one rendered compact evidence block" };
+  }
+  const spliced = `${normalized.slice(0, start)}${trimmedBlock}${normalized.slice(end)}`;
+  return { ok: true, body: usesCRLF ? spliced.replace(/\n/g, "\r\n") : spliced };
+}
+
+// --- Workflow-owned evidence repair record -----------------------------------
+
+export const EVIDENCE_REPAIR_VERSION = "evidence-repair-v1";
+const EVIDENCE_REPAIR_START = "<!-- ruralnative:evidence-repair:start -->";
+const EVIDENCE_REPAIR_END = "<!-- ruralnative:evidence-repair:end -->";
+
+export interface EvidenceRepairRecord {
+  repository: string;
+  prNumber: number;
+  oldRequirementsRevision: string;
+  newRequirementsRevision: string;
+  oldHeadSha: string;
+  newHeadSha: string;
+  baseSha: string;
+  reason: string;
+  verificationProvenance: string;
+}
+
+function evidenceRepairField(inner: string, label: string): string | null {
+  const pattern = new RegExp(`^[ \\t]*-[ \\t]*${escapeHandoffRegExp(label)}[ \\t]*:(.*)$`, "gm");
+  const values: string[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = pattern.exec(inner)) !== null) values.push((m[1] ?? "").trim());
+  if (values.length !== 1 || values[0] === "") return null;
+  return values[0];
+}
+
+function encodeRepairField(value: string): string {
+  return value
+    .replace(/\\/g, "\\\\")
+    .replace(/\r\n?/g, "\n")
+    .replace(/-->/g, "--\\u003E")
+    .replace(/\n/g, "\\n");
+}
+
+function decodeRepairField(value: string): string {
+  let out = "";
+  for (let i = 0; i < value.length; ) {
+    if (value.startsWith("--\\u003E", i)) {
+      out += "-->";
+      i += 8;
+      continue;
+    }
+    if (value[i] === "\\" && i + 1 < value.length) {
+      const nxt = value[i + 1];
+      if (nxt === "n") {
+        out += "\n";
+        i += 2;
+        continue;
+      }
+      if (nxt === "\\") {
+        out += "\\";
+        i += 2;
+        continue;
+      }
+    }
+    out += value[i];
+    i += 1;
+  }
+  return out;
+}
+
+export function renderEvidenceRepairRecord(input: EvidenceRepairRecord): string {
+  if (!/^[A-Za-z0-9-_.]+\/[A-Za-z0-9-_.]+$/.test(input.repository)) throw new Error("invalid evidence repair repository");
+  if (!Number.isInteger(input.prNumber) || input.prNumber < 1) throw new Error("invalid evidence repair PR number");
+  if (!requirementsPinWellFormed(input.newRequirementsRevision)) throw new Error("invalid evidence repair new pin");
+  if (input.oldRequirementsRevision.trim() !== "" && !requirementsPinWellFormed(input.oldRequirementsRevision) && input.oldRequirementsRevision !== "missing") {
+    throw new Error("invalid evidence repair old pin");
+  }
+  if (input.newHeadSha.trim() === "" || input.baseSha.trim() === "") throw new Error("evidence repair needs trustworthy revisions");
+  if (input.reason.trim() === "" || input.verificationProvenance.trim() === "") throw new Error("evidence repair needs a reason and verification provenance");
+  const lines = [
+    EVIDENCE_REPAIR_START,
+    "## Evidence repair",
+    "",
+    `- Repair version: ${EVIDENCE_REPAIR_VERSION}`,
+    `- Repository: ${input.repository}`,
+    `- PR: ${input.prNumber}`,
+    `- Old requirements revision: ${input.oldRequirementsRevision === "" ? "missing" : input.oldRequirementsRevision}`,
+    `- New requirements revision: ${input.newRequirementsRevision}`,
+    `- Old head: ${input.oldHeadSha === "" ? "missing" : input.oldHeadSha}`,
+    `- New head: ${input.newHeadSha}`,
+    `- Base: ${input.baseSha}`,
+    `- Reason: ${encodeRepairField(input.reason)}`,
+    `- Verification: ${encodeRepairField(input.verificationProvenance)}`,
+    EVIDENCE_REPAIR_END,
+  ];
+  return lines.join("\n");
+}
+
+export function parseEvidenceRepairRecord(body: string): { found: boolean; record?: EvidenceRepairRecord; reason: string } {
+  const normalized = normalizeNewlines(body);
+  const starts = normalized.split(EVIDENCE_REPAIR_START).length - 1;
+  const ends = normalized.split(EVIDENCE_REPAIR_END).length - 1;
+  if (starts === 0 && ends === 0) return { found: false, reason: "no evidence repair record" };
+  if (starts !== ends || starts !== 1) return { found: false, reason: "stray, unbalanced, or duplicate evidence repair markers" };
+  const inner = normalized.match(
+    new RegExp(`${escapeHandoffRegExp(EVIDENCE_REPAIR_START)}[ \\t]*\\n([\\u0000-\\uFFFF]*?)\\n[ \\t]*${escapeHandoffRegExp(EVIDENCE_REPAIR_END)}`),
+  )?.[1] ?? null;
+  if (inner === null) return { found: false, reason: "evidence repair record is unreadable" };
+  const version = evidenceRepairField(inner, "Repair version");
+  if (version !== EVIDENCE_REPAIR_VERSION) return { found: false, reason: `unsupported evidence repair ${version ?? "unknown"}` };
+  const repository = evidenceRepairField(inner, "Repository");
+  const prRaw = evidenceRepairField(inner, "PR");
+  const oldPin = evidenceRepairField(inner, "Old requirements revision");
+  const newPin = evidenceRepairField(inner, "New requirements revision");
+  const oldHead = evidenceRepairField(inner, "Old head");
+  const newHead = evidenceRepairField(inner, "New head");
+  const base = evidenceRepairField(inner, "Base");
+  const reason = evidenceRepairField(inner, "Reason");
+  const verification = evidenceRepairField(inner, "Verification");
+  if (!repository || !prRaw || !oldPin || !newPin || !oldHead || !newHead || !base || !reason || !verification) {
+    return { found: false, reason: "evidence repair record is incomplete" };
+  }
+  const prNumber = Number(prRaw);
+  if (!Number.isInteger(prNumber) || prNumber < 1) return { found: false, reason: "evidence repair PR number is invalid" };
+  return {
+    found: true,
+    reason: "evidence repair record parsed",
+    record: {
+      repository,
+      prNumber,
+      oldRequirementsRevision: oldPin === "missing" ? "" : oldPin,
+      newRequirementsRevision: newPin,
+      oldHeadSha: oldHead === "missing" ? "" : oldHead,
+      newHeadSha: newHead,
+      baseSha: base,
+      reason: decodeRepairField(reason),
+      verificationProvenance: decodeRepairField(verification),
+    },
+  };
+}
+
+/** Reuse an identical repair record after interruption; any difference stops. */
+export function evidenceRepairReusable(
+  pinned: EvidenceRepairRecord,
+  current: EvidenceRepairRecord,
+): boolean {
+  return (
+    pinned.repository.toLowerCase() === current.repository.toLowerCase() &&
+    pinned.prNumber === current.prNumber &&
+    pinned.oldRequirementsRevision === current.oldRequirementsRevision &&
+    pinned.newRequirementsRevision === current.newRequirementsRevision &&
+    pinned.oldHeadSha === current.oldHeadSha &&
+    pinned.newHeadSha === current.newHeadSha &&
+    pinned.baseSha === current.baseSha &&
+    pinned.reason === current.reason &&
+    pinned.verificationProvenance === current.verificationProvenance
+  );
+}
+
+// --- Shared owner-decision and policy-change facts (review + fix) ------------
+//
+// A head-only policy change never authorizes itself. Owner decisions are
+// discovered automatically and verified against native repository/PR
+// identity, author identity (owner/admin or delegation established by
+// pinned-base policy; ordinary write permission is insufficient),
+// body/hash, referenced revisions/requirements, and exact exception scope.
+// Comment claims of OWNER/admin status, ADR assertions, or arbitrary PR
+// instructions are never trusted, and there is no general `approved: true`
+// escape hatch. A matching decision supplies only its named repository-local
+// exceptions; everything else becomes validated blocking findings.
+
+export interface OwnerDecisionFact {
+  repository: string;
+  prNumber: number;
+  commentId: string;
+  authorLogin: string;
+  /** Observed via the native permission API, never a comment claim. */
+  authorIsOwnerOrAdmin: boolean;
+  /** Delegation established by pinned-base policy. */
+  authorDelegatedByBasePolicy: boolean;
+  decisionBody: string;
+  decisionBodyHash: string;
+  referencedHeadSha: string;
+  referencedBaseSha: string;
+  referencedRequirementsRevision: string;
+  /** Named repository-local exception scope, e.g. `REVIEW.md:rule-3`. */
+  exceptionScope: readonly string[];
+  revoked: boolean;
+  superseded: boolean;
+  unrelated: boolean;
+}
+
+export interface OwnerDecisionExpectation {
+  repository: string;
+  prNumber: number;
+  headSha: string;
+  baseSha: string;
+  requirementsRevision: string;
+}
+
+function isRepoLocalExceptionScope(value: string): boolean {
+  if (value.trim() === "" || value.includes("..") || value.startsWith("/") || value.includes("\\")) return false;
+  return /^[A-Za-z0-9._/-]+(?::[A-Za-z0-9._/ -]+)?$/.test(value);
+}
+
+export function verifyOwnerDecision(
+  decision: OwnerDecisionFact,
+  expected: OwnerDecisionExpectation,
+  hash: RevisionHasher,
+): { valid: boolean; reason: string } {
+  if (decision.repository.toLowerCase() !== expected.repository.toLowerCase() || decision.prNumber !== expected.prNumber) {
+    return { valid: false, reason: "owner decision names another repository or pull request" };
+  }
+  if (decision.commentId.trim() === "" || decision.authorLogin.trim() === "") {
+    return { valid: false, reason: "owner decision needs a native comment identity and author" };
+  }
+  if (!decision.authorIsOwnerOrAdmin && !decision.authorDelegatedByBasePolicy) {
+    return { valid: false, reason: "owner decision requires repository owner/admin authority or delegation established by pinned-base policy; ordinary write permission is insufficient" };
+  }
+  if (decision.revoked) return { valid: false, reason: "owner decision was revoked" };
+  if (decision.superseded) return { valid: false, reason: "owner decision was superseded by a later decision" };
+  if (decision.unrelated) return { valid: false, reason: "owner decision references unrelated work" };
+  if (decision.decisionBody.trim() === "") return { valid: false, reason: "owner decision body is missing" };
+  if (decision.decisionBodyHash !== hash(decision.decisionBody)) {
+    return { valid: false, reason: "owner decision body hash does not match the observed body; re-fetch before publication" };
+  }
+  if (decision.referencedHeadSha !== expected.headSha || decision.referencedBaseSha !== expected.baseSha) {
+    return { valid: false, reason: "owner decision references stale revisions; re-fetch it before publication" };
+  }
+  if (decision.referencedRequirementsRevision !== expected.requirementsRevision) {
+    return { valid: false, reason: "owner decision references stale requirements; re-fetch it before publication" };
+  }
+  if (decision.exceptionScope.length === 0) {
+    return { valid: false, reason: "owner decision names no repository-local exceptions" };
+  }
+  for (const scope of decision.exceptionScope) {
+    if (!isRepoLocalExceptionScope(scope)) {
+      return { valid: false, reason: `owner decision scope is not repository-local: ${scope}` };
+    }
+  }
+  return { valid: true, reason: "owner decision verified against native identity, authority, revisions, and exact exception scope" };
+}
+
+export type PolicyChangeKind =
+  | "unchanged"
+  | "proposed-violation-reviewable"
+  | "inaccessible"
+  | "ambiguous"
+  | "contradictory";
+
+export interface PolicyChangeFact {
+  baseSources: readonly PolicySource[];
+  headSources: readonly PolicySource[];
+  baseReadable: boolean;
+  headReadable: boolean;
+  baseIsSymlink: boolean;
+  headIsSymlink: boolean;
+  /** Safe git-object read succeeded when the working-tree read failed. */
+  gitObjectFallbackReadable: boolean;
+  /** Content inspection found genuinely contradictory governing authority. */
+  baseContradictory: boolean;
+  /** Content inspection found ambiguous governing authority. */
+  baseAmbiguous: boolean;
+}
+
+function policySourceKey(s: PolicySource): string {
+  return `${s.path}\t${s.hash}`;
+}
+
+export function classifyPolicyChange(fact: PolicyChangeFact): { kind: PolicyChangeKind; reason: string } {
+  if (fact.baseIsSymlink || fact.headIsSymlink) {
+    return { kind: "ambiguous", reason: "a policy path is a symlink; resolve it outside this command and never follow an untrusted link" };
+  }
+  if (!fact.baseReadable || !fact.headReadable) {
+    if (!fact.gitObjectFallbackReadable) {
+      return { kind: "inaccessible", reason: "governing policy is unreadable and no safe git-object read succeeded; never substitute defaults for unreadable policy" };
+    }
+  }
+  if (fact.baseContradictory) {
+    return { kind: "contradictory", reason: "governing authority is genuinely contradictory; reconcile it outside this command" };
+  }
+  if (fact.baseAmbiguous) {
+    return { kind: "ambiguous", reason: "governing authority is ambiguous; reconcile it outside this command" };
+  }
+  const base = new Set(fact.baseSources.map(policySourceKey));
+  const head = new Set(fact.headSources.map(policySourceKey));
+  const same = base.size === head.size && [...base].every((k) => head.has(k));
+  if (same) return { kind: "unchanged", reason: "governing sources are unchanged between base and head" };
+  // Any head-only addition, removal, or relaxation never authorizes itself.
+  // The established base rule stays in force; the proposed change is a
+  // reviewable violation that becomes blocking findings when unapproved.
+  return {
+    kind: "proposed-violation-reviewable",
+    reason: "the pull request adds, removes, or relaxes a governing source; the established base rule stays in force and a head-only relaxation never authorizes itself",
+  };
+}
+
+export interface PolicyBlockingFindingDraft {
+  /** Governing base rule, e.g. `REVIEW.md: Verification expectations`. */
+  governingRule: string;
+  /** Actual changed source path, e.g. `REVIEW.md`. */
+  sourcePath: string;
+  message: string;
+}
+
+/**
+ * Build validated blocking findings for unapproved proposed policy changes.
+ * Each finding is tied to the actual changed source and its governing base
+ * rule. Callers must supply a `fileInDiff` check: a finding whose file is
+ * not in the reviewed diff is not invented here — the caller returns a
+ * restriction instead. Never invent a file/line for a non-diff diagnostic.
+ */
+export function buildPolicyBlockingFindings(
+  drafts: readonly PolicyBlockingFindingDraft[],
+  fileInDiff: (file: string) => boolean,
+): { findings: readonly PolicyBlockingFindingDraft[]; restricted: readonly PolicyBlockingFindingDraft[] } {
+  const findings: PolicyBlockingFindingDraft[] = [];
+  const restricted: PolicyBlockingFindingDraft[] = [];
+  for (const draft of drafts) {
+    if (draft.governingRule.trim() === "" || draft.sourcePath.trim() === "" || draft.message.trim() === "") {
+      restricted.push(draft);
+      continue;
+    }
+    if (!fileInDiff(draft.sourcePath)) {
+      restricted.push(draft);
+      continue;
+    }
+    findings.push(draft);
+  }
+  return { findings, restricted };
 }
 
 export const FIX_PROGRESS_LEGACY_VERSION = "fix-progress-v1";

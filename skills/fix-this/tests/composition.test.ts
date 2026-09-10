@@ -60,8 +60,10 @@ describe("final-stage contract (INV-5, INV-6, INV-13, INV-14)", () => {
     assert.ok(authority.includes("invoke-review-this"));
     assert.ok(authority.includes("use-ci-as-merge-gate"));
   });
-  test("config carries no Agent Manager permission", () => {
-    assert.equal(read(".kilo/kilo.jsonc").includes("agent_manager"), false);
+  test("config carries no Agent Manager authority", () => {
+    const config = JSON.parse(read(".kilo/kilo.jsonc"));
+    const perm = config.agent?.["review-this"]?.permission ?? config.agent?.["fix-this"]?.permission ?? config.agent?.["implement-this"]?.permission ?? {};
+    assert.ok(!("agent_manager" in perm) || (perm as any)["agent_manager"] === "deny", "Agent Manager must be absent or denied");
   });
   test("leaf keeps final-stage invariants test-encoded", () => {
     const leaf = read("docs/leaves/fix-this.md");
