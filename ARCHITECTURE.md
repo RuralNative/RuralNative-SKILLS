@@ -17,7 +17,6 @@ Documentation tier: full
 
 New `skills/<identity>/` needs a row, leaf doc, matching `SKILL.md` name (check 3).## Non-seam docs
 
-- REVIEW.md
 - CONTEXT.md, README.md, docs/debt.md, reference/vendor-facts.md
 - docs/agents/*, docs/manifest.md, docs/human/*
 ## Decisions

@@ -38,4 +38,4 @@ Regression: `node --test tests/github-facts.test.ts`. Reference:
 
 ## Links
 
-Glossary: `CONTEXT.md`. Decisions: ADR-0014, 0015, 0019, 0021, 0023, 0024, 0031, 0032, 0034, 0037, 0038, 0040. Review policy: `REVIEW.md` (optional). Redirect: `docs/leaves/ext/implement-this.md`.
+Glossary: `CONTEXT.md`. Decisions: ADR-0014, 0015, 0019, 0021, 0023, 0024, 0031, 0032, 0034, 0037, 0038, 0040. Redirect: `docs/leaves/ext/implement-this.md`.

@@ -31,4 +31,4 @@ Equivalent required CI on the reviewed head/base, or the established local comma
 
 ## Links
 
-Glossary: `CONTEXT.md`. Decisions: ADR-0006, ADR-0014, ADR-0015, ADR-0019, ADR-0022, ADR-0023, ADR-0024, ADR-0031, ADR-0032, ADR-0033, ADR-0034, ADR-0035, ADR-0036, ADR-0037, ADR-0038, ADR-0039, ADR-0040. Review policy: `REVIEW.md` (optional). Redirect: `docs/leaves/ext/review-this.md`.
+Glossary: `CONTEXT.md`. Decisions: ADR-0006, ADR-0014, ADR-0015, ADR-0019, ADR-0022, ADR-0023, ADR-0024, ADR-0031, ADR-0032, ADR-0033, ADR-0034, ADR-0035, ADR-0036, ADR-0037, ADR-0038, ADR-0039, ADR-0040. Redirect: `docs/leaves/ext/review-this.md`.

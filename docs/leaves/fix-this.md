@@ -32,4 +32,4 @@ Established focused checks plus the repository verification command(s) on the re
 
 ## Links
 
-Glossary: `CONTEXT.md`. Decisions: ADR-0024, ADR-0031, ADR-0032, ADR-0034, ADR-0035, ADR-0037, ADR-0038, ADR-0040. Review policy: `REVIEW.md` (optional).
+Glossary: `CONTEXT.md`. Decisions: ADR-0024, ADR-0031, ADR-0032, ADR-0034, ADR-0035, ADR-0037, ADR-0038, ADR-0040.

@@ -29,5 +29,5 @@ Doc-cache lifecycle: establish, audit, improve, maintain. Outputs: cache accurac
 21. **INV-21** — Generated `AGENTS.md` keeps the five commands, the management marker, and exactly one unslopify session-start block after the marker; Establish, Maintain, and Improve preserve it byte for byte (ADR-0029).
 ## Links
 
-Decisions: ADR-0001..0032. Review policy: `REVIEW.md` (check 8). Harness: `scripts/docs-check.sh`. Redirect: `docs/leaves/ext/document-for-agents.md`.
+Decisions: ADR-0001..0032. Harness: `scripts/docs-check.sh`. Redirect: `docs/leaves/ext/document-for-agents.md`.
 - Glossary: `CONTEXT.md` — Decision journal.

@@ -72,51 +72,15 @@ describe("review policy classification (document-for-agents #136)", () => {
     assert.ok(classify.includes("| What are the cross-cutting rules? | policy | policy doc | linked from index; never restated in leaves |"));
   });
 
-  test("REVIEW.md exists at the root, is indexed, and stays complete without a line quota", () => {
-    const review = read("REVIEW.md");
+  test("this repository uses skill defaults without a root review policy", () => {
     const arch = read("ARCHITECTURE.md");
     const manifest = read("docs/manifest.md");
-    assert.ok(review.split("\n").length > 0, "policy must carry its rules");
-    assert.ok(manifest.includes("| REVIEW.md | policy |"), "coverage manifest must list REVIEW.md as policy");
-    assert.ok(arch.includes("- REVIEW.md"), "non-seam list must carry REVIEW.md");
-    // The marker line the freshness mechanism parses must exist
-    assert.ok(review.includes("<!-- Governs-from:"), "Governs-from declaration line must exist");
-  });
-
-  test("REVIEW.md defines the required policy areas", () => {
-    const n = norm(read("REVIEW.md"));
-    for (const area of [
-      "scope",
-      "severity",
-      "trust rules",
-      "verification expectations",
-      "current-head freshness",
-      "inline-comment evidence",
-      "subagent use",
-      "ci equivalence",
-    ]) {
-      assert.ok(n.includes(area), `policy must define ${area}`);
-    }
-  });
-
-  test("review-only authority publishes findings without fixes or delivery", () => {
-    const n = norm(read("REVIEW.md"));
-    assert.ok(n.includes("no fix subagent"), "policy must state no fix subagent runs");
-    assert.ok(
-      n.includes("verifies every finding") && n.includes("before publishing"),
-      "the frontier reviewer verifies every finding before publication"
-    );
-    for (const forbidden of ["never applies fixes", "never", "merge"]) {
-      assert.ok(n.includes(forbidden), `policy must forbid reviewer ${forbidden}`);
-    }
-  });
-
-  test("no cloud review: one frontier pass owns the verdict with no cross-host authority", () => {
-    const n = norm(read("REVIEW.md"));
-    assert.ok(n.includes("standards") && n.includes("spec"), "both review checklists must be named");
-    assert.ok(n.includes("frontier pass"), "one in-session frontier pass owns the review");
-    assert.equal(n.includes("cloudadapter"), false, "policy must not name cloud adapters");
-    assert.equal(n.includes("cloud collection"), false, "policy must not describe cloud collection");
+    assert.equal(fs.existsSync(path.join(ROOT, "REVIEW.md")), false);
+    assert.equal(manifest.includes("| REVIEW.md | policy |"), false);
+    assert.equal(arch.includes("- REVIEW.md"), false);
+    const agents = read("AGENTS.md");
+    assert.ok(agents.includes("Reviews use `/review-this` defaults"));
+    assert.ok(agents.includes("Do not create a review policy file unless explicitly requested"));
   });
 });
 
@@ -144,19 +108,19 @@ describe("review policy template and index guidance (document-for-agents #136)",
     assert.equal(n.includes("105-line policy budget") || n.includes("≤ 105 lines"), false, "review policy must not carry a line quota");
   });
 
-  test("leaf docs point to the review policy instead of restating it", () => {
+  test("leaf docs do not link the removed review policy or restate it", () => {
     const agentsLeaf = read("docs/leaves/document-for-agents.md");
     const implLeaf = read("docs/leaves/implement-this.md");
     const reviewLeaf = read("docs/leaves/review-this.md");
-    for (const leaf of [agentsLeaf, implLeaf, reviewLeaf]) {
-      assert.ok(leaf.includes("`REVIEW.md`"), "each workflow leaf must link the review policy");
+    const fixLeaf = read("docs/leaves/fix-this.md");
+    for (const leaf of [agentsLeaf, implLeaf, reviewLeaf, fixLeaf]) {
+      assert.equal(leaf.includes("Review policy: `REVIEW.md`"), false);
     }
     // Pointing, not restating: no leaf redefines severity or trust wholesale
     for (const leaf of [implLeaf, reviewLeaf]) {
       assert.ok(!leaf.includes("## Severity"), "leaves must not restate policy sections");
       assert.ok(!leaf.includes("## Trust rules"), "leaves must not restate policy sections");
     }
-    assert.ok(norm(agentsLeaf).includes("check 8"), "the owning leaf names the enforcing check");
   });
 });
 

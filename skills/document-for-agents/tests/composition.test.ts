@@ -208,7 +208,10 @@ describe("attention boundary contract (document-for-agents:INV-7..INV-13)", () =
     assert.ok(templates.includes("does not duplicate the five commands"));
     const agents = read("AGENTS.md");
     assert.ok(agents.startsWith(`1. ${commands[0]}\n`), "AGENTS.md must start with command 1");
-    assertOrdered(norm(agents), commands, "AGENTS.md");
+    const repositoryCommands = [...commands];
+    repositoryCommands[3] = "Apply the durable documentation policy below; code wins.";
+    assertOrdered(norm(agents), repositoryCommands, "AGENTS.md");
+    assert.ok(agents.includes("Otherwise leave docs alone. Code wins when they disagree."));
     assert.ok(
       agents.indexOf(commands[0]) < agents.indexOf("\n## "),
       "the five commands must come before any other AGENTS.md section"
