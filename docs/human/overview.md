@@ -10,6 +10,9 @@ Single-target resolution requires the pull request to be open, linked to the tic
 
 When the evidence pin is stale at an unchanged head, review repairs only that metadata. The `recover-evidence` operation is the sole writer and works from observation, not caller claims: it reads the authenticated actor's write permission, the pull request body and native closing and parent links, the issue bodies, and the local checkout, then builds its checks from the pinned configuration and the approved frozen boundary. The observed verification intent and every active criterion need a complete execution receipt, including non-behavior proof, and a truncated log or a downgraded behavior record stops the write. One evidence region is replaced in place with the repair record inside it, the surrounding bytes stay untouched, the bundled validator must accept the candidate, and the helper re-reads the facts, the positive head-repository identity, and the observed governing sources before each body-only PATCH and adopts an exact read-back. A real check failure keeps the old evidence and continues with the failure as a blocker.
 
+Implementation tickets belong to a parent specification. Intake reads that
+parent and the ticket's blockers; it does not require the ticket to have children.
+
 Direct pull-request review also withholds auto-merge authority when the linked ticket and closing reference disagree.
 
 The installed skill metadata uses the same `/review-this <target>` invocation as the body and installation guide.

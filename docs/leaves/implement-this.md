@@ -29,6 +29,12 @@ Implementation adapter: validates one open ticket, implements it directly in the
 
 Focused checks named by the ticket's smallest sufficient verification.
 
+Intake reads the ticket's native parent relationship and the returned
+specification, plus the ticket's incoming blockers and their current states.
+It does not enumerate the ticket's children or require downstream dependents.
+Any child-membership check queries the parent specification instead.
+Regression: `node --test skills/implement-this/tests/composition.test.ts`.
+
 The `github-facts.mjs` operation is `sub-issues` (hyphen); the GitHub REST
 suffix is `/sub_issues` (underscore). The reader requests
 `gh api --paginate --slurp repos/<owner>/<repo>/issues/<n>/sub_issues`, so a

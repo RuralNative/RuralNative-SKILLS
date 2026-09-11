@@ -2,6 +2,10 @@
 
 The technical flow starts with a task you give to `/plan-this`.
 
+Implementation reads the selected ticket's parent link, then its specification,
+and checks the ticket's incoming blockers. A child-membership check, if needed,
+reads the specification's children, not the ticket's children.
+
 1. Planning loads repository-owned `unslopify` before progress and reads only the focused agent cache `AGENTS.md -> ARCHITECTURE.md -> seam leaf -> CONTEXT.md -> relevant ADRs`; human pages remain derived and are not preloaded. Once `unslopify` has set itself up in a project, it loads before the first reply of every session (ADR-0029). Each task's read set resolves at runtime from affected seams, so unrelated documentation growth never changes what one task must read.
 2. Planning defines an intent capsule (`Outcome`, `User`, `Why now`, `Success`, `Constraints`, `Non-goals`) and asks a question only when repository facts and the confirmed task cannot decide a choice that changes product behavior, scope, cost, risk, or an action that is hard to undo; a complete settled capsule moves on without a question. It optionally explores directions when the solution form is unsettled, then resolves the remaining choices one at a time with the options the decision requires and one clear recommendation, researches facts the codebase can answer, shows a plain-language preview of what will be created, the main risks, and what happens next, and waits for explicit publication approval. Interrupted runs resume recorded decisions. One-decision precedence and the planning-only write boundary are explicit.
 3. Planning publishes a parent specification with no claimable label, links each child ticket to it as a native GitHub sub-issue, and creates native blocked-by edges from each blocker's numeric database ID. Every published criterion carries a local ID unique within its own issue, written `AC-1`; the stable key is the authority issue number plus the local ID, and retired IDs are never reused. Independent tickets start together, real blockers become edges, and file overlap without semantic dependency becomes a scheduling note for user-managed parallel checkouts.

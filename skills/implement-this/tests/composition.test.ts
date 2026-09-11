@@ -53,6 +53,15 @@ describe("single checkout contract (INV-6, INV-7)", () => {
 });
 
 describe("evidence and verification (INV-13, INV-15, INV-16)", () => {
+  test("intake distinguishes ticket dependencies from specification children (INV-8)", () => {
+    const validate = read("skills/implement-this/SKILL.md").split("## Validate\n")[1].split("## Build and verify")[0];
+    assert.match(validate, /Read the ticket's native parent relationship/);
+    assert.match(validate, /`blocked-by` operation against the ticket number/);
+    assert.match(validate, /Do not query the ticket's sub-issues/);
+    assert.match(validate, /`sub-issues` operation against the parent specification number/);
+    assert.match(validate, /not an intake prerequisite/);
+    assert.match(validate, /unavailable, forbidden, malformed, or partial reads stop/);
+  });
   test("compact evidence lives in the PR body with no full gate", () => {
     const skill = read("skills/implement-this/SKILL.md");
     const n = norm(skill);
