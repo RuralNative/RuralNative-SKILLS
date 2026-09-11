@@ -16,6 +16,20 @@ describe("implement-this identity (INV-1)", () => {
 });
 
 describe("implement-this installation and invocation (INV-2)", () => {
+  test("same-session continuation preserves human authorization without trusting handoffs (INV-3)", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const continuation = skill.split("## Same-session continuation\n")[1]?.split("## Rules")[0];
+    assert.ok(continuation, "define continuation separately from a new invocation");
+    assert.match(continuation, /original human message/);
+    assert.match(continuation, /compaction.*background-task completion/);
+    assert.match(continuation, /current session's original human messages/);
+    assert.match(continuation, /MISSING_TICKET_AUTHORIZATION/);
+    assert.match(continuation, /summary, handoff document, or task report.*not authorization/);
+    assert.match(continuation, /fresh session requires its own explicit human instruction/);
+    assert.match(continuation, /pause, stop, status-only, or handoff-only/);
+    assert.match(continuation, /clean-checkout gate is an entry check/);
+    assert.match(continuation, /unknown or conflicting changes stop/);
+  });
   test("documents the single-ticket form only", () => {
     const skill = read("skills/implement-this/SKILL.md");
     const install = read("skills/implement-this/INSTALL.md");

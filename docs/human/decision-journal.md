@@ -8,6 +8,11 @@ blockers from the specification's children. Intake does not enumerate the
 ticket's children; optional membership verification queries the specification.
 This clarifies the existing rule in `docs/leaves/implement-this.md`.
 
+That rule also distinguishes continuing an authorized session from starting a
+new one. Compaction and task completion do not cancel the original request.
+The original human message remains the authority, while handoffs and summaries
+only help locate it. Later human restrictions still apply.
+
 ### 2026-09-09 — Verify every handoff and let finalization resume (ADR-0038)
 
 What changed: a requirements pin exists only for resolved requirements — resolution failure throws a typed error naming the role instead of hashing a broken body, and a body carrying both `## Solution` and `## Settled decisions` is treated as a clear alternate template with both homes fingerprinted. Every stage now runs a small bundled validator command (Node 24+) against the exact bodies and against what it actually published, read back from GitHub. `/review-this` publishes one complete review as one bounded step: create a pending review at the pinned commit, capture its native identity, submit the final body with that identity, read it back, and validate. `/fix-this` resumes from a `fix-progress-v2` receipt, a confirmed merged pull request resumes bookkeeping only, and legacy progress notes stay diagnostic — they never let a rerun skip work.

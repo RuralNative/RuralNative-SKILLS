@@ -13,6 +13,10 @@ When the evidence pin is stale at an unchanged head, review repairs only that me
 Implementation tickets belong to a parent specification. Intake reads that
 parent and the ticket's blockers; it does not require the ticket to have children.
 
+Your implementation request remains valid within the same session after its
+conversation is compacted or a background task finishes. A new session still
+needs your instruction; a handoff alone cannot authorize work.
+
 Direct pull-request review also withholds auto-merge authority when the linked ticket and closing reference disagree.
 
 The installed skill metadata uses the same `/review-this <target>` invocation as the body and installation guide.

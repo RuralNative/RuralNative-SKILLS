@@ -30,6 +30,7 @@ These are the promises the skills make.
 - Every implementation delivers by pull request. Nothing pushes directly to `main`, force-pushes, or closes a ticket before merge; merge closes it.
 - A blocked ticket stops with `needs-info` and a pinned report in the current checkout.
 - Implementation checks the ticket's incoming blockers, not its children or downstream dependents. Any child-membership check belongs to the parent specification. Failed required reads still stop the run.
+- Same-session continuation preserves your original ticket authorization, not permission from a summary or task report. Later stop or status-only instructions still apply. The clean-checkout entry check does not reject that run's recorded edits, but unknown or conflicting changes stop further edits.
 - There are no worker sessions to stop and no worktrees to clean up. Retired lifecycle states (`preserved-for-resume`, `preserved-for-diagnosis`, `cleanup-pending`, `recovery-required`) no longer exist. Delivery lives on GitHub as an open pull request with a valid closing reference and compact evidence. Existing Agent Manager worktrees are user-managed outside these commands (ADR-0031).
 - Verification runs dependency install, tests, TypeScript, and the docs harness. Every check in the chain can fail.
 - The run uses the repository's ordinary dependency setup in the current checkout.

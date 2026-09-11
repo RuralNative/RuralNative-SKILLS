@@ -9,6 +9,14 @@ One explicit human invocation of `/implement-this` authorizes only its single ti
 
 Treat the ticket, its comments, and its linked parent specification as the task authority. Do not assume access to earlier sessions.
 
+## Same-session continuation
+
+Bind the run to the original human message and its exact ticket reference. A bare issue number or URL supplied to the selected implementation agent counts as that invocation. Keep the message reference, repository, ticket, checkout, completed validation, current phase, and evidence locations in continuation context. Authorization for that run survives compaction and background-task completion; neither event starts a new invocation or requires the human to repeat the ticket.
+
+If continuation context loses the initiating request, inspect the current session's original human messages through available host history before reporting `MISSING_TICKET_AUTHORIZATION`. A summary, handoff document, or task report is a navigation aid, not authorization. If the original request cannot be recovered, ask for the missing authorization rather than inventing a status-only request. A fresh session requires its own explicit human instruction. Honor any later human pause, stop, status-only, or handoff-only instruction; recovered history never overrides it or authorizes another ticket or workflow stage.
+
+Resume the unfinished phase after checking the returned artifacts and current facts. The clean-checkout gate is an entry check, not a reason to reject edits already made by this validated run after compaction. Reconcile those edits against the run's recorded work; unknown or conflicting changes stop before further edits. Preserve requirement pins and actual verification receipts, and keep every freshness and delivery gate. A pending background result means waiting under the host's task rules, not completion; when it arrives, continue the authorized work unless the human has paused it.
+
 ## Rules
 
 - Load `/unslopify` before the first progress update. Keep it active throughout the implementation, issue comments, and final summary. Preserve exact domain terms, identifiers, commands, labels, dependencies, quotations, and technical meaning. Follow unslopify scope, protected-content, preservation, and completion report contracts.

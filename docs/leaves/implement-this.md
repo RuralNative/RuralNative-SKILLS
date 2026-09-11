@@ -35,6 +35,14 @@ It does not enumerate the ticket's children or require downstream dependents.
 Any child-membership check queries the parent specification instead.
 Regression: `node --test skills/implement-this/tests/composition.test.ts`.
 
+Same-session continuation retains the initiating human request through
+compaction and task completion. Missing context triggers recovery of the
+original human message, not authorization from a summary or handoff. Fresh
+sessions need their own human instruction, and later human restrictions still
+apply. The clean-checkout entry gate does not reject the validated run's own
+recorded edits on continuation; unknown or conflicting edits stop. The
+composition test checks these instructions, not model compliance at runtime.
+
 The `github-facts.mjs` operation is `sub-issues` (hyphen); the GitHub REST
 suffix is `/sub_issues` (underscore). The reader requests
 `gh api --paginate --slurp repos/<owner>/<repo>/issues/<n>/sub_issues`, so a
