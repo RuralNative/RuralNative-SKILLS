@@ -296,4 +296,75 @@ describe("document-for-humans hard dependency (document-for-humans:INV-6)", () =
     // stale checks: no minimal-tier rule that creates everything, no issue/commit as allowed source, no old runtime path
     assert.ok(!readme.includes("journal decisions from commit"), "stale journal from commits must not appear");
   });
+
+  test("task artifacts are optional and applicability-checked, never mandatory identical pages", () => {
+    const routing = read("skills/document-for-humans/reference/routing.md");
+    const templates = read("skills/document-for-humans/reference/templates.md");
+    const skill = read("skills/document-for-humans/SKILL.md");
+    const nR = norm(routing);
+    assert.ok(nR.includes("task guide (optional)") && nR.includes("operation reference (optional)") && nR.includes("developer recipe (optional)"));
+    assert.ok(nR.includes("purpose") && nR.includes("prerequisites") && nR.includes("authority") && nR.includes("available operations"));
+    assert.ok(nR.includes("justified omission") || nR.includes("justified omissions") || nR.includes("not-applicable"));
+    assert.ok(templates.includes("Task guide (optional)") && templates.includes("Operation reference (optional)") && templates.includes("Developer recipe (optional)"));
+    assert.ok(norm(skill).includes("optional task guide") || norm(skill).includes("task guide"));
+    assert.ok(!skill.includes("| How do I complete one task end to end?"), "routing table stays in reference, not SKILL.md");
+  });
+
+  test("operational states stay separate and recovery stays permission-compatible", () => {
+    const routing = read("skills/document-for-humans/reference/routing.md");
+    const skill = read("skills/document-for-humans/SKILL.md");
+    const nR = norm(routing);
+    const nS = norm(skill);
+    assert.ok(nR.includes("internal capability") && nR.includes("exposed operation") && nR.includes("visible control") && nR.includes("configured integration") && nR.includes("verified execution"));
+    assert.ok(nR.includes("submission separate from completion") || nR.includes("submission versus completion") || (nR.includes("submission") && nR.includes("completion")));
+    assert.ok(nR.includes("response failure separate from rollback") || (nR.includes("response failure") && nR.includes("rollback")));
+    assert.ok(nR.includes("permission-compatible") && nR.includes("check uncertain state before retry") && nR.includes("state the limit"));
+    assert.ok(nS.includes("internal capability separate from") && nS.includes("permission-compatible"));
+  });
+
+  test("maintenance is content-aware and rejects metadata-only freshness", () => {
+    const coherence = read("skills/document-for-humans/reference/coherence.md");
+    const skill = read("skills/document-for-humans/SKILL.md");
+    const nC = norm(coherence);
+    const nS = norm(skill);
+    assert.ok(nC.includes("removed sources") && nC.includes("newly documented subjects") && nC.includes("shared changed fact"));
+    assert.ok(nC.includes("leave unrelated articles unchanged"));
+    assert.ok(nC.includes("alone never proves review") || nC.includes("never proves review"));
+    assert.ok(nC.includes("disclose unavailable prior source state"));
+    assert.ok(nS.includes("removed sources") && nS.includes("newly documented subjects") && nS.includes("shared changed"));
+  });
+
+  test("evidence kinds stay separate with honest contexts and semantic recheck", () => {
+    const coherence = read("skills/document-for-humans/reference/coherence.md");
+    const skill = read("skills/document-for-humans/SKILL.md");
+    const nC = norm(coherence);
+    assert.ok(nC.includes("reader-task") && nC.includes("source consistency") && nC.includes("diagram") && nC.includes("mechanical") && nC.includes("prose"));
+    assert.ok(nC.includes("independent reader and source-consistency contexts") || nC.includes("independent"));
+    assert.ok(nC.includes("label same-context") && nC.includes("diagnostic-only"));
+    assert.ok(nC.includes("recheck corrected meaning semantically") || nC.includes("recheck corrected meaning"));
+    assert.ok(nC.includes("passing syntax") && nC.includes("never proves meaning"));
+    assert.ok(norm(skill).includes("diagram") || norm(skill).includes("evidence separate"));
+  });
+
+  test("reporting stays evidence-bounded and test-data conclusions stay sourced", () => {
+    const coherence = read("skills/document-for-humans/reference/coherence.md");
+    const nC = norm(coherence);
+    assert.ok(nC.includes("visible source defects") && nC.includes("missing evidence") && nC.includes("runtime facts outside scope"));
+    assert.ok(nC.includes("source-consistency claims unless separate verification exists") || nC.includes("unless separate verification exists"));
+    assert.ok(nC.includes("consistent sources never prove runtime truth") || nC.includes("never prove runtime truth"));
+    assert.ok(nC.includes("not established by the sources") || nC.includes("temporary test data"));
+  });
+
+  test("frozen synthetic inputs cover ten cases with an offline system and stay out of ordinary invocation", () => {
+    const frozen = JSON.parse(read("skills/document-for-humans/tests/fixtures/frozen-comparison.json"));
+    const cases = JSON.parse(read("skills/document-for-humans/tests/fixtures/synthetic-cases.json"));
+    const skill = read("skills/document-for-humans/SKILL.md");
+    assert.ok(Array.isArray(cases.cases) && cases.cases.length === 10);
+    assert.ok(cases.cases.some((c) => c.system === "offline"));
+    assert.ok(cases.note.toLowerCase().includes("never output-quality proof") || cases.note.toLowerCase().includes("contract checks only"));
+    assert.ok(typeof frozen.adoptionRule === "string" && frozen.adoptionRule.includes("safety regression blocks adoption"));
+    assert.ok(frozen.note.toLowerCase().includes("never required outcomes") || frozen.note.toLowerCase().includes("never required"));
+    assert.equal(skill.includes("synthetic-cases"), false, "comparison machinery stays out of ordinary invocation");
+    assert.equal(skill.includes("frozen-comparison"), false, "comparison machinery stays out of ordinary invocation");
+  });
 });

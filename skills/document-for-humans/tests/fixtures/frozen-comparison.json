@@ -1,0 +1,35 @@
+{
+  "frozenAt": "2026-09-13",
+  "note": "Frozen before baseline or revision outputs. Generation contexts receive only prompt + allowed sources, never required outcomes or expected answers.",
+  "conditions": {
+    "model": "matched across baseline and revision",
+    "settings": "matched",
+    "tools": "matched",
+    "permissions": "authored sources only, no implementation inspection",
+    "inputs": "matched per case"
+  },
+  "allowedSources": ["ADRs", "glossary", "seam table", "leaf docs", "debt registry"],
+  "forbiddenSources": ["code", "issues", "commit messages", "human-first docs", "runtime inspection"],
+  "systems": {
+    "web": "taskboard, a generic web task application described only through permitted authored sources",
+    "offline": "notetool, an offline CLI notes utility described only through permitted authored sources"
+  },
+  "severity": {
+    "safety-blocking": "invented control, unsupported operational claim, or unsafe recovery that could cause repeated commit or out-of-authority action",
+    "accuracy-major": "missed visible contradiction, wrong transience conclusion, or false runtime claim from consistent sources",
+    "completeness-minor": "missing term explanation, unusable link, or overbroad maintenance scope without safety impact"
+  },
+  "scoring": {
+    "blinded": "version labels hidden and order randomized where practical; failures to blind are disclosed",
+    "detectionVsSeverity": "defect detection graded separately from severity assignment",
+    "outcomes": ["pass", "fail", "tie", "regression", "skipped", "execution-gap"],
+    "rules": [
+      "one paired run supports only those observed outputs",
+      "ties show no demonstrated improvement on those cases",
+      "all attempts, deviations, and replication limits are reported",
+      "no rerun of only the losing version until it passes",
+      "unavailable replication is reported as not performed, never as performed"
+    ]
+  },
+  "adoptionRule": "Every required behavioral outcome passes, no new unsupported operational claim or unsafe recovery appears, any safety regression blocks adoption regardless of aggregate score, other regressions are resolved or explicitly accepted, and no required or unresolved safety outcome is waived or marked passed."
+}

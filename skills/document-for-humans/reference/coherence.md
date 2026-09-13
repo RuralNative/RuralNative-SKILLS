@@ -16,6 +16,22 @@
 
 `Audit checks source resolution, claim traceability, freshness, bridge direction, artifact need, and plain-language requirements separately. Each check has its own evidence and fix.`
 
+## Content-aware maintenance
+
+- `Review changed source content, removed sources, newly documented subjects, and every article that depends on a shared changed fact. Leave unrelated articles unchanged.`
+- `A date, file touch, or digest refresh alone never proves review. Disclose unavailable prior source state instead of promising discovery of subjects absent from every permitted source.`
+
+## Evidence separation
+
+- `Keep five evidence kinds separate: reader-task completion, source consistency, diagram meaning, mechanical checks, and prose quality. Use independent reader and source-consistency contexts for larger or safety-sensitive work where available; label same-context or unexecuted checks honestly.`
+- `Recheck corrected meaning semantically after edits, not only mechanically. Diagnostic-only audits produce findings and authorize no repairs. Already authorized narrow maintenance needs no repeated approval.`
+- `Diagrams stay supporting: a passing syntax or render check never proves meaning. When an edge contradicts permitted sources, the narrative wins and the corrected relationship is rechecked semantically.`
+
+## Reporting limits
+
+- `Visible source defects, missing evidence, and runtime facts outside scope have different outcomes. Completion claims stay source-consistency claims unless separate verification exists. Consistent sources never prove runtime truth.`
+- `Temporary test data concludes transience only when permitted sources disclose cleanup or transience. Otherwise state that persistent records are not established by the sources.`
+
 ## Adaptation
 
 - `Repos without an accepted ADR: the decision journal category stays dormant. Do not derive journal claims from commit messages. Record the decision in the authored tree first or leave the category dormant until an ADR is accepted.`

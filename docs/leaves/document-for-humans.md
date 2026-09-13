@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Turns the AI-first doc tree into stakeholder-readable derived docs: plain-language overviews, a decision journal, guardrails, and data-flow stories that agents regenerate but never cite as truth.
+Turns the AI-first doc tree into stakeholder-readable derived docs: plain-language overviews, a decision journal, guardrails, data-flow stories, and optional task guides, operation references, and developer recipes that agents regenerate but never cite as truth. Task pages stay source-backed with justified omissions; operational claims separate internal capability from exposed operation and verified execution; maintenance is content-aware; reader, source-consistency, diagram, mechanical, and prose evidence stay separate.
 
 ## Scope & boundaries
 

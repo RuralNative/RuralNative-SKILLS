@@ -1,4 +1,4 @@
-# Templates — the four artifacts
+# Templates — core and optional task artifacts
 
 ## The derived header
 
@@ -79,3 +79,41 @@ depth: <leaf docs whose data-flow sections this derives from>
 ## Capabilities catalog (dormant)
 
 Do not create this artifact until a real consumer asks what the system can do; then derive it from the seam table's responsibility column. Dormant categories stay unborn — no file, no header, no gate check until the need is real.
+
+## Task guide (optional)
+
+One task, end to end. Omit any check that does not apply, with a one-line reason.
+
+```
+## <Task>
+
+Purpose: <what done looks like>.
+Prerequisites: <what must hold first>.
+Steps: <numbered moves, each naming its source>.
+Result: <observable outcome>.
+If it fails: <documented check and recovery, or the stated limit>.
+```
+
+## Operation reference (optional)
+
+One operation. Never list an operation no source exposes.
+
+```
+### <Operation>
+
+Authority: <who may run it>.
+Input and result: <what goes in, what comes back>.
+Failure and recovery: <documented recovery or the stated limit>.
+```
+
+## Developer recipe (optional)
+
+One extension path. Bound each claim to its source.
+
+```
+## <Recipe>
+
+When to use: <the question it answers>.
+Moves: <short ordered list>.
+Verify: <how to confirm, or what cannot be verified in scope>.
+```

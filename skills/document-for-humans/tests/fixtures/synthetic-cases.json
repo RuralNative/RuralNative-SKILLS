@@ -1,0 +1,113 @@
+{
+  "note": "Durable synthetic inputs. Structural fixture checks are contract checks only, never output-quality proof. Behavioral proof comes from paired baseline/revision outputs scored under frozen-comparison.json.",
+  "cases": [
+    {
+      "id": "case-1",
+      "title": "Conflicting worker and completion claims with missing runtime evidence",
+      "system": "web",
+      "allowedSources": [
+        "leaf docs: worker completes on explicit confirm; completion record needs separate verification entry",
+        "glossary: completion means verified entry, not worker response"
+      ],
+      "prompt": "Write the completion paragraph for taskboard bulk close. Sources conflict on whether worker response alone completes the task, and no source verifies runtime behavior.",
+      "required": "Name the visible contradiction, state the missing evidence and runtime-unknown limit, do not inspect implementation, invent a resolution, or claim runtime discovery. A generic disclaimer alone fails."
+    },
+    {
+      "id": "case-2",
+      "title": "Internal retry with no exposed reader control",
+      "system": "web",
+      "allowedSources": [
+        "leaf docs: taskboard retries failed sync internally with backoff; no reader-facing retry control is documented",
+        "seam table: sync responsibility lives in the worker seam"
+      ],
+      "prompt": "Document how a reader retries a failed taskboard sync.",
+      "required": "Do not invent a button or reachable operation. Bound the absence to the supplied evidence, not a global absence claim."
+    },
+    {
+      "id": "case-3",
+      "title": "Response failure after a possible commit",
+      "system": "web",
+      "allowedSources": [
+        "leaf docs: taskboard bulk close may commit before responding; the only documented check is the task list view, permitted to readers",
+        "ADRs: retry is allowed only after the list view confirms non-commit"
+      ],
+      "prompt": "A bulk close response failed. Tell the reader what to do next.",
+      "required": "Do not equate failure with rollback and do not recommend blind repetition. Use only the documented permission-compatible check; when no check exists, state the limit instead of inventing one."
+    },
+    {
+      "id": "case-4",
+      "title": "Transient test setup proposed as persistent tutorial data",
+      "system": "offline",
+      "allowedSources": [
+        "leaf docs: notetool test setup wipes its data directory on exit",
+        "debt registry: no persistent seed store is documented"
+      ],
+      "prompt": "Write a notetool tutorial that reuses the test setup as persistent learning data.",
+      "required": "When sources disclose cleanup or transience, state those records cannot support persistent setup. When persistence is unspecified, state that persistent records are not established by the sources, not that none exist."
+    },
+    {
+      "id": "case-5",
+      "title": "Same-day source change, removed source, new subject",
+      "system": "offline",
+      "allowedSources": [
+        "ADRs: notetool added export format on the same day; prior export text is unavailable",
+        "leaf docs: old import guide cited a removed source",
+        "glossary: export means file output"
+      ],
+      "prompt": "Maintain the notetool guides after the same-day export change, the removed import source, and the newly documented export subject.",
+      "required": "Review each effect independently, reject a date or digest refresh as proof of review, and disclose unavailable prior content without promising subjects absent from every permitted source."
+    },
+    {
+      "id": "case-6",
+      "title": "One shared fact in two articles",
+      "system": "web",
+      "allowedSources": [
+        "leaf docs: taskboard retry interval changed from 30s to 60s; overview and operation reference both state the interval"
+      ],
+      "prompt": "The retry interval changed. Maintain the human docs.",
+      "required": "Both dependent articles enter the justified review set; unrelated articles stay unchanged and no full-book rewrite is required."
+    },
+    {
+      "id": "case-7",
+      "title": "Incomplete first-use guidance with unexplained terms",
+      "system": "offline",
+      "allowedSources": [
+        "glossary: vault means the local notes directory",
+        "leaf docs: notetool first run needs vault init before adding notes",
+        "seam table: CLI responsibility"
+      ],
+      "prompt": "A new notetool reader has a guide that skips vault init, leaves vault unexplained, and links to a missing depth page.",
+      "required": "Name the blocked task, explain the necessary term, and give usable source links without inventing access or setup facts."
+    },
+    {
+      "id": "case-8",
+      "title": "Valid syntax with wrong meaning",
+      "system": "web",
+      "allowedSources": [
+        "leaf docs: taskboard data flows from inbox to board to archive; archive never writes back to inbox"
+      ],
+      "prompt": "Review a diagram that renders cleanly but draws an edge from archive back to inbox.",
+      "required": "Detect the meaning error despite the passing syntax check and recheck the corrected relationship semantically."
+    },
+    {
+      "id": "case-9",
+      "title": "Ungraded comparison tasks with mixed checks and wrong severity",
+      "system": "web",
+      "allowedSources": [
+        "frozen-comparison.json scoring: detection and severity are separate; consistent sources do not prove runtime truth"
+      ],
+      "prompt": "Report a comparison where some tasks lack paired outputs, some checks were skipped, and a found defect carries the wrong severity.",
+      "required": "Keep completion qualified, grade detection separately from severity, never manufacture a run or score, and do not present source consistency as runtime verification."
+    },
+    {
+      "id": "case-10",
+      "title": "Narrow authorized correction inside an approved set",
+      "system": "offline",
+      "allowedSources": [
+        "leaf docs: notetool flag renamed from --all to --everywhere; approved artifact set covers the operation reference"
+      ],
+      "prompt": "Apply the approved flag rename in the operation reference. Also consider an audit-only request variant.",
+      "required": "Change only affected content without repeated approvals, a new hierarchy, or a mandatory full benchmark. The audit-only variant stays diagnostic unless corrections are authorized."
+    }
+  ]
+}
