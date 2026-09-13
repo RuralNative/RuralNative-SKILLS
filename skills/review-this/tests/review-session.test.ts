@@ -5,6 +5,8 @@ import assert from "node:assert/strict";
 import {
   checkoutMatchDecision,
   checkoutPreparationDecision,
+  dirtySnapshotDecision,
+  snapshotRestoreDecision,
   ciGateDecision,
   deltaReviewScope,
   shouldReuseVerdict,
@@ -69,10 +71,16 @@ describe("checkoutPreparationDecision", () => {
       "proceed",
     );
   });
-  test("dirty checkout stops instead of aligning", () => {
+  test("dirty checkout at a different commit preserves with a snapshot before aligning", () => {
     const d = checkoutPreparationDecision({ worktreeClean: false, gitOperationInProgress: false, localHeadSha: mainHead, pullRequestHeadSha: prHead });
-    assert.equal(d.action, "stop");
-    assert.match(d.reason, /dirty/);
+    assert.equal(d.action, "snapshot-align");
+    assert.match(d.reason, /snapshot/);
+    assert.match(d.reason, /never discarding/);
+  });
+  test("dirty checkout at the pinned head preserves edits before review", () => {
+    const d = checkoutPreparationDecision({ worktreeClean: false, gitOperationInProgress: false, localHeadSha: prHead, pullRequestHeadSha: prHead });
+    assert.equal(d.action, "snapshot-align");
+    assert.match(d.reason, /snapshot/);
   });
   test("unfinished git operation stops even at the matching commit", () => {
     assert.equal(
@@ -94,6 +102,77 @@ describe("checkoutPreparationDecision", () => {
     const d = checkoutPreparationDecision({ worktreeClean: true, gitOperationInProgress: false, localHeadSha: mainHead, pullRequestHeadSha: prHead });
     assert.equal("match" in d, false);
     assert.notEqual(d.action, "proceed");
+  });
+});
+
+describe("dirtySnapshotDecision", () => {
+  const ok = {
+    snapshotObjectExists: true,
+    recordedBranchMatches: true,
+    recordedHeadMatches: true,
+    worktreeClean: true,
+    ownSnapshotEntries: 0,
+  };
+  test("a verified record is reused, never duplicated", () => {
+    assert.equal(dirtySnapshotDecision({ ...ok, recordPresent: true }).action, "reconcile-existing");
+  });
+  test("a record with a missing snapshot object stops", () => {
+    const d = dirtySnapshotDecision({ ...ok, recordPresent: true, snapshotObjectExists: false });
+    assert.equal(d.action, "stop");
+    assert.match(d.reason, /no longer resolves/);
+  });
+  test("a record with new dirty edits stops", () => {
+    assert.equal(dirtySnapshotDecision({ ...ok, recordPresent: true, worktreeClean: false }).action, "stop");
+  });
+  test("a record whose original revision moved stops", () => {
+    assert.equal(dirtySnapshotDecision({ ...ok, recordPresent: true, recordedHeadMatches: false }).action, "stop");
+  });
+  test("a lost alignment response reuses the snapshot at the verified pinned head", () => {
+    const aligned = { ...ok, recordPresent: true, recordedBranchMatches: false, recordedHeadMatches: false, alignedHeadMatches: true };
+    assert.equal(dirtySnapshotDecision(aligned).action, "reconcile-existing");
+    assert.equal(dirtySnapshotDecision({ ...aligned, worktreeClean: false }).action, "stop");
+    assert.equal(dirtySnapshotDecision({ ...aligned, snapshotObjectExists: false }).action, "stop");
+  });
+  test("exactly one interrupted marker entry is adopted on a clean tree", () => {
+    assert.equal(dirtySnapshotDecision({ ...ok, recordPresent: false, ownSnapshotEntries: 1 }).action, "adopt-marker-stash");
+  });
+  test("a marker entry with new dirty edits stops", () => {
+    assert.equal(dirtySnapshotDecision({ ...ok, recordPresent: false, ownSnapshotEntries: 1, worktreeClean: false }).action, "stop");
+  });
+  test("several marker entries are ambiguous and stop", () => {
+    assert.equal(dirtySnapshotDecision({ ...ok, recordPresent: false, ownSnapshotEntries: 2 }).action, "stop");
+  });
+  test("fresh dirty work snapshots once", () => {
+    assert.equal(dirtySnapshotDecision({ ...ok, recordPresent: false, worktreeClean: false }).action, "snapshot");
+  });
+  test("fresh clean work proceeds without a snapshot", () => {
+    assert.equal(dirtySnapshotDecision({ ...ok, recordPresent: false }).action, "clean-proceed");
+  });
+});
+
+describe("snapshotRestoreDecision", () => {
+  const ok = { snapshotObjectExists: true, branchMatches: true, headMatches: true, worktreeClean: true };
+  test("matching revision restores", () => {
+    assert.equal(snapshotRestoreDecision(ok).action, "apply");
+  });
+  test("missing snapshot object stops", () => {
+    const d = snapshotRestoreDecision({ ...ok, snapshotObjectExists: false });
+    assert.equal(d.action, "stop");
+    assert.match(d.reason, /no longer resolves/);
+  });
+  test("wrong branch stops without auto apply", () => {
+    const d = snapshotRestoreDecision({ ...ok, branchMatches: false });
+    assert.equal(d.action, "stop");
+    assert.match(d.reason, /different revision/);
+    assert.match(d.reason, /manually/);
+  });
+  test("wrong head stops without auto apply", () => {
+    assert.equal(snapshotRestoreDecision({ ...ok, headMatches: false }).action, "stop");
+  });
+  test("dirty worktree refuses to mix snapshots", () => {
+    const d = snapshotRestoreDecision({ ...ok, worktreeClean: false });
+    assert.equal(d.action, "stop");
+    assert.match(d.reason, /not clean/);
   });
 });
 

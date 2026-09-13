@@ -4,9 +4,14 @@
 // before specific rules, explicit denies for prohibited operations, no
 // trailing cross-tool catch-all override, helper-bound execution (no blanket
 // node/npm/npx/gh api), read-only git inspection only, private run-dir
-// writes only, and no subagent/Agent Manager authority. Command permissions
-// are not an OS sandbox; the helpers enforce their own argument allowlists,
-// code inspection, and fork/static-review restrictions.
+// writes only, and no subagent/Agent Manager authority. The prompt is a thin
+// wrapper: it loads the installed skill by identity and defers workflow,
+// gates, recovery, and stopping conditions to it — no superseded rule
+// restatement and no "frontier" model wording. `kilo_local_recall` stays
+// allowed for read-only session-history recall; a paused run still needs a
+// new human instruction. Command permissions are not an OS sandbox; the
+// helpers enforce their own argument allowlists, code inspection, and
+// fork/static-review restrictions.
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -38,18 +43,27 @@ function effectiveBashPermission(bash: Record<string, string>, command: string):
 }
 
 describe("tracked review-this agent permissions", () => {
-  test("agent exists with review-only prompt, primary mode, and no worktree authority", () => {
+  test("agent exists with thin-wrapper prompt, primary mode, and no worktree authority", () => {
     const config = trackedConfig();
     const agent = config.agent?.["review-this"];
     assert.ok(agent, "tracked agent.review-this is required");
     assert.equal(agent.mode, "primary");
-    assert.match(String(agent.prompt ?? ""), /never fix/i);
-    assert.match(String(agent.prompt ?? ""), /automatic recovery|bounded/i);
+    const prompt = String(agent.prompt ?? "");
+    assert.match(prompt, /thin wrapper for the installed `review-this` skill/i);
+    assert.match(prompt, /counts as `\/review-this <input>`/i, "agent selection stays the explicit invocation");
+    assert.match(prompt, /Preserve the exact input and the confirmed task and decisions when continuing the same session/i, "session-history recovery keeps the input");
+    assert.match(prompt, /`unslopify`/i);
+    assert.match(prompt, /`review-this` by identity/i);
+    assert.match(prompt, /The installed skill owns the workflow, scope, approval gates, recovery, verification, publication, and stopping conditions/i, "skills authority stays with the installed skill");
+    assert.match(prompt, /human approval/i);
+    assert.equal(prompt.includes("frontier"), false, "no model-gate wording that caused refusals");
+    assert.equal(prompt.includes("Publish the review, summarize, then stop"), false, "no superseded rule restatement");
     assert.equal(agent.permission?.task?.["*"], "deny", "subagent delegation stays denied");
     assert.equal(agent.permission?.["*"], "deny", "unlisted tools deny by default");
-    for (const tool of ["agent_manager", "background_process", "notify_user", "suggest", "write"]) {
+    for (const tool of ["agent_manager", "background_process", "notify_user", "suggest", "write", "send_file", "open_plan", "plan_exit"]) {
       assert.equal(agent.permission?.[tool], "deny", `${tool} stays denied`);
     }
+    assert.equal(agent.permission?.kilo_local_recall, "allow", "read-only session-history recall stays possible");
   });
 
   test("broad fallbacks precede specific rules and effective evaluation denies prohibited operations", () => {

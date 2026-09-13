@@ -59,15 +59,21 @@ describe("single checkout contract (INV-5, INV-6, INV-13, INV-14)", () => {
     assert.ok(skill.includes("## Publish"));
     assert.ok(skill.includes("## Spec\n\nIssue #0"));
   });
-  test("Prepare aligns a clean mismatching checkout and keeps every other stop", () => {
+  test("Prepare preserves dirty work before alignment without manual cleanup (INV-5, ADR-0041)", () => {
     const skill = read("skills/review-this/SKILL.md");
     assert.ok(skill.includes("checkoutPreparationDecision"), "skill must decide checkout preparation");
     assert.ok(skill.includes("checkoutMatchDecision"), "skill must keep the strict final match gate");
     assert.ok(skill.includes("git fetch origin refs/pull/<n>/head"), "skill must fetch the pull-request head ref");
     assert.ok(skill.includes("git -c core.hooksPath= checkout --detach"), "skill must align without moving branches or running checkout hooks");
-    assert.ok(skill.includes("Never force the switch, stash, reset, clean"), "skill must forbid destructive recovery");
+    assert.ok(skill.includes("Never force the switch, use an unqualified shared stash, reset, clean"), "skill must forbid destructive recovery");
     assert.ok(skill.includes("stays at the reviewed commit for `/fix-this`"), "skill must leave the aligned checkout for fix-this");
-    assert.ok(skill.includes("only working-tree effect"), "skill must scope the working-tree exception to alignment");
+    assert.ok(skill.includes("verified preservation of local edits"), "preparation must preserve local work");
+    assert.ok(skill.includes("deleted tracked file is preserved as a deletion"), "regression: do not discard the reported deletion");
+    assert.ok(skill.includes("installed `prepare-review.mjs` alignment operation"), "use the permitted helper rather than denied direct commands");
+    assert.ok(skill.includes("recoverable snapshot"));
+    assert.ok(skill.includes("Reuse that `runId` after interruption"), "resume must find the original snapshot record");
+    assert.ok(skill.includes("Dirty work at the pinned head takes the same preservation path"));
+    assert.ok(skill.includes("--no-overwrite-ignore"), "checkout must retain the final ignored-file guard");
     const install = read("skills/review-this/INSTALL.md");
     assert.ok(norm(install).includes("automatically aligns"), "install must document automatic alignment");
   });

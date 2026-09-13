@@ -75,7 +75,7 @@ export interface CheckoutPreparationFact {
   pullRequestHeadSha: string;
 }
 
-export type CheckoutPreparationAction = "proceed" | "align" | "stop";
+export type CheckoutPreparationAction = "proceed" | "align" | "snapshot-align" | "stop";
 
 export interface CheckoutPreparationDecision {
   action: CheckoutPreparationAction;
@@ -83,14 +83,18 @@ export interface CheckoutPreparationDecision {
 }
 
 /**
- * Decide how to prepare the checkout before review (ADR-0036). A clean
- * checkout already at the pull-request head proceeds untouched, whatever
- * branch name it is on. A clean checkout at a different commit aligns: the
- * caller fetches the verified pull-request head and switches this checkout
- * to that exact commit in detached `HEAD`, without moving local branches or
- * creating a worktree. Alignment authorizes the switch only; the strict
- * match check still has to pass afterwards. A dirty worktree, an unfinished
- * git operation, or a missing revision stops with no checkout effect.
+ * Decide how to prepare the checkout before review (ADR-0036, narrowed for
+ * automatic recovery). A clean checkout already at the pull-request head
+ * proceeds untouched, whatever branch name it is on. A clean checkout at a
+ * different commit aligns: the caller fetches the verified pull-request head
+ * and switches this checkout to that exact commit in detached `HEAD`,
+ * without moving local branches or creating a worktree. A dirty checkout
+ * first preserves unrelated edits in a verified,
+ * recoverable snapshot and then aligns; unknown edits are never discarded,
+ * so the caller must snapshot the worktree before the switch and report the
+ * snapshot identity instead of dropping it. This also applies at the pinned
+ * head because review must not observe uncommitted edits. An unfinished git
+ * operation or a missing revision stops with no checkout effect.
  */
 export function checkoutPreparationDecision(
   fact: CheckoutPreparationFact,
@@ -98,16 +102,102 @@ export function checkoutPreparationDecision(
   if (fact.gitOperationInProgress) {
     return { action: "stop", reason: "a git operation is in progress; finish or abort it outside this command" };
   }
-  if (!fact.worktreeClean) {
-    return { action: "stop", reason: "the current checkout is dirty; commit or stash outside this command" };
-  }
   if (fact.localHeadSha.trim() === "" || fact.pullRequestHeadSha.trim() === "") {
     return { action: "stop", reason: "no trustworthy pull-request head revision to align to" };
+  }
+  if (!fact.worktreeClean) {
+    return { action: "snapshot-align", reason: "the checkout is dirty; preserve unrelated edits in a verified recoverable snapshot before reviewing the pinned head, never discarding unknown edits" };
   }
   if (fact.localHeadSha === fact.pullRequestHeadSha) {
     return { action: "proceed", reason: "the clean checkout is already at the pull-request head commit" };
   }
   return { action: "align", reason: "the clean checkout is at a different commit; align it to the pull-request head in detached HEAD" };
+}
+
+// --- Dirty-checkout snapshot reconciliation (automatic recovery) ------------
+//
+// Preserving a dirty checkout before alignment is effectful and must survive
+// interruption. These decisions let the caller reconcile a snapshot record
+// and any marked snapshot entry instead of snapshotting twice or guessing.
+
+export interface DirtySnapshotFact {
+  recordPresent: boolean;
+  /** The recorded snapshot commit still resolves in this repository. */
+  snapshotObjectExists: boolean;
+  recordedBranchMatches: boolean;
+  recordedHeadMatches: boolean;
+  /** Clean checkout matches the pinned head bound to the verified record. */
+  alignedHeadMatches?: boolean;
+  worktreeClean: boolean;
+  /** Stash entries carrying this run's snapshot marker. */
+  ownSnapshotEntries: number;
+}
+
+export type DirtySnapshotAction = "snapshot" | "reconcile-existing" | "adopt-marker-stash" | "stop" | "clean-proceed";
+
+/**
+ * Reconcile dirty-checkout preservation before alignment. An existing record
+ * is reused only when its snapshot is verified and the clean checkout matches
+ * either the original checkout or the record's pinned alignment head. Other
+ * revisions stop, leaving the snapshot recoverable. Exactly one interrupted
+ * marker stash without a record
+ * is adopted (the push completed, the record write did not); several are
+ * ambiguous. Fresh dirty work snapshots once; fresh clean work proceeds.
+ */
+export function dirtySnapshotDecision(fact: DirtySnapshotFact): { action: DirtySnapshotAction; reason: string } {
+  if (fact.recordPresent) {
+    if (!fact.snapshotObjectExists) {
+      return { action: "stop", reason: "a snapshot record exists but the snapshot commit no longer resolves; reconcile it manually before any checkout effect" };
+    }
+    if (!fact.worktreeClean) {
+      return { action: "stop", reason: "a snapshot record exists while the worktree is dirty again; reconcile the recorded snapshot manually" };
+    }
+    if ((!fact.recordedBranchMatches || !fact.recordedHeadMatches) && !fact.alignedHeadMatches) {
+      return { action: "stop", reason: "the checkout moved from the recorded original revision; reconcile the recorded snapshot manually without another checkout effect" };
+    }
+    return { action: "reconcile-existing", reason: "an interrupted preparation left a verified snapshot record; reuse it instead of snapshotting again" };
+  }
+  if (fact.ownSnapshotEntries > 1) {
+    return { action: "stop", reason: "several marked snapshot entries exist; reconcile them manually instead of guessing" };
+  }
+  if (fact.ownSnapshotEntries === 1) {
+    if (!fact.worktreeClean) {
+      return { action: "stop", reason: "an interrupted snapshot entry exists while the worktree is dirty again; reconcile manually" };
+    }
+    return { action: "adopt-marker-stash", reason: "an interrupted snapshot left exactly one marked snapshot entry; adopt it instead of creating a second snapshot" };
+  }
+  return fact.worktreeClean
+    ? { action: "clean-proceed", reason: "nothing to preserve; no snapshot record or marked entry exists" }
+    : { action: "snapshot", reason: "the dirty checkout is preserved once in a verified snapshot before alignment" };
+}
+
+export interface SnapshotRestoreFact {
+  /** The recorded snapshot commit still resolves in this repository. */
+  snapshotObjectExists: boolean;
+  branchMatches: boolean;
+  headMatches: boolean;
+  worktreeClean: boolean;
+}
+
+/**
+ * Decide whether a recorded snapshot may be restored. Restoration is
+ * authorized only on a clean checkout at the exact recorded original branch
+ * and head: `stash apply` refuses to overwrite or recreate paths, so any
+ * current edit — staged, unstaged, or untracked — stops the restore instead
+ * of mixing two states. At a different revision automation stops and the
+ * user applies the snapshot manually instead.
+ */
+export function snapshotRestoreDecision(fact: SnapshotRestoreFact): { action: "apply" | "stop"; reason: string } {
+  if (!fact.snapshotObjectExists) {
+    return { action: "stop", reason: "the recorded snapshot commit no longer resolves; nothing to restore" };
+  }
+  if (!fact.branchMatches || !fact.headMatches) {
+    return { action: "stop", reason: "the checkout is at a different revision than the recorded original; apply the snapshot manually instead of letting automation re-anchor it to different content" };
+  }
+  if (!fact.worktreeClean) {
+    return { action: "stop", reason: "the worktree is not clean at the recorded revision; resolve or clear the current edits before restoring the snapshot" };
+  }
+  return { action: "apply", reason: "the checkout matches the recorded original revision; restore the preserved edits" };
 }
 
 export interface RevisionChangeFact {

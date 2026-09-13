@@ -48,12 +48,11 @@ describe("install-check in fixture homes", () => {
     fs.writeFileSync(
       agentMd,
       [
-        "review exactly one pull request",
-        "never fix",
-        "prepare-review.mjs",
-        "workflow-cli.mjs",
-        "publish-review.mjs",
-        "github-facts.mjs",
+        "You are a thin wrapper for the installed `review-this` skill.",
+        "A direct human task or target reference addressed to this agent, including a bare number or URL, counts as `/review-this <input>`.",
+        "Preserve the exact input and the confirmed task and decisions when continuing the same session.",
+        "Load `unslopify` with the skill tool before the first response and `ponytail` before code work.",
+        "The installed skill owns the workflow, scope, approval gates, recovery, verification, publication, and stopping conditions.",
         "  bash:",
         '    "*": ask',
         '    "git branch -D*": deny',
@@ -69,6 +68,7 @@ describe("install-check in fixture homes", () => {
         '    "node */.kilocode/skills/review-this/github-facts.mjs": allow',
         '    "node */.agents/skills/review-this/github-facts.mjs": allow',
         '    "*>*": deny',
+        "  kilo_local_recall: allow",
         "",
       ].join("\n"),
     );
@@ -89,17 +89,17 @@ describe("install-check in fixture homes", () => {
     fs.writeFileSync(
       agentMd,
       [
-        "review exactly one pull request",
-        "never fix",
-        "prepare-review.mjs",
-        "workflow-cli.mjs",
-        "publish-review.mjs",
-        "github-facts.mjs",
+        "You are a thin wrapper for the installed `review-this` skill.",
+        "A direct human task or target reference addressed to this agent, including a bare number or URL, counts as `/review-this <input>`.",
+        "Preserve the exact input and the confirmed task and decisions when continuing the same session.",
+        "Load `unslopify` with the skill tool before the first response and `ponytail` before code work.",
+        "The installed skill owns the workflow, scope, approval gates, recovery, verification, publication, and stopping conditions.",
         "  bash:",
         '    "*": ask',
         '    "git branch -D*": deny',
         '    "git branch*": allow',
         '    "node */review-this/workflow-cli.mjs*": allow',
+        "  kilo_local_recall: allow",
         "",
       ].join("\n"),
     );
@@ -130,5 +130,14 @@ describe("install-check in fixture homes", () => {
     fs.appendFileSync(path.join(dst, "github-facts.ts"), "\n// drift\n");
     const factsDrift = run(["--source", src, "--install", dst]);
     assert.equal(factsDrift.exit, 1);
+    copySkill(dst);
+    fs.rmSync(path.join(dst, "recovery.md"));
+    const missingRecovery = run(["--source", src, "--install", dst]);
+    assert.equal(missingRecovery.exit, 1);
+    copySkill(dst);
+    fs.appendFileSync(path.join(dst, "recovery.md"), "\nStale recovery rules.\n");
+    const recoveryDrift = run(["--source", src, "--install", dst]);
+    assert.equal(recoveryDrift.exit, 1);
+    assert.ok(JSON.stringify(recoveryDrift.json).includes("byte-mismatch"));
   });
 });

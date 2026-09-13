@@ -29,6 +29,7 @@ export const REVIEWER_ALLOWED_ACTIONS = [
   "run-focused-checks",
   "run-local-fallback-once",
   "align-clean-checkout",
+  "preserve-dirty-checkout",
   "create-pending-review",
   "submit-review",
   "read-back-review",

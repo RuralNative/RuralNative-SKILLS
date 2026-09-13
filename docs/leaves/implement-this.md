@@ -7,6 +7,15 @@ Implementation adapter: validates one open ticket, implements it directly in the
 
 ## Non-negotiables
 
+ADR-0041 narrows invariants 6 and 10 below: checkout entry reconciles verified
+task-owned edits and preserves obstructing unrelated work before a necessary
+switch. It reuses a verified existing feature branch automatically, using the
+observed default branch rather than assuming `main`. Operational errors take the
+bundled recovery path before escalation. A dirty entry or interrupted run alone
+does not require manual cleanup or another invocation; required proof and human
+decisions remain gates. Historical clean-only and blanket-blocked clauses below
+are superseded only by this scope.
+
 1. **INV-1** — `name` equals folder `implement-this`.
 2. **INV-2** — INSTALL: `npx skills add ... --skill implement-this`, manual copy.
 3. **INV-3** — Narrowed by ADR-0034: self-contained single stage, one `Issue #0` slot, `disable-model-invocation`, explicit human invocation, single ticket, `/unslopify` model-invocable. No `/implement` invocation and no mandatory `/code-review`.
@@ -40,8 +49,9 @@ compaction and task completion. Missing context triggers recovery of the
 original human message, not authorization from a summary or handoff. Fresh
 sessions need their own human instruction, and later human restrictions still
 apply. The clean-checkout entry gate does not reject the validated run's own
-recorded edits on continuation; unknown or conflicting edits stop. The
-composition test checks these instructions, not model compliance at runtime.
+recorded edits on continuation; unknown edits remain protected and conflicting
+edits block mutation. Decision tests cover the checkout facts, and composition
+tests check instructions, not model compliance at runtime.
 
 The `github-facts.mjs` operation is `sub-issues` (hyphen); the GitHub REST
 suffix is `/sub_issues` (underscore). The reader requests
@@ -52,4 +62,4 @@ Regression: `node --test tests/github-facts.test.ts`. Reference:
 
 ## Links
 
-Glossary: `CONTEXT.md`. Decisions: ADR-0014, 0015, 0019, 0021, 0023, 0024, 0031, 0032, 0034, 0037, 0038, 0040. Redirect: `docs/leaves/ext/implement-this.md`.
+Glossary: `CONTEXT.md`. Decisions: ADR-0014, 0015, 0019, 0021, 0023, 0024, 0031, 0032, 0034, 0037, 0038, 0040, 0041. Redirect: `docs/leaves/ext/implement-this.md`.

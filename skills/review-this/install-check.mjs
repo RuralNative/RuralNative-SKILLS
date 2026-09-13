@@ -17,6 +17,7 @@ import path from "node:path";
 
 const REQUIRED_SKILL_FILES = [
   "SKILL.md",
+  "recovery.md",
   "INSTALL.md",
   "package.json",
   "targets.ts",
@@ -43,6 +44,7 @@ const REQUIRED_SKILL_FILES = [
 // executing helper pass.
 const BYTE_PARITY_FILES = [
   "SKILL.md",
+  "recovery.md",
   "INSTALL.md",
   "package.json",
   "targets.ts",
@@ -152,11 +154,28 @@ function main() {
   if (agentMd) {
     try {
       const agent = readFileSync(agentMd, "utf8");
-      const needs = ["review exactly one pull request", "never fix", "prepare-review.mjs", "workflow-cli.mjs", "publish-review.mjs", "github-facts.mjs"];
+      const needs = [
+        "thin wrapper for the installed `review-this` skill",
+        "counts as `/review-this <input>`",
+        "Preserve the exact input and the confirmed task and decisions when continuing the same session",
+        "unslopify",
+        "ponytail",
+        "The installed skill owns the workflow, scope, approval gates, recovery, verification, publication, and stopping conditions",
+        "prepare-review.mjs",
+        "workflow-cli.mjs",
+        "publish-review.mjs",
+        "github-facts.mjs",
+      ];
       for (const needle of needs) {
         if (!agent.includes(needle)) {
           fail(checks, `installed agent prompt is missing: ${needle}`);
         }
+      }
+      if (/frontier/i.test(agent)) {
+        fail(checks, "installed agent prompt still carries superseded model-gate wording");
+      }
+      if (!/^  kilo_local_recall: allow$/m.test(agent)) {
+        fail(checks, "installed agent must allow read-only session-history recall (kilo_local_recall)");
       }
       // Parsed permission structure, not substrings: no broad branch allow,
       // installation-bound helpers without trailing wildcards, and effective

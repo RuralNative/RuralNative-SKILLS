@@ -7,7 +7,27 @@ import {
   fixCheckoutDecision,
   fixPushDecision,
   isForbiddenFixAction,
+  isVerifiedFixTaskEdits,
+  type FixTaskEditsFact,
 } from "../fix-session.ts";
+
+function taskEdits(overrides: Partial<FixTaskEditsFact> = {}): FixTaskEditsFact {
+  return {
+    recordedPullRequest: 285,
+    authorizedPullRequest: 285,
+    recordedRepository: "o/r",
+    authorizedRepository: "o/r",
+    recordedBaseSha: "h1",
+    observedBaseSha: "h1",
+    recordedPaths: ["a.ts"],
+    observedPaths: ["a.ts"],
+    recordedIndexDigest: "index1",
+    observedIndexDigest: "index1",
+    recordedWorktreeDigest: "work1",
+    observedWorktreeDigest: "work1",
+    ...overrides,
+  };
+}
 
 describe("fixCheckoutDecision", () => {
   test("clean alias checkout at the reviewed head proceeds", () => {
@@ -23,10 +43,10 @@ describe("fixCheckoutDecision", () => {
       "create-feature-branch",
     );
   });
-  test("dirty or mismatched revisions stop", () => {
+  test("unverified dirty edits preserve, and mismatched revisions stop", () => {
     assert.deepEqual(
       fixCheckoutDecision({ worktreeClean: false, localHeadSha: "h1", pullRequestHeadSha: "h1", reviewedHeadSha: "h1", needsFeatureBranch: false }).action,
-      "stop",
+      "preserve",
     );
     assert.deepEqual(
       fixCheckoutDecision({ worktreeClean: true, localHeadSha: "old", pullRequestHeadSha: "h1", reviewedHeadSha: "h1", needsFeatureBranch: false }).action,
@@ -36,6 +56,14 @@ describe("fixCheckoutDecision", () => {
       fixCheckoutDecision({ worktreeClean: true, localHeadSha: "h1", pullRequestHeadSha: "h1", reviewedHeadSha: "old", needsFeatureBranch: false }).action,
       "stop",
     );
+  });
+  test("unverified preservation never discards unknown edits", () => {
+    const d = fixCheckoutDecision({ worktreeClean: false, localHeadSha: "h1", pullRequestHeadSha: "h1", reviewedHeadSha: "h1", needsFeatureBranch: false });
+    assert.equal(d.action, "preserve");
+    if (d.action === "preserve") {
+      assert.match(d.reason, /preserve/);
+      assert.match(d.reason, /never discarding/);
+    }
   });
 });
 
@@ -121,6 +149,119 @@ describe("decideFixEntry (ADR-0038)", () => {
     assert.equal(fixCheckoutDecision(missingCheckpoint).action, "stop");
     const bookkeeping = { worktreeClean: true, localHeadSha: "h1", pullRequestHeadSha: "h2", reviewedHeadSha: "h1", needsFeatureBranch: false, entryAction: "resume-bookkeeping" as const };
     assert.equal(fixCheckoutDecision(bookkeeping).action, "proceed");
+  });
+});
+
+describe("verified pre-checkpoint task edits resume", () => {
+  test("interrupted fix-phase edits relax cleanliness only and proceed at the reviewed head", () => {
+    const d = fixCheckoutDecision({
+      worktreeClean: false,
+      localHeadSha: "h1",
+      pullRequestHeadSha: "h1",
+      reviewedHeadSha: "h1",
+      needsFeatureBranch: false,
+      taskEdits: taskEdits(),
+    });
+    assert.equal(d.action, "proceed");
+  });
+  test("dirty verified flows through entry/head/remote/checkpoint guards", () => {
+    const freshBase = {
+      worktreeClean: false as const,
+      localHeadSha: "h1",
+      pullRequestHeadSha: "h1",
+      reviewedHeadSha: "h1",
+      needsFeatureBranch: false as const,
+      taskEdits: taskEdits(),
+    };
+    assert.equal(
+      fixCheckoutDecision({ ...freshBase, entryAction: "stop" }).action,
+      "stop",
+      "dirty verified entry stop must stop",
+    );
+    assert.equal(
+      fixCheckoutDecision({ ...freshBase, pullRequestHeadSha: "  " }).action,
+      "stop",
+      "dirty verified empty PR head must stop",
+    );
+    assert.equal(
+      fixCheckoutDecision({ ...freshBase, pullRequestHeadSha: "h2" }).action,
+      "stop",
+      "dirty verified moved fresh remote must stop",
+    );
+    assert.equal(
+      fixCheckoutDecision({
+        ...freshBase,
+        entryAction: "resume-fixes",
+        expectedHeadSha: "h1",
+        resumeCheckpoint: undefined,
+      }).action,
+      "stop",
+      "dirty verified missing resumeCheckpoint must stop",
+    );
+    assert.equal(
+      fixCheckoutDecision({
+        worktreeClean: false,
+        localHeadSha: "h2",
+        pullRequestHeadSha: "h3",
+        reviewedHeadSha: "h1",
+        needsFeatureBranch: false,
+        entryAction: "resume-fixes",
+        expectedHeadSha: "h2",
+        resumeCheckpoint: { startedHeadSha: "h1", resultingHeadSha: "h2", completedSteps: [] },
+        taskEdits: taskEdits({ recordedBaseSha: "h2", observedBaseSha: "h2" }),
+      }).action,
+      "stop",
+      "dirty verified moved resume remote must stop",
+    );
+  });
+  test("verified edits need a feature branch before further edits", () => {
+    const d = fixCheckoutDecision({
+      worktreeClean: false,
+      localHeadSha: "h1",
+      pullRequestHeadSha: "h1",
+      reviewedHeadSha: "h1",
+      needsFeatureBranch: true,
+      taskEdits: taskEdits(),
+    });
+    assert.equal(d.action, "create-feature-branch");
+  });
+  test("verified edits on another revision never apply onto different content", () => {
+    const rebased = fixCheckoutDecision({
+      worktreeClean: false,
+      localHeadSha: "h2",
+      pullRequestHeadSha: "h1",
+      reviewedHeadSha: "h1",
+      needsFeatureBranch: false,
+      taskEdits: taskEdits(),
+    });
+    assert.equal(rebased.action, "preserve");
+    if (rebased.action === "preserve") assert.match(rebased.reason, /different revision/);
+  });
+  test("verified edits misaligned with the entry revision stop", () => {
+    const d = fixCheckoutDecision({
+      worktreeClean: false,
+      localHeadSha: "h1",
+      pullRequestHeadSha: "h2",
+      reviewedHeadSha: "h2",
+      needsFeatureBranch: false,
+      entryAction: "resume-fixes",
+      expectedHeadSha: "h2",
+      resumeCheckpoint: { startedHeadSha: "h2", resultingHeadSha: "h2", completedSteps: [] },
+      taskEdits: taskEdits(),
+    });
+    assert.equal(d.action, "stop");
+  });
+  test("ownership binds target, repository, revisions, paths, and digests", () => {
+    assert.equal(isVerifiedFixTaskEdits(taskEdits()), true);
+    assert.equal(isVerifiedFixTaskEdits(undefined), false);
+    assert.equal(isVerifiedFixTaskEdits(taskEdits({ authorizedPullRequest: 286 })), false);
+    assert.equal(isVerifiedFixTaskEdits(taskEdits({ authorizedRepository: "o/other" })), false);
+    assert.equal(isVerifiedFixTaskEdits(taskEdits({ observedBaseSha: "h2" })), false);
+    assert.equal(isVerifiedFixTaskEdits(taskEdits({ observedPaths: ["a.ts", "b.ts"] })), false);
+    assert.equal(isVerifiedFixTaskEdits(taskEdits({ observedPaths: [] })), false);
+    assert.equal(isVerifiedFixTaskEdits(taskEdits({ observedIndexDigest: "other" })), false);
+    assert.equal(isVerifiedFixTaskEdits(taskEdits({ observedWorktreeDigest: "other" })), false);
+    assert.equal(isVerifiedFixTaskEdits(taskEdits({ recordedWorktreeDigest: "  " })), false);
   });
 });
 

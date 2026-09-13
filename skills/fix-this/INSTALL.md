@@ -11,7 +11,7 @@ The run consumes only a validated `review-handoff-v1` block from the latest comp
 - One open non-draft pull request against the pinned default branch with a valid native closing link, or a merged PR resuming bookkeeping through a reconciled `fix-progress-v2` checkpoint with verified merge associations.
 - One completed native review published by the updated `review-this` carrying exactly one valid `review-handoff-v1` block. Legacy prose-only reviews need one publication by the updated reviewer before first use.
 - `/unslopify` installed through its registry lane: `npx skills add RuralNative/RuralNative-SKILLS --skill unslopify`.
-- A clean invoking checkout at the reviewed PR head (or at the checkpoint's resulting head on resume). Branch aliases, the pinned default branch, and detached `HEAD` at the same commit are accepted; the default branch and detached `HEAD` create a feature branch before edits.
+- An invoking checkout at the reviewed PR head, or the verified local result on resume. Task-owned edits may resume before a final checkpoint exists; unknown edits need verified preservation before alignment. Branch aliases match; the default branch and detached `HEAD` require a feature branch before edits.
 - Tracked project permissions in `.kilo/kilo.jsonc` require no `agent_manager` entry. No fix subagent is used.
 
 ## Install
@@ -33,6 +33,11 @@ cp -r skills/fix-this ~/.agents/skills/fix-this
 Install or upgrade `review-this` from the same verified revision at the same time: the producer and consumer share the `review-handoff-v1` contract. Editing this repository does not update installed copies automatically; verify the path the target project actually loads.
 
 ## Verification
+
+The bundled `recovery.md` covers interrupted local work and uncertain remote
+effects. Resume compares the original authorization, target, revision pins, exact
+edits, and receipts to current facts. A push already at the intended result is
+complete, not a reason to stop. Merge and proof requirements remain unchanged.
 
 From the clean checkout at the reviewed PR head, after the review published its handoff:
 

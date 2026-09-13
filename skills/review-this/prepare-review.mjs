@@ -9,8 +9,8 @@
 // general shell or arbitrary GitHub request interface.
 //
 // Allowed operations (input.operation): observe-target, prepare-checkout,
-// resolve-policy, verify-commands, recover-evidence, setup-runtime,
-// install-deps, run-check, publish-review, repair-record.
+// restore-checkout, resolve-policy, verify-commands, recover-evidence,
+// setup-runtime, install-deps, run-check, publish-review, repair-record.
 //
 // - Helpers call `gh` and approved setup/check commands using argument
 //   arrays, with validated targets and a sanitized environment.
@@ -37,11 +37,12 @@ import {
 } from "./github-facts.ts";
 
 const REQUIRED_NODE_MAJOR = 24;
-const RUN_ROOT = "/tmp/kilo/review-this";
+const RUN_ROOT = process.env.REVIEW_THIS_RUN_ROOT ?? "/tmp/kilo/review-this";
 
 const ALLOWED_OPERATIONS = new Set([
   "observe-target",
   "prepare-checkout",
+  "restore-checkout",
   "resolve-policy",
   "verify-commands",
   "recover-evidence",
@@ -51,6 +52,9 @@ const ALLOWED_OPERATIONS = new Set([
   "publish-review",
   "repair-record",
 ]);
+
+const SNAPSHOT_RECORD_FILE = "checkout-snapshot.json";
+const SNAPSHOT_MARKER_PREFIX = "review-this snapshot ";
 
 function print(exitCode, result) {
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
@@ -69,7 +73,8 @@ function sanitizedEnv() {
     if (/LD_PRELOAD|NODE_OPTIONS|PYTHONPATH|RUBYOPT|PERL5OPT|BASH_ENV|ENV|ZDOTDIR/i.test(k)) continue;
     out[k] = v;
   }
-  // Never pass interpreter preloads or env overrides through.
+  // Never pass interpreter preloads or env overrides through. Git config
+  // stays on HOME isolation only: GIT_CONFIG_* never passes through.
   delete out.LD_PRELOAD;
   delete out.NODE_OPTIONS;
   return out;
@@ -344,6 +349,184 @@ async function verifyLocalCheckout(pinnedHead, repository) {
   return { ok: true };
 }
 
+// Dirty-checkout preservation (automatic recovery): a verified snapshot of
+// tracked, staged, unstaged, and untracked edits plus a durable record of the
+// original branch, head, and dirty listing. Ignored files are never touched,
+// deleted, or snapshotted. The record lets a later invocation reconcile an
+// interrupted preparation instead of snapshotting twice, and lets
+// `restore-checkout` re-apply the preserved edits only at the exact recorded
+// original revision.
+
+async function readSnapshotRecord(runDir) {
+  let raw = null;
+  try {
+    raw = await fs.readFile(path.join(runDir, SNAPSHOT_RECORD_FILE), "utf8");
+  } catch (error) {
+    if (error?.code === "ENOENT") return { ok: false };
+    return { ok: false, malformed: true, reason: `snapshot record unreadable: ${error.message}` };
+  }
+  let data = null;
+  try {
+    data = JSON.parse(raw);
+  } catch {
+    return { ok: false, malformed: true, reason: "snapshot record is not valid JSON; reconcile it manually without another checkout effect" };
+  }
+  if (
+    typeof data !== "object" ||
+    data === null ||
+    typeof data.originalBranch !== "string" ||
+    data.originalBranch.trim() === "" ||
+    !validSha(data.originalHead) ||
+    !validSha(data.snapshot) ||
+    !Array.isArray(data.status) ||
+    !data.status.every((entry) => typeof entry === "string") ||
+    typeof data.originalGitDir !== "string" ||
+    !path.isAbsolute(data.originalGitDir) ||
+    typeof data.repository !== "string" ||
+    !validRepository(data.repository) ||
+    !validPrNumber(data.prNumber) ||
+    typeof data.runId !== "string" ||
+    data.runId === "" ||
+    !validSha(data.pinnedHead)
+  ) {
+    return { ok: false, malformed: true, reason: "snapshot record is malformed; reconcile it manually without another checkout effect" };
+  }
+  const stashParent = typeof data.stashParent === "string" && data.stashParent !== "" ? data.stashParent.trim() : null;
+  if (stashParent === null || !validSha(stashParent) || stashParent !== data.originalHead.trim()) {
+    return { ok: false, malformed: true, reason: "snapshot record is malformed; reconcile it manually without another checkout effect" };
+  }
+  return {
+    ok: true,
+    data: {
+      ...data,
+      originalHeadSha: data.originalHead.trim(),
+      snapshotSha: data.snapshot.trim(),
+      pinnedHeadSha: data.pinnedHead.trim(),
+      stashParentSha: stashParent,
+    },
+  };
+}
+
+async function verifySnapshotObject(snapshotSha) {
+  if (!validSha(snapshotSha)) return false;
+  const check = await execArgs("git", ["cat-file", "-e", `${snapshotSha.trim()}^{commit}`]);
+  return check.ok;
+}
+
+// Resolve the actual parent rather than trusting two matching record fields.
+async function verifyOwnedSnapshot(snapshotSha, originalHead) {
+  if (!(await verifySnapshotObject(snapshotSha))) return false;
+  const parent = await execArgs("git", ["rev-parse", `${snapshotSha}^1`]);
+  return parent.ok && parent.output.trim() === originalHead;
+}
+
+// Rebuild the exact `statusKeys` listing from a stash commit: the index diff
+// (^1..^2) names staged sides, the worktree diff (^2..stash) names unstaged
+// sides, and the untracked parent tree (^3) names untracked paths.
+async function stashSnapshotKeys(snapshotSha) {
+  const indexDiff = await execArgs("git", ["diff", "--name-status", "-z", `${snapshotSha}^1`, `${snapshotSha}^2`]);
+  const workDiff = await execArgs("git", ["diff", "--name-status", "-z", `${snapshotSha}^2`, snapshotSha]);
+  if (!indexDiff.ok || indexDiff.truncated || !workDiff.ok || workDiff.truncated) return null;
+  const parseNameStatusZ = (output) => {
+    const fields = String(output ?? "").split("\0");
+    if (fields.length > 0 && fields[fields.length - 1] === "") fields.pop();
+    const map = new Map();
+    for (let i = 0; i < fields.length;) {
+      const code = fields[i++];
+      if (!code) break;
+      const letter = code[0];
+      if (letter === "R" || letter === "C") {
+        // -z rename order is <orig>\0<new>\0; statusKeys shape is new -> old.
+        const orig = (fields[i++] ?? "").replace(/\/$/, "");
+        const shown = (fields[i++] ?? "").replace(/\/$/, "");
+        map.set(shown, { letter, rename: `${shown} -> ${orig}` });
+        continue;
+      }
+      map.set((fields[i++] ?? "").replace(/\/$/, ""), { letter });
+    }
+    return map;
+  };
+  const staged = parseNameStatusZ(indexDiff.output);
+  const unstaged = parseNameStatusZ(workDiff.output);
+  const keys = [];
+  for (const [file, entry] of staged) {
+    const work = unstaged.get(file);
+    unstaged.delete(file);
+    keys.push(`${entry.letter}${work?.letter ?? " "} ${entry.rename ?? work?.rename ?? file}`);
+  }
+  for (const [file, entry] of unstaged) {
+    keys.push(` ${entry.letter} ${entry.rename ?? file}`);
+  }
+  const third = await execArgs("git", ["rev-parse", "--verify", `${snapshotSha}^3`]);
+  if (third.ok) {
+    const tree = await execArgs("git", ["ls-tree", "-r", "--name-only", "-z", `${snapshotSha}^3`]);
+    if (!tree.ok || tree.truncated) return null;
+    const names = String(tree.output ?? "").split("\0");
+    if (names.length > 0 && names[names.length - 1] === "") names.pop();
+    for (const name of names) {
+      if (name !== "") keys.push(`?? ${name.replace(/\/$/, "")}`);
+    }
+  }
+  return keys.sort();
+}
+
+// `git status --porcelain=v1 -z` emits NUL-terminated `XY path` entries, so a
+// filename can never be confused with a status column. Keys keep the raw
+// two-letter code, one space, and path (` M tracked.txt`) for comparison.
+// Untracked paths are listed individually to match the snapshot tree.
+// Raw NUL bytes are preserved end to
+// end: never trim the listing, and rename entries consume the paired second
+// NUL field (`R  new\0old`) as one key so exotic filenames (newline, leading
+// space) round-trip exactly.
+function statusKeys(porcelainZ) {
+  const raw = String(porcelainZ ?? "").split("\0");
+  if (raw.length > 0 && raw[raw.length - 1] === "") raw.pop();
+  const keys = [];
+  for (let i = 0; i < raw.length; i += 1) {
+    const entry = raw[i];
+    if (entry === "" || entry === undefined) continue;
+    const xy = entry.slice(0, 2);
+    const shown = entry.slice(3);
+    if (xy === "R " || xy === "RM" || xy === "RD" || /^[RC]/.test(xy)) {
+      const orig = raw[i + 1] ?? "";
+      i += 1;
+      keys.push(`${xy} ${shown.replace(/\/$/, "")} -> ${orig.replace(/\/$/, "")}`);
+      continue;
+    }
+    keys.push(`${xy} ${shown.replace(/\/$/, "")}`);
+  }
+  return keys.sort();
+}
+
+// Stash entries created by this run's snapshot, matched by the exact
+// run-scoped marker (`review-this snapshot <runId> ` with a trailing space so
+// `run-1` never adopts `run-10`). A raw SHA identifies each entry, so a later
+// lookup never depends on stash numbering.
+function isOwnSnapshotSubject(subject, runId) {
+  const marker = `${SNAPSHOT_MARKER_PREFIX}${runId} `;
+  return /^On [^:]+: /.test(subject) && subject.slice(subject.indexOf(": ") + 2).startsWith(marker);
+}
+
+async function listOwnSnapshotEntries(runId) {
+  const list = await execArgsFull("git", ["stash", "list", "--format=%H%x1f%gs%x1e"]);
+  if (!list.ok) return { ok: false, reason: "stash entries are unreadable" };
+  if (list.truncated) return { ok: false, reason: "stash entries are unreadable" };
+  const entries = [];
+  for (const chunk of list.output.split("\x1e")) {
+    const line = chunk.trim();
+    if (!line) continue;
+    const separator = line.indexOf("\x1f");
+    if (separator < 0) continue;
+    const sha = line.slice(0, separator).trim();
+    const subject = line.slice(separator + 1).trim();
+    if (!validSha(sha)) continue;
+    if (isOwnSnapshotSubject(subject, runId)) {
+      entries.push({ sha, subject });
+    }
+  }
+  return { ok: true, entries };
+}
+
 // Accept the candidate through the actual bundled consumer. A mocked
 // validator is insufficient; this runs the shipped workflow-cli.mjs.
 function runBundledEvidenceCli(here, input) {
@@ -418,7 +601,7 @@ async function main() {
       print(2, failure("input runId must be a safe run-directory name"));
     }
   }
-
+  const defaultRunId = `${operation}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
   const here = path.dirname(fileURLToPath(import.meta.url));
   let pure = null;
   try {
@@ -517,15 +700,13 @@ async function main() {
         break;
       }
       case "prepare-checkout": {
-        // Verified detached alignment only: fetch the PR head ref, verify the
-        // fetched commit equals the pinned SHA, recheck cleanliness,
-        // unfinished operations, and ignored collisions, then
-        // `git -c core.hooksPath= checkout --detach`. Never force, stash,
-        // reset, clean, switch branches, or create a worktree.
+        // Preserve local edits, then align to the verified PR commit without
+        // forcing checkout, moving branches, or creating another worktree.
         if (!validSha(input.pinnedHeadSha) || !validPrNumber(input.prNumber) || !validRepository(input.repository)) {
           print(2, failure("prepare-checkout requires repository, prNumber, and pinnedHeadSha"));
         }
-        const runDir = await ensureRunDir(input.runId ?? `checkout-${Date.now()}`);
+        const runId = typeof input.runId === "string" && input.runId !== "" ? input.runId : defaultRunId;
+        const runDir = await ensureRunDir(runId);
         if (input.dryRun === true) {
           print(0, { ok: true, operation, runDir, validated: true });
         }
@@ -534,6 +715,7 @@ async function main() {
           print(1, { ok: false, operation, kind: "recoverable", failureClass: "transient-read", reason: "git directory unreadable; re-read before repeating" });
         }
         const gitDir = gitDirRes.output.trim();
+        const originalGitDir = await fs.realpath(gitDir);
         const unfinishedMarkers = ["MERGE_HEAD", "CHERRY_PICK_HEAD", "REVERT_HEAD", "BISECT_LOG"];
         for (const marker of unfinishedMarkers) {
           try {
@@ -568,14 +750,12 @@ async function main() {
         if (!rev.ok || rev.output.trim() !== input.pinnedHeadSha.trim()) {
           print(1, { ok: false, operation, kind: "restricted", reason: `fetched commit ${rev.output.trim().slice(0, 12)} does not equal pinned ${String(input.pinnedHeadSha).slice(0, 12)}; the PR moved during resolution` });
         }
-        const status = await execArgs("git", ["status", "--porcelain"]);
-        if (!status.ok) {
+        const status = await execArgs("git", ["status", "--porcelain=v1", "-z", "--untracked-files=all"]);
+        if (!status.ok || status.truncated) {
           print(1, { ok: false, operation, kind: "recoverable", failureClass: "transient-read", reason: "git status unreadable; re-read before repeating" });
         }
-        if (status.output.trim() !== "") {
-          print(1, { ok: false, operation, kind: "restricted", reason: "the current checkout is dirty; commit or stash outside this command" });
-        }
         const pinned = input.pinnedHeadSha.trim();
+        const dirty = statusKeys(status.output).length > 0;
         const diffNames = await execArgs("git", ["diff", "--name-only", "HEAD", pinned]);
         if (!diffNames.ok) {
           print(1, { ok: false, operation, kind: "recoverable", failureClass: "transient-read", reason: "git diff unreadable; re-read before repeating" });
@@ -590,19 +770,259 @@ async function main() {
         if (collisions.length > 0) {
           print(1, { ok: false, operation, kind: "restricted", reason: `ignored-file collision at ${collisions.slice(0, 3).join(", ")}; the user decides what may be replaced` });
         }
-        const checkout = await execArgs("git", ["-c", "core.hooksPath=", "checkout", "--detach", pinned]);
+        // Preserve a dirty checkout before any checkout effect (narrowed
+        // ADR-0036 dirty rule): tracked, staged, unstaged, and untracked
+        // edits go into one verified recoverable snapshot; ignored files are
+        // never touched. An interrupted preparation is reconciled from the
+        // durable record instead of snapshotting twice. Unknown edits are
+        // never discarded. After a successful stash, failures retain the
+        // snapshot and report the remaining operation.
+        let preserved = null;
+        // status is already NUL-delimited; `dirty` preserves raw bytes (never
+        // trim) so newline filenames cannot fake a clean tree.
+        // Reconciliation always looks up this run's marker entries, even on a
+        // clean tree: a push that landed just before the record write must be
+        // discovered rather than snapshotted again or orphaned.
+        const earlyRecord = await readSnapshotRecord(runDir);
+        if (earlyRecord.malformed) {
+          print(1, { ok: false, operation, kind: "restricted", reason: earlyRecord.reason });
+        }
+        let ownEarly = await listOwnSnapshotEntries(runId);
+        if (!ownEarly.ok) {
+          print(1, { ok: false, operation, kind: "recoverable", failureClass: "transient-read", reason: "stash entries are unreadable; re-read before repeating" });
+        }
+        if (dirty || earlyRecord.ok || ownEarly.entries.length > 0) {
+          const session = await import(pathToFileURL(path.join(here, "review-session.ts")).href);
+          if (typeof session.dirtySnapshotDecision !== "function") {
+            print(2, failure("preparation core is unavailable"));
+          }
+          const record = earlyRecord;
+          const branchRes = await execArgs("git", ["rev-parse", "--abbrev-ref", "HEAD"]);
+          const headRes = await execArgs("git", ["rev-parse", "HEAD"]);
+          if (!branchRes.ok || !headRes.ok) {
+            print(1, { ok: false, operation, kind: "recoverable", failureClass: "transient-read", reason: "current branch or HEAD unreadable; re-read before repeating" });
+          }
+          const currentBranch = branchRes.output.trim();
+          const currentHead = headRes.output.trim();
+          const own = ownEarly;
+          // A record names its own repository, PR, and run: never apply it to
+          // an unrelated invocation.
+          if (record.ok && (record.data.repository.toLowerCase() !== input.repository.toLowerCase() || record.data.prNumber !== input.prNumber || record.data.runId !== runId || record.data.pinnedHeadSha !== pinned || record.data.originalGitDir !== originalGitDir)) {
+            print(1, { ok: false, operation, kind: "restricted", reason: `the snapshot record names a different target (${record.data.repository}#${record.data.prNumber}, run ${record.data.runId}); reconcile it manually without another checkout effect (the recorded snapshot ${record.data.snapshotSha.slice(0, 12)} stays recoverable)` });
+          }
+          const decision = session.dirtySnapshotDecision({
+            recordPresent: record.ok,
+            snapshotObjectExists: record.ok ? await verifyOwnedSnapshot(record.data.snapshotSha, record.data.originalHeadSha) : false,
+            recordedBranchMatches: record.ok && record.data.originalBranch === currentBranch,
+            recordedHeadMatches: record.ok && record.data.originalHeadSha === currentHead.trim(),
+            alignedHeadMatches: record.ok && currentHead.trim() === pinned && !dirty,
+            worktreeClean: !dirty,
+            ownSnapshotEntries: own.entries.length,
+          });
+          if (decision.action === "stop") {
+            const note = record.ok ? ` (the recorded snapshot ${record.data.snapshotSha.slice(0, 12)} stays recoverable)` : "";
+            print(1, { ok: false, operation, kind: "restricted", reason: `${decision.reason}${note}` });
+          }
+          if (decision.action === "reconcile-existing") {
+            preserved = { snapshot: record.data.snapshotSha.trim(), originalBranch: record.data.originalBranch, originalHead: record.data.originalHeadSha.trim(), status: record.data.status };
+          }
+          if (decision.action === "adopt-marker-stash") {
+            const adopted = own.entries[0].sha;
+            if (!(await verifySnapshotObject(adopted))) {
+              print(1, { ok: false, operation, kind: "restricted", reason: "the interrupted snapshot entry no longer resolves; reconcile it manually without another checkout effect" });
+            }
+            const parentRes = await execArgs("git", ["rev-parse", `${adopted}^1`]);
+            const originalMarker = `${SNAPSHOT_MARKER_PREFIX}${runId} ${currentBranch}@${currentHead}`;
+            if (!parentRes.ok || parentRes.output.trim() !== currentHead.trim() || !own.entries[0].subject.endsWith(`: ${originalMarker}`)) {
+              print(1, { ok: false, operation, kind: "restricted", reason: "the interrupted snapshot entry no longer matches this checkout; reconcile it manually without another checkout effect" });
+            }
+            const adoptedKeys = await stashSnapshotKeys(adopted);
+            if (adoptedKeys === null) {
+              print(1, { ok: false, operation, kind: "restricted", reason: "the interrupted snapshot entry is unreadable; reconcile it manually without another checkout effect" });
+            }
+            preserved = {
+              snapshot: adopted,
+              originalBranch: currentBranch,
+              originalHead: currentHead.trim(),
+              status: adoptedKeys,
+              stashParent: parentRes.output.trim(),
+              pinnedHead: pinned,
+            };
+          }
+          if (decision.action === "snapshot") {
+            // Capture the exact NUL-delimited listing before the push; the
+            // untrimmed newline check below only detects dirt, never records.
+            const preKeys = statusKeys(status.output);
+            const message = `${SNAPSHOT_MARKER_PREFIX}${runId} ${currentBranch}@${currentHead.trim()}`;
+            const stash = await execArgs("git", ["stash", "push", "--include-untracked", "--message", message]);
+            if (!stash.ok) {
+              print(1, { ok: false, operation, kind: "restricted", reason: `snapshot failed; nothing was checked out; inspect the worktree and marked stash before retrying: ${stash.output.slice(0, 200)}` });
+            }
+            const snap = await execArgs("git", ["rev-parse", "refs/stash"]);
+            const snapshotSha = snap.ok ? snap.output.trim() : "";
+            if (!(await verifySnapshotObject(snapshotSha))) {
+              print(1, { ok: false, operation, kind: "restricted", reason: "stash completed but snapshot identity could not be verified; inspect the marked stash and current worktree before retrying" });
+            }
+            // A marked entry must name this run: otherwise a concurrent stash
+            // landed on top and the identity is unproven.
+            const verifyList = await listOwnSnapshotEntries(runId);
+            const newest = verifyList.ok ? verifyList.entries.find((entry) => entry.sha === snapshotSha) : undefined;
+            if (!verifyList.ok || newest === undefined) {
+              print(1, { ok: false, operation, kind: "restricted", reason: "the newest stash entry is not this run's marked snapshot; reconcile manually with git stash list" });
+            }
+            // The new snapshot's first parent must be the recorded original
+            // head: otherwise the stash captured a different checkout.
+            const stashParent = await execArgs("git", ["rev-parse", `${snapshotSha}^1`]);
+            if (!stashParent.ok || stashParent.output.trim() !== currentHead.trim()) {
+              print(1, { ok: false, operation, kind: "restricted", reason: "the snapshot does not match this checkout; reconcile manually with git stash list" });
+            }
+            const statusZ = await execArgs("git", ["status", "--porcelain=v1", "-z", "--untracked-files=all"]);
+            if (!statusZ.ok || statusZ.truncated) {
+              print(1, { ok: false, operation, kind: "recoverable", failureClass: "transient-read", reason: "git status unreadable after snapshot; re-read before repeating" });
+            }
+            const keys = statusKeys(statusZ.output);
+            if (keys.length > 0) {
+              print(1, { ok: false, operation, kind: "restricted", reason: `snapshot recorded but the worktree still lists: ${keys.slice(0, 3).join(", ")}; reconcile manually with git stash list` });
+            }
+            preserved = {
+              snapshot: snapshotSha,
+              originalBranch: currentBranch,
+              originalHead: currentHead.trim(),
+              status: preKeys,
+              stashParent: stashParent.output.trim(),
+              pinnedHead: pinned,
+            };
+          }
+          const afterStash = await execArgs("git", ["status", "--porcelain=v1", "-z", "--untracked-files=all"]);
+          if (!afterStash.ok || afterStash.truncated || statusKeys(afterStash.output).length > 0) {
+            print(1, { ok: false, operation, kind: "restricted", reason: "the snapshot did not leave a clean worktree; the edits remain in place; reconcile manually with git stash list" });
+          }
+          if (decision.action !== "reconcile-existing") {
+            try {
+              await fs.writeFile(
+                path.join(runDir, SNAPSHOT_RECORD_FILE),
+                `${JSON.stringify({ repository: input.repository, prNumber: input.prNumber, runId, originalGitDir, ...preserved, createdAt: new Date().toISOString() }, null, 2)}\n`,
+                { mode: 0o600 },
+              );
+            } catch (error) {
+              print(1, { ok: false, operation, kind: "restricted", reason: `the snapshot record could not be stored; the snapshot ${preserved.snapshot.slice(0, 12)} itself is intact under refs/stash: ${error.message}` });
+            }
+          }
+        }
+        const preservedNote = preserved
+          ? ` (the preserved edits stay recoverable: snapshot ${preserved.snapshot.slice(0, 12)}, original ${preserved.originalBranch}@${preserved.originalHead.slice(0, 12)})`
+          : "";
+        const checkout = await execArgs("git", ["-c", "core.hooksPath=", "checkout", "--detach", "--no-overwrite-ignore", pinned]);
         if (!checkout.ok) {
-          print(1, { ok: false, operation, kind: "restricted", reason: `detached alignment failed: ${checkout.output.slice(0, 200)}` });
+          print(1, { ok: false, operation, kind: "restricted", reason: `detached alignment failed: ${checkout.output.slice(0, 200)}${preservedNote}` });
         }
+        const headRes2 = await execArgs("git", ["rev-parse", "HEAD"]);
+        if (!headRes2.ok || headRes2.output.trim() !== pinned) {
+          print(1, { ok: false, operation, kind: "restricted", reason: `post-checkout HEAD does not equal the pinned head; stop without review${preservedNote}` });
+        }
+        const postStatus = await execArgs("git", ["status", "--porcelain=v1", "-z", "--untracked-files=all"]);
+        if (!postStatus.ok || postStatus.truncated || statusKeys(postStatus.output).length > 0) {
+          print(1, { ok: false, operation, kind: "restricted", reason: `post-checkout worktree is not clean; stop without review${preservedNote}` });
+        }
+        print(0, {
+          ok: true,
+          operation,
+          runDir,
+          aligned: input.pinnedHeadSha,
+          ...(preserved
+            ? { preserved: { snapshot: preserved.snapshot, originalBranch: preserved.originalBranch, originalHead: preserved.originalHead } }
+            : {}),
+        });
+        break;
+      }
+      case "restore-checkout": {
+        // Restore a dirty-checkout snapshot recorded by prepare-checkout.
+        // Authorized only on a clean checkout at the exact recorded original
+        // branch and head: `stash apply` refuses to overwrite or recreate
+        // paths, so any current edit stops the restore instead of mixing two
+        // states. At a different revision automation stops and the snapshot
+        // stays recoverable for a manual `git stash apply --index <sha>`.
+        // Never drops the snapshot.
+        if (typeof input.runId !== "string" || input.runId === "") {
+          print(2, failure("restore-checkout requires the runId of the run that preserved the snapshot"));
+        }
+        const runDir = await ensureRunDir(input.runId);
+        if (input.dryRun === true) {
+          print(0, { ok: true, operation, runDir, validated: true });
+        }
+        const session = await import(pathToFileURL(path.join(here, "review-session.ts")).href);
+        if (typeof session.snapshotRestoreDecision !== "function") {
+          print(2, failure("preparation core is unavailable"));
+        }
+        const record = await readSnapshotRecord(runDir);
+        if (!record.ok) {
+          if (record.malformed) {
+            print(1, { ok: false, operation, kind: "restricted", reason: record.reason });
+          }
+          print(1, { ok: false, operation, kind: "restricted", reason: "no usable snapshot record under this run directory; recover manually with git stash list and git stash apply --index" });
+        }
+        const snapshotSha = record.data.snapshotSha.trim();
+        const gitDirRes = await execArgs("git", ["rev-parse", "--git-dir"]);
+        if (!gitDirRes.ok || record.data.runId !== input.runId || await fs.realpath(gitDirRes.output.trim()) !== record.data.originalGitDir) {
+          print(1, { ok: false, operation, kind: "restricted", reason: "the snapshot record belongs to a different run or checkout; no edits were applied" });
+        }
+        for (const marker of ["MERGE_HEAD", "CHERRY_PICK_HEAD", "REVERT_HEAD", "BISECT_LOG", "rebase-merge", "rebase-apply"]) {
+          try {
+            await fs.lstat(path.join(record.data.originalGitDir, marker));
+            print(1, { ok: false, operation, kind: "restricted", reason: `unfinished git operation (${marker}); no snapshot edits were applied` });
+          } catch (error) {
+            if (error.code !== "ENOENT") throw error;
+          }
+        }
+        const exists = await verifyOwnedSnapshot(snapshotSha, record.data.originalHeadSha);
+        const branchRes = await execArgs("git", ["rev-parse", "--abbrev-ref", "HEAD"]);
         const headRes = await execArgs("git", ["rev-parse", "HEAD"]);
-        if (!headRes.ok || headRes.output.trim() !== pinned) {
-          print(1, { ok: false, operation, kind: "restricted", reason: "post-checkout HEAD does not equal the pinned head; stop without review" });
+        // Identity of the current tree state, read NUL-delimited end to end.
+        const statusRes = await execArgs("git", ["status", "--porcelain=v1", "-z", "--untracked-files=all"]);
+        if (!branchRes.ok || !headRes.ok || !statusRes.ok || statusRes.truncated) {
+          print(1, { ok: false, operation, kind: "recoverable", failureClass: "transient-read", reason: "git state unreadable; re-read before repeating" });
         }
-        const postStatus = await execArgs("git", ["status", "--porcelain"]);
-        if (!postStatus.ok || postStatus.output.trim() !== "") {
-          print(1, { ok: false, operation, kind: "restricted", reason: "post-checkout worktree is not clean; stop without review" });
+        const restore = session.snapshotRestoreDecision({
+          snapshotObjectExists: exists,
+          branchMatches: branchRes.output.trim() === record.data.originalBranch,
+          headMatches: headRes.output.trim() === record.data.originalHeadSha.trim(),
+          worktreeClean: statusKeys(statusRes.output).length === 0,
+        });
+        if (restore.action === "stop") {
+          print(1, {
+            ok: false,
+            operation,
+            kind: "restricted",
+            reason: `${restore.reason}; the recorded snapshot ${snapshotSha.slice(0, 12)} stays intact and can be applied manually with git stash apply --index ${snapshotSha}`,
+          });
         }
-        print(0, { ok: true, operation, runDir, aligned: input.pinnedHeadSha });
+        const apply = await execArgs("git", ["stash", "apply", "--index", snapshotSha]);
+        if (!apply.ok) {
+          print(1, { ok: false, operation, kind: "restricted", reason: `snapshot restore failed; the snapshot ${snapshotSha.slice(0, 12)} remains intact: ${apply.output.slice(0, 200)}` });
+        }
+        // `stash apply` refuses to overwrite or recreate conflicting paths,
+        // so a successful exit with a mismatched listing means something else
+        // owns those paths now — never force it, report it.
+        const after = await execArgs("git", ["status", "--porcelain=v1", "-z", "--untracked-files=all"]);
+        if (!after.ok || after.truncated) {
+          print(1, { ok: false, operation, kind: "restricted", reason: `post-restore status is unreadable; verify the worktree manually; the snapshot ${snapshotSha.slice(0, 12)} remains intact` });
+        }
+        const restoredSet = statusKeys(after.output);
+        // The record stores the exact key array (`XY path`); compare arrays,
+        // not trimmed newline text, so status columns and exotic names survive.
+        const expectedSet = [...record.data.status].sort();
+        if (restoredSet.length !== expectedSet.length || restoredSet.some((value, i) => value !== expectedSet[i])) {
+          print(1, { ok: false, operation, kind: "restricted", reason: `the restored worktree differs from the recorded listing; the snapshot ${snapshotSha.slice(0, 12)} remains intact; reconcile manually` });
+        }
+        print(0, {
+          ok: true,
+          operation,
+          runDir,
+          restored: true,
+          snapshot: snapshotSha,
+          originalBranch: record.data.originalBranch,
+          originalHead: record.data.originalHeadSha.trim(),
+        });
         break;
       }
       case "publish-review": {

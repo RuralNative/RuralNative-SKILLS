@@ -5,6 +5,70 @@
 // merge, and bookkeeping. It never generates another review verdict and never
 // conditions its own merge eligibility on CI status.
 
+export interface FixTaskEditsFact {
+  /** Pull request the recorded edits were made for. */
+  recordedPullRequest: number;
+  /** Pull request authorized for this run. Must equal the recorded target. */
+  authorizedPullRequest: number;
+  /** Repository `owner/name` the recorded edits were made in. */
+  recordedRepository: string;
+  /** Repository authorized for this run. Case-insensitive match. */
+  authorizedRepository: string;
+  /** Recorded starting HEAD when the edits began. */
+  recordedBaseSha: string;
+  /** Currently observed base HEAD (e.g. `git rev-parse HEAD`). */
+  observedBaseSha: string;
+  /** Exact recorded changed paths. */
+  recordedPaths: readonly string[];
+  /** Currently observed changed paths. */
+  observedPaths: readonly string[];
+  /** Recorded index digest. */
+  recordedIndexDigest: string;
+  /** Currently observed index digest. */
+  observedIndexDigest: string;
+  /** Recorded worktree digest. */
+  recordedWorktreeDigest: string;
+  /** Currently observed worktree digest. */
+  observedWorktreeDigest: string;
+}
+
+function sameFixPathSet(a: readonly string[], b: readonly string[]): boolean {
+  if (a.length !== b.length) return false;
+  const sortedA = [...a].sort();
+  const sortedB = [...b].sort();
+  return sortedA.every((value, i) => value === sortedB[i]);
+}
+
+/**
+ * True only when the dirty edits are attributable to this authorized run:
+ * same repository and pull-request target, same base revision, same exact
+ * paths, and same index plus worktree digests. Any missing or mismatched
+ * part is unverified. Ownership is derived here from the parts, never from
+ * one caller-supplied flag, a branch name, or a matching filename.
+ */
+export function isVerifiedFixTaskEdits(fact: FixTaskEditsFact | undefined): boolean {
+  if (!fact) return false;
+  if (!Number.isInteger(fact.recordedPullRequest) || fact.recordedPullRequest <= 0) return false;
+  if (fact.recordedPullRequest !== fact.authorizedPullRequest) return false;
+  if (!fact.recordedRepository.trim() || !fact.authorizedRepository.trim()) return false;
+  if (fact.recordedRepository.trim().toLowerCase() !== fact.authorizedRepository.trim().toLowerCase()) {
+    return false;
+  }
+  if (fact.recordedBaseSha.trim() === "" || fact.recordedBaseSha.trim() !== fact.observedBaseSha.trim()) {
+    return false;
+  }
+  if (fact.observedPaths.length === 0 || !sameFixPathSet(fact.recordedPaths, fact.observedPaths)) {
+    return false;
+  }
+  if (fact.recordedIndexDigest.trim() === "" || fact.recordedIndexDigest.trim() !== fact.observedIndexDigest.trim()) {
+    return false;
+  }
+  if (fact.recordedWorktreeDigest.trim() === "" || fact.recordedWorktreeDigest.trim() !== fact.observedWorktreeDigest.trim()) {
+    return false;
+  }
+  return true;
+}
+
 export interface FixCheckoutFact {
   /** The worktree has no uncommitted changes. */
   worktreeClean: boolean;
@@ -15,7 +79,7 @@ export interface FixCheckoutFact {
   /** Reviewed head SHA carried by the validated handoff. */
   reviewedHeadSha: string;
   /**
-   * Whether the checkout is on local `main` or detached `HEAD`.
+   * Whether the checkout is on the pinned default branch or detached `HEAD`.
    * Those states need a feature branch before fixes, not a stop.
    */
   needsFeatureBranch: boolean;
@@ -41,26 +105,51 @@ export interface FixCheckoutFact {
     resultingHeadSha: string;
     completedSteps: readonly string[];
   };
+  /**
+   * Verified provenance for dirty task-owned edits before a final
+   * checkpoint exists. Absent or failing means no verified ownership:
+   * unknown edits route to preservation, never to a destructive action.
+   * A verified record resumes in place only when its observed base equals
+   * the current local HEAD and that HEAD aligns with the entry's required
+   * revision; it is never applied onto a different revision.
+   */
+  taskEdits?: FixTaskEditsFact;
 }
 
 export type FixCheckoutDecision =
   | { action: "proceed"; reason: string }
   | { action: "create-feature-branch"; reason: string }
+  | { action: "preserve"; reason: string }
   | { action: "stop"; reason: string };
 
 /**
- * Checkout gate. A branch alias never blocks: clean HEAD equality is what
- * matters. Fresh runs keep clean HEAD = PR head = reviewed head. A resume
+ * Checkout gate (ADR-0041 narrowing). A branch alias never blocks: clean
+ * HEAD equality is what matters. Fresh runs keep HEAD = PR head = reviewed
+ * head, with verified pre-checkpoint task edits resuming in place. A resume
  * fixes path requires the checkpoint's resulting head locally and the remote
  * PR head at the state the checkpoint recorded (started head while
  * prepared-but-unpushed, resulting head after a completed push); external
- * remote movement stops. A confirmed merged PR resumes bookkeeping on any
- * clean checkout. `main` and detached HEAD need an explicit feature-branch
- * step before edits.
+ * remote movement stops. A confirmed merged PR resumes bookkeeping on the
+ * verified checkout. Unverified dirty edits route to verified preservation
+ * before necessary alignment and are never discarded. The pinned default
+ * branch and detached HEAD need an explicit feature-branch step before
+ * edits. Native merge safeguards stay unchanged.
  */
 export function fixCheckoutDecision(fact: FixCheckoutFact): FixCheckoutDecision {
   if (!fact.worktreeClean) {
-    return { action: "stop", reason: "the current checkout is dirty; commit or stash outside this command" };
+    // Verified local task edits relax cleanliness only: the record must bind
+    // target, repository, base revision, exact paths, and content digests,
+    // and the observed base must equal the current local HEAD (never apply
+    // saved edits onto a different revision). Anything unverified preserves,
+    // never destructive action; an interrupted merge still requires the
+    // recorded operation identity. Verified edits then fall through to the
+    // existing entry/head/remote/checkpoint guards below.
+    if (!isVerifiedFixTaskEdits(fact.taskEdits)) {
+      return { action: "preserve", reason: "the checkout carries unverified edits; preserve them through checked recovery before necessary alignment, never discarding unknown edits; unsafe preservation stops the mutation" };
+    }
+    if (fact.taskEdits!.observedBaseSha.trim() !== fact.localHeadSha.trim()) {
+      return { action: "preserve", reason: "verified task edits name a different base revision than the current local HEAD; preserve through checked recovery and do not apply saved edits onto a different revision" };
+    }
   }
   if (fact.localHeadSha.trim() === "") {
     return { action: "stop", reason: "no trustworthy local head revision" };
@@ -118,7 +207,7 @@ export function fixCheckoutDecision(fact: FixCheckoutFact): FixCheckoutDecision 
     return { action: "stop", reason: "the checkout does not match the reviewed head; republish the review or align outside this command" };
   }
   if (fact.needsFeatureBranch) {
-    return { action: "create-feature-branch", reason: "create the feature branch in this checkout before editing from main or detached HEAD" };
+    return { action: "create-feature-branch", reason: "create the feature branch in this checkout before editing from the pinned default branch or detached HEAD" };
   }
   return { action: "proceed", reason: "clean checkout at the reviewed pull-request head" };
 }

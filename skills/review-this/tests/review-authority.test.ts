@@ -15,8 +15,8 @@ describe("review-only authority", () => {
       assert.equal(isForbiddenReviewerAction(action), true);
     }
   });
-  test("allowed actions cover publication, checks, and clean-checkout alignment only", () => {
-    for (const action of ["publish-review", "publish-inline-findings", "run-focused-checks", "run-local-fallback-once", "align-clean-checkout"] as const) {
+  test("allowed actions cover publication, checks, preservation, and checkout alignment", () => {
+    for (const action of ["publish-review", "publish-inline-findings", "run-focused-checks", "run-local-fallback-once", "preserve-dirty-checkout", "align-clean-checkout"] as const) {
       assert.ok((REVIEWER_ALLOWED_ACTIONS as readonly string[]).includes(action));
       assert.equal(isForbiddenReviewerAction(action), false);
     }

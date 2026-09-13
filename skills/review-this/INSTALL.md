@@ -2,7 +2,28 @@
 
 `review-this` reviews exactly one pull request in the current checkout and publishes the findings. Invoke it explicitly as `/review-this <target>` where `<target>` is one pull-request number, one pull-request URL, one issue number, or one issue URL that resolves to exactly one open pull request — bare numbers (`100`) and hash numbers (`#100`) normalize to the same repository number. Parent specifications, ambiguous mappings, multiple targets, and cross-repository targets stop before any write.
 
-The skill requires a clean current checkout at the selected pull-request head commit. Local branch names are informational: a branch alias, the pinned default branch, or detached `HEAD` at the same commit matches. A clean checkout at a different commit automatically aligns: the run fetches the verified pull-request head ref, confirms the fetched commit equals the pinned head SHA, and switches this checkout to that exact commit in detached `HEAD` without moving local branches, running checkout hooks, or creating a worktree (ADR-0036). The checkout stays at the reviewed commit for `/fix-this`. A dirty worktree, an unfinished merge, rebase, cherry-pick, or revert, an ignored-file collision, a fetch or checkout failure, or a denied permission stops the run with no checkout change. It runs one frontier Standards-plus-Spec pass in-session, reports both checklists separately, publishes the review and verified inline findings to the pull request, and stops. It never applies source fixes, commits, pushes, merges, updates labels, promotes dependents, or closes tickets; the only pull-request body write is the scoped evidence-repair helper replacing exactly one validated region with provenance (ADR-0039); it re-reads pins, head-repository identity, and governing sources before each write and rejects incomplete receipts or downgraded behavior proof. It never calls Agent Manager, creates or removes a worktree, manages workers, runs cloud review, or reads Agent Manager state.
+Review runs on a clean current checkout at the selected pull-request head commit.
+The installed preparation helper automatically preserves dirty local work in a
+verified recoverable Git snapshot, then automatically aligns a different commit
+to the pinned head in detached `HEAD`. It moves no local branch, runs no checkout
+hook, and creates no worktree (ADR-0036, narrowed by ADR-0041). A branch alias,
+the pinned default branch, or detached `HEAD` at the same commit matches. The
+checkout stays at the reviewed commit for `/fix-this`; saved edits stay recoverable
+under their recorded identity and original checkout, never applied onto the PR.
+Unknown Git operations, ignored-file collisions, unsafe preservation, and denied
+permissions remain restrictions. Ordinary dirty entry needs no manual cleanup.
+
+The skill runs one frontier Standards-plus-Spec pass, publishes the review and
+verified inline findings, and stops. It never applies source fixes, commits,
+pushes, merges, updates labels, promotes dependents, or closes tickets. The only
+PR-body write is the scoped evidence-repair helper replacing one validated region
+with provenance (ADR-0039). It never calls Agent Manager, creates or removes a
+worktree, manages workers, runs cloud review, or reads Agent Manager state.
+
+Every bundle includes `recovery.md`. Recoverable helper errors and interrupted
+publication resume within the same authorized stage; the agent preserves actual
+receipts and reconciles native state before retrying an uncertain write. A new
+session still needs a human instruction naming or resuming the target.
 
 ## Requirements
 
@@ -58,7 +79,7 @@ Workflow runs perform no skill downloads: once installed, `/review-this` never f
 
 ## Verification
 
-From any clean checkout of the repository, after implementation has delivered:
+From the invoking checkout of the repository, after implementation has delivered:
 
 ```
 /review-this #100

@@ -7,6 +7,13 @@ Planning workflow adapter, invoked as `/plan-this <task>`: defines the intent ca
 
 ## Non-negotiables
 
+ADR-0041 applies operational recovery throughout the five phases: preserve the
+original request and explicit publication approval, reconcile already-created
+native issues, and finish missing approved links or labels after read-back.
+Dirty checkout files remain untouched because planning needs no alignment.
+The bundled recovery contract never authorizes new scope or removes invariant 8's
+approval gate. Composition tests cover the required instruction route.
+
 1. **INV-1** — `name` equals folder `plan-this`.
 2. **INV-2** — INSTALL: `npx skills add RuralNative/RuralNative-SKILLS --skill plan-this`, manual copy.
 3. **INV-3** — Structured workflow boundary: workflow line, approval gate, `## Contract`, five phases, ELI18 summary, single `## Task:` slot.
@@ -23,4 +30,4 @@ Planning workflow adapter, invoked as `/plan-this <task>`: defines the intent ca
 
 ## Links
 
-Glossary: `CONTEXT.md`. Decisions: ADR-0004, ADR-0006, ADR-0014, ADR-0015, ADR-0019, ADR-0020, ADR-0024, ADR-0027, ADR-0032, ADR-0034, ADR-0037, ADR-0038, ADR-0040. Harness: `scripts/docs-check.sh`. Redirect: `docs/leaves/ext/plan-this.md`.
+Glossary: `CONTEXT.md`. Decisions: ADR-0004, ADR-0006, ADR-0014, ADR-0015, ADR-0019, ADR-0020, ADR-0024, ADR-0027, ADR-0032, ADR-0034, ADR-0037, ADR-0038, ADR-0040, ADR-0041. Harness: `scripts/docs-check.sh`. Redirect: `docs/leaves/ext/plan-this.md`.

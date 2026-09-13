@@ -1,9 +1,21 @@
 # Seam: review-this
 ## Purpose
-Owns one pull-request review in the current checkout: resolve the target, align the clean checkout, ensure review policy, run one frontier Standards-plus-Spec pass, publish the findings, stop.
+Owns one pull-request review in the current checkout: resolve the target, preserve local edits when needed and align the checkout, ensure review policy, run one frontier Standards-plus-Spec pass, publish the findings, stop.
 **Not here**: implementing → `implement-this`; planning → `plan-this`.
 
 ## Non-negotiables
+
+ADR-0041 narrows invariants 5 and 14 below: dirty entry uses checked, verified Git
+preservation before alignment instead of requesting manual cleanup. Preservation
+retains the original checkout and recoverable snapshot identity; no saved edits
+are applied onto the PR. Unknown operations and unsafe preservation still stop
+the mutation. The installed preparation helper owns these effects. All phases
+load the bundled recovery contract, retain retry history across interruption,
+and reconcile completed publication before retrying. Source fixes remain outside
+review. Dirty work at the pinned head also requires preservation. A retained
+preparation `runId` reconciles interruptions before and after alignment without
+duplicating snapshots; the final checkout refuses to overwrite ignored files.
+Historical clean-only clauses below are superseded only by this scope.
 
 1. **INV-1** — `name` equals folder `review-this`.
 2. **INV-2** — INSTALL: registry-lane install, manual copy, `/review-this <target>` with one pull request or one issue resolving to one pull request.
@@ -31,4 +43,4 @@ Equivalent required CI on the reviewed head/base, or the established local comma
 
 ## Links
 
-Glossary: `CONTEXT.md`. Decisions: ADR-0006, ADR-0014, ADR-0015, ADR-0019, ADR-0022, ADR-0023, ADR-0024, ADR-0031, ADR-0032, ADR-0033, ADR-0034, ADR-0035, ADR-0036, ADR-0037, ADR-0038, ADR-0039, ADR-0040. Redirect: `docs/leaves/ext/review-this.md`.
+Glossary: `CONTEXT.md`. Decisions: ADR-0006, ADR-0014, ADR-0015, ADR-0019, ADR-0022, ADR-0023, ADR-0024, ADR-0031, ADR-0032, ADR-0033, ADR-0034, ADR-0035, ADR-0036, ADR-0037, ADR-0038, ADR-0039, ADR-0040, ADR-0041. Redirect: `docs/leaves/ext/review-this.md`.

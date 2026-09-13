@@ -14,6 +14,7 @@ export const AUTHORED_PATH = "scripts/workflow-state.ts";
 export const AUTHORED_CLI_PATH = "scripts/workflow-cli.mjs";
 export const AUTHORED_FACTS_PATH = "scripts/github-facts.ts";
 export const AUTHORED_FACTS_CLI_PATH = "scripts/github-facts.mjs";
+export const AUTHORED_RECOVERY_PATH = "scripts/workflow-recovery.md";
 // Dependency-free ESM metadata: the bundled runtime is ESM and must execute
 // inside a foreign CommonJS target too, so every skill package carries a
 // minimal `type: module` marker plus the Node 24+ engine declaration
@@ -50,6 +51,7 @@ export const RUNTIME_METADATA_PATHS = [
   "skills/review-this/package.json",
   "skills/fix-this/package.json",
 ];
+export const RECOVERY_COPY_PATHS = COPY_PATHS.map((file) => file.replace("workflow-state.ts", "recovery.md"));
 
 export function readAuthored(): string {
   return fs.readFileSync(path.join(ROOT, AUTHORED_PATH), "utf8");
@@ -87,6 +89,7 @@ export function driftedCopies(): string[] {
   for (const rel of FACTS_COPY_PATHS) check(rel, authoredFacts);
   for (const rel of FACTS_CLI_COPY_PATHS) check(rel, authoredFactsCli);
   for (const rel of RUNTIME_METADATA_PATHS) check(rel, AUTHORED_RUNTIME_METADATA);
+  for (const rel of RECOVERY_COPY_PATHS) check(rel, fs.readFileSync(path.join(ROOT, AUTHORED_RECOVERY_PATH), "utf8"));
   return drifted;
 }
 
@@ -110,6 +113,8 @@ export function regenerate(): void {
   for (const rel of RUNTIME_METADATA_PATHS) {
     fs.writeFileSync(path.join(ROOT, rel), AUTHORED_RUNTIME_METADATA);
   }
+  const recovery = fs.readFileSync(path.join(ROOT, AUTHORED_RECOVERY_PATH), "utf8");
+  for (const rel of RECOVERY_COPY_PATHS) fs.writeFileSync(path.join(ROOT, rel), recovery);
 }
 
 const invokedDirectly =

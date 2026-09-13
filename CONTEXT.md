@@ -169,7 +169,7 @@ The user's invoking working tree where `/implement-this`, `/review-this`, and `/
 _Avoid_: worktree (when the invoking checkout is meant)
 
 **Checkout alignment**:
-The `review-this` preparation that switches a clean current checkout at a different commit to the verified pull-request head commit in detached `HEAD`, moving no branch and creating no worktree. It changes which commit the worktree shows, never what the review publishes; dirty, unfinished-operation, and collision states stop with no checkout effect (ADR-0036). Bounded preparation (ADR-0039) extends this with one attempt per recoverable class — compatible runtimes, frozen installs, scoped evidence repair — and resumes interrupted publication once.
+The `review-this` preparation that switches the current checkout to the verified pull-request head commit in detached `HEAD`, moving no branch and creating no worktree. It changes which commit the checkout shows, never what the review publishes. Dirty local work is preserved under a verified recoverable identity before alignment (ADR-0041); unknown operations, collisions, and unsafe preservation block mutation. Preparation also recovers supported runtimes, locked dependencies, evidence metadata, and interrupted publication within the review role (ADR-0039).
 _Avoid_: manual realignment (what the stop clause required before ADR-0036)
 
 **Configured fix agent**:

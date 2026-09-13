@@ -7,6 +7,15 @@ Owns the final stage for one reviewed pull request in the current checkout: reso
 
 ## Non-negotiables
 
+ADR-0041 narrows invariant 5 below: verified task-owned local edits resume before a
+final checkpoint exists; a missing checkpoint never erases observed progress.
+Unrelated edits need verified preservation before necessary alignment. The
+bundled recovery contract preserves original authorization, revision pins, proof,
+and retry history. An already completed push advances to the missing next step;
+the no-op push rejection forbids a redundant effect, not continuation. Historical
+clean-only clauses below are superseded only by this scope. Merge eligibility,
+review provenance, and unknown-work protections remain unchanged.
+
 1. **INV-1** — `name` equals folder `fix-this`.
 2. **INV-2** — INSTALL: registry-lane install, manual copy, `/fix-this <target>` with one pull-request number or same-repository PR URL. Issue targets, multiple targets, missing PRs, ambiguous mappings, cross-repository targets, and fork mutation stop before mutation. Narrowed by ADR-0038: an open PR resolves for fresh or resumed finalization, and a merged PR resolves so a reconciled `fix-progress-v2` checkpoint may resume bookkeeping; closed-unmerged PRs never count as delivered and stop. Narrowed by ADR-0040: a confirmed native merge with verified PR and issue associations resumes bookkeeping only without a checkpoint; unverified merges never resume.
 3. **INV-3** — Fixed-template: verbatim prefix, workflow stages for the single pull request, `## Rules`, single `## Ticket` slot.
@@ -32,4 +41,4 @@ Established focused checks plus the repository verification command(s) on the re
 
 ## Links
 
-Glossary: `CONTEXT.md`. Decisions: ADR-0024, ADR-0031, ADR-0032, ADR-0034, ADR-0035, ADR-0037, ADR-0038, ADR-0040.
+Glossary: `CONTEXT.md`. Decisions: ADR-0024, ADR-0031, ADR-0032, ADR-0034, ADR-0035, ADR-0037, ADR-0038, ADR-0040, ADR-0041.

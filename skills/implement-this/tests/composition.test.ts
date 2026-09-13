@@ -28,7 +28,8 @@ describe("implement-this installation and invocation (INV-2)", () => {
     assert.match(continuation, /fresh session requires its own explicit human instruction/);
     assert.match(continuation, /pause, stop, status-only, or handoff-only/);
     assert.match(continuation, /clean-checkout gate is an entry check/);
-    assert.match(continuation, /unknown or conflicting changes stop/);
+    assert.match(continuation, /recorded revisions, exact paths, index and worktree digests/);
+    assert.match(continuation, /preserve unrelated work/);
   });
   test("documents the single-ticket form only", () => {
     const skill = read("skills/implement-this/SKILL.md");
