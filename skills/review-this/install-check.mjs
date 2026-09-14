@@ -79,25 +79,29 @@ function effectiveBash(bash, command) {
   return result;
 }
 
-function parseAgentBash(agentText) {
-  // The Markdown duplicate carries a YAML-like permission block. Extract the
-  // bash map without a YAML dependency: lines under `  bash:` of the form
+function parseAgentSection(agentText, name) {
+  // The Markdown duplicate carries YAML-like permission blocks. Extract one
+  // map without a YAML dependency: lines under `  <name>:` of the form
   // `    "<pattern>": <decision>`.
   const lines = String(agentText).split("\n");
-  const bash = {};
-  let inBash = false;
+  const map = {};
+  let inSection = false;
   for (const line of lines) {
-    if (/^\s{2}bash:\s*$/.test(line)) {
-      inBash = true;
+    if (new RegExp(`^\\s{2}${name}:\\s*$`).test(line)) {
+      inSection = true;
       continue;
     }
-    if (inBash) {
+    if (inSection) {
       if (/^\s{2}\S/.test(line) && !/^\s{4}/.test(line)) break;
       const m = line.match(/^\s{4}"(.*)":\s*(allow|deny|ask)\s*$/);
-      if (m) bash[m[1]] = m[2];
+      if (m) map[m[1]] = m[2];
     }
   }
-  return bash;
+  return map;
+}
+
+function parseAgentBash(agentText) {
+  return parseAgentSection(agentText, "bash");
 }
 
 function arg(name) {
@@ -161,6 +165,7 @@ function main() {
         "unslopify",
         "ponytail",
         "The installed skill owns the workflow, scope, approval gates, recovery, verification, publication, and stopping conditions",
+        "never authorizes a bypass",
         "prepare-review.mjs",
         "workflow-cli.mjs",
         "publish-review.mjs",
@@ -196,8 +201,35 @@ function main() {
         if (!h.includes("/.kilocode/skills/review-this/") && !h.includes("/.agents/skills/review-this/")) {
           fail(checks, `installed helper allow is not installation-bound: ${h}`);
         }
-        if (h.endsWith("*")) {
-          fail(checks, `installed helper allow has a trailing wildcard: ${h}`);
+      }
+      // Argument-bearing helpers carry a trailing `*` for arguments only.
+      // Positive supported invocations must be allowed; suffix tricks,
+      // chaining, redirection, preloads, and untrusted paths stay denied.
+      const supported = [
+        "node /home/u/.kilocode/skills/review-this/workflow-cli.mjs evidence -",
+        "node /home/u/.agents/skills/review-this/prepare-review.mjs /tmp/kilo/review-this/run/input.json",
+        "node /home/u/.kilocode/skills/review-this/github-facts.mjs -",
+      ];
+      for (const invocation of supported) {
+        if (effectiveBash(bash, invocation) !== "allow") {
+          fail(checks, `installed agent denies a supported helper invocation: ${invocation}`);
+        }
+      }
+      const rejected = [
+        "node /home/u/.kilocode/skills/review-this/workflow-cli.mjs evidence -; rm -rf /",
+        "node /home/u/.kilocode/skills/review-this/workflow-cli.mjs evidence - | tee /tmp/x",
+        "node /home/u/.kilocode/skills/review-this/workflow-cli.mjs > /tmp/x",
+        "node /tmp/pr/review-this/workflow-cli.mjs evidence -",
+        "NODE_OPTIONS=--inspect node /home/u/.kilocode/skills/review-this/workflow-cli.mjs evidence -",
+        "bun /home/u/.kilocode/skills/review-this/workflow-cli.mjs evidence -",
+        "deno run /home/u/.kilocode/skills/review-this/workflow-cli.mjs evidence -",
+        "nodejs /home/u/.kilocode/skills/review-this/workflow-cli.mjs evidence -",
+        "/usr/bin/node /tmp/pr/review-this/workflow-cli.mjs evidence -",
+        "/home/u/.kilocode/skills/review-this/workflow-cli.mjs evidence -",
+      ];
+      for (const invocation of rejected) {
+        if (effectiveBash(bash, invocation) === "allow") {
+          fail(checks, `installed agent allows a forbidden helper invocation: ${invocation}`);
         }
       }
       if (effectiveBash(bash, "git branch -D x") !== "deny") {
@@ -212,6 +244,34 @@ function main() {
       // Least-privilege markers: no unrestricted checkout/switch, no blanket node.
       if (/git checkout\*.*allow|git switch\*.*allow/.test(agent) && !/git checkout\*.*deny/.test(agent)) {
         fail(checks, "installed agent still allows unrestricted checkout/switch");
+      }
+      // Private-file creation with shared-config protection: edit and write
+      // must deny by default, allow only the private run directory, and keep
+      // permission configuration, shared skills, and Agent Manager state
+      // unwritable. External reads must cover the discovered skill roots.
+      for (const tool of ["edit", "write"]) {
+        const map = parseAgentSection(agent, tool);
+        if (Object.keys(map).length === 0) {
+          fail(checks, `installed agent has no parseable ${tool} permission map`);
+        }
+        if (map["*"] !== "deny") {
+          fail(checks, `installed agent ${tool} does not deny by default`);
+        }
+        if (map["/tmp/kilo/review-this/**"] !== "allow") {
+          fail(checks, `installed agent ${tool} cannot create private run-directory files`);
+        }
+        for (const kept of ["**/kilo.jsonc", "**/agent-manager.json", "**/.agents/skills/**"]) {
+          if (map[kept] !== "deny") {
+            fail(checks, `installed agent ${tool} leaves ${kept} writable`);
+          }
+        }
+      }
+      const external = parseAgentSection(agent, "external_directory");
+      if (Object.keys(external).length === 0) {
+        fail(checks, "installed agent has no parseable external_directory permission map");
+      }
+      if (external["*review-this/**"] !== "allow" || external["*unslopify/**"] !== "allow") {
+        fail(checks, "installed agent cannot read the discovered skill roots without prompts");
       }
       checks.push({ file: "agent:prompt-permissions", status: "ok" });
     } catch (error) {

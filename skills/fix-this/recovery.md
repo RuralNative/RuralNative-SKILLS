@@ -43,11 +43,21 @@ path for missing dependencies. Keep secrets, project policy, and host permission
 unchanged. Do not install skills or edit your own permission configuration.
 
 Re-read state before retrying an uncertain write. Make one corrective attempt per
-distinct failure cause, then verify its result and continue in the same invocation.
-Retain the attempted cause and observations across interruption so resume does not
-reset the retry budget. New evidence may identify another cause; repeating the
-same failed action without changed facts is not recovery. Permission denials,
+distinct failure cause and operation, then verify its result and continue in the same invocation.
+Retain the attempted cause, operation, and observations across interruption so resume does not
+reset the retry budget. Normalize the observed cause (case, whitespace, trailing
+punctuation) so reworded errors share one budget; new evidence may identify
+another cause with its own budget. Repeating the same failed action without
+changed facts is not recovery. Permission denials,
 authentication failures, and branch protection are not transient failures.
+
+Bootstrap without assuming a loader API. Prefer the skill loader by identity;
+when the host provides none, read the discovered trusted installation through
+permitted file reads with relative resources bound to that installation. A
+missing tool is not a missing installation, and a denied operation never
+authorizes a bypass or an invented workflow. Isolated helper-defect correction
+below a run directory is a review-this-only path owned by its preparation
+entry point; other roles do not inherit it.
 
 ## Protect local work
 

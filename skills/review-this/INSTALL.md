@@ -22,13 +22,15 @@ worktree, manages workers, runs cloud review, or reads Agent Manager state.
 
 Every bundle includes `recovery.md`. Recoverable helper errors and interrupted
 publication resume within the same authorized stage; the agent preserves actual
-receipts and reconciles native state before retrying an uncertain write. A new
-session still needs a human instruction naming or resuming the target.
+receipts and reconciles native state before retrying an uncertain write. A reproduced
+helper defect may receive one isolated run-local correction per observed cause and
+operation with helper-observed regression receipts and unchanged guards; shared
+installs stay unchanged. A new session still needs a human instruction naming or resuming the target.
 
 ## Requirements
 
 - A GitHub repository with native sub-issue and `blocked_by` relationships linking child tickets to their parent specification.
-- One open pull request against the pinned default branch with a closing reference `Closes #<ticket>`, current head and base SHAs, and compact or legacy implementation evidence.
+- One open pull request against the pinned default branch with a native closing reference to exactly one ticket (observed through `closingIssuesReferences` with full repository identity), current head and base SHAs, and compact or legacy implementation evidence.
 - Node 24 or newer: the bounded `prepare-review.mjs` entry point, the review-only `publish-review.mjs` entry point, the read-only `github-facts.mjs` native reads, and the read-only `workflow-cli.mjs` checks ship in this package next to the shared `workflow-state.ts` and `github-facts.ts` and fail closed on older runtimes.
 - `/unslopify` installed through its registry lane: `npx skills add RuralNative/RuralNative-SKILLS --skill unslopify`.
 - Tracked project permissions in `.kilo/kilo.jsonc` carry the least-privilege `agent.review-this` definition and require no `agent_manager` entry. No fix subagent is used. Command permissions are not an OS sandbox; the helpers enforce their own argument allowlists.
@@ -67,6 +69,16 @@ Verify with the read-only check (explicit roots, safe in CI fixture homes):
 
 ```bash
 node skills/review-this/install-check.mjs --source skills/review-this --install <active-root>/review-this
+```
+
+Synchronize the active installation with the repo-owned path instead of
+hand-editing prompts: it copies only Review This bundles, renders the agent
+definition from the canonical tracked configuration, and keeps a rollback
+backup before replacing anything (ADR-0042).
+
+```bash
+node scripts/sync-review-this.mjs --skill-dest <active-root>/review-this --agent-dest <config-dir>/agent/review-this.md --command-dest <config-dir>/command/review-this.md
+node scripts/sync-review-this.mjs --skill-dest <active-root>/review-this --agent-dest <config-dir>/agent/review-this.md --command-dest <config-dir>/command/review-this.md --apply
 ```
 
 ## Source provenance and trust

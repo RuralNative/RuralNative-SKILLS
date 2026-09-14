@@ -498,3 +498,191 @@ export function decidePublicationResume(input: {
   if (input.hasResumeId) return { action: "resume-once", reason: "resume the same verified pending review once with unchanged pins" };
   return { action: "stop", reason: "no resumable review identified" };
 }
+
+// --- Run-local tooling repair (approved helper-defect path) ------------------
+//
+// A future review may reproduce a helper defect, correct an isolated copy,
+// test it, and resume. It may not alter shared installations, PR source,
+// permissions, requirements, or approval rules. Copies live only below the
+// run directory; shared installs stay unchanged. Guards (permission checks,
+// side-effect guards, validators) stay byte-identical; only operational
+// readers/adapters may change. Test receipts are observed by the helper,
+// never accepted as caller-supplied success flags.
+
+export const TOOLING_REPAIR_RUN_ROOT = "/tmp/kilo/review-this";
+
+export type ToolingRepairOperation =
+  | "observe-target"
+  | "prepare-checkout"
+  | "resolve-policy"
+  | "verify-commands"
+  | "recover-evidence"
+  | "setup-runtime"
+  | "install-deps"
+  | "run-check"
+  | "publish-review";
+
+const REPAIRABLE_HELPER_FILES = new Set([
+  "github-facts.ts",
+  "github-facts.mjs",
+  "gh-review-transport.ts",
+  "targets.ts",
+  "discovery.ts",
+  "review-session.ts",
+  "reconciliation.ts",
+  "orientation.ts",
+]);
+
+const IMMUTABLE_GUARD_FILES = new Set([
+  "prepare-review.ts",
+  "prepare-review.mjs",
+  "workflow-state.ts",
+  "workflow-cli.mjs",
+  "review-policy.ts",
+  "review-authority.ts",
+  "publish-review.ts",
+  "publish-review.mjs",
+  "adapters.ts",
+  "install-check.mjs",
+]);
+
+export function isRepairableHelperFile(file: string): boolean {
+  if (typeof file !== "string" || file === "") return false;
+  if (file.includes("..") || file.startsWith("/") || file.startsWith("~")) return false;
+  if (file.includes("\\") || file.split("/").length !== 1) return false;
+  return REPAIRABLE_HELPER_FILES.has(file);
+}
+
+export function isImmutableGuardFile(file: string): boolean {
+  if (typeof file !== "string" || file === "") return false;
+  const base = file.split("/").pop() ?? "";
+  return IMMUTABLE_GUARD_FILES.has(base);
+}
+
+/** Normalize an observed cause so reworded errors share one retry budget. */
+export function normalizeRepairCause(cause: string): string {
+  return String(cause ?? "")
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, " ")
+    .replace(/[.:;!?,\-_`"'()[\]{}]+$/g, "")
+    .trim()
+    .slice(0, 120);
+}
+
+export function toolingRepairAttemptKey(operation: string, observedCause: string): string {
+  return `${operation}:${normalizeRepairCause(observedCause)}`;
+}
+
+/**
+ * True when the observed cause describes an authorization or gate denial
+ * rather than an operational helper defect. Such causes never authorize an
+ * isolated correction: a `restricted` gate saying no is not a broken reader.
+ */
+export function isToolingRepairAuthDenial(cause: string): boolean {
+  return /\b(403|401|unauthorized|forbidden|authentication|auth[-\s]?denied|permission\s+denied|requires\s+authentication|restricted|branch\s+protection|protected\s+branch)\b/i.test(
+    String(cause ?? ""),
+  );
+}
+
+export interface ToolingRepairRecord {
+  repository: string;
+  prNumber: number;
+  headSha: string;
+  baseSha: string;
+  runId: string;
+  operation: ToolingRepairOperation;
+  observedCause: string;
+  trustedInstallRoot: string;
+  trustedHashes: Record<string, string>;
+  changedFiles: string[];
+  /** Support files copied for isolated execution (package.json, scripts/). */
+  supportFiles?: string[];
+}
+
+export function validateToolingRepairRecord(record: unknown): { ok: true; record: ToolingRepairRecord } | { ok: false; reason: string } {
+  if (record === null || typeof record !== "object" || Array.isArray(record)) {
+    return { ok: false, reason: "tooling repair record must be an object" };
+  }
+  const r = record as Record<string, unknown>;
+  if (typeof r["repository"] !== "string" || !/^[A-Za-z0-9-_.]+\/[A-Za-z0-9-_.]+$/.test(r["repository"] as string)) {
+    return { ok: false, reason: "tooling repair record needs owner/name repository" };
+  }
+  if (!Number.isInteger(r["prNumber"]) || (r["prNumber"] as number) < 1) {
+    return { ok: false, reason: "tooling repair record needs a positive PR number" };
+  }
+  for (const key of ["headSha", "baseSha"] as const) {
+    if (typeof r[key] !== "string" || !/^[a-f0-9]{40,64}$/i.test((r[key] as string).trim())) {
+      return { ok: false, reason: `tooling repair record needs a hex ${key}` };
+    }
+  }
+  if (typeof r["runId"] !== "string" || !/^[A-Za-z0-9._-]{1,64}$/.test(r["runId"] as string)) {
+    return { ok: false, reason: "tooling repair record needs a safe runId" };
+  }
+  const allowedOps: readonly string[] = ["observe-target", "prepare-checkout", "resolve-policy", "verify-commands", "recover-evidence", "setup-runtime", "install-deps", "run-check", "publish-review"];
+  if (typeof r["operation"] !== "string" || !allowedOps.includes(r["operation"] as string)) {
+    return { ok: false, reason: "tooling repair record needs a repairable failed operation" };
+  }
+  if (typeof r["observedCause"] !== "string" || (r["observedCause"] as string).trim() === "") {
+    return { ok: false, reason: "tooling repair record needs the observed cause" };
+  }
+  if (typeof r["trustedInstallRoot"] !== "string" || (r["trustedInstallRoot"] as string).trim() === "") {
+    return { ok: false, reason: "tooling repair record needs the trusted install origin" };
+  }
+  const hashes = r["trustedHashes"];
+  if (hashes === null || typeof hashes !== "object" || Array.isArray(hashes)) {
+    return { ok: false, reason: "tooling repair record needs trusted file hashes" };
+  }
+  for (const [file, hash] of Object.entries(hashes as Record<string, unknown>)) {
+    if (file.includes("..") || file.startsWith("/") || file.includes("\\") || file.split("/").length !== 1) {
+      return { ok: false, reason: `tooling repair record carries a malicious path: ${file.slice(0, 80)}` };
+    }
+    if (typeof hash !== "string" || !/^[a-f0-9]{64}$/.test(hash.toLowerCase())) {
+      return { ok: false, reason: `tooling repair record carries a stale hash for ${file}` };
+    }
+  }
+  if (r["supportFiles"] !== undefined) {
+    if (!Array.isArray(r["supportFiles"])) {
+      return { ok: false, reason: "tooling repair record carries a malformed support file list" };
+    }
+    for (const file of r["supportFiles"] as unknown[]) {
+      if (typeof file !== "string" || file === "" || file.includes("..") || file.startsWith("/") || file.includes("\\")) {
+        return { ok: false, reason: `tooling repair record carries a malicious support path: ${String(file).slice(0, 80)}` };
+      }
+    }
+  }
+  if (!Array.isArray(r["changedFiles"]) || (r["changedFiles"] as unknown[]).length === 0) {
+    return { ok: false, reason: "tooling repair record needs at least one changed helper file" };
+  }
+  for (const file of r["changedFiles"] as unknown[]) {
+    if (typeof file !== "string" || !isRepairableHelperFile(file)) {
+      return { ok: false, reason: `tooling repair cannot change guard or unknown file: ${String(file).slice(0, 80)}` };
+    }
+    if (isImmutableGuardFile(file)) {
+      return { ok: false, reason: `tooling repair cannot change immutable guard: ${file}` };
+    }
+  }
+  return { ok: true, record: r as unknown as ToolingRepairRecord };
+}
+
+/**
+ * One isolated correction per observed cause and operation. Unchanged
+ * failures share one budget even across reworded errors or new run IDs
+ * (causes normalize); distinct evidenced causes receive their own budget.
+ * Interruptions retain the budget via the persisted attempts map.
+ */
+export function decideToolingRepairRetry(
+  operation: string,
+  observedCause: string,
+  attempts: Record<string, number>,
+): { retry: boolean; reason: string; key: string } {
+  const key = toolingRepairAttemptKey(operation, observedCause);
+  if (normalizeRepairCause(observedCause) === "") {
+    return { retry: false, reason: "tooling repair needs an observed cause before budgeting a correction", key };
+  }
+  const used = attempts[key] ?? 0;
+  if (used >= 1) {
+    return { retry: false, reason: `one isolated tooling correction already used for ${operation} with this cause; stop instead of looping`, key };
+  }
+  return { retry: true, reason: `one isolated tooling correction remains for ${operation} with this observed cause`, key };
+}

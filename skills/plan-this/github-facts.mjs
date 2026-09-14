@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Read-only native GitHub facts entry point (ADR-0040).
+// Read-only native GitHub facts entry point (ADR-0040, narrowed by ADR-0042).
 // Narrow allowlist: repository default branch, one issue with body/labels,
 // sub-issues, blocked_by/blocking dependencies, one pull request with refs
 // and native closing links, and one collaborator permission read. No writes,
@@ -8,6 +8,7 @@
 // Exit codes: 0 ok; 2 input or runtime failure.
 import { execFileSync } from "node:child_process";
 import { promises as fs } from "node:fs";
+import { readPullRequestFacts } from "./github-facts.ts";
 
 const ALLOWED = new Set(["repository", "issue", "sub-issues", "blocked-by", "blocking", "pull-request", "permission"]);
 
@@ -105,51 +106,23 @@ function main() {
     if (operation === "pull-request") {
       const prNumber = input.prNumber;
       if (!Number.isInteger(prNumber) || prNumber < 1) fail("prNumber must be a positive integer");
-      const result = gh(["api", `repos/${repository}/pulls/${prNumber}`]);
-      if (!result.ok) fail(result.reason);
-      const raw = parseJson(result.stdout);
-      if (raw === null || typeof raw !== "object") fail("pull-request response is not JSON");
-      const baseBranch = typeof raw.base?.ref === "string" ? raw.base.ref : "";
-      const baseSha = typeof raw.base?.sha === "string" ? raw.base.sha : "";
-      const headBranch = typeof raw.head?.ref === "string" ? raw.head.ref : "";
-      const headSha = typeof raw.head?.sha === "string" ? raw.head.sha : "";
-      if (baseBranch.trim() === "" || baseSha.trim() === "" || headBranch.trim() === "" || headSha.trim() === "") {
-        fail("pull-request refs or revisions are missing");
-      }
-      const timeline = gh(["api", "--paginate", "--slurp", `repos/${repository}/issues/${prNumber}/timeline`]);
-      if (!timeline.ok) fail(`closing-link read failed: ${timeline.reason}`);
-      let pages = null;
-      try {
-        pages = JSON.parse(timeline.stdout);
-      } catch {
-        fail("timeline pages are not complete JSON");
-      }
-      const flat = Array.isArray(pages) && pages.length > 0 && pages.every((p) => Array.isArray(p)) ? pages.flat() : pages;
-      if (!Array.isArray(flat)) fail("timeline pages are not complete JSON");
-      const closingIssues = [];
-      for (const entry of flat) {
-        if (entry === null || typeof entry !== "object") fail("timeline entry is not an object");
-        if (entry.event !== "connected") continue;
-        const url = String(entry.source?.issue?.html_url ?? entry.source?.issue?.url ?? entry.html_url ?? entry.url ?? "");
-        const m = url.match(/github\.com\/([A-Za-z0-9-_.]+)\/([A-Za-z0-9-_.]+)\/issues\/(\d+)/i);
-        if (!m) continue;
-        closingIssues.push({ owner: m[1], repo: m[2], number: Number(m[3]) });
-      }
-      const merged = raw.merged_at !== null && raw.merged_at !== undefined && String(raw.merged_at) !== "";
+      const facts = readPullRequestFacts((args) => gh(args), repository, prNumber);
+      if (facts.status.kind !== "complete") fail(`pull-request read ${facts.status.kind}: ${facts.status.reason}`);
+      if (facts.closingStatus.kind !== "complete") fail(`closing-link read ${facts.closingStatus.kind}: ${facts.closingStatus.reason}`);
       process.stdout.write(
         `${JSON.stringify({
           ok: true,
           number: prNumber,
           repository,
-          state: merged ? "merged" : raw.state,
-          draft: raw.draft === true,
-          baseBranch,
-          baseSha,
-          headBranch,
-          headSha,
-          mergeable: typeof raw.mergeable === "boolean" ? raw.mergeable : null,
-          mergeCommitSha: raw.merge_commit_sha ?? "",
-          closingIssues,
+          state: facts.state,
+          draft: facts.draft,
+          baseBranch: facts.baseBranch,
+          baseSha: facts.baseSha,
+          headBranch: facts.headBranch,
+          headSha: facts.headSha,
+          mergeable: facts.mergeable,
+          mergeCommitSha: facts.mergeCommitSha,
+          closingIssues: facts.closingIssues,
           closingStatus: "complete",
         })}\n`,
       );

@@ -279,3 +279,15 @@ _Avoid_: same-diff freshness (the superseded touch-only check), drift check
 **Clarification record**:
 A separate accepted decision record that recovers a legacy ADR's lost rationale from cited repository or tracker evidence and leaves the original verbatim; unproven rationale is a cache gap marked `unknown`, never invented (ADR-0028).
 _Avoid_: ADR rewrite, amendment
+
+**Complete-empty**:
+A native connection read that succeeded and exhausted pagination with zero links, with the observed node count reconciling the connection count. Missing, forbidden, malformed, partial, or truncated reads never count as complete-empty (ADR-0042).
+_Avoid_: empty result (when the validated observation is meant)
+
+**Cause-and-operation budget**:
+The retry bound for run-local tooling repair: one isolated correction per observed cause and operation, with reworded errors sharing one budget through normalization and distinct evidenced causes receiving their own. The budget survives interruption and new run IDs never reset an unchanged failure (ADR-0042).
+_Avoid_: retry count (when the cause-bound budget is meant)
+
+**Run-local isolated copy**:
+The corrected copy of named operational readers a reproduced helper defect receives below `/tmp/kilo/review-this/<runId>/`. The installed entry point prepares, validates, executes, and retries through it with helper-observed receipts and unchanged guards; shared installs, PR source, permissions, requirements, and approvals stay unchanged (ADR-0042).
+_Avoid_: patched install (the shared installation never changes)

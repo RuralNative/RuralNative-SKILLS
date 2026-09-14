@@ -127,8 +127,20 @@ if (args[0] === "api" && args[1] === "--method" && args[2] === "PATCH") {
   emit(prJson());
   process.exit(0);
 }
+if (args[0] === "api" && args[1] === "graphql") {
+  const numArg = args.find((arg) => typeof arg === "string" && arg.startsWith("number="));
+  const requested = numArg ? Number(numArg.slice("number=".length)) : state.prNumber;
+  const afterArg = args.find((arg) => typeof arg === "string" && arg.startsWith("after="));
+  if (afterArg) {
+    emit({ data: { repository: { pullRequest: { number: requested, closingIssuesReferences: { totalCount: 1, nodes: [], pageInfo: { hasNextPage: false, endCursor: null } } } } } });
+    process.exit(0);
+  }
+  const parts = String(repository).split("/");
+  emit({ data: { repository: { pullRequest: { number: requested, closingIssuesReferences: { totalCount: 1, nodes: [{ number: state.ticketNumber, repository: { nameWithOwner: repository } }], pageInfo: { hasNextPage: false, endCursor: null } } } } } });
+  process.exit(0);
+}
 if (args[0] === "api" && args.includes("--paginate") && resource.endsWith("/timeline")) {
-  emit([[{ event: "connected", source: { issue: { html_url: "https://github.com/" + repository + "/issues/" + state.ticketNumber } } }]]);
+  emit([[{ event: "cross-referenced", source: { issue: { html_url: "https://github.com/" + repository + "/issues/999999" } } }]]);
   process.exit(0);
 }
 if (resource.endsWith("/parent")) { emit({ number: state.parentNumber }); process.exit(0); }
@@ -555,5 +567,23 @@ describe("prepare-review.mjs scoped evidence repair", () => {
     assert.equal(result.stdout.kind, "restricted");
     assert.match(String(result.stdout.reason), /bound to head/);
     assert.equal(patches(fixture).length, 0);
+  });
+
+  test("native closing links without timeline events still recover evidence (#312 pattern)", () => {
+    const current = currentRequirementsRevision();
+    const stale = staleAdaptedPin(current);
+    const fixture = setupFixture((headSha) => `P1.\n\n${staleEvidenceBlock(stale, headSha)}\n\nCloses #${TICKET}\n`);
+    const result = invoke(fixture, inputFor(fixture, ticket297Body()));
+    assert.equal(result.exit, 0, JSON.stringify(result.stdout));
+    assert.equal(result.stdout.repaired, true);
+    assert.equal(patches(fixture).length, 1);
+    const calls = fs.existsSync(fixture.callsPath)
+      ? fs.readFileSync(fixture.callsPath, "utf8").split("\n").filter(Boolean).map((line) => JSON.parse(line) as string[])
+      : [];
+    assert.ok(calls.some((args) => args[1] === "graphql"), "native closing-link read uses GraphQL");
+    const timelines = calls.filter((args) => args.some((a) => String(a).includes("/timeline")));
+    for (const args of timelines) {
+      assert.ok(!JSON.stringify(args).includes("connected"), "no timeline connected event supplies the association");
+    }
   });
 });
