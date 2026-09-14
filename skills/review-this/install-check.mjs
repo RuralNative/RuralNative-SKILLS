@@ -4,15 +4,18 @@
 // Accepts explicit source/install roots so CI can exercise it in isolated
 // fixture homes without touching the user's home directory or credentials.
 // Checks complete bundle file sets and bytes, agent prompt/permissions,
-// command routing, and the runtime-resolved skill path.
+// command routing, and the runtime-resolved skill path. Bundle parity is
+// host-independent; Kilo agent/command validation runs only with
+// --host kilo (the default). Use --host generic for Claude/Codex/OpenCode
+// bundle verification without Kilo-specific requirements.
 //
 // Usage:
 //   node install-check.mjs --source <srcSkillDir> --install <installSkillDir>
-//     [--agent <agentMd>] [--command <commandMd>]
+//     [--agent <agentMd>] [--command <commandMd>] [--host kilo|generic]
 //
 // Exit 0 when every check passes; exit 1 with JSON diagnostics otherwise.
 // Never writes, installs, downloads, or mutates configuration.
-import { readFileSync, existsSync, statSync } from "node:fs";
+import { readFileSync, existsSync, lstatSync } from "node:fs";
 import path from "node:path";
 
 const REQUIRED_SKILL_FILES = [
@@ -20,6 +23,7 @@ const REQUIRED_SKILL_FILES = [
   "recovery.md",
   "INSTALL.md",
   "package.json",
+  "agents/openai.yaml",
   "targets.ts",
   "discovery.ts",
   "review-session.ts",
@@ -47,6 +51,7 @@ const BYTE_PARITY_FILES = [
   "recovery.md",
   "INSTALL.md",
   "package.json",
+  "agents/openai.yaml",
   "targets.ts",
   "discovery.ts",
   "review-session.ts",
@@ -114,24 +119,43 @@ function fail(checks, message) {
   process.exit(1);
 }
 
-function main() {
-  const source = arg("--source");
-  const install = arg("--install");
-  const agentMd = arg("--agent");
-  const commandMd = arg("--command");
-  const checks = [];
-  if (!source || !install) {
-    fail(checks, "missing --source and --install skill roots");
+function isSymlinked(filePath) {
+  try {
+    return lstatSync(filePath).isSymbolicLink();
+  } catch {
+    return false;
   }
+}
+
+function checkCodexPolicy(text) {
+  // Structural check without a YAML dependency: ignore full-line comments,
+  // then require exactly one explicit false and no true. A commented-out
+  // false never passes.
+  const codeLines = String(text)
+    .split("\n")
+    .filter((line) => !/^\s*#/.test(line));
+  const code = codeLines.join("\n");
+  const falses = code.match(/allow_implicit_invocation\s*:\s*false\b/g) ?? [];
+  const trues = code.match(/allow_implicit_invocation\s*:\s*true\b/g) ?? [];
+  return falses.length === 1 && trues.length === 0;
+}
+
+function checkBundle(source, install, checks) {
+  // Host-independent bundle parity: full file set plus byte equality.
+  // A Claude or Codex installation passes here with no Kilo agent YAML,
+  // no kilo_local_recall, and no /.kilocode/ pathname.
+  // This proves only that the install equals the local source. It does not
+  // prove the source itself is the reviewed revision; install from a pinned
+  // reviewed commit and record that provenance separately.
   for (const file of REQUIRED_SKILL_FILES) {
     const src = path.join(source, file);
     const dst = path.join(install, file);
-    if (!existsSync(src) || !statSync(src).isFile()) {
-      checks.push({ file, status: "missing-source" });
+    if (!existsSync(src) || isSymlinked(src) || !lstatSync(src).isFile()) {
+      checks.push({ file, status: isSymlinked(src) ? "symlinked-source" : "missing-source" });
       continue;
     }
-    if (!existsSync(dst) || !statSync(dst).isFile()) {
-      checks.push({ file, status: "missing-install" });
+    if (!existsSync(dst) || isSymlinked(dst) || !lstatSync(dst).isFile()) {
+      checks.push({ file, status: isSymlinked(dst) ? "symlinked-install" : "missing-install" });
       continue;
     }
     if (BYTE_PARITY_FILES.includes(file)) {
@@ -154,6 +178,46 @@ function main() {
     checks.push({ file: "SKILL.md:runtime-path", status: "ok" });
   } catch {
     fail(checks, "installed SKILL.md is unreadable");
+  }
+  // Codex invocation policy ships with the bundle and must deny implicit
+  // invocation; unknown metadata is never an enforcement claim.
+  try {
+    if (isSymlinked(path.join(install, "agents/openai.yaml"))) {
+      fail(checks, "installed agents/openai.yaml is a symlink");
+    }
+    const policy = readFileSync(path.join(install, "agents/openai.yaml"), "utf8");
+    if (!checkCodexPolicy(policy)) {
+      fail(checks, "installed agents/openai.yaml must set allow_implicit_invocation: false");
+    }
+    checks.push({ file: "agents/openai.yaml:policy", status: "ok" });
+  } catch {
+    fail(checks, "installed agents/openai.yaml is unreadable");
+  }
+}
+
+function main() {
+  const source = arg("--source");
+  const install = arg("--install");
+  const agentMd = arg("--agent");
+  const commandMd = arg("--command");
+  const host = arg("--host") ?? "kilo";
+  const checks = [];
+  if (!source || !install) {
+    fail(checks, "missing --source and --install skill roots");
+  }
+  if (host !== "kilo" && host !== "generic") {
+    fail(checks, `unknown --host ${host}; expected kilo|generic`);
+  }
+  checkBundle(source, install, checks);
+  if (host !== "kilo") {
+    // Generic host path: bundle parity above is the full gate. Kilo-specific
+    // agent/command files are not required and never cause a failure here.
+    const bad = checks.filter((c) => c.status !== "ok");
+    if (bad.length > 0) {
+      fail(checks, `${bad.length} installation check(s) failed`);
+    }
+    process.stdout.write(`${JSON.stringify({ ok: true, checks, host }, null, 2)}\n`);
+    return;
   }
   if (agentMd) {
     try {

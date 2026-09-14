@@ -30,17 +30,21 @@ The development workflow is an opinionated adapter over [Matt Pocock's engineeri
 
 ```bash
 npx skills add mattpocock/skills --skill grill-with-docs
+npx skills add mattpocock/skills --skill grilling
+npx skills add mattpocock/skills --skill domain-modeling
 npx skills add mattpocock/skills --skill to-spec
 npx skills add mattpocock/skills --skill to-tickets
-npx skills add mattpocock/skills --skill implement
 ```
 
-Each dependency ships at a verified source under `skills/engineering/` in the upstream repository:
+Each dependency ships at a verified source in the upstream repository:
 
 - [`grill-with-docs`](https://github.com/mattpocock/skills/tree/main/skills/engineering/grill-with-docs) — grills a plan into decisions while recording ADRs and glossary entries.
+- [`grilling`](https://github.com/mattpocock/skills/tree/main/skills/productivity/grilling) — decision-tree interview loaded by `grill-with-docs`.
+- [`domain-modeling`](https://github.com/mattpocock/skills/tree/main/skills/engineering/domain-modeling) — glossary and ADR capture loaded by `grill-with-docs`.
 - [`to-spec`](https://github.com/mattpocock/skills/tree/main/skills/engineering/to-spec) — turns the agreed conversation into a published parent specification.
 - [`to-tickets`](https://github.com/mattpocock/skills/tree/main/skills/engineering/to-tickets) — breaks the spec into tracer-bullet tickets with blocking edges.
-- [`implement`](https://github.com/mattpocock/skills/tree/main/skills/engineering/implement) — implements one ticket in the current checkout.
+
+`implement-this` implements directly in the current checkout with no `/implement` delegation.
 
 Then install the four local workflow adapters:
 
@@ -57,7 +61,7 @@ Their sources live in this repository under [`skills/plan-this`](https://github.
 
 - Any codebase an agent can read — no runtime, framework, or language requirement.
 - `unslopify` required before `document-for-agents` or `document-for-humans`; install it first. The `document-for-humans` workflow also requires an established agent-first doc tree from `document-for-agents`.
-- The workflow skills require Matt Pocock's `grill-with-docs`, `to-spec`, `to-tickets`, and `implement` installed before them.
+- The workflow skills require Matt Pocock's `grill-with-docs`, `grilling`, `domain-modeling`, `to-spec`, and `to-tickets` installed before planning. `implement-this` has no `/implement` dependency.
 - Optional: Python 3 for the advisory scanner at `skills/unslopify/scanner.py` (stdlib only, no network). When absent, the workflow continues model-only with the same scope and preservation rules.
 
 ## Our Shelf
@@ -127,7 +131,7 @@ Planning asks only when repository facts and the confirmed task cannot decide a 
 
 **Local review.** One frontier pass reviews every pull-request head using `/review-this` defaults and applicable repository rules. This repository has no root `REVIEW.md`; nothing is created when it is absent. Head-only governing changes are reviewable violations with blocking findings; verified owner decisions supply only their named exceptions. Policy revisions publish as the single-line `review-policy-v1` carrier. There is no cloud review and no fix subagent. Blocking findings cite a rule, criterion, or reproduced failure.
 
-**Hosts.** Any host that can run `/implement`, run focused tests, and push a branch works. No worktree manager, cloud review, or nested-agent platform is required.
+**Hosts.** Kilo Code is the verified reference. OpenCode CLI, Claude Code, and Codex use native invocation (`/plan-this`, `/implement-this`, `/review-this`, `/fix-this` where slash commands exist, `$plan-this` and siblings or native skill selection in Codex, native skill loading elsewhere) with unchanged identities and stage boundaries, but live discovery, literal input, companion locks, and effective permissions are NOT VERIFIED. On OpenCode, slash-argument forwarding is unsupported and restricted on dev-source evidence only, not a released-CLI check; no-argument selection with task or target text in a separate ordinary message is a candidate route, not certified literal. Locked upstream planning companions pause for explicit human invocation in the same session. No worktree manager, cloud review, custom runner, or nested-agent platform is required. Named blockers: no pinned released-host versions, no live literal-input receipts, no native permission enforcement checks, and no cross-host artifact handoff proof. Until those land, do not call other hosts production-proven.
 
 ## AI-First Workflow Integration
 

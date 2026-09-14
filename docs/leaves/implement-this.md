@@ -18,7 +18,7 @@ are superseded only by this scope.
 
 1. **INV-1** — `name` equals folder `implement-this`.
 2. **INV-2** — INSTALL: `npx skills add ... --skill implement-this`, manual copy.
-3. **INV-3** — Narrowed by ADR-0034: self-contained single stage, one `Issue #0` slot, `disable-model-invocation`, explicit human invocation, single ticket, `/unslopify` model-invocable. No `/implement` invocation and no mandatory `/code-review`.
+3. **INV-3** — Narrowed by ADR-0034: self-contained single stage, one `Issue #0` slot, explicit human invocation, single ticket, `/unslopify` model-invocable. No `/implement` invocation and no mandatory `/code-review`. Narrowed by ADR-0043: native invocation (`/implement-this #<n>` where supported, `$implement-this` or picker in Codex, native loading elsewhere); Codex `agents/openai.yaml` denies implicit invocation without breaking explicit loading.
 4. **INV-4** — Narrowed by ADR-0034: no `/implement` dependency; `/unslopify` for prose; route `AGENTS.md → ARCHITECTURE.md → seam leaf → CONTEXT.md → ADRs`.
 5. **INV-5** — PR-only: one PR against the pinned repository default branch, `Closes #<ticket>`; never push directly to the default branch, never force-push. Narrowed by ADR-0040: the default branch reads from GitHub and pins for the run; a mid-run change or incompatible existing PR stops, never silent retarget.
 6. **INV-6** — Retired by ADR-0031: isolated Agent Manager worker per ticket with ≤3/stage and ≤4 workspace caps. Current: one ticket in the current checkout; clean checkout required; branch creation only in that checkout; no worktree, session, or Agent Manager state.
@@ -62,4 +62,4 @@ Regression: `node --test tests/github-facts.test.ts`. Reference:
 
 ## Links
 
-Glossary: `CONTEXT.md`. Decisions: ADR-0014, 0015, 0019, 0021, 0023, 0024, 0031, 0032, 0034, 0037, 0038, 0040, 0041. Redirect: `docs/leaves/ext/implement-this.md`.
+Glossary: `CONTEXT.md`. Decisions: ADR-0014, 0015, 0019, 0021, 0023, 0024, 0031, 0032, 0034, 0037, 0038, 0040, 0041, 0043. Redirect: `docs/leaves/ext/implement-this.md`.

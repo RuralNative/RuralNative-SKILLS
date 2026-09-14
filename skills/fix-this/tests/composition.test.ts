@@ -71,3 +71,26 @@ describe("final-stage contract (INV-5, INV-6, INV-13, INV-14)", () => {
     assert.ok(leaf.includes("INV-13"));
   });
 });
+
+describe("fix-this portable native invocation (ADR-0043)", () => {
+  test("recognizes slash, Codex explicit, and native loading with exact PR reference", () => {
+    const skill = read("skills/fix-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(skill.includes("/fix-this <target>"), "slash form retained");
+    assert.ok(skill.includes("$fix-this"), "Codex explicit form");
+    assert.ok(n.includes("native skill loading"), "native loading");
+    assert.ok(n.includes("skill identity `fix-this` stays unchanged"), "stable identity");
+    assert.ok(n.includes("issue numbers never resolve here"), "issue rejection retained");
+  });
+
+  test("forbids OpenCode slash-argument forwarding", () => {
+    const skill = read("skills/fix-this/SKILL.md");
+    assert.ok(skill.includes("supplied outside slash-command arguments"), "outside-args guidance");
+    assert.equal(skill.includes("$ARGUMENTS"), false, "skill must not forward $ARGUMENTS");
+  });
+
+  test("Codex policy denies implicit invocation", () => {
+    const policy = read("skills/fix-this/agents/openai.yaml");
+    assert.ok(policy.includes("allow_implicit_invocation: false"), "implicit invocation denied");
+  });
+});

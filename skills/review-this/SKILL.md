@@ -5,7 +5,13 @@ description: Review exactly one pull request in the current checkout. Use /revie
 
 Review the single pull request in the current checkout with one frontier pass.
 
+One explicit human invocation of `/review-this` authorizes only its single pull request in this checkout. An agent cannot traverse the chain unattended.
+
 There is no `/code-review` dependency and no cloud review. The frontier reviewer performs one Standards-plus-Spec pass in-session, reports the two checklists separately, verifies each blocking claim against the pinned diff, publishes the review to the pull request, and stops. It never applies fixes, commits, pushes, merges, labels, promotes, or closes.
+
+Native invocation: `/review-this <target>` where the host supports slash commands, `$review-this` or native skill selection in Codex, and native skill loading elsewhere. Skill identity `review-this` stays unchanged. One pull-request number, URL, or one issue resolving to one open pull request selects the target; preserve the exact reference.
+
+On OpenCode, prefer skill selection with the target supplied outside slash-command arguments when the release preprocesses slash arguments. Slash-argument forwarding is unsupported on dev-source evidence only; unsupported forms are restricted, never silently treated as literal. The separate-message route is a candidate, not certified literal; live host checks are NOT VERIFIED. Keep execution in the main session, not a subtask.
 
 ## Rules
 

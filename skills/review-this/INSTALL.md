@@ -47,6 +47,8 @@ npx skills add RuralNative/RuralNative-SKILLS --skill review-this
 
 Manual fallback:
 
+Native hosts: `/review-this <target>` where slash commands exist; `$review-this` or native skill selection in Codex with `agents/openai.yaml` denying implicit invocation; `.claude/skills/review-this/SKILL.md` for Claude Code (a supported symlink may share the bundle); `.agents/skills` and OpenCode-native skill locations where supported. Live host checks are NOT VERIFIED. On OpenCode, prefer skill selection with the target supplied outside slash-command arguments; slash-argument forwarding is unsupported on dev-source evidence only, and the separate-message route is a candidate, not certified literal. Keep execution in the main session, not a subtask. Claude `allowed-tools` is not a deny list; Codex sandbox and approval rules stay distinct with narrow helper approvals and private input-file access only.
+
 Copying to `~/.agents/skills/review-this/` alone is insufficient for this
 session's registry: discover the active skill root on installation rather than
 asserting universal precedence, and install every changed workflow bundle the
@@ -65,10 +67,11 @@ cp -r skills/review-this <active-root>/review-this
 cp -r skills/fix-this <active-root>/fix-this
 ```
 
-Verify with the read-only check (explicit roots, safe in CI fixture homes):
+Verify with the read-only check (explicit roots, safe in CI fixture homes). The check proves the install equals the local source only; install from a pinned reviewed commit and record that provenance separately:
 
 ```bash
 node skills/review-this/install-check.mjs --source skills/review-this --install <active-root>/review-this
+node skills/review-this/install-check.mjs --source skills/review-this --install <active-root>/review-this --host generic
 ```
 
 Synchronize the active installation with the repo-owned path instead of

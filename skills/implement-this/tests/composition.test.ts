@@ -100,3 +100,27 @@ describe("evidence and verification (INV-13, INV-15, INV-16)", () => {
     assert.ok(leaf.includes("INV-7"));
   });
 });
+
+describe("implement-this portable native invocation (ADR-0043)", () => {
+  test("recognizes slash, Codex explicit, and native loading with exact ticket preservation", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(skill.includes("/implement-this #<n>"), "slash form retained");
+    assert.ok(skill.includes("$implement-this"), "Codex explicit form");
+    assert.ok(n.includes("native skill loading"), "native loading");
+    assert.ok(n.includes("skill identity `implement-this` stays unchanged"), "stable identity");
+    assert.ok(n.includes("preserve the exact ticket reference"), "exact preservation");
+  });
+
+  test("has no upstream implement delegation and no slash-argument forwarding", () => {
+    const skill = read("skills/implement-this/SKILL.md");
+    assert.ok(skill.includes("no `/implement` delegation"), "no delegation stated");
+    assert.equal(skill.includes("$ARGUMENTS"), false, "skill must not forward $ARGUMENTS");
+    assert.ok(skill.includes("supplied outside slash-command arguments"), "OpenCode outside-args guidance");
+  });
+
+  test("Codex policy denies implicit invocation", () => {
+    const policy = read("skills/implement-this/agents/openai.yaml");
+    assert.ok(policy.includes("allow_implicit_invocation: false"), "implicit invocation denied");
+  });
+});

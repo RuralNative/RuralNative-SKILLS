@@ -104,3 +104,33 @@ describe("review policy (INV-16, INV-17, INV-18)", () => {
     assert.ok(skill.includes("effectivePolicyRevision"));
   });
 });
+
+describe("review-this portable native invocation (ADR-0043)", () => {
+  test("recognizes slash, Codex explicit, and native loading with exact reference", () => {
+    const skill = read("skills/review-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(skill.includes("/review-this <target>"), "slash form retained");
+    assert.ok(skill.includes("$review-this"), "Codex explicit form");
+    assert.ok(n.includes("native skill loading"), "native loading");
+    assert.ok(n.includes("skill identity `review-this` stays unchanged"), "stable identity");
+    assert.ok(skill.includes("Keep execution in the main session, not a subtask"), "main session");
+    assert.ok(
+      skill.includes("One explicit human invocation of `/review-this` authorizes only its single pull request"),
+      "explicit human authorization retained",
+    );
+  });
+
+  test("forbids OpenCode slash-argument forwarding", () => {
+    const skill = read("skills/review-this/SKILL.md");
+    const n = norm(skill);
+    assert.ok(skill.includes("supplied outside slash-command arguments"), "outside-args guidance");
+    assert.ok(n.includes("slash-argument forwarding is unsupported"), "unsupported marked");
+    assert.equal(skill.includes("$ARGUMENTS"), false, "skill must not forward $ARGUMENTS");
+  });
+
+  test("Codex policy denies implicit invocation and ships in the bundle", () => {
+    const policy = read("skills/review-this/agents/openai.yaml");
+    assert.ok(policy.includes("allow_implicit_invocation: false"), "implicit invocation denied");
+    assert.ok(fs.existsSync(path.join(ROOT, "skills/review-this/agents/openai.yaml")), "policy ships");
+  });
+});

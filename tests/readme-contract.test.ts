@@ -38,17 +38,38 @@ describe("README contract (ADR-0031, ADR-0035)",()=>{
     assert.notEqual(instIdx,-1,"missing workflow skills install subsection");
     const sec=section(instIdx);
     const mp=[...bashCmds(sec,/npx skills add mattpocock\/skills --skill ([a-z-]+)/g)].map(m=>m[1]);
-    assert.deepEqual(mp,["grill-with-docs","to-spec","to-tickets","implement"]);
+    assert.deepEqual(mp,["grill-with-docs","grilling","domain-modeling","to-spec","to-tickets"]);
     const local=[...bashCmds(sec,/npx skills add RuralNative\/RuralNative-SKILLS --skill ([a-z-]+)/g)].map(m=>m[1]);
     assert.deepEqual(local,["plan-this","implement-this","review-this","fix-this"]);
   });
 
-  test("each Matt Pocock dependency links its verified source under skills/engineering",()=>{
-    const deps=["grill-with-docs","to-spec","to-tickets","implement"];
-    for(const dep of deps){
-      const link=`https://github.com/mattpocock/skills/tree/main/skills/engineering/${dep}`;
-      assert.ok(readme.includes(link),`missing verified source link ${link}`);
+  test("each Matt Pocock dependency links its verified source",()=>{
+    const deps={
+      "grill-with-docs": "skills/engineering/grill-with-docs",
+      "grilling": "skills/productivity/grilling",
+      "domain-modeling": "skills/engineering/domain-modeling",
+      "to-spec": "skills/engineering/to-spec",
+      "to-tickets": "skills/engineering/to-tickets",
+    };
+    for(const [dep, dir] of Object.entries(deps)){
+      const link=`https://github.com/mattpocock/skills/tree/main/${dir}`;
+      assert.ok(readme.includes(link),`missing verified source link ${link} for ${dep}`);
     }
+  });
+
+  test("implement-this has no upstream implement dependency",()=>{
+    assert.ok(readme.includes("no `/implement` delegation"),"README must state implement-this has no /implement delegation");
+    assert.equal(/npx skills add mattpocock\/skills --skill implement\b/.test(readme),false,"README must not require upstream implement");
+  });
+
+  test("native host invocation is documented without slash-argument forwarding",()=>{
+    const wfSec=wfSection();
+    assert.ok(/\$plan-this/.test(readme),"README must document Codex $plan-this form");
+    assert.ok(/no-argument selection|select the skill with no arguments/.test(wfSec),"README must document OpenCode no-argument selection");
+    assert.ok(/slash-argument forwarding is unsupported/.test(wfSec),"README must mark slash-argument forwarding unsupported");
+    assert.ok(/NOT VERIFIED/.test(wfSec),"README must mark live host checks NOT VERIFIED");
+    assert.ok(/candidate.*not certified literal/.test(wfSec),"README must mark separate-message route as candidate");
+    assert.ok(/Kilo Code is the verified reference/.test(wfSec),"README must keep Kilo as verified reference");
   });
 
   test("current checkout with no workers",()=>{

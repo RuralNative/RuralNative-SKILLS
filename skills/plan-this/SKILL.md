@@ -7,6 +7,12 @@ Run this planning-only workflow: `/grill-with-docs` → `/to-spec` → `/to-tick
 
 One direct `/plan-this <task>` invocation is the explicit human invocation that authorizes the full interactive `/grill-with-docs` → `/to-spec` → `/to-tickets` chain; publication itself still waits for the separate explicit approval gate in the rules below. `/unslopify` remains model-invocable.
 
+Native invocation: `/plan-this <task>` where the host supports slash commands, `$plan-this` or native skill selection in Codex, and native skill loading elsewhere. Skill identity `plan-this` stays unchanged. The explicit human stage selection plus the original human task text together authorize this run; selection alone authorizes no target-specific work or publication. Preserve the task text exactly as requirements data in the canonical task slot with no truncation or substitution. Live host checks are NOT VERIFIED.
+
+When a required companion denies model invocation (upstream companions may carry `disable-model-invocation`), preserve the approved plan and canonical publication rules, then pause for the human's same-session invocation of that companion. Do not fall through to upstream default templates, claimable parent labels, or premature publication.
+
+On OpenCode, do not pass free-form task text as slash-command arguments: the inspected floating dev renderer substitutes or appends arguments before shell and file expansion, not a released-CLI result. Select the skill with no arguments and supply the task text in a separate ordinary message in the same session; that separate-message route is a candidate, not certified literal. Unsupported slash-argument forms are restricted, never silently treated as literal.
+
 ## Contract
 
 - Read `recovery.md` on entry, after interruption, and before reporting a blocker. Recover the original request and prior approval from human messages; resume the decision tree and already-published native issue identities instead of restarting planning. Dirty source files do not block planning and stay untouched.

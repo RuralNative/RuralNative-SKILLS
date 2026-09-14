@@ -1,0 +1,5 @@
+interface:
+  display_name: "Fix This"
+  short_description: "Finalize one reviewed pull request, verify, merge, bookkeep"
+policy:
+  allow_implicit_invocation: false

@@ -99,6 +99,61 @@ describe("sync-review-this in fixture homes", () => {
     }
   });
 
+  test("Codex policy ships through sync with rollback", () => {
+    const { skillDest, agentDest, commandDest } = fixture();
+    try {
+      fs.writeFileSync(agentDest, renderCanonicalAgentMd());
+      fs.copyFileSync(path.join(repoRoot(), ".kilo", "command", "review-this.md"), commandDest);
+      fs.appendFileSync(path.join(skillDest, "agents", "openai.yaml"), "\n# stale\n");
+      const args = ["--skill-dest", skillDest, "--agent-dest", agentDest, "--command-dest", commandDest];
+      const drifted = run(args);
+      assert.equal(drifted.exit, 1, JSON.stringify(drifted.json));
+      assert.ok(drifted.json.drift.some((d: any) => d.file === "agents/openai.yaml"), "policy drift reported");
+      const applied = run([...args, "--apply"]);
+      assert.equal(applied.exit, 0, JSON.stringify(applied.json));
+      assert.equal(fs.readFileSync(path.join(skillDest, "agents", "openai.yaml"), "utf8"), fs.readFileSync(path.join(SKILL_SRC, "agents", "openai.yaml"), "utf8"));
+    } finally {
+      fs.rmSync(path.dirname(path.dirname(skillDest)), { recursive: true, force: true });
+    }
+  });
+
+  test("upgrade from pre-policy bundle creates missing agents dir", () => {
+    const { skillDest, agentDest, commandDest } = fixture();
+    try {
+      fs.writeFileSync(agentDest, renderCanonicalAgentMd());
+      fs.copyFileSync(path.join(repoRoot(), ".kilo", "command", "review-this.md"), commandDest);
+      fs.rmSync(path.join(skillDest, "agents"), { recursive: true, force: true });
+      const args = ["--skill-dest", skillDest, "--agent-dest", agentDest, "--command-dest", commandDest];
+      const drifted = run(args);
+      assert.equal(drifted.exit, 1, JSON.stringify(drifted.json));
+      assert.ok(drifted.json.drift.some((d: any) => d.file === "agents/openai.yaml"), "missing policy reported");
+      const applied = run([...args, "--apply"]);
+      assert.equal(applied.exit, 0, JSON.stringify(applied.json));
+      assert.equal(fs.readFileSync(path.join(skillDest, "agents", "openai.yaml"), "utf8"), fs.readFileSync(path.join(SKILL_SRC, "agents", "openai.yaml"), "utf8"));
+    } finally {
+      fs.rmSync(path.dirname(path.dirname(skillDest)), { recursive: true, force: true });
+    }
+  });
+
+  test("symlinked bundle entries drift and apply refuses to follow them", () => {
+    const { home, skillDest, agentDest, commandDest } = fixture();
+    try {
+      const outside = path.join(home, "victim.txt");
+      fs.writeFileSync(outside, "original\n");
+      const target = path.join(skillDest, "agents", "openai.yaml");
+      fs.rmSync(target);
+      fs.symlinkSync(outside, target);
+      const args = ["--skill-dest", skillDest, "--agent-dest", agentDest, "--command-dest", commandDest];
+      const drifted = run(args);
+      assert.equal(drifted.exit, 1, JSON.stringify(drifted.json));
+      const applied = run([...args, "--apply"]);
+      assert.equal(applied.exit, 1, JSON.stringify(applied.json));
+      assert.equal(fs.readFileSync(outside, "utf8"), "original\n");
+    } finally {
+      fs.rmSync(home, { recursive: true, force: true });
+    }
+  });
+
   test("wrong destinations are refused", () => {
     const { home, skillDest, agentDest, commandDest } = fixture();
     try {

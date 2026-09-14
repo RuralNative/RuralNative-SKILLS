@@ -15,7 +15,8 @@
 // Without --apply, exits 1 with a JSON drift report when destinations differ.
 // With --apply, writes changed files after a timestamped rollback backup and
 // exits 0. Never writes installs, downloads, or mutates anything else.
-import { cpSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, lstatSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { openSync, writeSync, closeSync, constants } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -30,6 +31,7 @@ const BUNDLE_FILES = [
   "recovery.md",
   "INSTALL.md",
   "package.json",
+  "agents/openai.yaml",
   "targets.ts",
   "discovery.ts",
   "review-session.ts",
@@ -57,6 +59,52 @@ function arg(name) {
 function fail(reason) {
   process.stdout.write(`${JSON.stringify({ ok: false, reason }, null, 2)}\n`);
   process.exit(1);
+}
+
+function assertNoSymlink(filePath, label) {
+  let current = path.resolve(filePath);
+  for (;;) {
+    try {
+      if (lstatSync(current).isSymbolicLink()) fail(`${label} is a symlink: ${current}`);
+    } catch {
+      // Missing components are created fresh below; stop at the first missing ancestor.
+      if (!existsSync(current)) {
+        current = path.dirname(current);
+        if (current === path.dirname(current)) break;
+        continue;
+      }
+      break;
+    }
+    const parent = path.dirname(current);
+    if (parent === current) break;
+    current = parent;
+    // Only walk up to the filesystem root for standalone files; bundle paths
+    // get an additional containment check at the write site.
+    if (current.length < 2) break;
+  }
+}
+
+function assertInside(root, target, label) {
+  const resolvedRoot = path.resolve(root);
+  const resolvedTarget = path.resolve(target);
+  if (resolvedTarget !== resolvedRoot && !resolvedTarget.startsWith(`${resolvedRoot}${path.sep}`)) {
+    fail(`${label} escapes its destination root`);
+  }
+}
+
+function writeFileNoFollow(filePath, data) {
+  assertNoSymlink(filePath, "destination");
+  try {
+    const fd = openSync(filePath, constants.O_WRONLY | constants.O_CREAT | constants.O_TRUNC | constants.O_NOFOLLOW);
+    try {
+      writeSync(fd, data);
+    } finally {
+      closeSync(fd);
+    }
+  } catch (error) {
+    if (error?.code === "ELOOP") fail(`destination is a symlink: ${filePath}`);
+    throw error;
+  }
 }
 
 function renderAgentMd() {
@@ -95,7 +143,11 @@ function main() {
     const dstPath = path.join(skillDest, file);
     let same = false;
     try {
-      same = existsSync(dstPath) && statSync(dstPath).isFile() && readFileSync(dstPath).equals(src);
+      same =
+        existsSync(dstPath) &&
+        !lstatSync(dstPath).isSymbolicLink() &&
+        statSync(dstPath).isFile() &&
+        readFileSync(dstPath).equals(src);
     } catch {
       same = false;
     }
@@ -128,21 +180,35 @@ function main() {
   const applied = [];
   const bundleDrift = drift.filter((d) => d.kind === "bundle");
   if (bundleDrift.length > 0) {
+    assertNoSymlink(skillDest, "skill destination");
     cpSync(skillDest, `${skillDest}.bak-${stamp}`, { recursive: true });
     for (const { file } of bundleDrift) {
-      writeFileSync(path.join(skillDest, file), readFileSync(path.join(SKILL_SRC, file)));
+      const dstPath = path.join(skillDest, file);
+      assertInside(skillDest, dstPath, "bundle destination");
+      assertNoSymlink(path.dirname(dstPath), "bundle parent");
+      if (existsSync(dstPath)) assertNoSymlink(dstPath, "bundle destination");
+      mkdirSync(path.dirname(dstPath), { recursive: true });
+      writeFileNoFollow(dstPath, readFileSync(path.join(SKILL_SRC, file)));
       applied.push({ kind: "bundle", file });
     }
   }
   for (const d of drift) {
     if (d.kind === "agent") {
-      cpSync(agentDest, `${agentDest}.bak-${stamp}`, { recursive: false });
-      writeFileSync(agentDest, agentMd);
+      if (existsSync(agentDest)) {
+        assertNoSymlink(agentDest, "agent destination");
+        cpSync(agentDest, `${agentDest}.bak-${stamp}`, { recursive: false });
+      }
+      mkdirSync(path.dirname(agentDest), { recursive: true });
+      writeFileNoFollow(agentDest, agentMd);
       applied.push(d);
     }
     if (d.kind === "command") {
-      cpSync(commandDest, `${commandDest}.bak-${stamp}`, { recursive: false });
-      writeFileSync(commandDest, commandMd);
+      if (existsSync(commandDest)) {
+        assertNoSymlink(commandDest, "command destination");
+        cpSync(commandDest, `${commandDest}.bak-${stamp}`, { recursive: false });
+      }
+      mkdirSync(path.dirname(commandDest), { recursive: true });
+      writeFileNoFollow(commandDest, commandMd);
       applied.push(d);
     }
   }

@@ -1,0 +1,5 @@
+interface:
+  display_name: "Plan This"
+  short_description: "Grill a task into decisions, then publish a spec with tickets"
+policy:
+  allow_implicit_invocation: false

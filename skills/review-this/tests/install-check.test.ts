@@ -162,4 +162,72 @@ describe("install-check in fixture homes", () => {
     assert.equal(recoveryDrift.exit, 1);
     assert.ok(JSON.stringify(recoveryDrift.json).includes("byte-mismatch"));
   });
+
+  test("generic host verifies bundle parity without Kilo agent requirements (ADR-0043)", () => {
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), "rti-"));
+    const src = path.join(home, "src");
+    const dst = path.join(home, "dst");
+    copySkill(src);
+    copySkill(dst);
+    const { exit, json } = run(["--source", src, "--install", dst, "--host", "generic"]);
+    assert.equal(exit, 0, JSON.stringify(json));
+    assert.equal(json.ok, true);
+    assert.equal(json.host, "generic");
+  });
+
+  test("unknown --host values fail instead of bypassing Kilo validation", () => {
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), "rti-"));
+    const src = path.join(home, "src");
+    const dst = path.join(home, "dst");
+    copySkill(src);
+    copySkill(dst);
+    const { exit, json } = run(["--source", src, "--install", dst, "--host", "kilo-"]);
+    assert.equal(exit, 1, JSON.stringify(json));
+    assert.match(String(json.reason ?? ""), /unknown --host/);
+  });
+
+  test("Codex policy and openai.yaml parity are enforced on both host paths", () => {
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), "rti-"));
+    const src = path.join(home, "src");
+    const dst = path.join(home, "dst");
+    copySkill(src);
+    copySkill(dst);
+    fs.rmSync(path.join(dst, "agents", "openai.yaml"));
+    const missingPolicy = run(["--source", src, "--install", dst, "--host", "generic"]);
+    assert.equal(missingPolicy.exit, 1);
+    copySkill(dst);
+    fs.appendFileSync(path.join(dst, "agents", "openai.yaml"), "\n# drift\n");
+    const driftedPolicy = run(["--source", src, "--install", dst, "--host", "generic"]);
+    assert.equal(driftedPolicy.exit, 1);
+    assert.ok(JSON.stringify(driftedPolicy.json).includes("byte-mismatch"));
+    copySkill(dst);
+    fs.writeFileSync(path.join(dst, "agents", "openai.yaml"), "policy:\n  allow_implicit_invocation: true\n");
+    const implicitAllowed = run(["--source", src, "--install", dst, "--host", "generic"]);
+    assert.equal(implicitAllowed.exit, 1);
+  });
+
+  test("commented-out false with true does not pass the Codex policy gate", () => {
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), "rti-"));
+    const src = path.join(home, "src");
+    const dst = path.join(home, "dst");
+    copySkill(src);
+    copySkill(dst);
+    const smuggled = "policy:\n  # allow_implicit_invocation: false (legacy)\n  allow_implicit_invocation: true\n";
+    fs.writeFileSync(path.join(src, "agents", "openai.yaml"), smuggled);
+    fs.writeFileSync(path.join(dst, "agents", "openai.yaml"), smuggled);
+    const { exit } = run(["--source", src, "--install", dst, "--host", "generic"]);
+    assert.equal(exit, 1);
+  });
+
+  test("symlinked bundle files fail instead of passing as trusted", () => {
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), "rti-"));
+    const src = path.join(home, "src");
+    const dst = path.join(home, "dst");
+    copySkill(src);
+    copySkill(dst);
+    fs.rmSync(path.join(dst, "agents", "openai.yaml"));
+    fs.symlinkSync(path.join(src, "agents", "openai.yaml"), path.join(dst, "agents", "openai.yaml"));
+    const { exit } = run(["--source", src, "--install", dst, "--host", "generic"]);
+    assert.equal(exit, 1);
+  });
 });

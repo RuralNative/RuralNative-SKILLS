@@ -1,0 +1,5 @@
+interface:
+  display_name: "Implement This"
+  short_description: "Implement one ticket in the current checkout, deliver one PR"
+policy:
+  allow_implicit_invocation: false

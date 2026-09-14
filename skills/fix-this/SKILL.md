@@ -7,6 +7,10 @@ Finalize the single reviewed pull request in the current checkout.
 
 One explicit human invocation of `/fix-this` authorizes only its single pull request in this checkout. `/review-this` publishes findings and stops; this command owns everything after that publication. It never generates another review verdict, never waits for CI, and never conditions its own merge eligibility on CI status. Local verification is mandatory. GitHub branch protection stays authoritative: a rejected merge is a restriction report, not completion.
 
+Native invocation: `/fix-this <target>` where the host supports slash commands, `$fix-this` or native skill selection in Codex, and native skill loading elsewhere. Skill identity `fix-this` stays unchanged. Preserve the exact pull-request reference; issue numbers never resolve here.
+
+On OpenCode, prefer skill selection with the target supplied outside slash-command arguments when the release preprocesses slash arguments. Unsupported slash-argument forms are restricted, never silently treated as literal. The separate-message route is a candidate, not certified literal; live host checks are NOT VERIFIED.
+
 ## Rules
 
 - Read `recovery.md` on entry, after interruption, and before reporting a blocker. Resume verified task edits even before the final `fix-progress-v2` checkpoint exists; a missing checkpoint is not evidence that no work was done. Reconcile native effects before retrying and perform only missing steps.

@@ -55,9 +55,22 @@ Bootstrap without assuming a loader API. Prefer the skill loader by identity;
 when the host provides none, read the discovered trusted installation through
 permitted file reads with relative resources bound to that installation. A
 missing tool is not a missing installation, and a denied operation never
-authorizes a bypass or an invented workflow. Isolated helper-defect correction
+authorizes a bypass or an invented workflow. A blocked or disabled skill is
+not an absent loader. Isolated helper-defect correction
 below a run directory is a review-this-only path owned by its preparation
 entry point; other roles do not inherit it.
+
+Locked companions pause for the human. When the host denies a model invocation
+of a required companion (for example upstream planning companions carrying
+`disable-model-invocation`), preserve the approved plan and canonical
+publication rules, then stop and wait for the human's same-session invocation
+of that companion. Do not fall through to upstream default templates,
+claimable parent labels, or premature publication. Missing, ambiguous,
+disabled, and denied dependencies have distinct outcomes: missing stops with
+an install direction, ambiguous stops with the competing identities, disabled
+stops with the host control that disabled it, and denied stops with the exact
+restriction before the affected mutation. Unknown invocation metadata is never
+an enforcement claim and never authorizes autonomous stage chaining.
 
 ## Protect local work
 

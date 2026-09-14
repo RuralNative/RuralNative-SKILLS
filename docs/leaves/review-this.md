@@ -18,9 +18,9 @@ duplicating snapshots; the final checkout refuses to overwrite ignored files.
 Historical clean-only clauses below are superseded only by this scope.
 
 1. **INV-1** — `name` equals folder `review-this`.
-2. **INV-2** — INSTALL: registry-lane install, manual copy, `/review-this <target>` with one pull request or one issue resolving to one pull request.
-3. **INV-3** — Fixed-template: verbatim prefix, workflow line for the single pull request, `## Rules`, single `## Spec` slot.
-4. **INV-4** — Deps frontier model then `/unslopify`; focused route. No `/code-review` dependency.
+2. **INV-2** — INSTALL: registry-lane install, manual copy, `/review-this <target>` with one pull request or one issue resolving to one pull request. Narrowed by ADR-0043: native invocation (`/review-this` where supported, `$review-this` or picker in Codex, native loading elsewhere); bundle parity is host-independent and Kilo-specific checks never gate Claude/Codex/OpenCode installs.
+3. **INV-3** — Fixed-template: verbatim prefix, workflow line for the single pull request, `## Rules`, single `## Spec` slot. Narrowed by ADR-0043: on OpenCode, no-argument selection with the target supplied outside slash arguments; slash-argument forwarding is unsupported; execution stays in the main session.
+4. **INV-4** — Deps frontier model then `/unslopify`; focused route. No `/code-review` dependency. Codex `agents/openai.yaml` denies implicit invocation; Claude `allowed-tools` is not a deny list; Codex sandbox and approvals stay distinct.
 5. **INV-5** — Retired by ADR-0031: `selectReviewWave` over open child PRs. Narrowed by ADR-0035: single-target resolution; parent specifications, ambiguous mappings, and multiple targets stop before any write; a clean checkout at the PR head commit matches under a branch alias, the pinned default branch, or detached `HEAD`. Narrowed by ADR-0036: a clean checkout at a different commit aligns to the pinned head in detached `HEAD` before review; dirty, unfinished-operation, collision, and failed-alignment states stop with no checkout effect.
 6. **INV-6** — Retired by ADR-0031: cloud collection with `unavailable` fallback. Current: no cloud review in any form.
 7. **INV-7** — Local finding validation keeps scope, evidence, severity, category, and exact reviewed revisions; rejects duplicate, stale, out-of-scope, unverified, and incomplete findings. No cross-host deduplication and no axis-preservation across subagents.
@@ -43,4 +43,4 @@ Equivalent required CI on the reviewed head/base, or the established local comma
 
 ## Links
 
-Glossary: `CONTEXT.md`. Decisions: ADR-0006, ADR-0014, ADR-0015, ADR-0019, ADR-0022, ADR-0023, ADR-0024, ADR-0031, ADR-0032, ADR-0033, ADR-0034, ADR-0035, ADR-0036, ADR-0037, ADR-0038, ADR-0039, ADR-0040, ADR-0041, ADR-0042. Redirect: `docs/leaves/ext/review-this.md`.
+Glossary: `CONTEXT.md`. Decisions: ADR-0006, ADR-0014, ADR-0015, ADR-0019, ADR-0022, ADR-0023, ADR-0024, ADR-0031, ADR-0032, ADR-0033, ADR-0034, ADR-0035, ADR-0036, ADR-0037, ADR-0038, ADR-0039, ADR-0040, ADR-0041, ADR-0042, ADR-0043. Redirect: `docs/leaves/ext/review-this.md`.

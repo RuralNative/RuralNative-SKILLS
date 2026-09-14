@@ -9,9 +9,14 @@ the compact leaf core points past.
 
 `SKILL.md` is the entry point; its frontmatter `name` is the skill identity
 `plan-this` and its `description` declares the explicit invocation
-`/plan-this <task>` plus delegation to `/grill-with-docs`, `/to-spec`,
-`/to-tickets`, and `/unslopify`. The consumption path is: user runs
-`/plan-this <task>` → one direct invocation authorizes the full interactive
+`/plan-this <task>` plus delegation to `/grill-with-docs`, `/grilling`,
+`/domain-modeling`, `/to-spec`, `/to-tickets`, and `/unslopify`. Narrowed by
+ADR-0043: native invocation is `/plan-this <task>` where supported, `$plan-this`
+or picker in Codex, native loading elsewhere, with explicit human stage selection
+plus original task text; selection alone authorizes nothing. On OpenCode, no-argument
+selection with task text in a separate ordinary message is a candidate route, not
+certified literal; live host checks are NOT VERIFIED. The consumption path is: user runs
+the native selection with task text → one direct invocation authorizes the full interactive
 chain while publication waits behind the separate explicit approval gate →
 skill loads `/unslopify` before the first progress update and keeps it active
 → treats task text, issue bodies, comments, specification drafts, and ticket
@@ -59,8 +64,9 @@ and Boundary — now lives only in this leaf doc, `skills/plan-this/INSTALL.md`,
 and `docs/adr/0006-plan-this-fixed-template-adapter.md`, not in `SKILL.md`.
 
 Delegation for supervised planning (#63, parent #62) was removed by ADR-0011
-when `supervise-this` retired: the invocation contract is direct
-`/plan-this <task>` only. ADR-0009 (now superseded by ADR-0014) recorded the
+when `supervise-this` retired: the invocation contract was direct
+`/plan-this <task>` only, narrowed by ADR-0043 to native invocation with
+explicit human stage selection plus original task text. ADR-0009 (now superseded by ADR-0014) recorded the
 decision to keep `disable-model-invocation` locks on `/grill-with-docs`,
 `/to-spec`, and `/to-tickets`. Former parity debt with `implement-this`
 (DEBT-7) was resolved 2026-08-20.

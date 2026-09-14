@@ -30,6 +30,8 @@ cd RuralNative-SKILLS
 cp -r skills/fix-this ~/.agents/skills/fix-this
 ```
 
+Native hosts: `/fix-this <target>` where slash commands exist; `$fix-this` or native skill selection in Codex with `agents/openai.yaml` denying implicit invocation; `.claude/skills/fix-this/SKILL.md` for Claude Code (a supported symlink may share the bundle). Live host checks are NOT VERIFIED. On OpenCode, prefer skill selection with the target supplied outside slash-command arguments when the release preprocesses slash arguments; the separate-message route is a candidate, not certified literal.
+
 Install or upgrade `review-this` from the same verified revision at the same time: the producer and consumer share the `review-handoff-v1` contract. Editing this repository does not update installed copies automatically; verify the path the target project actually loads.
 
 ## Verification
