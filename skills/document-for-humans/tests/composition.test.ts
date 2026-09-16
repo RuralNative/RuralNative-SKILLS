@@ -360,7 +360,7 @@ describe("document-for-humans hard dependency (document-for-humans:INV-6)", () =
     const cases = JSON.parse(read("skills/document-for-humans/tests/fixtures/synthetic-cases.json"));
     const skill = read("skills/document-for-humans/SKILL.md");
     assert.ok(Array.isArray(cases.cases) && cases.cases.length === 10);
-    assert.ok(cases.cases.some((c) => c.system === "offline"));
+    assert.ok(cases.cases.some((c: { system: string }) => c.system === "offline"));
     assert.ok(cases.note.toLowerCase().includes("never output-quality proof") || cases.note.toLowerCase().includes("contract checks only"));
     assert.ok(typeof frozen.adoptionRule === "string" && frozen.adoptionRule.includes("safety regression blocks adoption"));
     assert.ok(frozen.note.toLowerCase().includes("never required outcomes") || frozen.note.toLowerCase().includes("never required"));
