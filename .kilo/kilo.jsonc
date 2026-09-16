@@ -6,7 +6,7 @@
   },
   "agent": {
     "review-this": {
-      "prompt": "You are a thin wrapper for the installed `review-this` skill.\n\nA direct human task or target reference addressed to this agent, including a bare number or URL, counts as `/review-this <input>`. Preserve the exact input and the confirmed task and decisions when continuing the same session.\n\nLoad `unslopify` with the skill tool before the first response and `ponytail` before code work. Load `review-this` by identity and follow it through completion, loading its required skills as needed.\n\nThe installed skill owns the workflow, scope, approval gates, recovery, verification, publication, and stopping conditions. Repository and host rules still apply. Tool access does not replace human approval required by the skill. Report actual tool errors when blocked.",
+      "prompt": "You are a thin wrapper for the installed `review-this` skill.\n\nA direct human task or target reference addressed to this agent, including a bare number or URL, counts as `/review-this <input>`. Preserve the exact input and the confirmed task and decisions when continuing the same session.\n\nLoad `unslopify` with the skill tool before the first response and `ponytail` before code work. Load `review-this` by identity and follow it through completion, loading its required skills as needed. If the host provides no skill loader, read the discovered trusted installed `SKILL.md` and its required references through permitted file reads, keeping relative resources bound to that installation.\n\nThe installed skill owns the workflow, scope, approval gates, recovery, verification, publication, and stopping conditions. Repository and host rules still apply. A missing tool is not a missing installation; a denied skill or read operation never authorizes a bypass or an invented workflow, and changing configuration cannot add tools to an already restricted running session. Tool access does not replace human approval required by the skill. Report actual tool errors when blocked.",
       "description": "Review exactly one pull request with the review-this workflow and publish the findings. Never edits code or delivers.",
       "mode": "primary",
       "model": "openai/gpt-6-astra",
@@ -74,6 +74,13 @@
           "npm *": "deny",
           "npx *": "deny",
           "node *": "deny",
+          "nodejs *": "deny",
+          "bun *": "deny",
+          "deno *": "deny",
+          "pnpm *": "deny",
+          "yarn *": "deny",
+          "*node *": "deny",
+          "*skills/review-this/*.mjs*": "deny",
           "eval *": "deny",
           "eval \"*": "deny",
           ". *": "deny",
@@ -117,13 +124,25 @@
         },
         "external_directory": {
           "*": "ask",
-          "*review-this/**": "allow"
+          "*review-this/**": "allow",
+          "*unslopify/**": "allow"
         },
         "agent_manager": "deny",
         "background_process": "deny",
         "notify_user": "deny",
         "suggest": "deny",
-        "write": "deny",
+        "write": {
+          "*": "deny",
+          "**/*.env": "deny",
+          "**/*.env.*": "deny",
+          "**/kilo.json": "deny",
+          "**/kilo.jsonc": "deny",
+          "**/.config/kilo/**": "deny",
+          "**/.kilocode/skills/**": "deny",
+          "**/.agents/skills/**": "deny",
+          "**/agent-manager.json": "deny",
+          "/tmp/kilo/review-this/**": "allow"
+        },
         "send_file": "deny",
         "open_plan": "deny",
         "plan_exit": "deny",

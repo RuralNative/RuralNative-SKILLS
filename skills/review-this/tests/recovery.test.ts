@@ -57,6 +57,12 @@ import {
   decidePublicationResume,
   isEstablishedRepairCommand,
   summarizeExecutionReceipt,
+  isRepairableHelperFile,
+  isImmutableGuardFile,
+  isToolingRepairAuthDenial,
+  normalizeRepairCause,
+  decideToolingRepairRetry,
+  validateToolingRepairRecord,
 } from "../prepare-review.ts";
 import { publishReviewPublication } from "../publish-review.ts";
 import { fakeReviewPublicationHost } from "./fakes.ts";
@@ -642,6 +648,56 @@ describe("bounded preparation, local prerequisites, and publication resume", () 
     assert.equal(decidePrepareRetry("auth-denied", {}).retry, false);
     assert.equal(decidePrepareRetry("revision-change", {}).retry, true);
     assert.equal(decidePrepareRetry("revision-change", { "revision-change": 1 }).retry, false);
+  });
+
+  test("tooling repair budgets one correction per cause and operation; reworded errors share one budget", () => {
+    const first = decideToolingRepairRetry("recover-evidence", "closing-link read failed: HTTP 500", {});
+    assert.equal(first.retry, true);
+    const key = first.key;
+    assert.equal(decideToolingRepairRetry("recover-evidence", "closing-link read failed: HTTP 500.", { [key]: 1 }).retry, false);
+    assert.equal(decideToolingRepairRetry("recover-evidence", "CLOSING-LINK read FAILED: http 500", { [key]: 1 }).retry, false);
+    assert.equal(decideToolingRepairRetry("recover-evidence", "a different evidenced failure", { [key]: 1 }).retry, true);
+    assert.equal(decideToolingRepairRetry("observe-target", "closing-link read failed: HTTP 500", { [key]: 1 }).retry, true);
+    assert.equal(decideToolingRepairRetry("recover-evidence", "   ", {}).retry, false);
+  });
+
+  test("tooling repair allows operational readers but never guards, traversal, or absolute paths", () => {
+    assert.equal(isRepairableHelperFile("github-facts.ts"), true);
+    assert.equal(isRepairableHelperFile("gh-review-transport.ts"), true);
+    assert.equal(isRepairableHelperFile("workflow-state.ts"), false);
+    assert.equal(isRepairableHelperFile("prepare-review.ts"), false);
+    assert.equal(isRepairableHelperFile("../escape.ts"), false);
+    assert.equal(isRepairableHelperFile("/tmp/evil.mjs"), false);
+    assert.equal(isRepairableHelperFile("sub/dir.ts"), false);
+    assert.equal(isImmutableGuardFile("workflow-state.ts"), true);
+    assert.equal(isImmutableGuardFile("prepare-review.ts"), true);
+    assert.equal(isImmutableGuardFile("install-check.mjs"), true);
+    assert.equal(isImmutableGuardFile("github-facts.ts"), false);
+    assert.equal(normalizeRepairCause("  Closing-Link FAILED. "), "closing-link failed");
+    assert.equal(isToolingRepairAuthDenial("permission denied: branch protection"), true);
+    assert.equal(isToolingRepairAuthDenial("the run is restricted by policy"), true);
+    assert.equal(isToolingRepairAuthDenial("closing-link read failed: HTTP 500"), false);
+  });
+
+  test("tooling repair records reject guards, malicious paths, stale hashes, and missing bindings", () => {
+    const good = {
+      repository: "o/r",
+      prNumber: 312,
+      headSha: "a".repeat(40),
+      baseSha: "b".repeat(40),
+      runId: "repair-1",
+      operation: "recover-evidence",
+      observedCause: "closing-link read failed",
+      trustedInstallRoot: "/tmp/install-root",
+      trustedHashes: { "github-facts.ts": "c".repeat(64) },
+      changedFiles: ["github-facts.ts"],
+    };
+    assert.equal(validateToolingRepairRecord(good).ok, true);
+    assert.equal(validateToolingRepairRecord({ ...good, changedFiles: ["workflow-state.ts"] }).ok, false);
+    assert.equal(validateToolingRepairRecord({ ...good, changedFiles: ["../escape.ts"] }).ok, false);
+    assert.equal(validateToolingRepairRecord({ ...good, trustedHashes: { "github-facts.ts": "short" } }).ok, false);
+    assert.equal(validateToolingRepairRecord({ ...good, prNumber: 0 }).ok, false);
+    assert.equal(validateToolingRepairRecord({ ...good, changedFiles: [] }).ok, false);
   });
 
   test("compatible runtime selection never edits shell configuration", () => {

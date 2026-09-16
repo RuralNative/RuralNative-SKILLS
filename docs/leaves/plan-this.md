@@ -16,8 +16,8 @@ approval gate. Composition tests cover the required instruction route.
 
 1. **INV-1** — `name` equals folder `plan-this`.
 2. **INV-2** — INSTALL: `npx skills add RuralNative/RuralNative-SKILLS --skill plan-this`, manual copy.
-3. **INV-3** — Structured workflow boundary: workflow line, approval gate, `## Contract`, five phases, ELI18 summary, single `## Task:` slot.
-4. **INV-4** — Deps `/unslopify`, `/grill-with-docs`, `/to-spec`, `/to-tickets`; `/unslopify` before first progress update; focused route; delegated skills `disable-model-invocation`.
+3. **INV-3** — Structured workflow boundary: workflow line, approval gate, `## Contract`, five phases, ELI18 summary, single `## Task:` slot. Narrowed by ADR-0043: native invocation (`/plan-this <task>` where supported, `$plan-this` or picker in Codex, native loading elsewhere) with explicit human stage selection plus original task text authorizing the run; selection alone authorizes nothing. On OpenCode, no-argument selection with task text in a separate ordinary message; slash-argument forwarding is unsupported.
+4. **INV-4** — Deps `/unslopify`, `/grill-with-docs`, `/grilling`, `/domain-modeling`, `/to-spec`, `/to-tickets`; `/unslopify` before first progress update; focused route. `/grilling` and `/domain-modeling` are transitive via `/grill-with-docs`. Narrowed by ADR-0043: upstream companions may carry `disable-model-invocation` locks; a denial pauses for the human's same-session invocation with the approved plan and canonical rules preserved. Missing, ambiguous, disabled, and denied dependencies have distinct outcomes; unknown metadata never authorizes chaining.
 5. **INV-5** — Intent and decision gates: six-field capsule; ask only when facts and the confirmed task cannot decide; one plain question; no forced round when settled.
 6. **INV-6** — One planning contract: structured body is the single planning behavior source.
 7. **INV-7** — Bounded-planning: spec states capsule, behavior, non-goals, acceptance, affected seams, constraints, widest safe frontier, smallest test-first verification.
@@ -30,4 +30,4 @@ approval gate. Composition tests cover the required instruction route.
 
 ## Links
 
-Glossary: `CONTEXT.md`. Decisions: ADR-0004, ADR-0006, ADR-0014, ADR-0015, ADR-0019, ADR-0020, ADR-0024, ADR-0027, ADR-0032, ADR-0034, ADR-0037, ADR-0038, ADR-0040, ADR-0041. Harness: `scripts/docs-check.sh`. Redirect: `docs/leaves/ext/plan-this.md`.
+Glossary: `CONTEXT.md`. Decisions: ADR-0004, ADR-0006, ADR-0014, ADR-0015, ADR-0019, ADR-0020, ADR-0024, ADR-0027, ADR-0032, ADR-0034, ADR-0037, ADR-0038, ADR-0040, ADR-0041, ADR-0043. Harness: `scripts/docs-check.sh`. Redirect: `docs/leaves/ext/plan-this.md`.

@@ -271,44 +271,146 @@ export function readPullRequestFacts(
   };
 }
 
+export const CLOSING_REFS_QUERY =
+  "query($owner:String!,$name:String!,$number:Int!,$after:String){repository(owner:$owner,name:$name){pullRequest(number:$number){number closingIssuesReferences(first:100,after:$after){totalCount nodes{number repository{nameWithOwner}}pageInfo{hasNextPage endCursor}}}}}";
+
 function readClosingIssues(
   runner: GhRunner,
   repository: string,
   prNumber: number,
 ): { issues: { owner: string; repo: string; number: number }[]; status: FactStatus } {
-  // Native timeline closing links with full repository identity. Only
-  // `connected` events count as closing links; `cross-referenced` is a mere
-  // mention and never proves association. Unknown, failed, or malformed reads
+  // Native GraphQL closing links with full repository identity
+  // (ADR-0040, narrowed by ADR-0042). The current
+  // `closingIssuesReferences` connection is authoritative; historical
+  // timeline `connected` events are never unioned and disconnected links
+  // never revive. Unknown, failed, malformed, partial, or truncated reads
   // keep their own status so callers never treat empty as proof of no
-  // association.
-  const result = runner([
-    "api",
-    "--paginate",
-    "--slurp",
-    `repos/${repository}/issues/${prNumber}/timeline`,
-  ]);
-  if (!result.ok) {
-    const reason = result.reason ?? "unknown error";
-    if (/forbidden|403|permission/i.test(reason)) return { issues: [], status: { kind: "forbidden", reason } };
-    return { issues: [], status: { kind: "unavailable", reason } };
+  // association. Complete-empty means a successfully exhausted native
+  // connection whose observed node count reconciles with `totalCount`.
+  const parts = repository.split("/");
+  if (
+    parts.length !== 2 ||
+    !/^[A-Za-z0-9-_.]+$/.test(parts[0]) ||
+    !/^[A-Za-z0-9-_.]+$/.test(parts[1]) ||
+    !Number.isInteger(prNumber) ||
+    prNumber < 1
+  ) {
+    return { issues: [], status: { kind: "malformed", reason: "repository or PR number is invalid" } };
   }
-  const items = flattenPages(result.stdout);
-  if (items === null) return { issues: [], status: { kind: "malformed", reason: "timeline pages are not complete JSON" } };
+  const [owner, name] = parts;
   const out: { owner: string; repo: string; number: number }[] = [];
-  for (const item of items) {
-    if (item === null || typeof item !== "object") {
-      return { issues: [], status: { kind: "malformed", reason: "timeline entry is not an object" } };
+  const seen = new Set<string>();
+  const seenCursors = new Set<string>();
+  let after: string | null = null;
+  let observedTotal: number | null = null;
+  let rawNodesSeen = 0;
+  for (let page = 0; page < 20; page += 1) {
+    const args = [
+      "api",
+      "graphql",
+      "-f",
+      `query=${CLOSING_REFS_QUERY}`,
+      "-F",
+      `owner=${owner}`,
+      "-F",
+      `name=${name}`,
+      "-F",
+      `number=${prNumber}`,
+      ...(after !== null ? (["-F", `after=${after}`] as const) : []),
+    ];
+    const result = runner(args);
+    if (!result.ok) {
+      const reason = result.reason ?? "unknown error";
+      if (/forbidden|403|permission/i.test(reason)) return { issues: [], status: { kind: "forbidden", reason } };
+      return { issues: [], status: { kind: "unavailable", reason } };
     }
-    const raw = item as Record<string, unknown>;
-    if (raw["event"] !== "connected") continue;
-    const source = (raw["source"] ?? {}) as Record<string, unknown>;
-    const issue = (source["issue"] ?? raw) as Record<string, unknown>;
-    const url = String((issue["html_url"] as string) ?? (issue["url"] as string) ?? "");
-    const m = url.match(/github\.com\/([A-Za-z0-9-_.]+)\/([A-Za-z0-9-_.]+)\/issues\/(\d+)/i);
-    if (!m) continue;
-    out.push({ owner: m[1], repo: m[2], number: Number(m[3]) });
+    const parsed = parseJsonValue(result.stdout) as Record<string, unknown> | null;
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return { issues: [], status: { kind: "malformed", reason: "closing-link response is not JSON" } };
+    }
+    if (Array.isArray(parsed["errors"]) && (parsed["errors"] as unknown[]).length > 0) {
+      return { issues: [], status: { kind: "partial", reason: "closing-link read returned GraphQL errors" } };
+    }
+    const data = parsed["data"] as Record<string, unknown> | null | undefined;
+    if (data === null || data === undefined || typeof data !== "object" || Array.isArray(data)) {
+      return { issues: [], status: { kind: "malformed", reason: "closing-link response has no data" } };
+    }
+    const repoObj = data["repository"] as Record<string, unknown> | null | undefined;
+    if (repoObj === null || repoObj === undefined || typeof repoObj !== "object" || Array.isArray(repoObj)) {
+      return { issues: [], status: { kind: "malformed", reason: "closing-link response has no repository" } };
+    }
+    const pr = repoObj["pullRequest"] as Record<string, unknown> | null | undefined;
+    if (pr === null || pr === undefined || typeof pr !== "object" || Array.isArray(pr)) {
+      return { issues: [], status: { kind: "malformed", reason: "closing-link response has no pull request" } };
+    }
+    if (pr["number"] !== prNumber) {
+      return { issues: [], status: { kind: "malformed", reason: "closing-link response names another pull request" } };
+    }
+    const conn = pr["closingIssuesReferences"] as Record<string, unknown> | null | undefined;
+    if (conn === null || conn === undefined || typeof conn !== "object" || Array.isArray(conn)) {
+      return { issues: [], status: { kind: "malformed", reason: "closing-link connection is missing" } };
+    }
+    if (!Number.isInteger(conn["totalCount"]) || (conn["totalCount"] as number) < 0) {
+      return { issues: [], status: { kind: "malformed", reason: "closing-link count is missing" } };
+    }
+    if (observedTotal === null) {
+      observedTotal = conn["totalCount"] as number;
+    } else if (conn["totalCount"] !== observedTotal) {
+      return { issues: [], status: { kind: "partial", reason: "closing-link count changed across pages" } };
+    }
+    const nodes = conn["nodes"];
+    if (!Array.isArray(nodes)) {
+      return { issues: [], status: { kind: "malformed", reason: "closing-link nodes are missing" } };
+    }
+    rawNodesSeen += nodes.length;
+    for (const node of nodes) {
+      if (node === null || typeof node !== "object" || Array.isArray(node)) {
+        return { issues: [], status: { kind: "malformed", reason: "closing-link node is not an object" } };
+      }
+      const raw = node as Record<string, unknown>;
+      if (!Number.isInteger(raw["number"]) || (raw["number"] as number) < 1) {
+        return { issues: [], status: { kind: "malformed", reason: "closing-link node number is missing" } };
+      }
+      const nodeRepo = raw["repository"] as Record<string, unknown> | null | undefined;
+      const nameWithOwner = nodeRepo !== null && nodeRepo !== undefined ? nodeRepo["nameWithOwner"] : undefined;
+      if (typeof nameWithOwner !== "string" || !/^[A-Za-z0-9-_.]+\/[A-Za-z0-9-_.]+$/.test(nameWithOwner)) {
+        return { issues: [], status: { kind: "malformed", reason: "closing-link repository identity is missing" } };
+      }
+      const [linkOwner, linkRepo] = nameWithOwner.split("/");
+      const key = `${linkOwner.toLowerCase()}/${linkRepo.toLowerCase()}#${String(raw["number"])}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        out.push({ owner: linkOwner, repo: linkRepo, number: raw["number"] as number });
+      }
+    }
+    const pageInfo = conn["pageInfo"] as Record<string, unknown> | null | undefined;
+    if (pageInfo === null || pageInfo === undefined || typeof pageInfo !== "object" || Array.isArray(pageInfo)) {
+      return { issues: [], status: { kind: "malformed", reason: "closing-link pagination is missing" } };
+    }
+    if (typeof pageInfo["hasNextPage"] !== "boolean") {
+      return { issues: [], status: { kind: "malformed", reason: "closing-link pagination is missing" } };
+    }
+    if (pageInfo["hasNextPage"] !== true) {
+      // Reconcile the connection count with the observed nodes: a terminal
+      // page that reports more links than it delivered is truncated, never
+      // complete. The raw node count (before dedup) is compared so a
+      // repeated link cannot mask a missing one.
+      if (observedTotal !== null && rawNodesSeen !== observedTotal) {
+        return { issues: [], status: { kind: "partial", reason: `closing-link count mismatch: observed ${rawNodesSeen} of ${observedTotal}` } };
+      }
+      return { issues: out, status: complete("native closing links observed") };
+    }
+    const endCursor = pageInfo["endCursor"];
+    if (typeof endCursor !== "string" || endCursor === "") {
+      return { issues: [], status: { kind: "partial", reason: "closing-link pagination is truncated: missing cursor" } };
+    }
+    if (seenCursors.has(endCursor)) {
+      return { issues: [], status: { kind: "partial", reason: "closing-link pagination repeated a cursor" } };
+    }
+    seenCursors.add(endCursor);
+    after = endCursor;
   }
-  return { issues: out, status: complete("native closing links observed") };
+  return { issues: [], status: { kind: "partial", reason: "closing-link pagination exceeded the page bound" } };
 }
 
 /** Read one issue with body, state, labels, and parent link. */

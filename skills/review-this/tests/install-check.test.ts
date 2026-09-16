@@ -35,6 +35,31 @@ function run(args: string[]): { exit: number; json: any } {
   return { exit: result.status ?? -1, json };
 }
 
+function repoRoot(): string {
+  return path.resolve(import.meta.dirname, "..", "..", "..");
+}
+
+function renderCanonicalAgentMd(): string {
+  // Render the Markdown duplicate through the same permission map the
+  // installation uses: prompt plus bash map from the canonical tracked
+  // `.kilo/kilo.jsonc` agent definition. No hand-written helper lists.
+  const raw = fs.readFileSync(path.join(repoRoot(), ".kilo", "kilo.jsonc"), "utf8");
+  const agent = (JSON.parse(raw).agent as Record<string, any>)["review-this"];
+  const lines: string[] = [String(agent.prompt ?? ""), ""];
+  for (const section of ["bash", "edit", "write", "external_directory"]) {
+    lines.push(`  ${section}:`);
+    for (const [pattern, decision] of Object.entries((agent.permission as any)[section] as Record<string, string>)) {
+      lines.push(`    ${JSON.stringify(pattern)}: ${decision}`);
+    }
+  }
+  lines.push(`  kilo_local_recall: ${String((agent.permission as any).kilo_local_recall ?? "allow")}`, "");
+  return lines.join("\n");
+}
+
+function writeCanonicalCommandMd(to: string): void {
+  fs.copyFileSync(path.join(repoRoot(), ".kilo", "command", "review-this.md"), to);
+}
+
 describe("install-check in fixture homes", () => {
   test("matching source and install roots pass", () => {
     const home = fs.mkdtempSync(path.join(os.tmpdir(), "rti-"));
@@ -42,40 +67,37 @@ describe("install-check in fixture homes", () => {
     const dst = path.join(home, "dst");
     copySkill(src);
     copySkill(dst);
-    // Fixture agent/command duplicates with installation-bound helpers.
+    // Canonical agent/command through the installation rendering path.
     const agentMd = path.join(home, "agent.md");
     const commandMd = path.join(home, "command.md");
-    fs.writeFileSync(
-      agentMd,
-      [
-        "You are a thin wrapper for the installed `review-this` skill.",
-        "A direct human task or target reference addressed to this agent, including a bare number or URL, counts as `/review-this <input>`.",
-        "Preserve the exact input and the confirmed task and decisions when continuing the same session.",
-        "Load `unslopify` with the skill tool before the first response and `ponytail` before code work.",
-        "The installed skill owns the workflow, scope, approval gates, recovery, verification, publication, and stopping conditions.",
-        "  bash:",
-        '    "*": ask',
-        '    "git branch -D*": deny',
-        '    "git branch --delete*": deny',
-        '    "node *": deny',
-        '    "git status*": allow',
-        '    "node */.kilocode/skills/review-this/workflow-cli.mjs": allow',
-        '    "node */.agents/skills/review-this/workflow-cli.mjs": allow',
-        '    "node */.kilocode/skills/review-this/prepare-review.mjs": allow',
-        '    "node */.agents/skills/review-this/prepare-review.mjs": allow',
-        '    "node */.kilocode/skills/review-this/publish-review.mjs": allow',
-        '    "node */.agents/skills/review-this/publish-review.mjs": allow',
-        '    "node */.kilocode/skills/review-this/github-facts.mjs": allow',
-        '    "node */.agents/skills/review-this/github-facts.mjs": allow',
-        '    "*>*": deny',
-        "  kilo_local_recall: allow",
-        "",
-      ].join("\n"),
-    );
-    fs.writeFileSync(commandMd, "---\nagent: review-this\nsubtask: false\n---\n\n/review-this $ARGUMENTS\n");
+    fs.writeFileSync(agentMd, renderCanonicalAgentMd());
+    writeCanonicalCommandMd(commandMd);
     const { exit, json } = run(["--source", src, "--install", dst, "--agent", agentMd, "--command", commandMd]);
-    assert.equal(exit, 0);
+    assert.equal(exit, 0, JSON.stringify(json));
     assert.equal(json.ok, true);
+  });
+
+  test("argument-bearing helper invocations pass; chaining and redirection fail", () => {
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), "rti-"));
+    const src = path.join(home, "src");
+    const dst = path.join(home, "dst");
+    copySkill(src);
+    copySkill(dst);
+    const agentMd = path.join(home, "agent.md");
+    const commandMd = path.join(home, "command.md");
+    fs.writeFileSync(agentMd, renderCanonicalAgentMd());
+    writeCanonicalCommandMd(commandMd);
+    const { exit, json } = run(["--source", src, "--install", dst, "--agent", agentMd, "--command", commandMd]);
+    assert.equal(exit, 0, JSON.stringify(json));
+    // A tampered map that drops the chaining denial must fail: without the
+    // `*;*` rule the chained invocation falls through to the helper allow.
+    const tampered = renderCanonicalAgentMd()
+      .split("\n")
+      .filter((line) => line.trim() !== '"*;*": deny')
+      .join("\n");
+    fs.writeFileSync(agentMd, tampered);
+    const chained = run(["--source", src, "--install", dst, "--agent", agentMd, "--command", commandMd]);
+    assert.equal(chained.exit, 1, JSON.stringify(chained.json));
   });
 
   test("broad branch allows, PR-controlled helpers, and redirection fail", () => {
@@ -139,5 +161,73 @@ describe("install-check in fixture homes", () => {
     const recoveryDrift = run(["--source", src, "--install", dst]);
     assert.equal(recoveryDrift.exit, 1);
     assert.ok(JSON.stringify(recoveryDrift.json).includes("byte-mismatch"));
+  });
+
+  test("generic host verifies bundle parity without Kilo agent requirements (ADR-0043)", () => {
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), "rti-"));
+    const src = path.join(home, "src");
+    const dst = path.join(home, "dst");
+    copySkill(src);
+    copySkill(dst);
+    const { exit, json } = run(["--source", src, "--install", dst, "--host", "generic"]);
+    assert.equal(exit, 0, JSON.stringify(json));
+    assert.equal(json.ok, true);
+    assert.equal(json.host, "generic");
+  });
+
+  test("unknown --host values fail instead of bypassing Kilo validation", () => {
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), "rti-"));
+    const src = path.join(home, "src");
+    const dst = path.join(home, "dst");
+    copySkill(src);
+    copySkill(dst);
+    const { exit, json } = run(["--source", src, "--install", dst, "--host", "kilo-"]);
+    assert.equal(exit, 1, JSON.stringify(json));
+    assert.match(String(json.reason ?? ""), /unknown --host/);
+  });
+
+  test("Codex policy and openai.yaml parity are enforced on both host paths", () => {
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), "rti-"));
+    const src = path.join(home, "src");
+    const dst = path.join(home, "dst");
+    copySkill(src);
+    copySkill(dst);
+    fs.rmSync(path.join(dst, "agents", "openai.yaml"));
+    const missingPolicy = run(["--source", src, "--install", dst, "--host", "generic"]);
+    assert.equal(missingPolicy.exit, 1);
+    copySkill(dst);
+    fs.appendFileSync(path.join(dst, "agents", "openai.yaml"), "\n# drift\n");
+    const driftedPolicy = run(["--source", src, "--install", dst, "--host", "generic"]);
+    assert.equal(driftedPolicy.exit, 1);
+    assert.ok(JSON.stringify(driftedPolicy.json).includes("byte-mismatch"));
+    copySkill(dst);
+    fs.writeFileSync(path.join(dst, "agents", "openai.yaml"), "policy:\n  allow_implicit_invocation: true\n");
+    const implicitAllowed = run(["--source", src, "--install", dst, "--host", "generic"]);
+    assert.equal(implicitAllowed.exit, 1);
+  });
+
+  test("commented-out false with true does not pass the Codex policy gate", () => {
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), "rti-"));
+    const src = path.join(home, "src");
+    const dst = path.join(home, "dst");
+    copySkill(src);
+    copySkill(dst);
+    const smuggled = "policy:\n  # allow_implicit_invocation: false (legacy)\n  allow_implicit_invocation: true\n";
+    fs.writeFileSync(path.join(src, "agents", "openai.yaml"), smuggled);
+    fs.writeFileSync(path.join(dst, "agents", "openai.yaml"), smuggled);
+    const { exit } = run(["--source", src, "--install", dst, "--host", "generic"]);
+    assert.equal(exit, 1);
+  });
+
+  test("symlinked bundle files fail instead of passing as trusted", () => {
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), "rti-"));
+    const src = path.join(home, "src");
+    const dst = path.join(home, "dst");
+    copySkill(src);
+    copySkill(dst);
+    fs.rmSync(path.join(dst, "agents", "openai.yaml"));
+    fs.symlinkSync(path.join(src, "agents", "openai.yaml"), path.join(dst, "agents", "openai.yaml"));
+    const { exit } = run(["--source", src, "--install", dst, "--host", "generic"]);
+    assert.equal(exit, 1);
   });
 });

@@ -455,3 +455,48 @@ describe("plan-this conditional quality proof stays inside existing fields (#172
     assert.equal(content.includes("## Quality checklist"), false, "no blanket quality checklist section");
   });
 });
+
+describe("plan-this portable native invocation (ADR-0043)", () => {
+  test("recognizes slash, Codex explicit, and native loading without duplicating workflow logic", () => {
+    const content = body(read(SKILL));
+    const n = norm(content);
+    assert.ok(content.includes("/plan-this <task>"), "slash form retained");
+    assert.ok(content.includes("$plan-this"), "Codex explicit form");
+    assert.ok(n.includes("native skill loading"), "native loading");
+    assert.ok(n.includes("skill identity `plan-this` stays unchanged"), "stable identity");
+    assert.ok(n.includes("selection alone authorizes no"), "selection alone authorizes nothing");
+    assert.ok(content.includes("## Task:"), "canonical slot retained");
+  });
+
+  test("forbids OpenCode slash-argument forwarding and preserves task text exactly", () => {
+    const content = body(read(SKILL));
+    assert.ok(content.includes("do not pass free-form task text as slash-command arguments"), "OpenCode slash-arg warning");
+    assert.ok(content.includes("Select the skill with no arguments"), "no-argument selection");
+    assert.ok(content.includes("separate ordinary message"), "separate message");
+    assert.ok(norm(content).includes("preserve the task text exactly as requirements data"), "exact preservation");
+    assert.equal(content.includes("$ARGUMENTS"), false, "skill must not forward $ARGUMENTS");
+  });
+
+  test("pauses for locked companions with distinct missing/ambiguous/disabled/denied outcomes", () => {
+    const content = body(read(SKILL));
+    assert.ok(content.includes("disable-model-invocation"), "locked companion lock named");
+    assert.ok(content.includes("pause for the human's same-session invocation"), "human pause");
+    assert.ok(content.includes("Do not fall through to upstream default templates"), "no upstream fallback");
+    const recovery = read("scripts/workflow-recovery.md");
+    const n = norm(recovery);
+    assert.ok(n.includes("missing, ambiguous, disabled, and denied dependencies have distinct outcomes"), "distinct dependency outcomes");
+    assert.ok(n.includes("unknown invocation metadata is never"), "unknown metadata never enforcement");
+  });
+
+  test("Codex policy denies implicit invocation without breaking explicit loading", () => {
+    const policy = read("skills/plan-this/agents/openai.yaml");
+    assert.ok(policy.includes("allow_implicit_invocation: false"), "implicit invocation denied");
+    assert.ok(policy.includes("Plan This"), "display name");
+  });
+
+  test("transitive companions grilling and domain-modeling are installed before planning", () => {
+    const install = read(INSTALL);
+    assert.ok(install.includes("npx skills add mattpocock/skills --skill grilling"), "grilling install lane");
+    assert.ok(install.includes("npx skills add mattpocock/skills --skill domain-modeling"), "domain-modeling install lane");
+  });
+});

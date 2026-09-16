@@ -54,13 +54,15 @@ describe("tracked review-this agent permissions", () => {
     assert.match(prompt, /Preserve the exact input and the confirmed task and decisions when continuing the same session/i, "session-history recovery keeps the input");
     assert.match(prompt, /`unslopify`/i);
     assert.match(prompt, /`review-this` by identity/i);
+    assert.match(prompt, /If the host provides no skill loader, read the discovered trusted installed `SKILL\.md`/, "file-read fallback lives in the wrapper, not behind the loader");
+    assert.match(prompt, /never authorizes a bypass/, "denial never authorizes a bypass");
     assert.match(prompt, /The installed skill owns the workflow, scope, approval gates, recovery, verification, publication, and stopping conditions/i, "skills authority stays with the installed skill");
     assert.match(prompt, /human approval/i);
     assert.equal(prompt.includes("frontier"), false, "no model-gate wording that caused refusals");
     assert.equal(prompt.includes("Publish the review, summarize, then stop"), false, "no superseded rule restatement");
     assert.equal(agent.permission?.task?.["*"], "deny", "subagent delegation stays denied");
     assert.equal(agent.permission?.["*"], "deny", "unlisted tools deny by default");
-    for (const tool of ["agent_manager", "background_process", "notify_user", "suggest", "write", "send_file", "open_plan", "plan_exit"]) {
+    for (const tool of ["agent_manager", "background_process", "notify_user", "suggest", "send_file", "open_plan", "plan_exit"]) {
       assert.equal(agent.permission?.[tool], "deny", `${tool} stays denied`);
     }
     assert.equal(agent.permission?.kilo_local_recall, "allow", "read-only session-history recall stays possible");
@@ -83,8 +85,8 @@ describe("tracked review-this agent permissions", () => {
     assert.equal(bash["git push*"], "deny");
     // Helpers are bound to installed roots. A trailing `*` only carries
     // arguments; chaining and redirection stay denied by later rules.
-    const helpers = Object.keys(bash).filter((k) => k.includes("prepare-review.mjs") || k.includes("workflow-cli.mjs") || k.includes("publish-review.mjs"));
-    assert.ok(helpers.length >= 6, "installed helper allows exist for both roots");
+    const helpers = Object.keys(bash).filter((k) => k.includes("prepare-review.mjs") || k.includes("workflow-cli.mjs") || k.includes("publish-review.mjs") || k.includes("github-facts.mjs"));
+    assert.ok(helpers.length >= 8, "installed helper allows exist for both roots, including github-facts");
     for (const h of helpers) {
       assert.ok(h.includes("/.kilocode/skills/review-this/") || h.includes("/.agents/skills/review-this/"), `helper allow is installation-bound: ${h}`);
       assert.ok(!h.includes("*/review-this/") || h.includes("/.kilocode/") || h.includes("/.agents/"), `helper allow is not a generic review-this wildcard: ${h}`);
@@ -95,9 +97,23 @@ describe("tracked review-this agent permissions", () => {
     assert.equal(effectiveBashPermission(bash, "git branch --delete x"), "deny");
     assert.equal(effectiveBashPermission(bash, "git status --porcelain"), "allow");
     assert.equal(effectiveBashPermission(bash, "node /home/u/.kilocode/skills/review-this/workflow-cli.mjs evidence -"), "allow");
+    // Argument-bearing helper invocations stay allowed through the trailing
+    // `*`; chaining, redirection, preloads, and untrusted paths stay denied.
+    assert.equal(effectiveBashPermission(bash, "node /home/u/.agents/skills/review-this/prepare-review.mjs /tmp/kilo/review-this/run/input.json"), "allow");
+    assert.equal(effectiveBashPermission(bash, "node /home/u/.kilocode/skills/review-this/github-facts.mjs -"), "allow");
+    assert.equal(effectiveBashPermission(bash, "node /home/u/.kilocode/skills/review-this/workflow-cli.mjs evidence -; rm -rf /"), "deny");
+    assert.equal(effectiveBashPermission(bash, "NODE_OPTIONS=--inspect node /home/u/.kilocode/skills/review-this/workflow-cli.mjs evidence -"), "deny");
     assert.equal(effectiveBashPermission(bash, "node /tmp/pr-checkout/review-this/workflow-cli.mjs evidence -"), "deny");
     assert.equal(effectiveBashPermission(bash, "node /home/u/.kilocode/skills/review-this/workflow-cli.mjs > /home/u/.bashrc"), "deny");
     assert.equal(effectiveBashPermission(bash, "node /home/u/.kilocode/skills/review-this/workflow-cli.mjs | tee /tmp/x"), "deny");
+    // Alternate runtimes and direct execution never slip through to `ask`:
+    // side effects stay behind the bounded Node helpers.
+    assert.equal(effectiveBashPermission(bash, "bun /home/u/.kilocode/skills/review-this/workflow-cli.mjs evidence -"), "deny");
+    assert.equal(effectiveBashPermission(bash, "deno run /home/u/.kilocode/skills/review-this/workflow-cli.mjs evidence -"), "deny");
+    assert.equal(effectiveBashPermission(bash, "nodejs /home/u/.kilocode/skills/review-this/workflow-cli.mjs evidence -"), "deny");
+    assert.equal(effectiveBashPermission(bash, "pnpm dlx evil"), "deny");
+    assert.equal(effectiveBashPermission(bash, "/usr/bin/node /tmp/pr/review-this/workflow-cli.mjs evidence -"), "deny");
+    assert.equal(effectiveBashPermission(bash, "/home/u/.kilocode/skills/review-this/workflow-cli.mjs evidence -"), "deny");
   });
 
   test("edits allow only the private run directory; helpers, credentials, and configs stay unwritable", () => {
@@ -111,6 +127,21 @@ describe("tracked review-this agent permissions", () => {
     assert.equal(edit["**/.config/kilo/**"], "deny");
     assert.equal(edit["**/kilo.jsonc"], "deny");
     assert.equal(edit["**/agent-manager.json"], "deny");
+    // `write` mirrors `edit` so private JSON receipts can be created whether
+    // or not the host normalizes the two tools to one family. PR source,
+    // credentials, shared skills, permission config, and Agent Manager state
+    // stay unwritable in both.
+    const write = agent.permission.write as Record<string, string>;
+    assert.equal(write["*"], "deny");
+    assert.equal(write["/tmp/kilo/review-this/**"], "allow");
+    assert.equal(write["**/kilo.jsonc"], "deny");
+    assert.equal(write["**/agent-manager.json"], "deny");
+    assert.equal(write["**/.agents/skills/**"], "deny");
+    // External reads cover the discovered skill roots without prompts.
+    const external = agent.permission.external_directory as Record<string, string>;
+    assert.equal(external["*"], "ask");
+    assert.equal(external["*review-this/**"], "allow");
+    assert.equal(external["*unslopify/**"], "allow");
   });
 
   test("reads and skill loading stay normal; unrelated execution stays denied", () => {
@@ -118,7 +149,12 @@ describe("tracked review-this agent permissions", () => {
     assert.equal(agent.permission.read["*"], "allow");
     assert.equal(agent.permission.skill["review-this"], "allow");
     assert.equal(agent.permission.skill["unslopify"], "allow");
+    assert.equal(agent.permission.skill["ponytail"], "allow");
     assert.equal(agent.permission.skill["*"], "ask");
+    // Effective skill visibility: the loader tool itself must be present in
+    // the inventory, not merely denied at invocation. A final wildcard deny
+    // on `skill` would remove it; `ask` keeps it visible.
+    assert.notEqual(agent.permission.skill["*"], "deny", "skill loader stays visible in the tool inventory");
     assert.equal(agent.permission.bash["eval *"], "deny");
     assert.equal(agent.permission.bash["env *"], "deny");
     assert.equal(agent.permission.bash["LD_PRELOAD=*"], "deny");

@@ -14,7 +14,7 @@ Before publication approval, planning resolves an orientation set for every prop
 
 - A codebase you want to plan work for.
 - Node 24 or newer: the bundled read-only validator `workflow-cli.mjs` and read-only `github-facts.mjs` native reads (shipped in this package next to the shared `workflow-state.ts` and `github-facts.ts`) check the canonical publication gate, requirements revision, and native parent/dependency graphs and fail closed on older runtimes.
-- Hard dependencies: `/grill-with-docs`, `/to-spec`, `/to-tickets`, and `/unslopify`. Install the skills that provide those commands before invoking this one. This wrapper does not reimplement them.
+- Hard dependencies: `/grill-with-docs`, `/grilling`, `/domain-modeling`, `/to-spec`, `/to-tickets`, and `/unslopify`. Install the skills that provide those commands before invoking this one. This wrapper does not reimplement them. `/grilling` and `/domain-modeling` are loaded by `/grill-with-docs`.
 - `/unslopify` is this repository's local prose-cleanup utility — install it before use; the workflow stops without it.
 
 ## Install
@@ -32,6 +32,8 @@ Install the hard dependencies via their own registries before use:
 ```bash
 # hard dependencies — example registry lanes
 npx skills add mattpocock/skills --skill grill-with-docs
+npx skills add mattpocock/skills --skill grilling
+npx skills add mattpocock/skills --skill domain-modeling
 npx skills add mattpocock/skills --skill to-spec
 npx skills add mattpocock/skills --skill to-tickets
 npx skills add RuralNative/RuralNative-SKILLS --skill unslopify
@@ -61,6 +63,8 @@ cp -r skills/plan-this ~/.agents/skills/plan-this
 
 For other platforms, place `SKILL.md` in whatever location your agent loads skills from, keeping the folder name `plan-this`.
 
+Native hosts: `/plan-this <task>` where slash commands exist; `$plan-this` or native skill selection in Codex with `agents/openai.yaml` denying implicit invocation; `.claude/skills/plan-this/SKILL.md` for Claude Code (a supported symlink may share the bundle); `.agents/skills` and OpenCode-native skill locations where supported. Live host checks are NOT VERIFIED. On OpenCode, select with no arguments and supply the task text in a separate ordinary message; slash-argument forwarding is unsupported on dev-source evidence only, not a released-CLI check, and the separate-message route is a candidate, not certified literal. When a locked companion denies model invocation, pause for the human's same-session invocation and preserve the approved plan and canonical publication rules.
+
 ## Verify
 
 Invoke explicitly:
@@ -79,7 +83,7 @@ Former wrapper sections — Invocation details, Hard dependencies exposition, Ru
 
 ## Source provenance and trust
 
-Installing this skill is a trust decision in its source repository, `RuralNative/RuralNative-SKILLS`. Record provenance for what you install: note the resolved commit the registry CLI reports, or pin the revision you reviewed where the installer accepts a ref. Review the external hard dependencies the same way — `/grill-with-docs`, `/to-spec`, and `/to-tickets` come from `mattpocock/skills`; pin the reviewed revision where their installer supports it and record the commit you reviewed otherwise.
+Installing this skill is a trust decision in its source repository, `RuralNative/RuralNative-SKILLS`. Record provenance for what you install: note the resolved commit the registry CLI reports, or pin the revision you reviewed where the installer accepts a ref. Review the external hard dependencies the same way — `/grill-with-docs`, `/grilling`, `/domain-modeling`, `/to-spec`, and `/to-tickets` come from `mattpocock/skills`; pin the reviewed revision where their installer supports it and record the commit you reviewed otherwise.
 
 Provenance and pinning narrow what can change under you; they do not remove the residual trust in the source repository. Snyk's August 2026 audit reported Critical E005 and Medium W011 for this skill's install path. Pinning reviewed revisions addresses that exposure; the findings have not gone away and the underlying repository trust remains yours to make.
 

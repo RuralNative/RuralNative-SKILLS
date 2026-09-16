@@ -1,0 +1,5 @@
+interface:
+  display_name: "Review This"
+  short_description: "Review one pull request in the current checkout, publish findings"
+policy:
+  allow_implicit_invocation: false

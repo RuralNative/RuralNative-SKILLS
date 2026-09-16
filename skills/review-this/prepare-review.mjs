@@ -10,7 +10,8 @@
 //
 // Allowed operations (input.operation): observe-target, prepare-checkout,
 // restore-checkout, resolve-policy, verify-commands, recover-evidence,
-// setup-runtime, install-deps, run-check, publish-review, repair-record.
+// setup-runtime, install-deps, run-check, publish-review, repair-record,
+// prepare-tooling-repair, verify-tooling-repair.
 //
 // - Helpers call `gh` and approved setup/check commands using argument
 //   arrays, with validated targets and a sanitized environment.
@@ -51,6 +52,48 @@ const ALLOWED_OPERATIONS = new Set([
   "run-check",
   "publish-review",
   "repair-record",
+  "prepare-tooling-repair",
+  "verify-tooling-repair",
+  "retry-tooling-repair",
+]);
+
+const TOOLING_REPAIR_RECORD_FILE = "tooling-repair.json";
+const TOOLING_ATTEMPTS_FILE = "tooling-repair-attempts.json";
+const TOOLING_ISOLATED_DIR = "isolated";
+// Operational readers/adapters that may be corrected in isolation. Guards
+// (permission checks, side-effect guards, validators) stay immutable.
+const REPAIRABLE_HELPERS = new Set([
+  "github-facts.ts",
+  "github-facts.mjs",
+  "gh-review-transport.ts",
+  "targets.ts",
+  "discovery.ts",
+  "review-session.ts",
+  "reconciliation.ts",
+  "orientation.ts",
+]);
+const TOOLING_GUARD_FILES = [
+  "prepare-review.ts",
+  "prepare-review.mjs",
+  "workflow-state.ts",
+  "workflow-cli.mjs",
+  "review-policy.ts",
+  "review-authority.ts",
+  "publish-review.ts",
+  "publish-review.mjs",
+  "adapters.ts",
+  "install-check.mjs",
+];
+const TOOLING_REPAIRABLE_OPS = new Set([
+  "observe-target",
+  "prepare-checkout",
+  "resolve-policy",
+  "verify-commands",
+  "recover-evidence",
+  "setup-runtime",
+  "install-deps",
+  "run-check",
+  "publish-review",
 ]);
 
 const SNAPSHOT_RECORD_FILE = "checkout-snapshot.json";
@@ -99,6 +142,14 @@ async function ensureRunDir(subdir) {
   if (subdir.includes("..") || path.isAbsolute(subdir)) {
     throw new Error("path traversal rejected: run paths stay under /tmp/kilo/review-this/");
   }
+  // The run root itself must stay inside the system temp directory: an
+  // environment override pointing elsewhere never authorizes copies outside
+  // the private run area.
+  const runRootResolved = path.resolve(RUN_ROOT);
+  const tmpResolved = path.resolve(os.tmpdir());
+  if (runRootResolved !== tmpResolved && !runRootResolved.startsWith(`${tmpResolved}${path.sep}`)) {
+    throw new Error("run root outside the system temp directory rejected");
+  }
   const full = path.join(RUN_ROOT, subdir);
   const resolved = path.resolve(full);
   if (!resolved.startsWith(`${path.resolve(RUN_ROOT)}/`) && resolved !== path.resolve(RUN_ROOT)) {
@@ -124,9 +175,9 @@ async function ensureRunDir(subdir) {
   return resolved;
 }
 
-function execArgs(command, args, maxOutput = 8000) {
+function execArgs(command, args, maxOutput = 8000, options = {}) {
   return new Promise((resolve) => {
-    execFile(command, args, { env: sanitizedEnv(), shell: false, timeout: 120000, maxBuffer: 32 * 1024 * 1024 }, (error, stdout, stderr) => {
+    execFile(command, args, { env: sanitizedEnv(), shell: false, timeout: 120000, maxBuffer: 32 * 1024 * 1024, ...(options.cwd ? { cwd: options.cwd } : {}) }, (error, stdout, stderr) => {
       const full = `${stdout ?? ""}${error ? (stderr ?? "") : ""}`;
       const truncated = full.length > maxOutput;
       const output = truncated ? full.slice(0, maxOutput) : full;
@@ -139,16 +190,39 @@ function execArgs(command, args, maxOutput = 8000) {
   });
 }
 
-function execArgsFull(command, args, maxOutput = 512 * 1024) {
-  return execArgs(command, args, maxOutput);
+// Spawn with stdin input (for helper-owned execution of an isolated reader).
+// The executable path and arguments are fixed by the helper, never by the
+// caller; only the JSON observation input rides on stdin.
+function execFileStdin(command, args, stdinText, options = {}) {
+  return new Promise((resolve) => {
+    const child = execFile(command, args, { env: sanitizedEnv(), shell: false, timeout: 120000, maxBuffer: 16 * 1024 * 1024, ...(options.cwd ? { cwd: options.cwd } : {}) }, (error, stdout, stderr) => {
+      const full = `${stdout ?? ""}${error ? (stderr ?? "") : ""}`;
+      if (error) {
+        resolve({ ok: false, exitStatus: error.code ?? 1, output: full.slice(0, 8000), truncated: full.length > 8000, fullLength: full.length });
+        return;
+      }
+      resolve({ ok: true, exitStatus: 0, output: (stdout ?? "").slice(0, 8000), truncated: (stdout ?? "").length > 8000, fullLength: (stdout ?? "").length });
+    });
+    if (child.stdin) {
+      child.stdin.write(stdinText);
+      child.stdin.end();
+    }
+  });
+}
+
+function execArgsFull(command, args, maxOutput = 512 * 1024, options = {}) {
+  return execArgs(command, args, maxOutput, options);
 }
 
 // One shared bounded executor for approved checks. Keeps the integer exit
 // status, recorded output size, and truncation state so a shortened display is
-// never mistaken for a complete receipt.
-async function runApprovedCheck(command) {
+// never mistaken for a complete receipt. Callers pass the directory the
+// command must run in: regression checks for an isolated correction run with
+// the isolated copy as their working directory so receipts prove the
+// correction, not the surrounding checkout.
+async function runApprovedCheck(command, cwd) {
   const parts = command.trim().split(/\s+/);
-  const result = await execArgsFull(parts[0], parts.slice(1));
+  const result = await execArgsFull(parts[0], parts.slice(1), 512 * 1024, cwd ? { cwd } : {});
   return {
     command,
     output: result.output,
@@ -347,6 +421,160 @@ async function verifyLocalCheckout(pinnedHead, repository) {
     return { ok: false, reason: "tracked files are dirty; never clean, reset, stash, or discard to make the run look clean" };
   }
   return { ok: true };
+}
+
+// Shared validation for an isolated tooling-repair state: record binding,
+// fresh install hashes, exact guard-set equality (additions and deletions
+// stop), and isolated-directory integrity (no symlinks, no traversal, no
+// undeclared files). Used by both `verify-tooling-repair` and
+// `retry-tooling-repair` so the two paths cannot drift apart.
+async function loadValidatedRepairState(pure, input, operation) {
+  const runDir = await ensureRunDir(input.runId);
+  let stored = null;
+  try {
+    stored = JSON.parse(await fs.readFile(path.join(runDir, TOOLING_REPAIR_RECORD_FILE), "utf8"));
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      print(1, { ok: false, operation, kind: "restricted", reason: "no tooling repair record under this run directory; prepare the isolated copy before verifying" });
+    }
+    print(1, { ok: false, operation, kind: "restricted", reason: `tooling repair record unreadable: ${error.message}` });
+  }
+  const validated = pure.validateToolingRepairRecord(stored);
+  if (!validated.ok) {
+    print(1, { ok: false, operation, kind: "restricted", reason: validated.reason });
+  }
+  const rec = validated.record;
+  if (rec.runId !== input.runId || rec.repository.toLowerCase() !== input.repository.toLowerCase() || rec.prNumber !== input.prNumber || rec.headSha.trim().toLowerCase() !== input.headSha.trim().toLowerCase() || rec.baseSha.trim().toLowerCase() !== input.baseSha.trim().toLowerCase()) {
+    print(1, { ok: false, operation, kind: "restricted", reason: "the repair record names a different target or revision; never reuse a correction across targets or revisions" });
+  }
+  const isolatedDir = path.join(runDir, TOOLING_ISOLATED_DIR);
+  try {
+    const dirStat = await fs.lstat(isolatedDir);
+    if (dirStat.isSymbolicLink() || !dirStat.isDirectory()) {
+      print(1, { ok: false, operation, kind: "restricted", reason: "the isolated copy is not a regular directory" });
+    }
+    const realIsolated = await fs.realpath(isolatedDir);
+    const realRun = await fs.realpath(runDir);
+    if (realIsolated !== path.join(realRun, TOOLING_ISOLATED_DIR)) {
+      print(1, { ok: false, operation, kind: "restricted", reason: "the isolated copy resolves outside its run directory" });
+    }
+  } catch (error) {
+    print(1, { ok: false, operation, kind: "restricted", reason: "the isolated copy is missing; prepare it before verifying" });
+  }
+  // Stale source hashes: the shared install must still match the trusted
+  // hashes recorded at preparation.
+  for (const [file, expected] of Object.entries(rec.trustedHashes)) {
+    const src = path.join(rec.trustedInstallRoot, file);
+    try {
+      const stat = await fs.lstat(src);
+      if (stat.isSymbolicLink() || !stat.isFile()) {
+        print(1, { ok: false, operation, kind: "restricted", reason: `trusted helper ${file} is no longer a regular file; re-prepare before verifying` });
+      }
+      const current = sha256Hex(await fs.readFile(src, "utf8"));
+      if (current.toLowerCase() !== String(expected).toLowerCase()) {
+        print(1, { ok: false, operation, kind: "restricted", reason: `trusted helper ${file} changed since preparation; re-prepare before verifying` });
+      }
+    } catch (error) {
+      print(1, { ok: false, operation, kind: "restricted", reason: `trusted helper ${file} is unreadable: ${error.message}` });
+    }
+  }
+  // Exact guard-set equality: a guard added, removed, or changed since
+  // preparation stops the repair. Repairs needing altered authorization or
+  // proof rules stay outside this path.
+  const storedGuards = (stored.guardHashes !== null && typeof stored.guardHashes === "object" && !Array.isArray(stored.guardHashes)) ? stored.guardHashes : {};
+  for (const file of TOOLING_GUARD_FILES) {
+    let current = null;
+    let present = false;
+    try {
+      const stat = await fs.lstat(path.join(rec.trustedInstallRoot, file));
+      if (!stat.isSymbolicLink() && stat.isFile()) {
+        present = true;
+        current = sha256Hex(await fs.readFile(path.join(rec.trustedInstallRoot, file), "utf8"));
+      }
+    } catch {
+      present = false;
+    }
+    const had = storedGuards[file];
+    if (had === undefined) {
+      if (present) {
+        print(1, { ok: false, operation, kind: "restricted", reason: `immutable guard appeared since preparation: ${file}; repairs needing altered authorization or proof rules stay outside this path` });
+      }
+      continue;
+    }
+    if (!present) {
+      print(1, { ok: false, operation, kind: "restricted", reason: `immutable guard removed since preparation: ${file}; repairs needing altered authorization or proof rules stay outside this path` });
+    }
+    if (current.toLowerCase() !== String(had).toLowerCase()) {
+      print(1, { ok: false, operation, kind: "restricted", reason: `immutable guard changed since preparation: ${file}; repairs needing altered authorization or proof rules stay outside this path` });
+    }
+  }
+  // Isolated copy integrity: no symlinks, no traversal, only the declared
+  // changed files plus recorded support files may exist.
+  const supportFiles = Array.isArray(rec.supportFiles) ? rec.supportFiles : [];
+  const allowedTop = new Set([...rec.changedFiles, "package.json", "scripts"]);
+  let topEntries = [];
+  try {
+    topEntries = await fs.readdir(isolatedDir);
+  } catch {
+    print(1, { ok: false, operation, kind: "restricted", reason: "the isolated copy is unreadable" });
+  }
+  for (const entry of topEntries) {
+    if (!allowedTop.has(entry)) {
+      print(1, { ok: false, operation, kind: "restricted", reason: `unexpected file in the isolated copy: ${String(entry).slice(0, 80)}` });
+    }
+    const entryPath = path.join(isolatedDir, entry);
+    try {
+      const stat = await fs.lstat(entryPath);
+      if (stat.isSymbolicLink()) {
+        print(1, { ok: false, operation, kind: "restricted", reason: `symlink in the isolated copy: ${String(entry).slice(0, 80)}` });
+      }
+      if (entry === "scripts") {
+        if (!stat.isDirectory()) {
+          print(1, { ok: false, operation, kind: "restricted", reason: "the isolated scripts entry is not a directory" });
+        }
+        const scriptEntries = await fs.readdir(entryPath);
+        for (const script of scriptEntries) {
+          if (!supportFiles.includes(`scripts/${script}`)) {
+            print(1, { ok: false, operation, kind: "restricted", reason: `unexpected file in the isolated copy: scripts/${String(script).slice(0, 80)}` });
+          }
+          const scriptStat = await fs.lstat(path.join(entryPath, script));
+          if (scriptStat.isSymbolicLink() || !scriptStat.isFile()) {
+            print(1, { ok: false, operation, kind: "restricted", reason: `isolated support file is not a regular file: scripts/${String(script).slice(0, 80)}` });
+          }
+        }
+      } else if (!stat.isFile()) {
+        print(1, { ok: false, operation, kind: "restricted", reason: `unexpected entry in the isolated copy: ${String(entry).slice(0, 80)}` });
+      }
+    } catch (error) {
+      print(1, { ok: false, operation, kind: "restricted", reason: `isolated copy unreadable: ${error.message}` });
+    }
+  }
+  // Isolated copy integrity: only intended repairable files may differ from
+  // trusted hashes.
+  const changed = [];
+  for (const file of rec.changedFiles) {
+    if (typeof file !== "string" || file.includes("..") || file.includes("/") || file.includes("\\") || !REPAIRABLE_HELPERS.has(file)) {
+      print(1, { ok: false, operation, kind: "restricted", reason: `repair path escapes the isolated copy: ${String(file).slice(0, 80)}` });
+    }
+    const dest = path.join(isolatedDir, file);
+    if (!path.resolve(dest).startsWith(`${path.resolve(isolatedDir)}/`) && path.resolve(dest) !== path.resolve(isolatedDir)) {
+      print(1, { ok: false, operation, kind: "restricted", reason: `repair path escapes the isolated copy: ${file}` });
+    }
+    try {
+      const stat = await fs.lstat(dest);
+      if (stat.isSymbolicLink() || !stat.isFile()) {
+        print(1, { ok: false, operation, kind: "restricted", reason: `corrected helper ${file} is not a regular file` });
+      }
+      const current = sha256Hex(await fs.readFile(dest, "utf8"));
+      if (current.toLowerCase() !== String(rec.trustedHashes[file]).toLowerCase()) changed.push(file);
+    } catch (error) {
+      print(1, { ok: false, operation, kind: "restricted", reason: `corrected helper ${file} is unreadable: ${error.message}` });
+    }
+  }
+  if (changed.length === 0) {
+    print(1, { ok: false, operation, kind: "restricted", reason: "the isolated copy carries no correction; apply a minimal change before verifying" });
+  }
+  return { runDir, rec, isolatedDir, changed };
 }
 
 // Dirty-checkout preservation (automatic recovery): a verified snapshot of
@@ -1729,6 +1957,376 @@ async function main() {
           print(1, { ok: false, operation, kind: "restricted", reason: "the pull request body is in a different state after the corrective attempt; stop without another write" });
         }
         print(1, { ok: false, operation, kind: "restricted", reason: "the pull request body is in an unexpected state after the write attempt; stop without another write" });
+        break;
+      }
+      case "prepare-tooling-repair": {
+        // Bounded isolated copy for a reproduced helper defect. Copies only
+        // below the run directory; shared installs stay unchanged. One
+        // correction per observed cause and operation; budgets survive
+        // interruption via the persisted attempts map keyed by target, cause,
+        // and operation. Reworded errors share one budget through
+        // normalization; distinct causes receive their own.
+        if (!validRepository(input.repository) || !validPrNumber(input.prNumber) || !validSha(input.headSha) || !validSha(input.baseSha)) {
+          print(2, failure("prepare-tooling-repair requires repository, prNumber, headSha, and baseSha"));
+        }
+        if (typeof input.runId !== "string" || !/^[A-Za-z0-9._-]{1,64}$/.test(input.runId)) {
+          print(2, failure("prepare-tooling-repair requires a safe runId"));
+        }
+        const failedOp = typeof input.failedOperation === "string" ? input.failedOperation : "";
+        const cause = typeof input.observedCause === "string" ? input.observedCause : "";
+        if (!TOOLING_REPAIRABLE_OPS.has(failedOp)) {
+          print(2, failure("prepare-tooling-repair requires a repairable failedOperation"));
+        }
+        if (cause.trim() === "") {
+          print(2, failure("prepare-tooling-repair requires the observed cause"));
+        }
+        if (typeof pure.normalizeRepairCause !== "function" || typeof pure.decideToolingRepairRetry !== "function" || typeof pure.validateToolingRepairRecord !== "function") {
+          print(2, failure("preparation core is unavailable"));
+        }
+        // A denial is not a defect: an error saying `restricted`,
+        // forbidden, or denied never authorizes an isolated correction.
+        const isDenial = typeof pure.isToolingRepairAuthDenial === "function"
+          ? pure.isToolingRepairAuthDenial(cause)
+          : isAuthFailureReason(cause);
+        if (isDenial) {
+          print(1, { ok: false, operation, kind: "restricted", reason: "the observed cause is a denial or gate restriction, not a reproducible helper defect; restrictions stay restrictions" });
+        }
+        const trustedRoot = typeof input.trustedInstallRoot === "string" ? input.trustedInstallRoot : "";
+        const helperFiles = Array.isArray(input.helperFiles) ? input.helperFiles : null;
+        if (trustedRoot === "" || !path.isAbsolute(trustedRoot)) {
+          print(2, failure("prepare-tooling-repair requires an absolute trustedInstallRoot"));
+        }
+        if (helperFiles === null || helperFiles.length === 0) {
+          print(2, failure("prepare-tooling-repair requires a non-empty helperFiles list"));
+        }
+        for (const file of helperFiles) {
+          if (typeof file !== "string" || !REPAIRABLE_HELPERS.has(file) || file.includes("..") || file.includes("/") || file.includes("\\")) {
+            print(1, { ok: false, operation, kind: "restricted", reason: `tooling repair cannot change guard or unknown file: ${String(file).slice(0, 80)}` });
+          }
+        }
+        const runDir = await ensureRunDir(input.runId);
+        if (input.dryRun === true) {
+          print(0, { ok: true, operation, runDir, validated: true });
+        }
+        const resolvedRoot = path.resolve(trustedRoot);
+        const resolvedRunRoot = path.resolve(RUN_ROOT);
+        if (resolvedRoot === resolvedRunRoot || resolvedRoot.startsWith(`${resolvedRunRoot}/`)) {
+          print(1, { ok: false, operation, kind: "restricted", reason: "the trusted install origin must not be the run directory" });
+        }
+        // Resolve symlinks before trusting the origin: a caller-supplied
+        // directory behind a link, or a PR checkout posing as an install,
+        // never becomes trusted. The origin must be a review-this skill
+        // installation carrying its own SKILL.md identity.
+        let realRoot = null;
+        try {
+          const rootStat = await fs.lstat(resolvedRoot);
+          if (rootStat.isSymbolicLink() || !rootStat.isDirectory()) {
+            print(1, { ok: false, operation, kind: "restricted", reason: "the trusted install origin is not a regular directory" });
+          }
+          realRoot = await fs.realpath(resolvedRoot);
+          const realRun = await fs.realpath(resolvedRunRoot).catch(() => resolvedRunRoot);
+          if (realRoot === realRun || realRoot.startsWith(`${realRun}${path.sep}`)) {
+            print(1, { ok: false, operation, kind: "restricted", reason: "the trusted install origin must not be the run directory" });
+          }
+        } catch (error) {
+          print(1, { ok: false, operation, kind: "restricted", reason: `the trusted install origin is unreadable: ${error.message}` });
+        }
+        try {
+          const skillStat = await fs.lstat(path.join(realRoot, "SKILL.md"));
+          if (skillStat.isSymbolicLink() || !skillStat.isFile()) {
+            print(1, { ok: false, operation, kind: "restricted", reason: "the trusted install origin is not a review-this skill installation" });
+          }
+          const skillText = await fs.readFile(path.join(realRoot, "SKILL.md"), "utf8");
+          if (!skillText.includes("name: review-this")) {
+            print(1, { ok: false, operation, kind: "restricted", reason: "the trusted install origin is not a review-this skill installation" });
+          }
+        } catch (error) {
+          print(1, { ok: false, operation, kind: "restricted", reason: `the trusted install origin is not a review-this skill installation: ${error.message}` });
+        }
+        const normalizedCause = pure.normalizeRepairCause(cause);
+        const attemptKey = `${input.repository.toLowerCase()}#${input.prNumber}:${failedOp}:${normalizedCause}`;
+        // Interruption resume first: an identical record reuses without
+        // consuming another budget. A record for another target stops here.
+        const recordPath = path.join(runDir, TOOLING_REPAIR_RECORD_FILE);
+        try {
+          const existingRaw = await fs.readFile(recordPath, "utf8");
+          const existing = JSON.parse(existingRaw);
+          const validated = pure.validateToolingRepairRecord(existing);
+          if (validated.ok) {
+            const rec = validated.record;
+            const sameTarget = rec.repository.toLowerCase() === input.repository.toLowerCase() && rec.prNumber === input.prNumber && rec.headSha.trim().toLowerCase() === input.headSha.trim().toLowerCase() && rec.baseSha.trim().toLowerCase() === input.baseSha.trim().toLowerCase();
+            const sameRepair = rec.runId === input.runId && rec.operation === failedOp && pure.normalizeRepairCause(rec.observedCause) === normalizedCause && rec.trustedInstallRoot === realRoot && JSON.stringify([...rec.changedFiles].sort()) === JSON.stringify([...helperFiles].sort());
+            if (sameTarget && sameRepair) {
+              print(0, { ok: true, operation, runDir, reused: true, record: rec, isolatedDir: path.join(runDir, TOOLING_ISOLATED_DIR) });
+            }
+            if (!sameTarget) {
+              print(1, { ok: false, operation, kind: "restricted", reason: "the repair record names a different target or revision; reconcile it manually without another copy" });
+            }
+          }
+        } catch (error) {
+          if (error?.code !== undefined && error.code !== "ENOENT" && !String(error.message ?? "").includes("reconcile")) throw error;
+        }
+        let attempts = {};
+        try {
+          const rawAttempts = await fs.readFile(path.join(resolvedRunRoot, TOOLING_ATTEMPTS_FILE), "utf8");
+          const parsedAttempts = JSON.parse(rawAttempts);
+          if (parsedAttempts !== null && typeof parsedAttempts === "object" && !Array.isArray(parsedAttempts)) attempts = parsedAttempts;
+        } catch (error) {
+          if (error?.code !== "ENOENT") {
+            print(1, { ok: false, operation, kind: "recoverable", failureClass: "transient-read", reason: "repair attempts are unreadable; re-read before repeating" });
+          }
+        }
+        const budget = pure.decideToolingRepairRetry(failedOp, cause, Object.fromEntries(Object.entries(attempts).map(([k, v]) => [k.endsWith(`:${failedOp}:${normalizedCause}`) && k.startsWith(`${input.repository.toLowerCase()}#${input.prNumber}:`) ? `${failedOp}:${normalizedCause}` : k, v])));
+        // The persisted map keys by target+operation+cause; the pure helper
+        // keys by operation+cause. Resolve the exact persisted key here.
+        const persistedUsed = typeof attempts[attemptKey] === "number" ? attempts[attemptKey] : 0;
+        if (persistedUsed >= 1) {
+          print(1, { ok: false, operation, kind: "restricted", reason: `one isolated tooling correction already used for ${failedOp} with this cause; stop instead of looping` });
+        }
+        if (!budget.retry && persistedUsed < 1) {
+          // Pure helper refused for another reason (e.g. empty cause, already
+          // normalized above). Surface its reason.
+          print(1, { ok: false, operation, kind: "restricted", reason: budget.reason });
+        }
+        const isolatedDir = path.join(runDir, TOOLING_ISOLATED_DIR);
+        await fs.mkdir(isolatedDir, { recursive: true, mode: 0o700 });
+        const trustedHashes = {};
+        for (const file of helperFiles) {
+          const src = path.join(realRoot, file);
+          try {
+            const stat = await fs.lstat(src);
+            if (stat.isSymbolicLink() || !stat.isFile()) {
+              print(1, { ok: false, operation, kind: "restricted", reason: `trusted helper ${file} is not a regular file` });
+            }
+            const content = await fs.readFile(src, "utf8");
+            trustedHashes[file] = sha256Hex(content);
+            const dest = path.join(isolatedDir, file);
+            if (!path.resolve(dest).startsWith(`${path.resolve(isolatedDir)}/`) && path.resolve(dest) !== path.resolve(isolatedDir)) {
+              print(1, { ok: false, operation, kind: "restricted", reason: `repair path escapes the isolated copy: ${file}` });
+            }
+            await fs.writeFile(dest, content, { mode: 0o600 });
+          } catch (error) {
+            print(1, { ok: false, operation, kind: "restricted", reason: `trusted helper ${file} is unreadable: ${error.message}` });
+          }
+        }
+        // Support files for isolated execution: the install's package.json
+        // plus its scripts/ helpers, copied verbatim (never corrected).
+        // Regression commands run with the isolated copy as their working
+        // directory so receipts prove the correction.
+        const supportFiles = [];
+        try {
+          const pkgStat = await fs.lstat(path.join(realRoot, "package.json"));
+          if (!pkgStat.isSymbolicLink() && pkgStat.isFile()) {
+            const pkgText = await fs.readFile(path.join(realRoot, "package.json"), "utf8");
+            await fs.writeFile(path.join(isolatedDir, "package.json"), pkgText, { mode: 0o600 });
+            supportFiles.push("package.json");
+          }
+        } catch {
+          // No package.json in the install: regression must use explicit
+          // node entries resolved against the isolated copy.
+        }
+        try {
+          const scriptsStat = await fs.lstat(path.join(realRoot, "scripts"));
+          if (!scriptsStat.isSymbolicLink() && scriptsStat.isDirectory()) {
+            const names = await fs.readdir(path.join(realRoot, "scripts"));
+            const copied = [];
+            for (const name of names) {
+              if (name === "" || name.includes("/") || name.includes("\\") || name.startsWith(".")) continue;
+              if (!name.endsWith(".mjs") && !name.endsWith(".js") && !name.endsWith(".cjs")) continue;
+              const src = path.join(realRoot, "scripts", name);
+              try {
+                const stat = await fs.lstat(src);
+                if (stat.isSymbolicLink() || !stat.isFile()) continue;
+                copied.push([name, await fs.readFile(src, "utf8")]);
+              } catch {
+                continue;
+              }
+            }
+            if (copied.length > 0) {
+              await fs.mkdir(path.join(isolatedDir, "scripts"), { recursive: true, mode: 0o700 });
+              for (const [name, text] of copied) {
+                await fs.writeFile(path.join(isolatedDir, "scripts", name), text, { mode: 0o600 });
+                supportFiles.push(`scripts/${name}`);
+              }
+            }
+          }
+        } catch {
+          // No scripts directory: nothing to copy.
+        }
+        const guardHashes = {};
+        for (const file of TOOLING_GUARD_FILES) {
+          try {
+            const stat = await fs.lstat(path.join(realRoot, file));
+            if (stat.isSymbolicLink() || !stat.isFile()) continue;
+            guardHashes[file] = sha256Hex(await fs.readFile(path.join(realRoot, file), "utf8"));
+          } catch {
+            continue;
+          }
+        }
+        const record = {
+          repository: input.repository,
+          prNumber: input.prNumber,
+          headSha: input.headSha.trim(),
+          baseSha: input.baseSha.trim(),
+          runId: input.runId,
+          operation: failedOp,
+          observedCause: cause,
+          trustedInstallRoot: realRoot,
+          trustedHashes,
+          guardHashes,
+          changedFiles: [...helperFiles],
+          supportFiles,
+        };
+        try {
+          await fs.writeFile(recordPath, `${JSON.stringify(record, null, 2)}\n`, { mode: 0o600 });
+        } catch (error) {
+          print(1, { ok: false, operation, kind: "restricted", reason: `the repair record could not be stored: ${error.message}` });
+        }
+        try {
+          attempts[attemptKey] = (typeof attempts[attemptKey] === "number" ? attempts[attemptKey] : 0) + 1;
+          await fs.mkdir(resolvedRunRoot, { recursive: true, mode: 0o700 });
+          await fs.writeFile(path.join(resolvedRunRoot, TOOLING_ATTEMPTS_FILE), `${JSON.stringify(attempts, null, 2)}\n`, { mode: 0o600 });
+        } catch (error) {
+          print(1, { ok: false, operation, kind: "restricted", reason: `repair attempts could not be retained: ${error.message}` });
+        }
+        print(0, { ok: true, operation, runDir, reused: false, record, isolatedDir });
+        break;
+      }
+      case "verify-tooling-repair": {
+        // Validate a corrected isolated copy, run its regression checks with
+        // helper-observed receipts from inside the isolated copy, and refuse
+        // guard changes, stale hashes, target reuse, malicious paths, and
+        // lost records. Fork code stays static-review-only.
+        if (typeof input.runId !== "string" || !/^[A-Za-z0-9._-]{1,64}$/.test(input.runId)) {
+          print(2, failure("verify-tooling-repair requires the runId of the run that prepared the copy"));
+        }
+        if (!validRepository(input.repository) || !validPrNumber(input.prNumber) || !validSha(input.headSha) || !validSha(input.baseSha)) {
+          print(2, failure("verify-tooling-repair requires repository, prNumber, headSha, and baseSha"));
+        }
+        const commands = Array.isArray(input.commands) ? input.commands : null;
+        const boundary = input.boundary ?? null;
+        const approved = Array.isArray(input.approvedCommands) ? input.approvedCommands : [];
+        if (commands === null || commands.length === 0 || boundary === null) {
+          print(2, failure("verify-tooling-repair requires commands plus its install boundary and approved command policy"));
+        }
+        if (typeof pure.isAllowedSetupCommand !== "function" || typeof pure.isValidInstallBoundary !== "function" || typeof pure.validateToolingRepairRecord !== "function" || typeof pure.isEstablishedRepairCommand !== "function") {
+          print(2, failure("preparation core is unavailable"));
+        }
+        if (input.fork === true) {
+          print(1, { ok: false, operation, kind: "restricted", reason: "fork code remains static-review-only; never execute untrusted fork code" });
+        }
+        if (!pure.isValidInstallBoundary(boundary)) {
+          print(1, { ok: false, operation, kind: "restricted", reason: "install boundary is not a known frozen boundary with lifecycle scripts disabled" });
+        }
+        for (const entry of approved) {
+          if (typeof entry !== "string" || entry.length === 0 || entry.length > 256) {
+            print(2, failure("approvedCommands must be an array of script names or explicit node entries"));
+          }
+          if (/[;&|><`$]/.test(entry) || /\bLD_PRELOAD\b|\bNODE_OPTIONS\b|\bPYTHONPATH\b/i.test(entry)) {
+            print(1, { ok: false, operation, kind: "restricted", reason: "approved command policy carries shell metacharacters or preloads" });
+          }
+        }
+        // Establishment comes from the trusted install's own package.json
+        // (read after the repair record loads), not from the caller's list
+        // alone: a caller-supplied `evil` script never authorizes itself.
+        const dryRunDir = await ensureRunDir(input.runId);
+        if (input.dryRun === true) {
+          print(0, { ok: true, operation, runDir: dryRunDir, validated: true });
+        }
+        const { runDir, rec, isolatedDir, changed } = await loadValidatedRepairState(pure, input, operation);
+        let trustedScripts = [];
+        try {
+          const pkg = JSON.parse(await fs.readFile(path.join(rec.trustedInstallRoot, "package.json"), "utf8"));
+          if (pkg && typeof pkg === "object" && pkg.scripts && typeof pkg.scripts === "object" && !Array.isArray(pkg.scripts)) {
+            trustedScripts = Object.entries(pkg.scripts).filter(([, value]) => typeof value === "string").map(([name]) => name);
+          }
+        } catch {
+          trustedScripts = [];
+        }
+        const repairConfig = { npmScripts: trustedScripts, trackedFiles: [...rec.changedFiles, ...(Array.isArray(rec.supportFiles) ? rec.supportFiles : [])] };
+        for (const command of commands) {
+          if (typeof command !== "string" || command.trim() === "") {
+            print(2, failure("each verify command must be a non-empty string"));
+          }
+          if (!pure.isAllowedSetupCommand(command, boundary, approved)) {
+            print(1, { ok: false, operation, kind: "restricted", reason: `verify command is outside the approved frozen boundary: ${String(command).slice(0, 120)}` });
+          }
+          const established = pure.isEstablishedRepairCommand(command, repairConfig);
+          if (!established.ok) {
+            print(1, { ok: false, operation, kind: "restricted", reason: `verify command is not established by the trusted install configuration: ${established.reason}` });
+          }
+        }
+        const receipts = [];
+        for (const command of commands) {
+          receipts.push(await runApprovedCheck(command, isolatedDir));
+        }
+        const truncated = receipts.filter((receipt) => receipt.truncated === true);
+        if (truncated.length > 0) {
+          print(1, { ok: false, operation, kind: "restricted", reason: `verify output is incomplete (truncated): ${truncated.map((r) => r.command).join(", ")}` });
+        }
+        const failed = receipts.filter((receipt) => receipt.exitStatus !== 0);
+        if (failed.length > 0) {
+          print(1, { ok: false, operation, kind: "restricted", reason: `corrected copy failed regression: ${failed.map((r) => r.command).join(", ")}`, receipts: receipts.map((r) => ({ command: r.command, exitStatus: r.exitStatus, truncated: r.truncated, outputBytes: r.outputBytes })) });
+        }
+        print(0, { ok: true, operation, runDir, verified: true, changedFiles: changed, isolatedDir, receipts: receipts.map((r) => ({ command: r.command, exitStatus: r.exitStatus, truncated: r.truncated, outputBytes: r.outputBytes })) });
+        break;
+      }
+      case "retry-tooling-repair": {
+        // Helper-owned retry of the failed observation through the corrected
+        // isolated executable. Only the isolated `github-facts.mjs` reader
+        // may run, only with a fixed read-only operation, and only after the
+        // same record, guard, hash, and integrity validation as verification.
+        // The agent never executes scripts from /tmp directly.
+        if (typeof input.runId !== "string" || !/^[A-Za-z0-9._-]{1,64}$/.test(input.runId)) {
+          print(2, failure("retry-tooling-repair requires the runId of the run that prepared the copy"));
+        }
+        if (!validRepository(input.repository) || !validPrNumber(input.prNumber) || !validSha(input.headSha) || !validSha(input.baseSha)) {
+          print(2, failure("retry-tooling-repair requires repository, prNumber, headSha, and baseSha"));
+        }
+        const retryOperation = typeof input.retryOperation === "string" ? input.retryOperation : "";
+        if (!["pull-request", "repository", "issue"].includes(retryOperation)) {
+          print(2, failure("retry-tooling-repair retries only pull-request, repository, or issue reads"));
+        }
+        if (typeof pure.validateToolingRepairRecord !== "function") {
+          print(2, failure("preparation core is unavailable"));
+        }
+        const { runDir, rec, isolatedDir, changed } = await loadValidatedRepairState(pure, input, operation);
+        if (!rec.changedFiles.includes("github-facts.mjs") && !changed.includes("github-facts.mjs")) {
+          print(1, { ok: false, operation, kind: "restricted", reason: "retry needs the corrected github-facts.mjs executable in the isolated copy" });
+        }
+        const isolatedCli = path.join(isolatedDir, "github-facts.mjs");
+        try {
+          const stat = await fs.lstat(isolatedCli);
+          if (stat.isSymbolicLink() || !stat.isFile()) {
+            print(1, { ok: false, operation, kind: "restricted", reason: "the isolated reader is not a regular file" });
+          }
+          const realCli = await fs.realpath(isolatedCli);
+          const realIsolated = await fs.realpath(isolatedDir);
+          if (realCli !== path.join(realIsolated, "github-facts.mjs")) {
+            print(1, { ok: false, operation, kind: "restricted", reason: "the isolated reader resolves outside its run directory" });
+          }
+        } catch (error) {
+          print(1, { ok: false, operation, kind: "restricted", reason: `the isolated reader is unreadable: ${error.message}` });
+        }
+        const retryInput = { operation: retryOperation, repository: input.repository, prNumber: input.prNumber };
+        if (retryOperation === "issue" && input.issueNumber !== undefined) {
+          if (!Number.isInteger(input.issueNumber) || input.issueNumber < 1) print(2, failure("retry issue reads need a positive issueNumber"));
+          retryInput.issueNumber = input.issueNumber;
+        }
+        const result = await execFileStdin(process.execPath, [isolatedCli, "-"], `${JSON.stringify(retryInput)}\n`, { cwd: isolatedDir });
+        if (result.truncated) {
+          print(1, { ok: false, operation, kind: "restricted", reason: "retry output is incomplete (truncated)" });
+        }
+        if (result.exitStatus !== 0) {
+          print(1, { ok: false, operation, kind: "restricted", reason: `isolated retry failed: ${result.output.slice(0, 200)}` });
+        }
+        let retried = null;
+        try {
+          retried = JSON.parse(result.output);
+        } catch {
+          print(1, { ok: false, operation, kind: "restricted", reason: "isolated retry returned invalid JSON" });
+        }
+        print(0, { ok: true, operation, runDir, isolatedDir, changedFiles: changed, retried });
         break;
       }
       default: {

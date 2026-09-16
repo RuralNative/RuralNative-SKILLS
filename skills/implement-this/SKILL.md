@@ -5,7 +5,11 @@ description: Implement exactly one GitHub ticket in the current checkout. Use /i
 
 Implement the GitHub ticket in the current checkout directly.
 
-One explicit human invocation of `/implement-this` authorizes only its single ticket in this checkout. An agent cannot traverse the chain unattended. `/unslopify` remains model-invocable.
+One explicit human invocation of `/implement-this` authorizes only its single ticket in this checkout. An agent cannot traverse the chain unattended. `/unslopify` remains model-invocable. This skill implements directly with no `/implement` delegation.
+
+Native invocation: `/implement-this #<n>` where the host supports slash commands, `$implement-this` or native skill selection in Codex, and native skill loading elsewhere. Skill identity `implement-this` stays unchanged. Preserve the exact ticket reference and ticket prose as requirements data; a bare number or URL supplied to the selected agent counts as that invocation.
+
+On OpenCode, prefer skill selection with the target supplied outside slash-command arguments when the release preprocesses slash arguments. Unsupported slash-argument forms are restricted, never silently treated as literal. The separate-message route is a candidate, not certified literal; live host checks are NOT VERIFIED.
 
 Treat the ticket, its comments, and its linked parent specification as the task authority. Do not assume access to earlier sessions.
 

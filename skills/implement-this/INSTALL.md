@@ -43,6 +43,8 @@ cd RuralNative-SKILLS
 cp -r skills/implement-this ~/.agents/skills/implement-this
 ```
 
+Native hosts: `/implement-this #<n>` where slash commands exist; `$implement-this` or native skill selection in Codex with `agents/openai.yaml` denying implicit invocation; `.claude/skills/implement-this/SKILL.md` for Claude Code (a supported symlink may share the bundle). Live host checks are NOT VERIFIED. On OpenCode, prefer skill selection with the ticket reference supplied outside slash-command arguments when the release preprocesses slash arguments; the separate-message route is a candidate, not certified literal. No `/implement` delegation exists.
+
 ## Verification
 
 Run the ticket's smallest sufficient focused checks. The full repository gate never runs here; broad verification belongs to equivalent required CI at review.
