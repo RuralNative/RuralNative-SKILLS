@@ -5,11 +5,13 @@
     "model": "matched across baseline and revision",
     "settings": "matched",
     "tools": "matched",
+    "dependency": "unslopify supplied or permitted consistently for both versions; an absent dependency stops the run and is reported as blocked, never scored as full workflow proof",
+    "outputProtocol": "matched output and tool protocol for both versions; any deviation is disclosed and the affected run is not treated as matched proof",
     "permissions": "authored sources only, no implementation inspection",
     "inputs": "matched per case"
   },
   "allowedSources": ["ADRs", "glossary", "seam table", "leaf docs", "debt registry"],
-  "forbiddenSources": ["code", "issues", "commit messages", "human-first docs", "runtime inspection"],
+  "forbiddenSources": ["code", "issues", "commit messages", "human-first docs", "runtime inspection", "evaluation records (including this comparison rubric, which is report input only)"],
   "systems": {
     "web": "taskboard, a generic web task application described only through permitted authored sources",
     "offline": "notetool, an offline CLI notes utility described only through permitted authored sources"

@@ -359,12 +359,47 @@ describe("document-for-humans hard dependency (document-for-humans:INV-6)", () =
     const frozen = JSON.parse(read("skills/document-for-humans/tests/fixtures/frozen-comparison.json"));
     const cases = JSON.parse(read("skills/document-for-humans/tests/fixtures/synthetic-cases.json"));
     const skill = read("skills/document-for-humans/SKILL.md");
-    assert.ok(Array.isArray(cases.cases) && cases.cases.length === 10);
+    assert.ok(Array.isArray(cases.cases) && cases.cases.length === 11);
     assert.ok(cases.cases.some((c: { system: string }) => c.system === "offline"));
     assert.ok(cases.note.toLowerCase().includes("never output-quality proof") || cases.note.toLowerCase().includes("contract checks only"));
     assert.ok(typeof frozen.adoptionRule === "string" && frozen.adoptionRule.includes("safety regression blocks adoption"));
     assert.ok(frozen.note.toLowerCase().includes("never required outcomes") || frozen.note.toLowerCase().includes("never required"));
     assert.equal(skill.includes("synthetic-cases"), false, "comparison machinery stays out of ordinary invocation");
     assert.equal(skill.includes("frozen-comparison"), false, "comparison machinery stays out of ordinary invocation");
+    // F-5: unspecified-persistence control exists alongside the known-cleanup variant
+    const case4b = cases.cases.find((c: { id: string }) => c.id === "case-4b");
+    assert.ok(case4b, "case-4b unspecified-persistence variant must exist");
+    assert.ok(!JSON.stringify(case4b.allowedSources).toLowerCase().includes("wipes"), "case-4b must supply no cleanup fact");
+    assert.ok(case4b.required.toLowerCase().includes("not established by the sources"));
+    // F-6: case-7 supplies a concrete guide and named authored destinations
+    const case7 = cases.cases.find((c: { id: string }) => c.id === "case-7");
+    assert.ok(typeof case7.guideExcerpt === "string" && case7.guideExcerpt.length > 0, "case-7 must supply a concrete guide excerpt");
+    assert.ok(Array.isArray(case7.validDestinations) && case7.validDestinations.length >= 2, "case-7 must name authored destinations");
+    // F-7: case-9 keeps the rubric as report input, never as derivation source
+    const case9 = cases.cases.find((c: { id: string }) => c.id === "case-9");
+    assert.ok(!JSON.stringify(case9.allowedSources).toLowerCase().includes("frozen-comparison"), "case-9 allowedSources must not name the evaluation record");
+    assert.ok(typeof case9.reportInput === "string" && case9.reportInput.toLowerCase().includes("report input only"));
+    // F-3: matched conditions require the pinned dependency and matched output protocol
+    assert.ok(typeof frozen.conditions.dependency === "string" && frozen.conditions.dependency.toLowerCase().includes("unslopify"));
+    assert.ok(typeof frozen.conditions.outputProtocol === "string" && frozen.conditions.outputProtocol.toLowerCase().includes("matched"));
+    assert.ok(JSON.stringify(frozen.forbiddenSources).toLowerCase().includes("evaluation records"));
+  });
+
+  test("maintenance discovers new subjects beyond citation intersection", () => {
+    const skill = read("skills/document-for-humans/SKILL.md");
+    const n = norm(skill);
+    assert.ok(n.includes("newly documented subjects"));
+    assert.equal(n.includes("only docs whose sources intersect the change set are affected"), false, "exclusive intersection filter must be gone (F-4)");
+    assert.ok(n.includes("use citation intersection as one starting signal"), "intersection is one signal, then new subjects are checked");
+    assert.ok(n.includes("record coverage or a justified exclusion") || n.includes("justified exclusion"));
+  });
+
+  test("evaluation records stay report input, never derivation sources", () => {
+    const routing = read("skills/document-for-humans/reference/routing.md");
+    const templates = read("skills/document-for-humans/reference/templates.md");
+    const skill = read("skills/document-for-humans/SKILL.md");
+    assert.ok(norm(routing).includes("evaluation records cannot supply claims") || norm(routing).includes("evaluation records"));
+    assert.ok(templates.includes("evaluation records never appear there"));
+    assert.ok(norm(skill).includes("evaluation records and comparison rubrics are report input only"));
   });
 });

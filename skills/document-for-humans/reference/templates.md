@@ -10,8 +10,8 @@ Every human-first doc opens with this block; the gate reads it for freshness, ag
 
 - Each Derived doc carries valid `Derived:` and `Sources:` headers. Both are
   required; a missing or unparseable header fails the gate.
-- `Sources:` lists only authored docs. Code, issues, commit messages, and
-  human-first docs never appear there.
+- `Sources:` lists only authored docs. Code, issues, commit messages,
+  human-first docs, and evaluation records never appear there.
 - The `Derived:` stamp postdates every source change; see `coherence.md` for the
   freshness rule.
 

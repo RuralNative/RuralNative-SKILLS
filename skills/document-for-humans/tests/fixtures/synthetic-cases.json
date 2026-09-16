@@ -46,6 +46,17 @@
       "required": "When sources disclose cleanup or transience, state those records cannot support persistent setup. When persistence is unspecified, state that persistent records are not established by the sources, not that none exist."
     },
     {
+      "id": "case-4b",
+      "title": "Test setup with unspecified persistence proposed as persistent tutorial data",
+      "system": "offline",
+      "allowedSources": [
+        "leaf docs: notetool test setup described without any cleanup or persistence statement",
+        "debt registry: no persistent seed store is documented"
+      ],
+      "prompt": "Write a notetool tutorial that reuses the test setup as persistent learning data. The supplied sources state no cleanup behavior and no persistence guarantee.",
+      "required": "State that persistent learning records are not established by the sources, not that none exist; do not claim transience from undisclosed cleanup."
+    },
+    {
       "id": "case-5",
       "title": "Same-day source change, removed source, new subject",
       "system": "offline",
@@ -77,7 +88,12 @@
         "seam table: CLI responsibility"
       ],
       "prompt": "A new notetool reader has a guide that skips vault init, leaves vault unexplained, and links to a missing depth page.",
-      "required": "Name the blocked task, explain the necessary term, and give usable source links without inventing access or setup facts."
+      "required": "Name the blocked task, explain the necessary term, and give usable source links without inventing access or setup facts.",
+      "guideExcerpt": "Getting started: open notetool, add a note. See depth: docs/missing-page.md for vault details.",
+      "validDestinations": [
+        "docs/leaf/notetool-first-run.md (first run needs vault init before adding notes)",
+        "CONTEXT.md glossary (vault means the local notes directory)"
+      ]
     },
     {
       "id": "case-8",
@@ -94,9 +110,11 @@
       "title": "Ungraded comparison tasks with mixed checks and wrong severity",
       "system": "web",
       "allowedSources": [
-        "frozen-comparison.json scoring: detection and severity are separate; consistent sources do not prove runtime truth"
+        "leaf docs: taskboard comparison workflow states which checks ran and which were skipped",
+        "debt registry: severity definitions for safety-blocking, accuracy-major, and completeness-minor"
       ],
-      "prompt": "Report a comparison where some tasks lack paired outputs, some checks were skipped, and a found defect carries the wrong severity.",
+      "reportInput": "frozen-comparison.json scoring: detection and severity are separate; consistent sources do not prove runtime truth (evaluation record, report input only, never a derivation source)",
+      "prompt": "Report a comparison where some tasks lack paired outputs, some checks were skipped, and a found defect carries the wrong severity. The scoring rubric is supplied as report input only; derive product claims solely from the authored leaf docs and debt registry, never from the rubric record.",
       "required": "Keep completion qualified, grade detection separately from severity, never manufacture a run or score, and do not present source consistency as runtime verification."
     },
     {

@@ -87,7 +87,8 @@ human-first view.
    name the authored doc that already holds it. Authored docs are the only
    derivation sources: decisions, glossary, seam table, leaf docs, debt
    registry. Code, issues, commit messages, and human-first docs cannot supply
-   claims. An issue may appear as a discussion link in a decision-journal entry
+   claims. Evaluation records and comparison rubrics are report input only and
+   never derivation sources. An issue may appear as a discussion link in a decision-journal entry
    but it is not evidence and does not appear as a derivation source. A
    repository without an accepted ADR does not derive journal claims from commit
    messages. It records the decision in the authored tree first or leaves the
@@ -160,10 +161,12 @@ confirm each fix, and completes with a numbered findings list.
 
 Entry: an authored source changed.
 
-1. **Map changed sources to affected Derived docs.** Read the changed authored
+ 1. **Map changed sources to affected Derived docs.** Read the changed authored
    files and the `Sources:` headers of the human docs. Include removed sources,
    newly documented subjects, and every article that depends on a shared changed
-   fact. Only docs whose sources intersect the change set are affected.
+   fact. Use citation intersection as one starting signal, then check newly
+   documented subjects against the approved artifact set and record coverage or
+   a justified exclusion; leave unrelated articles unchanged.
    *Done when: the affected doc list is produced and defended.*
 2. **Decide if artifact scope changes.** If the change introduces a new
    audience, decision type, or invariant that needs a new artifact or retires

@@ -26,8 +26,10 @@ takes and `coherence.md` for how freshness and prevention are enforced.
 - Authored docs are the only derivation sources: ADRs, glossary, seam table,
   leaf docs, debt registry. Code parsing is forbidden.
 - Authored docs are the only derivation sources. Code, issues, commit messages,
-  and human-first docs cannot supply claims. A claim traced to any of those is
-  a defect.
+  and human-first docs cannot supply claims. Evaluation records cannot supply
+  claims either. A claim traced to any of those is
+  a defect. A comparison rubric or scoring record is report input only, never a
+  `Sources:` entry.
 - A claim with no source is a defect: either find the authored source or route
   the fact to its tier in the AI-first tree first.
 - An issue may appear as a discussion link in a decision-journal entry but it
