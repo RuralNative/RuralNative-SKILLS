@@ -11,15 +11,25 @@ takes and `coherence.md` for how freshness and prevention are enforced.
 | What changed, why, and what does it cost me? | oversight stakeholder | Decision journal entry | the ADR it digests |
 | Which rules must my changes not break? | vibe coder, junior | Guardrails at a glance | leaf docs' Non-negotiables, glossary |
 | Where does information flow and where does it rest? | junior, stakeholder | Data-flow narrative | leaf docs' data-flow sections |
+| How do I complete one task end to end? | operator, junior | Task guide (optional) | leaf docs' data-flow and Non-negotiables, glossary |
+| Which operation do I use and what does it return? | operator, consumer | Operation reference (optional) | leaf docs' Non-negotiables and data-flow, ADRs |
+| How do I extend this safely? | developer | Developer recipe (optional) | leaf docs, seam table, debt registry |
 | What can this system do for me? | consumer | Capabilities catalog (dormant) | seam table responsibilities |
+
+## Task-oriented selection
+
+- Choose a task guide, operation reference, or developer recipe only when the reader's question needs it. Keep existing destinations and small-project folding.
+- Check each candidate page for purpose, prerequisites, authority, available operations, results, failure and recovery, and extension and verification limits. Record a justified omission or not-applicable outcome instead of inventing a fact or forcing every page into one identical shape.
 
 ## The derivation contract
 
 - Authored docs are the only derivation sources: ADRs, glossary, seam table,
   leaf docs, debt registry. Code parsing is forbidden.
 - Authored docs are the only derivation sources. Code, issues, commit messages,
-  and human-first docs cannot supply claims. A claim traced to any of those is
-  a defect.
+  and human-first docs cannot supply claims. Evaluation records cannot supply
+  claims either. A claim traced to any of those is
+  a defect. A comparison rubric or scoring record is report input only, never a
+  `Sources:` entry.
 - A claim with no source is a defect: either find the authored source or route
   the fact to its tier in the AI-first tree first.
 - An issue may appear as a discussion link in a decision-journal entry but it
@@ -29,6 +39,12 @@ takes and `coherence.md` for how freshness and prevention are enforced.
   the journal category dormant.
 - Every claim in a human doc traces to a span in its declared `Sources:` header.
   The header is the traceability contract.
+
+## Operational states
+
+- Keep five states separate: internal capability, exposed operation, visible control, configured integration, and verified execution. Never present an internal capability as a control the reader can reach.
+- Keep submission separate from completion and response failure separate from rollback.
+- Recovery uses only documented, permission-compatible checks. Check uncertain state before retry where a check exists. Where no check exists, state the limit instead of inventing a control or repeating a possibly committed mutation.
 
 ## One-way bridges
 

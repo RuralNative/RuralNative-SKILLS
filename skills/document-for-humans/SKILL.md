@@ -59,7 +59,8 @@ not by a repository-relative path.
    rule fails staleness; dormancy until the first human doc exists. See
    `reference/coherence.md` for the rule.
 6. **Size to the audience.** One overview page; a journal that grows one entry
-   per decision; guardrails only where invariants exist. See
+   per decision; guardrails only where invariants exist; task guides, operation
+   references, and developer recipes only when a reader question needs them. See
    `reference/routing.md` for the routing table.
 
 ## Branch A — Establish: build the human view for a repo with none
@@ -74,16 +75,20 @@ human-first view.
    `reference/routing.md` for allowed sources.
    *Done when: the authored source set is listed and every source file exists.*
 2. **Select artifacts by audience and question.** Using the routing table,
-   match each reader and their question to one of the four artifacts. Do not
-   create a dormant category early. See `reference/routing.md` and
-   `reference/templates.md` for the four shapes.
+   match each reader and their question to a core artifact or, when the question
+   needs it, to an optional task guide, operation reference, or developer recipe.
+   Apply the purpose, prerequisite, authority, operation, result, failure and
+   recovery, and extension checks, recording justified omissions instead of
+   forcing identical pages. Do not create a dormant category early. See
+   `reference/routing.md` and `reference/templates.md` for the shapes.
    *Done when: the planned artifact set is chosen and each artifact names its
    intended reader and question.*
 3. **Map each planned claim to its source.** For every claim the draft will make,
    name the authored doc that already holds it. Authored docs are the only
    derivation sources: decisions, glossary, seam table, leaf docs, debt
    registry. Code, issues, commit messages, and human-first docs cannot supply
-   claims. An issue may appear as a discussion link in a decision-journal entry
+   claims. Evaluation records and comparison rubrics are report input only and
+   never derivation sources. An issue may appear as a discussion link in a decision-journal entry
    but it is not evidence and does not appear as a derivation source. A
    repository without an accepted ADR does not derive journal claims from commit
    messages. It records the decision in the authored tree first or leaves the
@@ -97,7 +102,12 @@ human-first view.
 5. **Create the tree and derive the artifacts.** Create `docs/human/` and derive
    the approved artifacts under it. Each Derived doc carries valid `Derived:`
    and `Sources:` headers, uses one-way Bridge links for depth, and explains or
-   links glossary terms on first use. Wire prevention and freshness as in
+   links glossary terms on first use. Keep internal capability separate from
+   exposed operation, visible control, configured integration, and verified
+   execution; keep submission separate from completion and failure separate from
+   rollback; use only documented permission-compatible recovery, checking
+   uncertain state before retry where a check exists and stating the limit
+   otherwise. Wire prevention and freshness as in
    `reference/coherence.md`. Run the final `unslopify` audit on all created
    prose before publishing and record its completion report.
    *Done when: every selected artifact exists with valid `Derived:` and
@@ -108,8 +118,9 @@ human-first view.
 
 Entry: an existing human-first tree needs diagnosis. It checks source
 resolution, claim traceability, freshness, bridge direction, artifact need, and
-plain-language requirements separately, asks the owner to confirm each fix, and
-completes with a numbered findings list.
+plain-language requirements separately, keeps reader-task, source-consistency,
+diagram-meaning, mechanical, and prose evidence separate, asks the owner to
+confirm each fix, and completes with a numbered findings list.
 
 1. **Check source resolution.** Confirm every `Sources:` header resolves to an
    authored doc. Flag any source that points to code, an issue, a commit
@@ -117,7 +128,9 @@ completes with a numbered findings list.
    *Done when: each header is marked pass or fail with evidence.*
 2. **Check claim traceability.** Sample claims in each human doc and confirm
    each traces to a span in its declared sources. A claim with no source is a
-   defect.
+   defect. Keep visible source defects, missing evidence, and runtime-unknown
+   facts distinct; completion stays a source-consistency claim unless separate
+   verification exists. See `reference/coherence.md`.
    *Done when: sampled claims are marked traceable or defect with fix.*
 3. **Check freshness.** Confirm each `Derived:` stamp postdates its sources. A
    source committed after the stamp fails the gate. See
@@ -148,9 +161,12 @@ completes with a numbered findings list.
 
 Entry: an authored source changed.
 
-1. **Map changed sources to affected Derived docs.** Read the changed authored
-   files and the `Sources:` headers of the human docs. Only docs whose sources
-   intersect the change set are affected.
+ 1. **Map changed sources to affected Derived docs.** Read the changed authored
+   files and the `Sources:` headers of the human docs. Include removed sources,
+   newly documented subjects, and every article that depends on a shared changed
+   fact. Use citation intersection as one starting signal, then check newly
+   documented subjects against the approved artifact set and record coverage or
+   a justified exclusion; leave unrelated articles unchanged.
    *Done when: the affected doc list is produced and defended.*
 2. **Decide if artifact scope changes.** If the change introduces a new
    audience, decision type, or invariant that needs a new artifact or retires
@@ -160,7 +176,11 @@ Entry: an authored source changed.
    when the set is stable.*
 3. **Regenerate affected docs.** For each affected doc, regenerate its claims
    from its sources in the same diff. Preserve valid `Derived:` and `Sources:`
-   headers, one-way Bridge links, and glossary links on first use. Keep
+   headers, one-way Bridge links, and glossary links on first use. A date, touch,
+   or digest refresh alone never proves review; disclose unavailable prior source
+   state. Use separate reader and source-consistency contexts for larger or
+   safety-sensitive work where available, label same-context work honestly, and
+   recheck corrected meaning semantically. Keep
    same-diff regeneration and dormant-until-used categories as in
    `reference/coherence.md` and `reference/templates.md`.
    *Done when: each affected doc reflects its current sources.*
@@ -177,9 +197,9 @@ Entry: an authored source changed.
 
 ## Reference
 
-- `reference/routing.md` — audience routing, the derivation contract, tone and
+- `reference/routing.md` — audience routing, the derivation contract, task selection and operational states, tone and
   plain-language budgets.
-- `reference/templates.md` — the four artifacts, the derived header, and dormant
+- `reference/templates.md` — core and optional task artifacts, the derived header, and dormant
   rules.
-- `reference/coherence.md` — the prevention stack, the freshness rule, and
+- `reference/coherence.md` — the prevention stack, content-aware maintenance, evidence separation, reporting limits, the freshness rule, and
   adaptation.
